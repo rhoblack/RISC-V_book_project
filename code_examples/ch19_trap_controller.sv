@@ -144,25 +144,31 @@ module trap_controller (
          end
 
          // 트랩 진입: mstatus 업데이트
-         //   MPIE ← MIE (이전 인터럽트 인에이블 백업)
-         //   MIE  ← 0   (인터럽트 비활성화)
+         //   MPIE(bit7) ← MIE(bit3) : 이전 인터럽트 인에이블 백업
+         //   MIE(bit3)  ← 0         : 인터럽트 비활성화
+         // 주의: always_comb 내에서 동일 변수를 전체 할당 후 비트 단위로
+         //       재할당하면 IEEE 1800-2017 §9.2.2.2에 따라 비결정적 동작을
+         //       유발할 수 있습니다. 마스킹 연산으로 단일 할당합니다.
          S_TRAP_MSTATUS: begin
             csr_we    = 1'b1;
             csr_waddr = CSR_MSTATUS;
-            csr_wdata = csr_mstatus;
-            csr_wdata[MPIE_BIT] = csr_mstatus[MIE_BIT]; // MPIE ← MIE
-            csr_wdata[MIE_BIT]  = 1'b0;                  // MIE ← 0
+            // 나머지 비트 유지, MPIE ← MIE, MIE ← 0 (단일 마스킹 연산)
+            csr_wdata = (csr_mstatus & ~((32'h1 << MPIE_BIT) | (32'h1 << MIE_BIT)))
+                      | (csr_mstatus[MIE_BIT] << MPIE_BIT);
+                      // MIE 비트는 OR에 포함 안 됨 → 자동으로 0
          end
 
          // MRET: mstatus 복원
-         //   MIE  ← MPIE (인터럽트 인에이블 복원)
-         //   MPIE ← 1    (기본값)
+         //   MIE(bit3)  ← MPIE(bit7) : 인터럽트 인에이블 복원
+         //   MPIE(bit7) ← 1           : 기본값 복원
+         // 주의: always_comb 내 단일 마스킹 연산으로 비결정적 동작 방지
          S_MRET_MSTATUS: begin
             csr_we    = 1'b1;
             csr_waddr = CSR_MSTATUS;
-            csr_wdata = csr_mstatus;
-            csr_wdata[MIE_BIT]  = csr_mstatus[MPIE_BIT]; // MIE ← MPIE
-            csr_wdata[MPIE_BIT] = 1'b1;                   // MPIE ← 1
+            // 나머지 비트 유지, MIE ← MPIE, MPIE ← 1 (단일 마스킹 연산)
+            csr_wdata = (csr_mstatus & ~((32'h1 << MIE_BIT) | (32'h1 << MPIE_BIT)))
+                      | (csr_mstatus[MPIE_BIT] << MIE_BIT)
+                      | (32'h1 << MPIE_BIT);
          end
 
          default: ; // S_IDLE: 쓰기 없음
