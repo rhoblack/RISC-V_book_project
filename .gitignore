@@ -1,9 +1,6 @@
 # 백업 폴더
 backup/
 
-# Claude Code 내부 설정
-.claude/
-
 # OS 파일
 .DS_Store
 Thumbs.db
