@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 680" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow2" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="820" height="680" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="410" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">RISC-V RV32I 레지스터 파일 (x0 ~ x31) + PC</text>
+
+  <!-- 레지스터 파일 외곽 -->
+  <rect x="30" y="50" width="760" height="580" rx="10" fill="white" stroke="#E5E7EB" stroke-width="2" filter="url(#shadow2)"/>
+
+  <!-- 헤더 행 -->
+  <rect x="30" y="50" width="760" height="35" rx="10" fill="#2563EB"/>
+  <rect x="30" y="70" width="760" height="15" fill="#2563EB"/>
+  <text x="75" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="white">레지스터</text>
+  <text x="165" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="white">ABI 이름</text>
+  <text x="340" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="white">용도</text>
+  <text x="590" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="white">호출 규약</text>
+  <text x="740" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="white">비트 폭</text>
+
+  <!-- x0 (특수) -->
+  <rect x="30" y="85" width="760" height="28" fill="#FEF3C7"/>
+  <text x="75" y="103" text-anchor="middle" font-size="11" font-weight="600" fill="#92400E" font-family="monospace">x0</text>
+  <text x="165" y="103" text-anchor="middle" font-size="11" font-weight="600" fill="#92400E" font-family="monospace">zero</text>
+  <text x="340" y="103" text-anchor="middle" font-size="11" fill="#92400E">항상 0 (하드와이어드, 쓰기 무시)</text>
+  <text x="590" y="103" text-anchor="middle" font-size="11" fill="#92400E">-</text>
+  <text x="740" y="103" text-anchor="middle" font-size="11" fill="#92400E">32비트</text>
+
+  <!-- x1 -->
+  <rect x="30" y="113" width="760" height="28" fill="white"/>
+  <text x="75" y="131" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x1</text>
+  <text x="165" y="131" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">ra</text>
+  <text x="340" y="131" text-anchor="middle" font-size="11" fill="#1E293B">복귀 주소 (Return Address)</text>
+  <text x="590" y="131" text-anchor="middle" font-size="11" fill="#DC2626">Caller-saved</text>
+  <text x="740" y="131" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x2 -->
+  <rect x="30" y="141" width="760" height="28" fill="#F9FAFB"/>
+  <text x="75" y="159" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x2</text>
+  <text x="165" y="159" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">sp</text>
+  <text x="340" y="159" text-anchor="middle" font-size="11" fill="#1E293B">스택 포인터 (Stack Pointer)</text>
+  <text x="590" y="159" text-anchor="middle" font-size="11" fill="#059669">Callee-saved</text>
+  <text x="740" y="159" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x3 -->
+  <rect x="30" y="169" width="760" height="28" fill="white"/>
+  <text x="75" y="187" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x3</text>
+  <text x="165" y="187" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">gp</text>
+  <text x="340" y="187" text-anchor="middle" font-size="11" fill="#1E293B">전역 포인터 (Global Pointer)</text>
+  <text x="590" y="187" text-anchor="middle" font-size="11" fill="#64748B">-</text>
+  <text x="740" y="187" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x4 -->
+  <rect x="30" y="197" width="760" height="28" fill="#F9FAFB"/>
+  <text x="75" y="215" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x4</text>
+  <text x="165" y="215" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">tp</text>
+  <text x="340" y="215" text-anchor="middle" font-size="11" fill="#1E293B">스레드 포인터 (Thread Pointer)</text>
+  <text x="590" y="215" text-anchor="middle" font-size="11" fill="#64748B">-</text>
+  <text x="740" y="215" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x5-x7 -->
+  <rect x="30" y="225" width="760" height="28" fill="white"/>
+  <text x="75" y="243" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x5~x7</text>
+  <text x="165" y="243" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">t0~t2</text>
+  <text x="340" y="243" text-anchor="middle" font-size="11" fill="#1E293B">임시 레지스터 (Temporaries)</text>
+  <text x="590" y="243" text-anchor="middle" font-size="11" fill="#DC2626">Caller-saved</text>
+  <text x="740" y="243" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x8-x9 -->
+  <rect x="30" y="253" width="760" height="28" fill="#F9FAFB"/>
+  <text x="75" y="271" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x8~x9</text>
+  <text x="165" y="271" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">s0/fp, s1</text>
+  <text x="340" y="271" text-anchor="middle" font-size="11" fill="#1E293B">저장 레지스터 (s0 = 프레임 포인터)</text>
+  <text x="590" y="271" text-anchor="middle" font-size="11" fill="#059669">Callee-saved</text>
+  <text x="740" y="271" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x10-x17 -->
+  <rect x="30" y="281" width="760" height="28" fill="#EFF6FF"/>
+  <text x="75" y="299" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x10~x17</text>
+  <text x="165" y="299" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">a0~a7</text>
+  <text x="340" y="299" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">함수 인수 / 반환값 (Arguments / Return)</text>
+  <text x="590" y="299" text-anchor="middle" font-size="11" fill="#DC2626">Caller-saved</text>
+  <text x="740" y="299" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x18-x27 -->
+  <rect x="30" y="309" width="760" height="28" fill="#F9FAFB"/>
+  <text x="75" y="327" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x18~x27</text>
+  <text x="165" y="327" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">s2~s11</text>
+  <text x="340" y="327" text-anchor="middle" font-size="11" fill="#1E293B">저장 레지스터 (Saved Registers)</text>
+  <text x="590" y="327" text-anchor="middle" font-size="11" fill="#059669">Callee-saved</text>
+  <text x="740" y="327" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- x28-x31 -->
+  <rect x="30" y="337" width="760" height="28" fill="white"/>
+  <text x="75" y="355" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">x28~x31</text>
+  <text x="165" y="355" text-anchor="middle" font-size="11" font-family="monospace" fill="#2563EB">t3~t6</text>
+  <text x="340" y="355" text-anchor="middle" font-size="11" fill="#1E293B">임시 레지스터 (Temporaries)</text>
+  <text x="590" y="355" text-anchor="middle" font-size="11" fill="#DC2626">Caller-saved</text>
+  <text x="740" y="355" text-anchor="middle" font-size="11" fill="#64748B">32비트</text>
+
+  <!-- PC (별도) -->
+  <rect x="30" y="380" width="760" height="30" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="75" y="400" text-anchor="middle" font-size="11" font-weight="700" font-family="monospace" fill="#2563EB">PC</text>
+  <text x="165" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">pc</text>
+  <text x="340" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">프로그램 카운터 (Program Counter) — 범용 레지스터 아님</text>
+  <text x="590" y="400" text-anchor="middle" font-size="11" fill="#2563EB">하드웨어 관리</text>
+  <text x="740" y="400" text-anchor="middle" font-size="11" fill="#2563EB">32비트</text>
+
+  <!-- 범례 -->
+  <rect x="50" y="430" width="700" height="90" rx="8" fill="#F8FAFC" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="400" y="452" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">호출 규약 (Calling Convention) 범례</text>
+
+  <rect x="80" y="465" width="12" height="12" fill="#DC2626" rx="2"/>
+  <text x="100" y="476" font-size="11" fill="#1E293B">Caller-saved: 함수 호출 전에 호출자(caller)가 저장해야 함</text>
+
+  <rect x="80" y="488" width="12" height="12" fill="#059669" rx="2"/>
+  <text x="100" y="499" font-size="11" fill="#1E293B">Callee-saved: 피호출자(callee)가 사용 전에 저장하고 복귀 시 복원해야 함</text>
+
+  <!-- 하드웨어 관점 설명 -->
+  <rect x="50" y="535" width="700" height="90" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="400" y="557" text-anchor="middle" font-size="13" font-weight="600" fill="#92400E">하드웨어 설계 관점</text>
+  <text x="70" y="577" font-size="11" fill="#92400E">- 레지스터 파일은 32개의 32비트 레지스터 배열 (32 x 32-bit)</text>
+  <text x="70" y="595" font-size="11" fill="#92400E">- 읽기 포트 2개 (rs1, rs2), 쓰기 포트 1개 (rd) — 동시 접근 필요</text>
+  <text x="70" y="613" font-size="11" fill="#92400E">- x0 레지스터: 쓰기 동작 무시, 읽기 시 항상 0x00000000 반환</text>
+</svg>

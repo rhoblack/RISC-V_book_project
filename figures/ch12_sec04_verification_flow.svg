@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">전체 RV32I 검증 흐름도</text>
+
+  <!-- Test Programs -->
+  <rect x="30" y="60" width="160" height="170" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="110" y="85" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">테스트 프로그램</text>
+  <text x="110" y="110" text-anchor="middle" font-size="10" fill="#1F2937">1. 산술/논리 연산</text>
+  <text x="110" y="130" text-anchor="middle" font-size="10" fill="#1F2937">2. 분기/점프</text>
+  <text x="110" y="150" text-anchor="middle" font-size="10" fill="#1F2937">3. 로드/스토어</text>
+  <text x="110" y="170" text-anchor="middle" font-size="10" fill="#1F2937">4. 버블 정렬</text>
+  <text x="110" y="190" text-anchor="middle" font-size="10" fill="#1F2937">5. 재귀 함수</text>
+  <text x="110" y="210" text-anchor="middle" font-size="10" fill="#1F2937">6. 복합 해저드</text>
+
+  <!-- Cross Compiler -->
+  <rect x="230" y="80" width="140" height="50" rx="6" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="300" y="102" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563EB">RISC-V 어셈블러</text>
+  <text x="300" y="118" text-anchor="middle" font-size="9" fill="#6B7280">riscv32-as / RARS</text>
+
+  <line x1="190" y1="105" x2="228" y2="105" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+  <!-- Hex file -->
+  <rect x="230" y="150" width="140" height="40" rx="6" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="300" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB">program.hex</text>
+
+  <line x1="300" y1="130" x2="300" y2="148" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+  <!-- Pipeline CPU -->
+  <rect x="420" y="80" width="170" height="130" rx="8" fill="#3B82F6" stroke="#2563EB" stroke-width="2"/>
+  <text x="505" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="white">5단계 파이프라인</text>
+  <text x="505" y="128" text-anchor="middle" font-size="13" font-weight="bold" fill="white">RV32I CPU</text>
+  <text x="505" y="155" text-anchor="middle" font-size="10" fill="#DBEAFE">+ 포워딩 유닛</text>
+  <text x="505" y="172" text-anchor="middle" font-size="10" fill="#DBEAFE">+ 해저드 감지</text>
+  <text x="505" y="189" text-anchor="middle" font-size="10" fill="#DBEAFE">+ 분기 처리</text>
+
+  <line x1="370" y1="170" x2="418" y2="155" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+  <!-- Testbench -->
+  <rect x="420" y="240" width="170" height="50" rx="6" fill="#7C3AED" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="505" y="265" text-anchor="middle" font-size="12" font-weight="bold" fill="white">SystemVerilog</text>
+  <text x="505" y="280" text-anchor="middle" font-size="11" fill="white">테스트벤치</text>
+
+  <line x1="505" y1="210" x2="505" y2="238" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+  <!-- Results -->
+  <rect x="640" y="70" width="140" height="60" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="710" y="95" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">VCD 파형</text>
+  <text x="710" y="112" text-anchor="middle" font-size="10" fill="#059669">Verdi/Vivado</text>
+
+  <rect x="640" y="150" width="140" height="60" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="710" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">레지스터 덤프</text>
+  <text x="710" y="192" text-anchor="middle" font-size="10" fill="#059669">기대값 비교</text>
+
+  <rect x="640" y="230" width="140" height="60" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="710" y="255" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">메모리 덤프</text>
+  <text x="710" y="272" text-anchor="middle" font-size="10" fill="#059669">정렬 결과 검증</text>
+
+  <line x1="590" y1="100" x2="638" y2="100" stroke="#059669" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="590" y1="160" x2="638" y2="175" stroke="#059669" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="590" y1="260" x2="638" y2="260" stroke="#059669" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+  <!-- Bottom: Test Categories -->
+  <rect x="30" y="300" width="750" height="80" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="405" y="325" text-anchor="middle" font-size="12" font-weight="bold" fill="#1F2937">검증 단계</text>
+
+  <rect x="50" y="340" width="130" height="28" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="115" y="359" text-anchor="middle" font-size="10" fill="#2563EB">1. 단위 명령어</text>
+
+  <rect x="200" y="340" width="130" height="28" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="265" y="359" text-anchor="middle" font-size="10" fill="#2563EB">2. 해저드 시나리오</text>
+
+  <rect x="350" y="340" width="130" height="28" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="415" y="359" text-anchor="middle" font-size="10" fill="#2563EB">3. 알고리즘</text>
+
+  <rect x="500" y="340" width="130" height="28" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="565" y="359" text-anchor="middle" font-size="10" fill="#2563EB">4. 재귀/스택</text>
+
+  <rect x="650" y="340" width="120" height="28" rx="4" fill="#059669"/>
+  <text x="710" y="359" text-anchor="middle" font-size="10" fill="white" font-weight="bold">5. FPGA 합성</text>
+</svg>

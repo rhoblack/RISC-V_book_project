@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 500" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowU" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto-start-reverse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="500" fill="#F8FAFC" rx="8"/>
+
+  <text x="425" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">주변 장치 드라이버 소프트웨어 아키텍처</text>
+  <text x="425" y="52" text-anchor="middle" font-size="12" fill="#64748B">C 함수 → MMIO 레지스터 → 하드웨어 계층 구조</text>
+
+  <!-- ===== 상단: C 응용 프로그램 ===== -->
+  <rect x="100" y="70" width="650" height="60" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="425" y="95" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">C 응용 프로그램 (main.c)</text>
+  <text x="425" y="115" text-anchor="middle" font-size="10" fill="#1E293B">printf("Hello RISC-V!") | gpio_write(0xFF) | timer_set(1000)</text>
+
+  <!-- 화살표 -->
+  <line x1="250" y1="135" x2="250" y2="165" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <line x1="425" y1="135" x2="425" y2="165" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <line x1="600" y1="135" x2="600" y2="165" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- ===== 중간: 드라이버 계층 ===== -->
+  <!-- UART 드라이버 -->
+  <rect x="100" y="170" width="220" height="80" rx="6" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="210" y="195" text-anchor="middle" font-size="12" font-weight="700" fill="#4F46E5">UART 드라이버</text>
+  <text x="210" y="213" text-anchor="middle" font-size="9" font-family="monospace" fill="#1E293B">uart_init() / uart_putc()</text>
+  <text x="210" y="228" text-anchor="middle" font-size="9" font-family="monospace" fill="#1E293B">uart_getc() / uart_puts()</text>
+  <text x="210" y="243" text-anchor="middle" font-size="9" fill="#64748B">Base: 0xC000_0000</text>
+
+  <!-- GPIO 드라이버 -->
+  <rect x="340" y="170" width="170" height="80" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="425" y="195" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">GPIO 드라이버</text>
+  <text x="425" y="213" text-anchor="middle" font-size="9" font-family="monospace" fill="#1E293B">gpio_write() / gpio_read()</text>
+  <text x="425" y="228" text-anchor="middle" font-size="9" font-family="monospace" fill="#1E293B">gpio_set_dir()</text>
+  <text x="425" y="243" text-anchor="middle" font-size="9" fill="#64748B">Base: 0xC000_0010</text>
+
+  <!-- Timer 드라이버 -->
+  <rect x="530" y="170" width="220" height="80" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="640" y="195" text-anchor="middle" font-size="12" font-weight="700" fill="#D97706">Timer 드라이버</text>
+  <text x="640" y="213" text-anchor="middle" font-size="9" font-family="monospace" fill="#1E293B">timer_init() / timer_set()</text>
+  <text x="640" y="228" text-anchor="middle" font-size="9" font-family="monospace" fill="#1E293B">timer_isr()</text>
+  <text x="640" y="243" text-anchor="middle" font-size="9" fill="#64748B">Base: 0xC000_0020</text>
+
+  <!-- 화살표 -->
+  <line x1="210" y1="255" x2="210" y2="295" stroke="#4F46E5" stroke-width="2" marker-end="url(#arrowB)"/>
+  <line x1="425" y1="255" x2="425" y2="295" stroke="#059669" stroke-width="2" marker-end="url(#arrowB)"/>
+  <line x1="640" y1="255" x2="640" y2="295" stroke="#D97706" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <text x="140" y="280" font-size="9" fill="#4F46E5" font-weight="600">volatile *</text>
+  <text x="360" y="280" font-size="9" fill="#059669" font-weight="600">volatile *</text>
+  <text x="575" y="280" font-size="9" fill="#D97706" font-weight="600">volatile *</text>
+
+  <!-- ===== MMIO 레지스터 계층 ===== -->
+  <rect x="60" y="300" width="730" height="70" rx="6" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="425" y="325" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">MMIO 레지스터 맵 (Memory-Mapped I/O)</text>
+
+  <!-- UART 레지스터들 -->
+  <rect x="80" y="335" width="55" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="107" y="352" text-anchor="middle" font-size="8" fill="#4F46E5">TXDATA</text>
+  <rect x="140" y="335" width="55" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="167" y="352" text-anchor="middle" font-size="8" fill="#4F46E5">RXDATA</text>
+  <rect x="200" y="335" width="55" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="227" y="352" text-anchor="middle" font-size="8" fill="#4F46E5">STATUS</text>
+  <rect x="260" y="335" width="55" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="287" y="352" text-anchor="middle" font-size="8" fill="#4F46E5">CTRL</text>
+
+  <!-- GPIO 레지스터들 -->
+  <rect x="360" y="335" width="55" height="25" rx="3" fill="#D1FAE5" stroke="#059669" stroke-width="1"/>
+  <text x="387" y="352" text-anchor="middle" font-size="8" fill="#059669">DIR</text>
+  <rect x="420" y="335" width="55" height="25" rx="3" fill="#D1FAE5" stroke="#059669" stroke-width="1"/>
+  <text x="447" y="352" text-anchor="middle" font-size="8" fill="#059669">OUT</text>
+  <rect x="480" y="335" width="55" height="25" rx="3" fill="#D1FAE5" stroke="#059669" stroke-width="1"/>
+  <text x="507" y="352" text-anchor="middle" font-size="8" fill="#059669">IN</text>
+
+  <!-- Timer 레지스터들 -->
+  <rect x="580" y="335" width="55" height="25" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="607" y="352" text-anchor="middle" font-size="8" fill="#D97706">CTRL</text>
+  <rect x="640" y="335" width="55" height="25" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="667" y="352" text-anchor="middle" font-size="8" fill="#D97706">CMP</text>
+  <rect x="700" y="335" width="55" height="25" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="727" y="352" text-anchor="middle" font-size="8" fill="#D97706">CNT</text>
+
+  <!-- 화살표 아래로: APB 버스 -->
+  <line x1="425" y1="375" x2="425" y2="405" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- ===== APB 버스 ===== -->
+  <rect x="150" y="410" width="550" height="35" rx="6" fill="#3B82F6" filter="url(#shadow)"/>
+  <text x="425" y="433" text-anchor="middle" font-size="12" font-weight="700" fill="white">APB 버스 (PSEL / PENABLE / PWRITE / PWDATA / PRDATA)</text>
+
+  <!-- 하단 HW 모듈 -->
+  <line x1="210" y1="450" x2="210" y2="470" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+  <line x1="425" y1="450" x2="425" y2="470" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+  <line x1="640" y1="450" x2="640" y2="470" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <text x="210" y="490" text-anchor="middle" font-size="10" font-weight="600" fill="#4F46E5">UART HW (Ch17)</text>
+  <text x="425" y="490" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">GPIO HW (Ch17)</text>
+  <text x="640" y="490" text-anchor="middle" font-size="10" font-weight="600" fill="#D97706">Timer HW (Ch17)</text>
+</svg>

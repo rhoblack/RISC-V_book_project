@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 08 — FSM 기반 제어 유닛</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 08</span>
+  <h1>FSM 기반 제어 유닛</h1>
+  <p class="chapter-intro">멀티사이클 프로세서의 두뇌인 유한 상태 기계(FSM) 제어 유닛을 설계한다. Chapter 07에서 구축한 데이터패스 위에 FSM을 올려 완전한 멀티사이클 CPU를 완성하고, 단일 사이클 대비 성능 트레이드오프를 정량적으로 분석한다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>Moore FSM과 Mealy FSM의 차이를 설명하고, 프로세서 제어에 Moore FSM이 적합한 이유를 논증할 수 있다.</li>
+    <li>RV32I 명령어 타입별로 FSM 상태 전이 경로를 도출하고, 각 상태의 제어 신호를 정의할 수 있다.</li>
+    <li><code>always_ff</code> + <code>always_comb</code> 이중 블록 패턴으로 합성 가능한 FSM을 SystemVerilog로 구현할 수 있다.</li>
+    <li>멀티사이클 CPU를 통합하여 R/I/S/B/U/J 타입 프로그램을 시뮬레이션으로 검증할 수 있다.</li>
+    <li>CPI와 클럭 주파수를 기반으로 단일 사이클과 멀티사이클의 성능을 비교 분석할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 8.1 유한 상태 기계(FSM) 제어 원리 ========== -->
+<section id="sec-8-1">
+  <h2>8.1 유한 상태 기계(FSM) 제어 원리</h2>
+
+  <p>Chapter 06에서 설계한 단일 사이클 제어 유닛은 순수한 조합 논리(combinational logic)로 구현되었다. 명령어가 입력되면 한 클럭 사이클 안에 모든 제어 신호가 동시에 결정되고, 데이터패스의 모든 단계가 한꺼번에 동작한다. 이 방식은 개념적으로 단순하지만, Chapter 07에서 분석한 대로 가장 느린 명령어(Load)에 맞추어 클럭 주기를 설정해야 하므로 빠른 명령어(Branch 등)도 불필요하게 긴 시간을 소모하는 비효율이 발생한다.</p>
+
+  <p>멀티사이클 프로세서는 하나의 명령어 실행을 여러 클럭 사이클로 나눈다. 각 사이클에서는 데이터패스의 일부 모듈만 활성화하고, 나머지는 비활성 상태로 둔다. 이렇게 되면 "지금 어떤 단계를 수행 중인가?"를 추적하는 메커니즘이 필요하다. 바로 이 역할을 수행하는 것이 <strong>유한 상태 기계(有限狀態機械, Finite State Machine, FSM)</strong>이다.</p>
+
+  <h3>FSM의 기본 구성 요소</h3>
+
+  <p>FSM은 다음 네 가지 요소로 정의된다.</p>
+
+  <table>
+    <tr><th>요소</th><th>설명</th><th>멀티사이클 프로세서에서의 의미</th></tr>
+    <tr><td><strong>상태 집합(States)</strong></td><td>유한한 개수의 상태</td><td>IF, ID, EX, MEM, WB 등의 실행 단계</td></tr>
+    <tr><td><strong>입력(Inputs)</strong></td><td>상태 전이를 결정하는 신호</td><td>opcode, funct3 등 명령어 필드</td></tr>
+    <tr><td><strong>출력(Outputs)</strong></td><td>데이터패스를 제어하는 신호</td><td>PCWrite, IRWrite, MemRead, RegWrite 등</td></tr>
+    <tr><td><strong>전이 함수(Transition Function)</strong></td><td>현재 상태와 입력에 따른 다음 상태</td><td>ID 상태에서 opcode에 따라 EX 변형으로 분기</td></tr>
+  </table>
+
+  <div class="analogy">
+    <strong>비유: 교통 신호등 시스템</strong>
+    <p>FSM은 교통 신호등과 유사하다. 신호등은 녹색→황색→적색→녹색 순으로 순환하며, 각 상태(색상)에서 차량과 보행자에게 서로 다른 "제어 신호"(정지, 주의, 진행)를 보낸다. 센서(입력)가 보행자 버튼 눌림을 감지하면 상태 전이 순서가 변경될 수 있다. 멀티사이클 프로세서의 FSM도 마찬가지로, 현재 상태(실행 단계)에 따라 데이터패스에 서로 다른 제어 신호를 출력하고, 명령어의 종류(입력)에 따라 다음 상태로의 전이 경로가 달라진다.</p>
+  </div>
+
+  <h3>Moore FSM vs Mealy FSM</h3>
+
+  <p>FSM은 출력 결정 방식에 따라 두 가지로 분류된다.</p>
+
+  <p><strong>Moore FSM</strong>에서는 출력이 오직 현재 상태에 의해서만 결정된다. 수학적으로 표현하면 <code>출력 = f(현재_상태)</code>이다. 상태가 바뀌지 않는 한 출력은 변하지 않으므로, 출력이 안정적이고 글리치(glitch) 발생 가능성이 낮다. 상태 전이도(state transition diagram)에서 출력은 <strong>상태 원(circle) 내부</strong>에 표기한다.</p>
+
+  <p><strong>Mealy FSM</strong>에서는 출력이 현재 상태와 입력의 조합으로 결정된다. 즉 <code>출력 = f(현재_상태, 입력)</code>이다. 같은 상태에 있더라도 입력이 바뀌면 출력이 즉시 변한다. 이 특성 덕분에 Moore FSM보다 적은 수의 상태로 동일한 동작을 구현할 수 있지만, 입력 변화가 출력에 직접 전파되므로 조합 논리 경로(combinational path)가 길어질 수 있고 글리치에 취약하다. 상태 전이도에서 출력은 <strong>전이 화살표 위</strong>에 "입력/출력" 형태로 표기한다.</p>
+
+  <figure>
+    <img src="../figures/ch08_sec01_fsm_concept.svg" alt="Moore FSM과 Mealy FSM 비교 다이어그램">
+    <figcaption>그림 8.1: Moore FSM과 Mealy FSM의 구조 비교. Moore FSM은 상태 내부에 출력을 표기하고, Mealy FSM은 전이 화살표에 입력/출력을 표기한다.</figcaption>
+  </figure>
+
+  <h3>프로세서 제어에 Moore FSM을 선택하는 이유</h3>
+
+  <p>멀티사이클 프로세서의 제어 유닛 설계에서는 일반적으로 <strong>Moore FSM</strong>을 채택한다. 그 이유는 다음과 같다.</p>
+
+  <ol>
+    <li><strong>출력 안정성</strong>: 각 클럭 사이클 동안 제어 신호가 안정적이어야 데이터패스의 레지스터, 멀티플렉서, 메모리가 올바르게 동작한다. Moore FSM은 상태가 고정되어 있는 한 출력이 변하지 않으므로 이 요구사항을 자연스럽게 충족한다.</li>
+    <li><strong>타이밍 분석 용이</strong>: 출력이 상태 레지스터의 출력에서 직접 도출되므로, 조합 논리 지연이 짧고 임계 경로(critical path) 분석이 단순하다.</li>
+    <li><strong>디버깅 편의</strong>: 현재 상태만 관찰하면 모든 제어 신호를 알 수 있으므로, Verdi나 Vivado Simulator의 파형 분석에서 상태만 추적하면 디버깅이 용이하다.</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Moore FSM이 상태 수가 더 많다면, 하드웨어도 더 커지지 않나요?</p>
+    <p><strong>A:</strong> 이론적으로는 그렇습니다. 하지만 프로세서 제어 유닛의 규모에서 상태 수가 10~15개 정도이므로, 상태 레지스터에 필요한 플립플롭 수는 4비트면 충분합니다. Mealy FSM으로 상태를 2~3개 줄이더라도 절감되는 하드웨어는 미미하며, 오히려 출력 로직의 조합 경로가 길어져 타이밍 제약을 충족하기 어려워질 수 있습니다. 실무에서는 안정성과 디버깅 편의를 우선시하여 Moore FSM을 표준 패턴으로 사용합니다.</p>
+  </aside>
+
+  <h3>명령어별 사이클 수</h3>
+
+  <p>멀티사이클 프로세서에서 각 명령어 타입이 소요하는 사이클 수는 명령어가 거치는 상태(단계)의 수에 의해 결정된다. 이 값이 곧 해당 명령어의 CPI(Cycles Per Instruction, 명령어당 사이클 수)이다.</p>
+
+  <table>
+    <tr><th>명령어 타입</th><th>경로 (상태 시퀀스)</th><th>CPI</th><th>근거</th></tr>
+    <tr><td>R 타입 (ADD, SUB 등)</td><td>IF → ID → EX → WB</td><td>4</td><td>ALU 연산 후 즉시 레지스터 기록</td></tr>
+    <tr><td>I 타입 (ADDI 등)</td><td>IF → ID → EX → WB</td><td>4</td><td>R 타입과 동일 경로 (B 입력만 즉치수로 변경)</td></tr>
+    <tr><td>Load (LW 등)</td><td>IF → ID → EX → MEM → WB</td><td>5</td><td>주소 계산 후 메모리 접근이 추가로 필요</td></tr>
+    <tr><td>Store (SW 등)</td><td>IF → ID → EX → MEM</td><td>4</td><td>메모리 기록 후 WB 불필요 (레지스터 변경 없음)</td></tr>
+    <tr><td>Branch (BEQ 등)</td><td>IF → ID → EX</td><td>3</td><td>조건 판정 후 PC 갱신만 수행</td></tr>
+    <tr><td>U 타입 (LUI, AUIPC)</td><td>IF → ID → EX → WB</td><td>4</td><td>즉치수 처리 후 레지스터 기록</td></tr>
+    <tr><td>J 타입 (JAL, JALR)</td><td>IF → ID → EX → WB</td><td>4</td><td>점프 목표 계산 + 복귀 주소 저장</td></tr>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>위 표에서 Branch가 3사이클로 가장 짧은 이유에 주목하십시오. Branch 명령어는 레지스터에 결과를 기록하지 않으므로 WB 단계가 불필요합니다. 멀티사이클의 핵심 이점이 바로 이것입니다 — 각 명령어가 필요한 만큼만 사이클을 사용합니다. 단일 사이클에서는 Branch도 Load와 동일한 시간을 소모했습니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: "Moore FSM에서 현재 상태가 EX라면, 제어 신호를 결정하기 위해 opcode를 확인해야 하는가?" 정답: Moore FSM의 정의에 따르면 출력은 상태에만 의존해야 합니다. 하지만 EX 상태에서 R 타입과 Load의 제어 신호가 다르므로, 실제로는 EX 상태를 EX_R, EX_M 등으로 세분화하여 Moore 원칙을 유지합니다. 이 구조는 8.2절에서 상세히 다룹니다.</p>
+  </aside>
+
+  <h3>핵심 연결: FSM 상태 = 파이프라인 스테이지</h3>
+
+  <p>이 절을 마무리하면서 한 가지 결정적인 통찰을 강조한다. <strong>멀티사이클 FSM의 각 상태는 파이프라인 프로세서의 각 스테이지와 1:1로 대응한다.</strong> IF 상태는 파이프라인의 IF 스테이지에, ID 상태는 ID 스테이지에, EX 상태는 EX 스테이지에 대응한다. 멀티사이클에서는 이 상태들을 <em>순차적으로</em> 하나씩 실행하지만, 파이프라인에서는 이 상태들을 <em>동시에</em> 병렬 실행한다. 이 관점에서 멀티사이클 프로세서는 파이프라인 프로세서의 "직렬 버전"이라고 할 수 있다. Chapter 09에서 이 연결을 공식적으로 확장한다.</p>
+
+</section>
+
+<!-- ========== 8.2 5단계 FSM 상태 설계 ========== -->
+<section id="sec-8-2">
+  <h2>8.2 5단계 FSM 상태 설계: IF → ID → EX → MEM → WB</h2>
+
+  <p>8.1절에서 FSM의 기본 원리를 이해했으니, 이제 멀티사이클 RV32I 프로세서를 위한 구체적인 상태 전이도를 설계한다. 각 상태에서 어떤 제어 신호가 활성화되어야 하는지를 명확히 정의하는 것이 이 절의 핵심 과제이다.</p>
+
+  <h3>상태 전이도 전체 구조</h3>
+
+  <p>그림 8.2는 멀티사이클 프로세서의 완전한 상태 전이도이다. 시작점은 항상 IF 상태이며, 리셋 시에도 IF로 초기화된다. IF에서 ID로의 전이는 모든 명령어에 공통이다. ID 상태에서 opcode를 해독한 결과에 따라 네 가지 EX 변형 상태 중 하나로 분기한다. 이후 각 명령어 타입의 특성에 따라 MEM, WB 상태를 선택적으로 거친 뒤 다시 IF로 복귀한다.</p>
+
+  <figure>
+    <img src="../figures/ch08_sec02_state_transition.svg" alt="5단계 FSM 상태 전이도">
+    <figcaption>그림 8.2: 멀티사이클 RV32I 프로세서의 FSM 상태 전이도. ID 상태에서 명령어 타입에 따라 네 가지 EX 변형으로 분기한다. 점선 화살표는 IF로의 복귀를 나타낸다.</figcaption>
+  </figure>
+
+  <h3>IF (Instruction Fetch) 상태</h3>
+
+  <p>IF 상태에서는 프로그램 카운터(PC)가 가리키는 메모리 주소에서 명령어를 읽어 명령어 레지스터(IR, Instruction Register)에 저장한다. 동시에 PC를 4만큼 증가시켜 다음 명령어 주소를 준비한다.</p>
+
+  <table>
+    <tr><th>제어 신호</th><th>값</th><th>근거</th></tr>
+    <tr><td><code>MemRead</code></td><td>1</td><td>메모리에서 명령어 읽기</td></tr>
+    <tr><td><code>IorD</code></td><td>0</td><td>주소 = PC (명령어 주소)</td></tr>
+    <tr><td><code>IRWrite</code></td><td>1</td><td>읽은 명령어를 IR에 저장</td></tr>
+    <tr><td><code>ALUSrcA</code></td><td>PC</td><td>ALU A 입력 = PC</td></tr>
+    <tr><td><code>ALUSrcB</code></td><td>4</td><td>ALU B 입력 = 상수 4</td></tr>
+    <tr><td><code>ALUOp</code></td><td>ADD</td><td>PC + 4 계산</td></tr>
+    <tr><td><code>PCWrite</code></td><td>1</td><td>PC ← PC + 4</td></tr>
+    <tr><td><code>PCSrc</code></td><td>ALU결과</td><td>PC에 ALU 출력(PC+4) 기록</td></tr>
+  </table>
+
+  <p>IF 상태에서 ALU를 PC+4 계산에 사용하는 이유는 멀티사이클의 자원 공유 원칙 때문이다. 단일 사이클에서는 PC+4를 위한 별도 가산기가 있었지만, 멀티사이클에서는 ALU 하나로 모든 연산을 시분할(time-sharing)한다. IF 단계에서 ALU가 PC+4를 계산하고, EX 단계에서는 동일한 ALU가 명령어의 연산(덧셈, 비교 등)을 수행한다.</p>
+
+  <h3>ID (Instruction Decode) 상태</h3>
+
+  <p>ID 상태에서는 IR에 저장된 명령어를 해독한다. 레지스터 파일에서 rs1과 rs2를 읽어 중간 레지스터 A, B에 저장한다. 또한 분기/점프 목표 주소를 <strong>미리(speculatively)</strong> 계산하여 ALUOut 레지스터에 저장해 둔다. 이 "투기적 계산"은 분기 명령어일 경우 EX 상태에서 조건 판정 후 즉시 사용할 수 있게 해 준다.</p>
+
+  <table>
+    <tr><th>제어 신호</th><th>값</th><th>근거</th></tr>
+    <tr><td><code>ALUSrcA</code></td><td>PC</td><td>분기 목표 = PC + Imm (투기적 계산)</td></tr>
+    <tr><td><code>ALUSrcB</code></td><td>Imm</td><td>즉치수 (부호 확장 완료)</td></tr>
+    <tr><td><code>ALUOp</code></td><td>ADD</td><td>PC + Imm 계산</td></tr>
+  </table>
+
+  <p>ID 상태의 특별한 점은 <strong>모든 명령어 타입에 공통</strong>이라는 것이다. 아직 명령어 타입을 구분하지 않고, 레지스터 읽기와 즉치수 생성이라는 공통 작업만 수행한다. 이것은 레지스터 파일의 읽기 포트가 opcode와 무관하게 항상 rs1, rs2 필드를 인덱스로 사용하기 때문에 가능하다. R 타입이 아닌 명령어에서 B 레지스터의 값은 사용되지 않을 뿐, 읽기 자체는 문제를 일으키지 않는다.</p>
+
+  <h3>EX (Execute) 상태 — 네 가지 변형</h3>
+
+  <p>ID 상태에서 해독된 opcode에 따라 네 가지 EX 변형 중 하나로 전이한다. 이 분기가 멀티사이클 FSM의 핵심적인 "상태 경로 분기"이다.</p>
+
+  <h4>EX_R: R/I 타입 ALU 실행</h4>
+
+  <p>R 타입(ADD, SUB, AND 등)과 I 타입(ADDI, ANDI 등) 명령어는 ALU 연산을 수행한다. 두 타입의 차이는 ALU B 입력이 레지스터(R 타입)인지 즉치수(I 타입)인지 뿐이다.</p>
+
+  <table>
+    <tr><th>제어 신호</th><th>R 타입</th><th>I 타입</th><th>공통 근거</th></tr>
+    <tr><td><code>ALUSrcA</code></td><td>rs1 (A)</td><td>rs1 (A)</td><td>첫 번째 피연산자는 항상 rs1</td></tr>
+    <tr><td><code>ALUSrcB</code></td><td>rs2 (B)</td><td>Imm</td><td>R 타입은 레지스터, I 타입은 즉치수</td></tr>
+    <tr><td><code>ALUOp</code></td><td colspan="2">funct3/funct7에 따라 결정</td><td>Ch06 디코더 로직 재사용</td></tr>
+  </table>
+
+  <h4>EX_M: Load/Store 주소 계산</h4>
+
+  <p>Load와 Store 명령어는 메모리 접근 주소를 계산한다. 주소 = rs1(베이스) + Imm(오프셋)이다.</p>
+
+  <table>
+    <tr><th>제어 신호</th><th>값</th><th>근거</th></tr>
+    <tr><td><code>ALUSrcA</code></td><td>rs1 (A)</td><td>베이스 주소</td></tr>
+    <tr><td><code>ALUSrcB</code></td><td>Imm</td><td>오프셋</td></tr>
+    <tr><td><code>ALUOp</code></td><td>ADD</td><td>유효 주소 = base + offset</td></tr>
+  </table>
+
+  <h4>EX_B: Branch 조건 판정</h4>
+
+  <p>Branch 명령어는 rs1과 rs2를 비교하여 분기 조건의 성립 여부를 판정한다. 조건이 성립하면 PC를 ID 상태에서 미리 계산해 둔 ALUOut(PC + Imm)으로 갱신한다.</p>
+
+  <table>
+    <tr><th>제어 신호</th><th>값</th><th>근거</th></tr>
+    <tr><td><code>ALUSrcA</code></td><td>rs1 (A)</td><td>비교 대상 1</td></tr>
+    <tr><td><code>ALUSrcB</code></td><td>rs2 (B)</td><td>비교 대상 2</td></tr>
+    <tr><td><code>ALUOp</code></td><td>SUB</td><td>뺄셈으로 비교 (Zero 플래그 활용)</td></tr>
+    <tr><td><code>PCWrite</code></td><td>분기 성립 시 1</td><td>조건 성립 시에만 PC 갱신</td></tr>
+    <tr><td><code>PCSrc</code></td><td>ALUOut</td><td>ID에서 계산한 PC+Imm 사용</td></tr>
+  </table>
+
+  <p>Branch 명령어의 CPI가 3으로 가장 짧은 이유는 여기에 있다. 조건 판정 후 즉시 IF로 복귀하며, MEM이나 WB 단계를 거치지 않는다.</p>
+
+  <h4>EX_U: U/J 타입 처리</h4>
+
+  <p>LUI, AUIPC, JAL, JALR은 각각 고유한 동작을 수행하지만, 모두 한 사이클의 EX 처리로 충분하다.</p>
+
+  <table>
+    <tr><th>명령어</th><th>ALUSrcA</th><th>ALUSrcB</th><th>ALUOp</th><th>추가 동작</th></tr>
+    <tr><td>LUI</td><td>0</td><td>Imm</td><td>ADD</td><td>rd = 0 + Imm(상위 20비트)</td></tr>
+    <tr><td>AUIPC</td><td>PC</td><td>Imm</td><td>ADD</td><td>rd = PC + Imm(상위 20비트)</td></tr>
+    <tr><td>JAL</td><td>PC</td><td>4</td><td>ADD</td><td>rd = PC+4, PC ← ALUOut(ID 계산)</td></tr>
+    <tr><td>JALR</td><td>rs1(A)</td><td>Imm</td><td>ADD</td><td>rd = PC+4, PC ← ALU 결과(rs1+Imm)</td></tr>
+  </table>
+
+  <h3>MEM (Memory Access) 상태</h3>
+
+  <p>MEM 상태는 Load와 Store 명령어만 진입한다. EX_M에서 계산한 ALUOut을 메모리 주소로 사용한다.</p>
+
+  <table>
+    <tr><th>제어 신호</th><th>Load</th><th>Store</th></tr>
+    <tr><td><code>IorD</code></td><td>1 (데이터 주소)</td><td>1 (데이터 주소)</td></tr>
+    <tr><td><code>MemRead</code></td><td>1</td><td>0</td></tr>
+    <tr><td><code>MemWrite</code></td><td>0</td><td>1</td></tr>
+  </table>
+
+  <p>Store 명령어는 MEM 상태에서 메모리 쓰기를 완료한 후 바로 IF로 복귀한다(CPI=4). 레지스터에 기록할 값이 없으므로 WB 단계가 불필요하다. Load 명령어는 메모리에서 읽은 데이터를 MDR(Memory Data Register)에 저장한 후 WB_M 상태로 전이한다.</p>
+
+  <h3>WB (Write Back) 상태 — 세 가지 변형</h3>
+
+  <p>WB 상태는 레지스터 파일에 결과를 기록하는 최종 단계이다. 기록할 데이터 소스에 따라 세 가지 변형이 있다.</p>
+
+  <table>
+    <tr><th>WB 변형</th><th>데이터 소스</th><th>대상 명령어</th><th>RegSrc</th></tr>
+    <tr><td>WB_R</td><td>ALUOut (ALU 결과)</td><td>R/I 타입</td><td>00</td></tr>
+    <tr><td>WB_M</td><td>MDR (메모리 데이터)</td><td>Load</td><td>01</td></tr>
+    <tr><td>WB_U</td><td>ALUOut 또는 PC</td><td>U/J 타입</td><td>00 / 10</td></tr>
+  </table>
+
+  <p>모든 WB 변형 상태에서는 <code>RegWrite = 1</code>로 설정하고, <code>RegSrc</code>로 기록할 데이터를 선택한다. WB 완료 후에는 항상 IF로 복귀하여 다음 명령어를 인출한다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>FSM 상태를 세분화(EX_R, EX_M, EX_B, EX_U 등)하는 것은 Moore FSM 원칙을 준수하기 위한 핵심 설계 기법입니다. 만약 EX를 단일 상태로 두면, 출력(제어 신호)이 opcode에 의존하게 되어 사실상 Mealy FSM이 됩니다. 상태를 세분화하면 코드가 길어지지만, 각 <code>case</code> 분기가 간결해지고 디버깅이 쉬워집니다. 산업 현장에서도 이 패턴을 표준으로 사용합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>전체 상태 전이도를 종이에 직접 그려 보십시오. 그리고 다음을 확인하십시오: (1) 모든 상태에서 다음 상태가 명확히 정의되어 있는가? (2) 모든 경로가 결국 IF로 복귀하는가? (3) 각 명령어 타입의 CPI가 올바른가? 이 세 가지를 확인할 수 있다면 8.3절의 SystemVerilog 구현으로 넘어갈 준비가 된 것입니다.</p>
+  </aside>
+
+</section>
+
+<!-- ========== 8.3 FSM 제어 유닛 SystemVerilog 구현 ========== -->
+<section id="sec-8-3">
+  <h2>8.3 FSM 제어 유닛 SystemVerilog 구현</h2>
+
+  <p>8.2절에서 설계한 상태 전이도를 SystemVerilog 코드로 변환한다. FSM의 하드웨어 구현에는 확립된 표준 패턴이 있다 — <code>always_ff</code> 블록(상태 레지스터)과 <code>always_comb</code> 블록(다음 상태 로직 + 출력 로직)의 이중 블록 구조이다. 이 패턴을 정확히 따르면 Vivado를 비롯한 합성 도구가 의도한 대로 하드웨어를 추론(infer)한다.</p>
+
+  <h3>FSM 구현의 3대 블록</h3>
+
+  <p>합성 가능한 FSM은 다음 세 가지 블록으로 구성된다.</p>
+
+  <ol>
+    <li><strong>상태 레지스터 (<code>always_ff</code>)</strong>: 현재 상태를 저장하는 플립플롭. 클럭 상승 에지에서 다음 상태를 래치한다.</li>
+    <li><strong>다음 상태 로직 (<code>always_comb</code>)</strong>: 현재 상태와 입력을 기반으로 다음 상태를 계산하는 조합 논리.</li>
+    <li><strong>출력 로직 (<code>always_comb</code>)</strong>: Moore FSM의 경우 현재 상태만으로 출력(제어 신호)을 결정하는 조합 논리.</li>
+  </ol>
+
+  <p>다음 상태 로직과 출력 로직은 별도의 <code>always_comb</code> 블록으로 분리할 수도 있고, 하나로 합칠 수도 있다. 교육적 명확성을 위해 본 교재에서는 다음 상태와 출력을 별도로 분리하는 3-블록 스타일을 사용한다.</p>
+
+  <div class="analogy">
+    <strong>비유: 요리 레시피의 3요소</strong>
+    <p>FSM의 3대 블록은 요리 레시피에 비유할 수 있다. (1) "현재 요리 단계 기록지"(상태 레지스터) — 지금 어디까지 진행했는지 기억한다. (2) "다음 단계 결정 규칙"(다음 상태 로직) — 현재 단계와 재료 상태(입력)를 보고 다음에 무엇을 할지 결정한다. (3) "각 단계별 작업 지시서"(출력 로직) — 현재 단계에서 어떤 도구를 사용하고 어떤 불 세기를 사용할지 지시한다.</p>
+  </div>
+
+  <h3>상태 열거형 정의</h3>
+
+  <p>SystemVerilog의 <code>typedef enum</code>을 사용하면 상태에 의미 있는 이름을 부여할 수 있다. 합성 도구는 이를 자동으로 이진 인코딩으로 변환하며, 시뮬레이션에서는 상태 이름이 파형에 표시되어 디버깅이 편리하다.</p>
+
+  <pre><code class="language-systemverilog">
+// FSM 상태 정의
+typedef enum logic [3:0] {
+   S_IF   = 4'b0000,   // 명령어 인출 (Instruction Fetch)
+   S_ID   = 4'b0001,   // 명령어 해독 (Instruction Decode)
+   S_EX_R = 4'b0010,   // 실행: R/I 타입 ALU 연산
+   S_EX_M = 4'b0011,   // 실행: Load/Store 주소 계산
+   S_EX_B = 4'b0100,   // 실행: Branch 조건 판정
+   S_EX_U = 4'b0101,   // 실행: U/J 타입 처리
+   S_MEM  = 4'b0110,   // 메모리 접근 (Load/Store)
+   S_WB_R = 4'b0111,   // 쓰기 복귀: ALU 결과 → 레지스터
+   S_WB_M = 4'b1000,   // 쓰기 복귀: 메모리 데이터 → 레지스터
+   S_WB_U = 4'b1001    // 쓰기 복귀: U/J 타입 결과 → 레지스터
+} fsm_state_t;
+  </code></pre>
+
+  <p>4비트로 10개 상태를 인코딩한다. 사용되지 않는 6개 코드(4'b1010 ~ 4'b1111)는 <code>default</code> 절에서 S_IF로 복귀시켜 안전성을 확보한다.</p>
+
+  <h3>블록 1: 상태 레지스터 (always_ff)</h3>
+
+  <p>상태 레지스터는 FSM의 "기억" 장치이다. 클럭 상승 에지마다 다음 상태 값을 현재 상태로 전환한다. 리셋 시에는 IF 상태로 초기화한다.</p>
+
+  <pre><code class="language-systemverilog">
+// 상태 레지스터 — always_ff 블록
+fsm_state_t state_reg, state_next;
+
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      state_reg <= S_IF;        // 리셋: IF 상태로 초기화
+   else
+      state_reg <= state_next;  // 클럭 에지: 다음 상태로 전이
+end
+  </code></pre>
+
+  <p>이 코드에서 주목할 점은 비동기 리셋(<code>negedge rst_n</code>)을 사용한다는 것이다. Basys 3의 FPGA에서는 글로벌 리셋이 비동기로 동작하므로 이 패턴이 적합하다. 논블로킹 할당(<code>&lt;=</code>)을 사용하는 것은 순차 논리의 필수 규칙이다.</p>
+
+  <h3>블록 2: 다음 상태 로직 (always_comb)</h3>
+
+  <p>다음 상태 로직은 현재 상태와 opcode를 기반으로 다음에 진입할 상태를 결정한다. 8.2절의 상태 전이도를 <code>case</code> 문으로 직접 번역한 것이다.</p>
+
+  <pre><code class="language-systemverilog">
+// 다음 상태 로직 — always_comb 블록
+always_comb begin
+   state_next = S_IF;   // 기본값: 안전한 복귀 (래치 방지)
+
+   case (state_reg)
+      S_IF: state_next = S_ID;   // IF → ID (모든 명령어 공통)
+
+      S_ID: begin                 // ID → EX 분기 (opcode 기반)
+         case (opcode)
+            OP_R_TYPE: state_next = S_EX_R;
+            OP_I_TYPE: state_next = S_EX_R;
+            OP_LOAD:   state_next = S_EX_M;
+            OP_STORE:  state_next = S_EX_M;
+            OP_BRANCH: state_next = S_EX_B;
+            OP_JAL:    state_next = S_EX_U;
+            OP_JALR:   state_next = S_EX_U;
+            OP_LUI:    state_next = S_EX_U;
+            OP_AUIPC:  state_next = S_EX_U;
+            default:   state_next = S_IF;
+         endcase
+      end
+
+      S_EX_R: state_next = S_WB_R;   // R/I → WB
+      S_EX_M: state_next = S_MEM;    // Load/Store → MEM
+      S_EX_B: state_next = S_IF;     // Branch → IF (3사이클 완료)
+      S_EX_U: state_next = S_WB_U;   // U/J → WB
+
+      S_MEM: begin
+         if (opcode == OP_LOAD)
+            state_next = S_WB_M;     // Load → WB
+         else
+            state_next = S_IF;       // Store → IF (4사이클 완료)
+      end
+
+      S_WB_R: state_next = S_IF;     // R/I WB → IF (4사이클 완료)
+      S_WB_M: state_next = S_IF;     // Load WB → IF (5사이클 완료)
+      S_WB_U: state_next = S_IF;     // U/J WB → IF (4사이클 완료)
+
+      default: state_next = S_IF;    // 미정의 상태 → 안전한 복귀
+   endcase
+end
+  </code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> <code>always_comb</code> 블록 시작에서 <code>state_next = S_IF</code>라고 기본값을 설정하는 이유는 무엇인가요?</p>
+    <p><strong>A:</strong> 조합 논리에서 모든 <code>case</code> 분기와 모든 조건 경로에서 출력을 할당하지 않으면 합성 도구가 래치(latch)를 추론합니다. 래치는 의도하지 않은 메모리 소자로, 타이밍 문제와 시뮬레이션-합성 불일치의 주범입니다. 블록 시작에서 기본값을 설정하면 어떤 경로를 타더라도 출력이 정의되므로 래치를 완벽히 방지할 수 있습니다. 이것은 SystemVerilog 합성 코드의 필수 관행(best practice)입니다.</p>
+  </aside>
+
+  <h3>블록 3: 출력 로직 (always_comb)</h3>
+
+  <p>출력 로직은 현재 상태에 따라 데이터패스의 제어 신호를 결정한다. Moore FSM이므로 <code>case (state_reg)</code>만 사용하며, 입력 신호(opcode 등)는 사용하지 않아야 한다. 다만 EX_R 상태에서 R 타입과 I 타입의 ALUSrcB가 다르고, WB_U 상태에서 LUI/AUIPC와 JAL/JALR의 RegSrc가 다르므로, 이 부분에서만 opcode를 참조한다. 이는 순수 Moore가 아닌 "혼합형(mixed)" 접근이지만, 상태를 더 세분화하는 것보다 실용적이다.</p>
+
+  <pre><code class="language-systemverilog">
+// 출력 로직 — always_comb 블록 (일부 발췌)
+always_comb begin
+   // 모든 출력 기본값 = 비활성
+   pc_write = 1'b0;  ir_write = 1'b0;
+   reg_write = 1'b0; mem_read = 1'b0;  mem_write = 1'b0;
+   i_or_d = 1'b0;    alu_src_a = ALUSRC_A_RS1;
+   alu_src_b = ALUSRC_B_RS2;  alu_op = 4'b0000;
+   reg_src = 2'b00;  pc_src = 2'b00;
+
+   case (state_reg)
+      S_IF: begin
+         mem_read  = 1'b1;           // 메모리에서 명령어 읽기
+         ir_write  = 1'b1;           // IR에 명령어 저장
+         alu_src_a = ALUSRC_A_PC;    // ALU A = PC
+         alu_src_b = ALUSRC_B_4;     // ALU B = 4
+         pc_write  = 1'b1;           // PC ← PC + 4
+      end
+
+      S_ID: begin
+         alu_src_a = ALUSRC_A_PC;    // 분기 목표 투기적 계산
+         alu_src_b = ALUSRC_B_IMM;   // PC + Imm
+      end
+
+      S_EX_B: begin
+         alu_src_a = ALUSRC_A_RS1;
+         alu_src_b = ALUSRC_B_RS2;
+         alu_op    = 4'b0001;        // SUB (비교)
+         if (branch_taken) begin
+            pc_write = 1'b1;
+            pc_src   = 2'b01;        // PC ← ALUOut
+         end
+      end
+
+      S_MEM: begin
+         i_or_d = 1'b1;              // 주소 = ALUOut
+         if (opcode == OP_LOAD)
+            mem_read = 1'b1;
+         else
+            mem_write = 1'b1;
+      end
+
+      S_WB_R: begin
+         reg_write = 1'b1;
+         reg_src   = 2'b00;          // ALUOut → rd
+      end
+
+      S_WB_M: begin
+         reg_write = 1'b1;
+         reg_src   = 2'b01;          // MDR → rd
+      end
+
+      // ... 나머지 상태 생략 (전체 코드는 ch08_fsm_control.sv 참조)
+      default: ;
+   endcase
+end
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>출력 로직 블록의 시작부에서 모든 제어 신호에 기본값 0(비활성)을 할당하는 패턴은 "기본값 우선(default-first)" 코딩 스타일이라 합니다. 이 방식의 장점은 세 가지입니다: (1) 래치 방지, (2) 코드 가독성 — 각 상태에서는 활성화할 신호만 명시하면 됩니다, (3) 안전성 — 빠뜨린 신호가 있더라도 비활성 상태가 유지됩니다.</p>
+  </aside>
+
+  <h3>전체 코드 구조</h3>
+
+  <p>FSM 제어 유닛의 전체 SystemVerilog 코드는 <code>code_examples/ch08_fsm_control.sv</code>에 수록되어 있다. 코드의 전체 구조를 요약하면 다음과 같다.</p>
+
+  <table>
+    <tr><th>구성 요소</th><th>SystemVerilog 구문</th><th>역할</th></tr>
+    <tr><td>상태 열거형</td><td><code>typedef enum logic [3:0]</code></td><td>10개 상태 이름 정의</td></tr>
+    <tr><td>상태 레지스터</td><td><code>always_ff @(posedge clk or negedge rst_n)</code></td><td>현재 상태 저장</td></tr>
+    <tr><td>다음 상태 로직</td><td><code>always_comb</code> + <code>case (state_reg)</code></td><td>상태 전이 결정</td></tr>
+    <tr><td>출력 로직</td><td><code>always_comb</code> + <code>case (state_reg)</code></td><td>제어 신호 생성</td></tr>
+    <tr><td>ALU 디코딩</td><td><code>function automatic alu_decode</code></td><td>funct3/funct7 → ALU 연산 코드</td></tr>
+  </table>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>학생들에게 FSM 코딩을 가르칠 때 가장 효과적인 방법은 "상태 전이도 → 코드 번역"의 기계적 프로세스를 보여주는 것입니다. (1) 상태 전이도의 각 원(circle)이 <code>case</code>의 한 분기가 됩니다. (2) 각 화살표가 <code>state_next = ...</code> 할당이 됩니다. (3) 각 원 안의 출력 목록이 해당 상태의 제어 신호 할당이 됩니다. 이 규칙을 따르면 어떤 복잡한 FSM이라도 체계적으로 코드로 변환할 수 있습니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 질문에 답해 보십시오: "S_EX_B 상태의 출력 로직에서 <code>branch_taken</code> 신호를 참조하는데, 이것은 Moore FSM 원칙에 위배되지 않는가?" 이 질문에 대한 답은 본문에서 이미 다루었습니다. 엄밀한 Moore FSM이라면 분기 성립/불성립을 위한 별도 상태(S_EX_B_TAKEN, S_EX_B_NOT_TAKEN)가 필요하지만, 실무에서는 이러한 혼합 방식이 허용됩니다.</p>
+  </aside>
+
+</section>
+
+<!-- ========== 8.4 멀티사이클 CPU 통합 및 시뮬레이션 ========== -->
+<section id="sec-8-4">
+  <h2>8.4 멀티사이클 CPU 통합 및 시뮬레이션</h2>
+
+  <p>FSM 제어 유닛의 설계가 완료되었으니, 이제 Chapter 07의 멀티사이클 데이터패스와 통합하여 완전한 멀티사이클 CPU를 구성한다. 통합의 핵심은 FSM이 출력하는 제어 신호를 데이터패스의 멀티플렉서, 레지스터 인에이블, 메모리 제어 포트에 올바르게 연결하는 것이다.</p>
+
+  <h3>모듈 계층 구조</h3>
+
+  <p>멀티사이클 CPU의 최상위 모듈 <code>multicycle_cpu_top</code>은 다음과 같은 계층 구조를 갖는다.</p>
+
+  <table>
+    <tr><th>모듈</th><th>역할</th><th>출처</th></tr>
+    <tr><td><code>multicycle_cpu_top</code></td><td>최상위 모듈: 데이터패스 + 제어 유닛 통합</td><td>Ch08 신규</td></tr>
+    <tr><td>├ <code>fsm_control_unit</code></td><td>FSM 제어 유닛</td><td>Ch08 (8.3절)</td></tr>
+    <tr><td>├ 레지스터 파일</td><td>32×32 레지스터 배열</td><td>Ch04 재사용</td></tr>
+    <tr><td>├ ALU</td><td>10가지 연산</td><td>Ch04 재사용</td></tr>
+    <tr><td>├ 즉치수 생성기</td><td>6가지 타입 즉치수 추출</td><td>Ch04 재사용</td></tr>
+    <tr><td>├ 중간 레지스터</td><td>A, B, ALUOut, MDR, IR</td><td>Ch07 (멀티사이클 전용)</td></tr>
+    <tr><td>└ 멀티플렉서들</td><td>ALUSrcA, ALUSrcB, IorD, RegSrc, PCSrc</td><td>Ch07 (멀티사이클 전용)</td></tr>
+  </table>
+
+  <h3>Top-Level 모듈 구현</h3>
+
+  <p>최상위 모듈의 핵심은 FSM 제어 유닛을 인스턴스화하고, 그 출력(제어 신호)을 데이터패스의 각 구성 요소에 연결하는 것이다. 전체 코드는 <code>code_examples/ch08_multicycle_top.sv</code>에 수록되어 있다. 주요 연결 포인트를 살펴보자.</p>
+
+  <pre><code class="language-systemverilog">
+// FSM 제어 유닛 인스턴스
+fsm_control_unit u_fsm_ctrl (
+   .clk           (clk),
+   .rst_n         (rst_n),
+   .opcode        (opcode),       // IR에서 추출한 opcode
+   .funct3        (funct3),       // IR에서 추출한 funct3
+   .funct7        (funct7),       // IR에서 추출한 funct7
+   .branch_taken  (branch_taken), // 분기 비교기 출력
+   .pc_write      (pc_write),     // → PC 레지스터 인에이블
+   .ir_write      (ir_write),     // → IR 레지스터 인에이블
+   .reg_write     (reg_write_en), // → 레지스터 파일 WE
+   .mem_read      (ctrl_mem_read),// → 메모리 읽기
+   .mem_write     (ctrl_mem_write),// → 메모리 쓰기
+   .i_or_d        (i_or_d),       // → 메모리 주소 MUX
+   .alu_src_a     (alu_src_a),    // → ALU A 입력 MUX
+   .alu_src_b     (alu_src_b),    // → ALU B 입력 MUX
+   .alu_op        (alu_op),       // → ALU 연산 코드
+   .reg_src       (reg_src),      // → 레지스터 쓰기 데이터 MUX
+   .pc_src        (pc_src),       // → PC 소스 MUX
+   .current_state (current_state) // → 디버깅 출력
+);
+  </code></pre>
+
+  <p>중간 레지스터(A, B, ALUOut, MDR)는 매 클럭 사이클마다 자동으로 값을 래치한다. IR과 PC만 인에이블 신호로 갱신 시점을 제어한다.</p>
+
+  <pre><code class="language-systemverilog">
+// 중간 결과 레지스터 — 매 클럭 에지에서 래치
+always_ff @(posedge clk) begin
+   a_reg       <= rs1_data;      // 레지스터 파일 출력 래치
+   b_reg       <= rs2_data;
+   alu_out_reg <= alu_result;    // ALU 출력 래치
+   mdr_reg     <= mem_rdata;     // 메모리 읽기 데이터 래치
+end
+
+// 명령어 레지스터 — IRWrite 인에이블 시에만 갱신
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      ir_reg <= 32'h0000_0013;   // NOP (ADDI x0, x0, 0)
+   else if (ir_write)
+      ir_reg <= mem_rdata;
+end
+  </code></pre>
+
+  <h3>통합 메모리 모델</h3>
+
+  <p>멀티사이클 프로세서의 특징 중 하나는 명령어 메모리(IMEM)와 데이터 메모리(DMEM)를 하나의 물리적 메모리로 통합할 수 있다는 점이다. 단일 사이클에서는 IF 단계와 MEM 단계가 동시에 실행되므로 두 개의 메모리 포트가 필요했지만, 멀티사이클에서는 IF와 MEM이 서로 다른 사이클에서 실행되므로 하나의 메모리 포트를 시분할할 수 있다. <code>IorD</code> 제어 신호가 이 시분할을 관리한다.</p>
+
+  <pre><code class="language-systemverilog">
+// 메모리 주소 멀티플렉서
+// IorD = 0: PC (명령어 인출)
+// IorD = 1: ALUOut (데이터 접근)
+assign mem_addr = i_or_d ? alu_out_reg : pc_reg;
+  </code></pre>
+
+  <h3>테스트벤치를 이용한 종합 검증</h3>
+
+  <p>통합 CPU의 동작을 검증하기 위해 <code>code_examples/ch08_multicycle_tb.sv</code> 테스트벤치를 사용한다. 이 테스트벤치는 다음 명령어들을 순차적으로 실행하여 R/I/S/B/U/J 타입을 종합 검증한다.</p>
+
+  <table>
+    <tr><th>주소</th><th>명령어</th><th>설명</th><th>기대 결과</th></tr>
+    <tr><td>0x00</td><td><code>ADDI x1, x0, 5</code></td><td>I 타입: 즉치수 덧셈</td><td>x1 = 5</td></tr>
+    <tr><td>0x04</td><td><code>ADDI x2, x0, 3</code></td><td>I 타입: 즉치수 덧셈</td><td>x2 = 3</td></tr>
+    <tr><td>0x08</td><td><code>ADD x3, x1, x2</code></td><td>R 타입: 레지스터 덧셈</td><td>x3 = 8</td></tr>
+    <tr><td>0x0C</td><td><code>SUB x4, x1, x2</code></td><td>R 타입: 레지스터 뺄셈</td><td>x4 = 2</td></tr>
+    <tr><td>0x10</td><td><code>AND x5, x1, x2</code></td><td>R 타입: 비트 AND</td><td>x5 = 1</td></tr>
+    <tr><td>0x14</td><td><code>OR x6, x1, x2</code></td><td>R 타입: 비트 OR</td><td>x6 = 7</td></tr>
+    <tr><td>0x18</td><td><code>SW x3, 256(x0)</code></td><td>S 타입: 메모리 저장</td><td>mem[256] = 8</td></tr>
+    <tr><td>0x1C</td><td><code>LW x7, 256(x0)</code></td><td>Load: 메모리 적재</td><td>x7 = 8</td></tr>
+    <tr><td>0x20</td><td><code>BEQ x1, x2, 8</code></td><td>B 타입: 분기 불성립</td><td>다음 명령어 실행</td></tr>
+    <tr><td>0x24</td><td><code>ADDI x8, x0, 99</code></td><td>BEQ 미성립 확인</td><td>x8 = 99</td></tr>
+    <tr><td>0x28</td><td><code>BEQ x3, x3, 8</code></td><td>B 타입: 분기 성립</td><td>0x30으로 점프</td></tr>
+    <tr><td>0x2C</td><td><code>ADDI x9, x0, 77</code></td><td>건너뛰어야 함</td><td>x9 = 0 (미실행)</td></tr>
+    <tr><td>0x30</td><td><code>LUI x10, 0x12345</code></td><td>U 타입: 상위 즉치수</td><td>x10 = 0x12345000</td></tr>
+    <tr><td>0x34</td><td><code>JAL x11, 8</code></td><td>J 타입: 점프</td><td>x11 = 0x38, 0x3C로 점프</td></tr>
+    <tr><td>0x3C</td><td><code>ADDI x13, x0, 42</code></td><td>JAL 목표 확인</td><td>x13 = 42</td></tr>
+  </table>
+
+  <p>시뮬레이션 실행 시 각 명령어의 FSM 상태 전이를 파형에서 추적할 수 있다. IF 상태에서 메모리 읽기가 수행되고, ID에서 레지스터가 읽히고, EX에서 ALU 연산이 실행되는 과정을 사이클 단위로 확인하면 멀티사이클 프로세서의 동작 원리를 직관적으로 체감할 수 있다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>시뮬레이션 파형에서 FSM 상태를 열거형 이름으로 표시하려면 Vivado Simulator에서 해당 신호의 "Radix"를 "Enum"으로 설정하십시오. VCS/Verdi에서는 <code>typedef enum</code> 정보가 자동으로 인식됩니다. 상태가 S_IF, S_ID, S_EX_R 등의 이름으로 표시되면 디버깅 효율이 크게 향상됩니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 테스트벤치에서 명령어를 32비트 16진수로 직접 입력하는 것이 번거로운데, 더 쉬운 방법은 없나요?</p>
+    <p><strong>A:</strong> Chapter 03에서 소개한 riscv-gnu-toolchain을 사용하면 어셈블리 코드를 작성하고 <code>riscv32-unknown-elf-objcopy -O verilog</code>로 .hex 파일을 생성할 수 있습니다. 이 파일을 <code>$readmemh</code>로 메모리에 로드하면 됩니다. 실무에서는 이 방식이 표준이며, 교육 목적으로는 수작업 인코딩도 이해에 도움이 됩니다.</p>
+  </aside>
+
+  <h3>시뮬레이션 실행 방법</h3>
+
+  <p>Vivado Simulator를 사용하는 경우 다음 단계를 따른다.</p>
+
+  <ol>
+    <li>Vivado에서 새 시뮬레이션 전용 프로젝트를 생성한다.</li>
+    <li><code>ch08_fsm_control.sv</code>, <code>ch08_multicycle_top.sv</code>를 Design Sources로 추가한다.</li>
+    <li><code>ch08_multicycle_tb.sv</code>를 Simulation Sources로 추가한다.</li>
+    <li>Run Simulation → Run Behavioral Simulation을 실행한다.</li>
+    <li>콘솔 출력에서 [PASS]/[FAIL] 결과를 확인하고, 파형 뷰어에서 <code>debug_state</code>와 <code>debug_pc</code>를 관찰한다.</li>
+  </ol>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>시뮬레이션을 실행한 후, 다음을 확인해 보십시오: (1) <code>ADD x3, x1, x2</code> 명령어가 정확히 4사이클(IF→ID→EX_R→WB_R)을 소요하는가? (2) <code>LW x7, 256(x0)</code>이 정확히 5사이클을 소요하는가? (3) <code>BEQ x3, x3, 8</code>이 성립하여 x9에 77이 기록되지 않는가? 세 가지 모두 확인했다면 멀티사이클 CPU가 올바르게 동작하는 것입니다.</p>
+  </aside>
+
+</section>
+
+<!-- ========== 8.5 성능 비교: 단일 사이클 vs 멀티사이클 ========== -->
+<section id="sec-8-5">
+  <h2>8.5 성능 비교: 단일 사이클 vs 멀티사이클</h2>
+
+  <p>멀티사이클 프로세서가 완성되었으니, 이제 단일 사이클과의 성능을 정량적으로 비교한다. "더 나아졌는가?"라는 질문에 대한 답은 단순하지 않다. 멀티사이클은 클럭 주파수에서 우위를 가지지만, CPI에서는 불리하다. 최종 성능은 이 두 요소의 곱으로 결정되며, 실행하는 프로그램의 명령어 믹스(instruction mix)에 의존한다.</p>
+
+  <h3>성능 측정 공식</h3>
+
+  <p>프로세서의 실행 시간은 다음 공식으로 계산한다.</p>
+
+  <p style="text-align: center; font-size: 1.1em; margin: 1.5em 0;">
+    <strong>실행 시간 = 명령어 수(N) × CPI × 클럭 주기(T<sub>clk</sub>)</strong>
+  </p>
+
+  <p>세 요소 중 명령어 수(N)는 프로그램과 ISA에 의해 결정되므로 프로세서 구조와 무관하다. 따라서 단일 사이클과 멀티사이클의 성능 차이는 <strong>CPI × T<sub>clk</sub></strong>의 곱에 의해 결정된다.</p>
+
+  <h3>CPI 분석</h3>
+
+  <p>단일 사이클 프로세서의 CPI는 정의상 1.0이다. 모든 명령어가 정확히 1 클럭 사이클에 완료되기 때문이다.</p>
+
+  <p>멀티사이클 프로세서의 CPI는 명령어 타입마다 다르다(8.1절 참조). 프로그램 전체의 <strong>평균 CPI(CPI<sub>avg</sub>)</strong>는 각 명령어 타입의 CPI에 해당 타입의 실행 비율을 가중 평균한 값이다.</p>
+
+  <p style="text-align: center; margin: 1em 0;">
+    <code>CPI<sub>avg</sub> = Σ (CPI<sub>i</sub> × f<sub>i</sub>)</code>
+  </p>
+
+  <p>여기서 <code>f<sub>i</sub></code>는 명령어 타입 i의 실행 빈도(fraction)이다. 대표적인 RISC-V 벤치마크(gcc 기반)의 명령어 믹스를 사용하여 계산하면 다음과 같다.</p>
+
+  <table>
+    <tr><th>명령어 타입</th><th>CPI</th><th>실행 빈도 (f<sub>i</sub>)</th><th>CPI × f<sub>i</sub></th></tr>
+    <tr><td>R/I 타입 (ALU)</td><td>4</td><td>40%</td><td>1.60</td></tr>
+    <tr><td>Load</td><td>5</td><td>25%</td><td>1.25</td></tr>
+    <tr><td>Store</td><td>4</td><td>10%</td><td>0.40</td></tr>
+    <tr><td>Branch</td><td>3</td><td>20%</td><td>0.60</td></tr>
+    <tr><td>U/J 타입</td><td>4</td><td>5%</td><td>0.20</td></tr>
+    <tr><td colspan="3"><strong>합계: CPI<sub>avg</sub></strong></td><td><strong>4.05</strong></td></tr>
+  </table>
+
+  <p>멀티사이클의 평균 CPI는 약 4.05이다. 단일 사이클의 CPI 1.0에 비해 약 4배 높다.</p>
+
+  <h3>클럭 주파수 분석</h3>
+
+  <p>단일 사이클의 클럭 주기는 가장 긴 명령어(Load)의 지연 시간에 맞추어야 한다. Load 명령어의 임계 경로는 다음과 같다.</p>
+
+  <p style="text-align: center; margin: 1em 0;">
+    <code>T<sub>single</sub> = t<sub>IMEM</sub> + t<sub>RegRead</sub> + t<sub>ALU</sub> + t<sub>DMEM</sub> + t<sub>RegWrite</sub></code>
+  </p>
+
+  <p>Basys 3 (Artix-7 FPGA)에서의 대략적인 지연 값은 다음과 같다.</p>
+
+  <table>
+    <tr><th>단계</th><th>지연 시간 (ns)</th></tr>
+    <tr><td>IMEM (BRAM 읽기)</td><td>~8</td></tr>
+    <tr><td>레지스터 파일 읽기</td><td>~3</td></tr>
+    <tr><td>ALU (최장: 가산기 캐리 전파)</td><td>~10</td></tr>
+    <tr><td>DMEM (BRAM 읽기)</td><td>~8</td></tr>
+    <tr><td>레지스터 파일 쓰기 (셋업 시간)</td><td>~3</td></tr>
+    <tr><td><strong>합계: T<sub>single</sub></strong></td><td><strong>~32 ns</strong></td></tr>
+  </table>
+
+  <p>따라서 단일 사이클의 최대 클럭 주파수는 약 <strong>1 / 32ns ≈ 31 MHz</strong>이다.</p>
+
+  <p>멀티사이클의 클럭 주기는 가장 긴 <strong>단일 단계</strong>의 지연 시간에 맞추면 된다. 가장 긴 단계는 메모리 접근(~8ns) 또는 ALU 연산(~10ns)이므로, 약간의 여유를 두면 다음과 같다.</p>
+
+  <p style="text-align: center; margin: 1em 0;">
+    <code>T<sub>multi</sub> = max(t<sub>단계별</sub>) + t<sub>overhead</sub> ≈ 10 + 2 = 12 ns</code>
+  </p>
+
+  <p>멀티사이클의 최대 클럭 주파수는 약 <strong>1 / 12ns ≈ 83 MHz</strong>이다. 단일 사이클 대비 약 <strong>2.7배</strong> 높다.</p>
+
+  <h3>전체 성능 비교</h3>
+
+  <p>동일한 프로그램(N개 명령어)을 실행할 때 두 방식의 실행 시간을 비교한다.</p>
+
+  <table>
+    <tr><th>항목</th><th>단일 사이클</th><th>멀티사이클</th></tr>
+    <tr><td>CPI</td><td>1.0</td><td>4.05 (가중 평균)</td></tr>
+    <tr><td>클럭 주기 (T<sub>clk</sub>)</td><td>32 ns</td><td>12 ns</td></tr>
+    <tr><td><strong>CPI × T<sub>clk</sub></strong></td><td><strong>32.0 ns/instr</strong></td><td><strong>48.6 ns/instr</strong></td></tr>
+    <tr><td>상대 성능</td><td>1.00 (기준)</td><td>0.66 (34% 느림)</td></tr>
+  </table>
+
+  <figure>
+    <img src="../figures/ch08_sec05_cpi_comparison.svg" alt="단일 사이클 vs 멀티사이클 CPI 비교 차트">
+    <figcaption>그림 8.3: 단일 사이클과 멀티사이클의 CPI 비교 및 성능 분석 요약. 멀티사이클은 클럭 주파수가 높지만, CPI가 높아 전체 성능은 명령어 믹스에 의존한다.</figcaption>
+  </figure>
+
+  <h3>분석 결과 해석</h3>
+
+  <p>놀랍게도, 이 분석에서 멀티사이클 프로세서는 단일 사이클보다 약 34% <strong>느리다</strong>. 클럭 주파수의 2.7배 향상이 CPI의 4.05배 증가를 상쇄하지 못하기 때문이다. 이것은 실망스러운 결과처럼 보이지만, 중요한 통찰을 제공한다.</p>
+
+  <ol>
+    <li><strong>하드웨어 자원 절감</strong>: 멀티사이클은 ALU와 메모리를 공유하므로 면적(LUT 수)이 줄어든다. Basys 3처럼 리소스가 제한된 FPGA에서는 이 절감이 가치 있다.</li>
+    <li><strong>클럭 도메인 통합 용이</strong>: 높은 클럭 주파수는 주변 장치(UART, SPI 등)와의 인터페이스에서 타이밍 설계를 유리하게 한다.</li>
+    <li><strong>파이프라인의 필연적 동기</strong>: CPI를 1로 유지하면서 클럭 주파수도 높이는 방법이 바로 <strong>파이프라인</strong>이다. 멀티사이클의 각 상태를 "동시에" 실행하면 CPI ≈ 1 + 클럭 주파수 ≈ 83MHz를 달성할 수 있다. 이것이 Chapter 09에서 다룰 핵심 아이디어이다.</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 멀티사이클이 단일 사이클보다 느리다면, 왜 멀티사이클을 배우나요?</p>
+    <p><strong>A:</strong> 멀티사이클은 파이프라인을 이해하기 위한 필수 교량입니다. (1) "명령어를 단계별로 분할 실행한다"는 멀티사이클의 핵심 아이디어가 파이프라인의 전제입니다. (2) FSM 제어의 개념은 캐시 컨트롤러, 버스 인터페이스 등 후속 설계에서 반복 사용됩니다. (3) 멀티사이클의 중간 레지스터(A, B, ALUOut)는 파이프라인 레지스터의 직접적인 선조입니다. 멀티사이클 없이 파이프라인으로 바로 가면 "왜 파이프라인 레지스터가 필요한가?"의 직관을 얻기 어렵습니다.</p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>FPGA 합성 후 실제 타이밍 결과는 이론적 분석과 다를 수 있습니다. Vivado의 <code>report_timing_summary</code> 명령으로 정확한 WNS(Worst Negative Slack)를 확인하십시오. 실제 Basys 3 합성 결과를 비교하는 실습은 Ch12.5에서 단일 사이클/멀티사이클/파이프라인 3종을 동시에 비교하며 수행합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 시나리오를 생각해 보십시오: 만약 프로그램이 Branch 명령어 위주(60%)라면, 멀티사이클의 CPI_avg는 얼마이며, 단일 사이클 대비 성능은 어떻게 변하는가? Branch CPI=3이므로 평균 CPI가 낮아져 멀티사이클이 상대적으로 유리해집니다. 이처럼 명령어 믹스에 따라 결론이 달라진다는 것이 핵심 교훈입니다.</p>
+  </aside>
+
+</section>
+
+<!-- ========== 8.6 마이크로프로그래밍 개요 (선택) ========== -->
+<section id="sec-8-6">
+  <h2>8.6 마이크로프로그래밍 개요 (선택)</h2>
+
+  <p>지금까지 설계한 FSM 제어 유닛은 <strong>하드와이어드 제어(hardwired control)</strong> 방식이다. 상태 전이와 출력 로직이 조합 논리 회로로 직접 구현되어 있으며, 동작을 변경하려면 하드웨어(SystemVerilog 코드)를 수정하고 재합성해야 한다. 이 절에서는 대안적인 제어 방식인 <strong>마이크로프로그래밍(microprogramming)</strong>을 개관한다.</p>
+
+  <h3>마이크로프로그래밍의 핵심 아이디어</h3>
+
+  <p>마이크로프로그래밍에서는 FSM의 상태 전이표와 출력표를 조합 논리 대신 <strong>ROM(Read-Only Memory)</strong>에 저장한다. 각 FSM 상태에 대응하는 ROM 주소에 해당 상태의 제어 신호(마이크로명령어, microinstruction)가 저장되어 있다. 현재 상태가 ROM의 주소가 되고, ROM의 출력이 제어 신호와 다음 상태 정보를 제공한다.</p>
+
+  <div class="analogy">
+    <strong>비유: 요리 레시피 북</strong>
+    <p>하드와이어드 제어는 요리사가 모든 레시피를 암기하고 있는 것과 같다. 빠르지만, 새로운 레시피를 추가하려면 요리사를 재교육해야 한다. 마이크로프로그래밍은 레시피 북(ROM)을 참조하는 것과 같다. 약간 느리지만(ROM 접근 시간), 레시피 북의 페이지를 교체하면 새로운 요리(명령어)를 쉽게 추가할 수 있다.</p>
+  </div>
+
+  <h3>마이크로명령어(Microinstruction) 구조</h3>
+
+  <p>마이크로코드 ROM의 각 워드(마이크로명령어)는 다음 필드를 포함한다.</p>
+
+  <table>
+    <tr><th>필드</th><th>비트 수 (예시)</th><th>설명</th></tr>
+    <tr><td>제어 신호</td><td>15~20</td><td>PCWrite, IRWrite, MemRead, ALUSrcA 등 모든 제어 신호</td></tr>
+    <tr><td>다음 주소 제어</td><td>2~3</td><td>Seq(순차), Dispatch(opcode 기반 분기), Fetch(IF 복귀)</td></tr>
+    <tr><td>다음 주소 (조건부)</td><td>4~6</td><td>분기 시 직접 지정 주소</td></tr>
+  </table>
+
+  <p>마이크로코드 ROM의 크기는 <code>(상태 수) × (마이크로명령어 비트 수)</code>이다. 10개 상태에 25비트 마이크로명령어라면 ROM 크기는 10 × 25 = 250비트로 매우 작다. FPGA의 BRAM이나 분산 RAM으로 쉽게 구현할 수 있다.</p>
+
+  <h3>디스패치 테이블 (Dispatch Table)</h3>
+
+  <p>마이크로프로그래밍의 핵심 메커니즘 중 하나는 <strong>디스패치(dispatch)</strong>이다. ID 상태에서 opcode를 디코딩하여 해당 명령어 타입의 마이크로코드 시작 주소로 점프하는 것이다. 이는 하드와이어드 FSM의 <code>case (opcode)</code> 분기와 동일한 역할을 하지만, 분기 대상 주소가 별도의 디스패치 ROM에 저장되어 있다.</p>
+
+  <pre><code class="language-systemverilog">
+// 마이크로프로그래밍 개념 코드 (교육 목적)
+// 실제 합성 코드는 아래보다 복잡함
+
+logic [24:0] microcode_rom [0:15];   // 16개 마이크로명령어
+logic [3:0]  micro_pc;               // 마이크로 프로그램 카운터
+logic [24:0] current_uinstr;         // 현재 마이크로명령어
+
+// 마이크로코드 ROM 읽기
+assign current_uinstr = microcode_rom[micro_pc];
+
+// 제어 신호 추출
+assign {pc_write, ir_write, mem_read, mem_write,
+        reg_write, i_or_d, alu_src_a, alu_src_b,
+        alu_op, reg_src, pc_src, next_addr_ctrl} = current_uinstr;
+
+// 마이크로 PC 갱신
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      micro_pc <= 4'd0;   // IF에 해당하는 마이크로코드 주소
+   else begin
+      case (next_addr_ctrl)
+         2'b00: micro_pc <= micro_pc + 1;           // 순차 (Sequential)
+         2'b01: micro_pc <= dispatch_rom[opcode];    // 디스패치 (Dispatch)
+         2'b10: micro_pc <= 4'd0;                    // IF 복귀 (Fetch)
+         default: micro_pc <= 4'd0;
+      endcase
+   end
+end
+  </code></pre>
+
+  <h3>하드와이어드 vs 마이크로프로그래밍 비교</h3>
+
+  <table>
+    <tr><th>비교 항목</th><th>하드와이어드 제어</th><th>마이크로프로그래밍</th></tr>
+    <tr><td><strong>구현 방식</strong></td><td>조합 논리 (게이트/LUT)</td><td>ROM (마이크로코드 저장)</td></tr>
+    <tr><td><strong>속도</strong></td><td>빠름 (조합 논리 지연만)</td><td>느림 (ROM 접근 시간 추가)</td></tr>
+    <tr><td><strong>유연성</strong></td><td>낮음 (하드웨어 변경 필요)</td><td>높음 (ROM 내용만 수정)</td></tr>
+    <tr><td><strong>설계 복잡도</strong></td><td>명령어 수 증가 → 급격히 복잡</td><td>마이크로코드 추가 → 선형 증가</td></tr>
+    <tr><td><strong>디버깅</strong></td><td>논리 분석기 필요</td><td>마이크로코드 덤프로 확인 가능</td></tr>
+    <tr><td><strong>면적</strong></td><td>작음 (RISC 수준) ~ 큼 (CISC)</td><td>ROM 크기에 비례</td></tr>
+    <tr><td><strong>적용 사례</strong></td><td>RISC-V, ARM, MIPS</td><td>x86, IBM 360, VAX</td></tr>
+  </table>
+
+  <p>RISC-V와 같은 RISC 아키텍처에서는 명령어 형식이 정규적이고 명령어 수가 제한적이므로, 하드와이어드 제어가 표준이다. 반면 x86과 같은 CISC 아키텍처에서는 수백 개의 복잡한 명령어를 지원해야 하므로 마이크로코드 ROM이 사실상 필수이다. 현대 x86 프로세서(Intel, AMD)는 프론트엔드에서 CISC 명령어를 마이크로옵스(micro-ops)로 분해하고, 이 마이크로옵스를 RISC 스타일 백엔드에서 실행하는 하이브리드 구조를 채택한다.</p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>"하드와이어드 제어와 마이크로프로그래밍의 차이를 설명하시오."</strong></p>
+    <p>이 질문은 반도체/프로세서 설계 면접에서 빈출 주제입니다. 핵심 답변 포인트:</p>
+    <ul>
+      <li><strong>하드와이어드</strong>: 제어 신호를 조합 논리로 직접 생성. 속도 우위, RISC에 적합. 변경 시 재설계 필요.</li>
+      <li><strong>마이크로프로그래밍</strong>: 제어 신호를 ROM에 저장. 유연성 우위, CISC에 적합. ROM 접근 시간이 성능 오버헤드.</li>
+      <li><strong>현대 트렌드</strong>: x86은 마이크로코드로 CISC→RISC 변환 후 하드와이어드 실행 엔진 사용 (하이브리드).</li>
+      <li><strong>FPGA 관점</strong>: FPGA에서는 LUT가 곧 ROM이므로 경계가 모호. 합성 도구가 자동으로 최적 구현 결정.</li>
+    </ul>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>FPGA 설계에서는 마이크로프로그래밍을 명시적으로 사용하는 경우가 드뭅니다. FPGA의 LUT(Look-Up Table) 자체가 작은 ROM이므로, 합성 도구가 <code>case</code> 문을 자동으로 LUT ROM으로 매핑합니다. 따라서 SystemVerilog에서 <code>case</code> 문으로 작성한 하드와이어드 제어와 ROM 기반 마이크로프로그래밍은 합성 결과가 거의 동일할 수 있습니다. 중요한 것은 개념적 구분을 이해하는 것이며, ASIC 설계에서는 이 차이가 면적과 전력에 유의미한 영향을 줍니다.</p>
+  </aside>
+
+</section>
+
+<!-- ========== 8.7 본 챕터 요약 및 다음 단계 ========== -->
+<section id="sec-8-7">
+  <h2>8.7 본 챕터 요약 및 다음 단계</h2>
+
+  <p>이 챕터에서는 멀티사이클 프로세서의 핵심인 FSM 제어 유닛을 설계하고, 데이터패스와 통합하여 완전한 멀티사이클 RV32I CPU를 완성하였다. 또한 단일 사이클과의 성능 비교를 통해 각 구조의 장단점을 정량적으로 분석하였다.</p>
+</section>
+
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>FSM 제어 유닛</strong>은 멀티사이클 프로세서에서 "현재 어떤 단계를 수행 중인가"를 추적하고, 각 단계에 맞는 제어 신호를 생성하는 순차 논리 회로이다.</li>
+    <li><strong>Moore FSM</strong>은 출력이 현재 상태에만 의존하므로 출력이 안정적이다. 프로세서 제어에 표준으로 사용된다.</li>
+    <li>멀티사이클 FSM은 <strong>10개 상태</strong>(IF, ID, EX×4, MEM, WB×3)로 구성되며, ID 상태에서 opcode에 따라 네 가지 EX 변형으로 분기한다.</li>
+    <li>명령어별 CPI: <strong>R/I: 4, Load: 5, Store: 4, Branch: 3, U/J: 4</strong>. 평균 CPI ≈ 4.05.</li>
+    <li>SystemVerilog FSM 구현은 <strong><code>always_ff</code>(상태 레지스터) + <code>always_comb</code>(다음 상태/출력 로직)</strong>의 표준 패턴을 따른다.</li>
+    <li>멀티사이클은 단일 사이클 대비 <strong>클럭 주파수 ~2.7배 향상, CPI ~4배 증가</strong>. 순수 성능은 명령어 믹스에 의존하며, 대부분의 경우 단일 사이클과 비슷하거나 약간 느리다.</li>
+    <li>멀티사이클의 진정한 가치는 <strong>파이프라인으로의 교량</strong>: 각 FSM 상태를 동시에 병렬 실행하면 CPI ≈ 1과 높은 클럭 주파수를 동시에 달성할 수 있다.</li>
+    <li><strong>하드와이어드 제어</strong>는 조합 논리로 빠르고, <strong>마이크로프로그래밍</strong>은 ROM 기반으로 유연하다. RISC는 하드와이어드, CISC는 마이크로프로그래밍이 표준.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> Moore FSM과 Mealy FSM의 출력 결정 방식 차이를 한 문장으로 설명하시오.</li>
+    <li><strong>[이해]</strong> Branch 명령어의 CPI가 3인 이유를 상태 전이 경로를 들어 설명하시오. Store 명령어가 WB 상태를 거치지 않는 이유는 무엇인가?</li>
+    <li><strong>[적용]</strong> JALR 명령어의 FSM 상태 전이 경로(IF→ID→EX_U→WB_U)에서 각 상태의 제어 신호를 완전하게 나열하시오. 특히 EX_U에서 PC와 rd에 기록되는 값을 명시하시오.</li>
+    <li><strong>[분석]</strong> 프로그램의 명령어 믹스가 Load 50%, R 타입 30%, Branch 20%인 경우 멀티사이클의 평균 CPI를 계산하시오. 이 경우 단일 사이클 대비 멀티사이클의 상대 성능은 어떠한가? (클럭 주파수 비율을 2.7배로 가정)</li>
+    <li><strong>[평가]</strong> 하드와이어드 제어와 마이크로프로그래밍 중 RV32I 프로세서에 적합한 방식을 선택하고, 그 근거를 세 가지 이상 제시하시오. 만약 RV64GC(64비트, 모든 표준 확장 포함)로 확장한다면 이 선택이 바뀌는가?</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>Chapter 09에서는 멀티사이클의 핵심 도약을 수행한다 — FSM의 각 상태를 <strong>동시에 병렬 실행</strong>하는 <strong>파이프라인 프로세서</strong>를 설계한다. 멀티사이클에서 IF → ID → EX → MEM → WB를 순차적으로 실행했던 것을, 서로 다른 명령어의 IF, ID, EX, MEM, WB를 같은 사이클에 겹쳐 실행함으로써 CPI ≈ 1을 달성한다. 이번 챕터에서 설계한 FSM 상태 정의와 각 상태의 제어 신호가 파이프라인 각 스테이지의 제어 로직의 기반이 된다. 특히 멀티사이클의 중간 레지스터(A, B, ALUOut)가 파이프라인 레지스터(IF/ID, ID/EX, EX/MEM, MEM/WB)로 확장되는 과정을 직접 확인하게 될 것이다.</p>
+</section>
+
+</body>
+</html>

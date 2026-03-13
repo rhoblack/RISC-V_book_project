@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 24 — RV32I 확장: M, F 표준 확장</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 24</span>
+  <h1>RV32I 확장: M, F 표준 확장</h1>
+  <p class="chapter-intro">
+    지금까지 완성한 RV32I 파이프라인 프로세서는 정수 연산만을 지원합니다.
+    그러나 실제 응용에서는 곱셈, 나눗셈, 부동소수점 연산이 빈번하게 요구됩니다.
+    이 챕터에서는 RISC-V의 모듈형 확장(Modular Extension) 철학에 따라
+    M 확장(곱셈/나눗셈), F 확장(단정밀도 부동소수점), Zicntr 확장(성능 카운터)을 학습하고,
+    Basys 3의 DSP48E1 슬라이스를 활용한 곱셈기를 직접 구현합니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>M 확장의 8개 명령어(MUL/MULH/MULHSU/MULHU/DIV/DIVU/REM/REMU)의 인코딩과 동작을 <strong>설명</strong>할 수 있다.</li>
+    <li>Basys 3 DSP48E1 슬라이스의 구조를 이해하고, 이를 활용한 32x32 곱셈기를 <strong>설계</strong>할 수 있다.</li>
+    <li>F 확장의 개요와 하드웨어/소프트웨어 에뮬레이션 방식의 트레이드오프를 <strong>평가</strong>할 수 있다.</li>
+    <li>Zicntr 확장의 성능 카운터(mcycle, minstret)를 구현하고 IPC를 <strong>측정</strong>할 수 있다.</li>
+    <li>DSP48E1 기반 파이프라인 곱셈기를 기존 프로세서에 통합하는 미니 프로젝트를 <strong>완성</strong>할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 24.1 M 확장: 곱셈/나눗셈 명령어 ========== -->
+<section id="sec-24-1">
+  <h2>24.1 M 확장: 곱셈/나눗셈 명령어</h2>
+
+  <p>
+    Chapter 02에서 RISC-V의 모듈형 ISA 구조를 처음 만났을 때, 기본 명령어 세트(Base Integer Instruction Set)인
+    RV32I에는 곱셈과 나눗셈 명령어가 포함되지 않는다는 점이 다소 의외였을 것입니다. 이는 RISC-V 설계 철학의
+    핵심입니다. 기본 세트를 최소화하고, 필요에 따라 확장(Extension)을 선택적으로 추가하는 방식입니다.
+    마치 레고 블록처럼, 기본 베이스 플레이트 위에 원하는 부품만 끼워 넣는 것과 유사합니다.
+    다만, 이 비유에는 한계가 있습니다 — 레고와 달리 하드웨어 확장은 면적, 전력, 타이밍에 직접적인
+    영향을 미치므로 신중한 트레이드오프 분석이 필요합니다.
+  </p>
+
+  <p>
+    M 확장(Standard Extension for Integer Multiplication and Division)은 RISC-V에서 가장 널리 사용되는 확장으로,
+    대부분의 상용 RISC-V 프로세서가 이를 포함합니다. RV32IM으로 표기하며, 기본 RV32I에
+    곱셈(Multiplication) 4개와 나눗셈(Division) 4개, 총 8개 명령어를 추가합니다.
+  </p>
+
+  <h3>M 확장 명령어 개요</h3>
+
+  <p>
+    M 확장의 8개 명령어는 모두 R-Type 형식을 사용합니다. 기존 RV32I의 R-Type 명령어(ADD, SUB 등)와
+    동일한 opcode <code>0110011</code>을 공유하며, <code>funct7 = 0000001</code>로 구분됩니다.
+    즉, 기존 디코더에 <code>funct7</code> 검사 한 줄만 추가하면 M 확장을 식별할 수 있습니다.
+    이것이 RISC-V 모듈형 설계의 우아한 점입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch24_sec01_m_extension_instructions.svg" alt="M 확장 명령어 인코딩 형식 및 8개 명령어 목록">
+    <figcaption>그림 24.1: M 확장 명령어 인코딩 — 모든 명령어가 R-Type 형식을 공유하며 funct3로 구분된다.</figcaption>
+  </figure>
+
+  <h3>곱셈 명령어 4종: MUL, MULH, MULHSU, MULHU</h3>
+
+  <p>
+    32비트 x 32비트 곱셈의 결과는 최대 64비트입니다. 하나의 명령어로 64비트 전체를 반환할 수 없으므로,
+    RISC-V는 곱셈 결과를 두 부분으로 나누어 반환합니다.
+  </p>
+
+  <ul>
+    <li><strong>MUL</strong> (<code>funct3 = 000</code>): 결과의 <em>하위 32비트</em>를 반환합니다.
+        부호에 관계없이 하위 32비트는 동일하므로, signed와 unsigned를 구분하지 않습니다.</li>
+    <li><strong>MULH</strong> (<code>funct3 = 001</code>): <em>부호 있는(signed) x 부호 있는</em> 곱셈의 상위 32비트를 반환합니다.</li>
+    <li><strong>MULHSU</strong> (<code>funct3 = 010</code>): <em>부호 있는 x 부호 없는(unsigned)</em> 곱셈의 상위 32비트를 반환합니다.
+        이 특이한 조합은 주소 계산 등 특수한 상황에서 사용됩니다.</li>
+    <li><strong>MULHU</strong> (<code>funct3 = 011</code>): <em>부호 없는 x 부호 없는</em> 곱셈의 상위 32비트를 반환합니다.</li>
+  </ul>
+
+  <p>
+    64비트 전체 결과가 필요한 경우, 컴파일러는 <code>MUL</code>(하위)과 <code>MULH</code>(상위) 두 명령어를
+    연속으로 발행합니다. RISC-V 스펙은 마이크로아키텍처가 이 패턴을 감지하여 내부적으로 하나의 곱셈만 수행하도록
+    최적화하는 것을 권장합니다. 이를 <em>곱셈 융합(multiplication fusion)</em>이라 합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      GCC는 <code>-march=rv32im</code> 옵션으로 M 확장을 활성화합니다. M 확장이 없는 프로세서에서
+      곱셈을 수행하면 컴파일러가 시프트-덧셈 루프로 에뮬레이션하며, 이는 수십 사이클이 소요됩니다.
+      M 확장의 하드웨어 곱셈기는 이를 1~3 사이클로 단축합니다.
+    </p>
+  </aside>
+
+  <h3>나눗셈 명령어 4종: DIV, DIVU, REM, REMU</h3>
+
+  <p>
+    나눗셈은 곱셈보다 하드웨어 구현이 복잡합니다. 반복적인 뺄셈(또는 비복원 나눗셈 알고리즘)이
+    필요하여, 일반적으로 32사이클이 소요됩니다.
+  </p>
+
+  <ul>
+    <li><strong>DIV</strong> (<code>funct3 = 100</code>): 부호 있는 나눗셈의 <em>몫(quotient)</em>을 반환합니다.</li>
+    <li><strong>DIVU</strong> (<code>funct3 = 101</code>): 부호 없는 나눗셈의 몫을 반환합니다.</li>
+    <li><strong>REM</strong> (<code>funct3 = 110</code>): 부호 있는 나눗셈의 <em>나머지(remainder)</em>를 반환합니다.</li>
+    <li><strong>REMU</strong> (<code>funct3 = 111</code>): 부호 없는 나눗셈의 나머지를 반환합니다.</li>
+  </ul>
+
+  <p>
+    RISC-V 스펙은 나눗셈의 두 가지 예외 상황을 명확히 정의합니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>예외 상황</th>
+      <th>조건</th>
+      <th>DIV/DIVU 결과</th>
+      <th>REM/REMU 결과</th>
+    </tr>
+    <tr>
+      <td>0으로 나누기 (Division by Zero)</td>
+      <td>divisor == 0</td>
+      <td>-1 (all 1s, <code>0xFFFF_FFFF</code>)</td>
+      <td>피제수(dividend) 그대로</td>
+    </tr>
+    <tr>
+      <td>부호 오버플로 (Signed Overflow)</td>
+      <td>-2<sup>31</sup> / -1</td>
+      <td>-2<sup>31</sup> (<code>0x8000_0000</code>)</td>
+      <td>0</td>
+    </tr>
+  </table>
+
+  <p>
+    이 예외 처리 규칙은 x86과 다릅니다. x86에서는 0으로 나누기 시 하드웨어 예외(trap)가 발생하지만,
+    RISC-V에서는 예외 없이 정해진 값을 반환합니다. 이 설계 결정은 하드웨어를 단순화하면서도
+    소프트웨어에서 결과값을 검사하여 예외를 처리할 수 있도록 합니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q:</strong> "RISC-V M 확장에서 곱셈 결과가 왜 두 명령어(MUL + MULH)로 분리되어 있습니까?"<br>
+      <strong>A:</strong> 32비트 x 32비트 곱셈의 결과는 최대 64비트이지만, RV32I 레지스터는 32비트입니다.
+      하나의 명령어에 두 개의 목적 레지스터를 지정하면 레지스터 파일에 3개의 읽기/2개의 쓰기 포트가 필요하여
+      하드웨어 복잡도가 증가합니다. 따라서 하위(MUL)와 상위(MULH)를 분리하여 R-Type 형식의 일관성을
+      유지하면서도, 마이크로아키텍처 수준에서 융합 최적화가 가능하도록 설계되었습니다.
+    </p>
+  </aside>
+
+  <h3>Basys 3에서의 M 확장 구현 전략</h3>
+
+  <p>
+    Basys 3 보드의 Artix-7 FPGA(XC7A35T)에는 <strong>DSP48E1 슬라이스 90개</strong>가 내장되어 있습니다.
+    DSP48E1은 25x18 비트 하드웨어 곱셈기, 48비트 ALU/누적기, 프리-애더(Pre-Adder)를 하나의 슬라이스에
+    통합한 전용 연산 블록입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch24_sec01_dsp48e1_multiplier.svg" alt="DSP48E1 슬라이스 내부 구조와 32x32 곱셈기 매핑">
+    <figcaption>그림 24.2: DSP48E1 슬라이스 내부 구조 — 25x18 곱셈기 코어를 활용하여 32x32 곱셈을 수행한다.</figcaption>
+  </figure>
+
+  <p>
+    32x32 비트 곱셈을 하나의 DSP48E1로 직접 처리할 수는 없습니다. 25x18 비트 곱셈기가 기본 단위이므로,
+    32x32 곱셈은 부분곱(Partial Product)을 생성하고 이를 합산하는 방식으로 구현합니다.
+    Vivado 합성 도구는 <code>(* use_dsp = "yes" *)</code> 속성을 인식하여 자동으로 DSP48E1 슬라이스를
+    추론합니다. 일반적으로 32x32 부호 있는 곱셈에 4개의 DSP48E1 슬라이스가 사용됩니다.
+  </p>
+
+  <h3>디코더 확장</h3>
+
+  <p>
+    기존 Chapter 06에서 설계한 디코더에 M 확장을 추가하는 것은 비교적 간단합니다.
+    <code>opcode == 7'b0110011</code> (R-Type)인 경우, <code>funct7 == 7'b0000001</code>을 추가로 검사하면 됩니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// M 확장 디코더 핵심 로직 (ch24_m_extension_decoder.sv)
+always_comb begin
+   is_m_ext = 1'b0;
+   m_op     = M_OP_NONE;
+
+   if (opcode == OPCODE_OP && funct7 == FUNCT7_MULDIV) begin
+      is_m_ext = 1'b1;
+      case (funct3)
+         3'b000: m_op = M_OP_MUL;     // MUL
+         3'b001: m_op = M_OP_MULH;    // MULH
+         3'b010: m_op = M_OP_MULHSU;  // MULHSU
+         3'b011: m_op = M_OP_MULHU;   // MULHU
+         3'b100: m_op = M_OP_DIV;     // DIV
+         3'b101: m_op = M_OP_DIVU;    // DIVU
+         3'b110: m_op = M_OP_REM;     // REM
+         3'b111: m_op = M_OP_REMU;    // REMU
+         default: is_m_ext = 1'b0;
+      endcase
+   end
+end
+  </code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> M 확장을 추가하면 기존 RV32I 명령어의 디코딩에 영향이 있나요?</p>
+    <p><strong>A:</strong> 없습니다. M 확장 명령어는 R-Type의 <code>funct7</code> 필드로 구분되므로,
+    기존 ADD(<code>funct7=0000000</code>)나 SUB(<code>funct7=0100000</code>)과 충돌하지 않습니다.
+    이것이 RISC-V 모듈형 설계의 핵심 장점입니다. 확장을 추가해도 기존 디코딩 로직을 변경할 필요가 없습니다.</p>
+  </aside>
+
+  <h3>파이프라인 통합 고려사항</h3>
+
+  <p>
+    M 확장을 5단계 파이프라인에 통합할 때 가장 중요한 문제는 <strong>다중 사이클 지연(Multi-Cycle Latency)</strong>입니다.
+    기존 ALU 연산은 1사이클 만에 완료되지만, 곱셈은 3사이클(파이프라인 곱셈기 기준),
+    나눗셈은 최대 32사이클이 소요됩니다.
+  </p>
+
+  <p>
+    이를 해결하는 전형적인 방법은 다음 두 가지입니다.
+  </p>
+
+  <ol>
+    <li><strong>파이프라인 스톨(Pipeline Stall)</strong>: 곱셈/나눗셈 결과가 나올 때까지
+        IF/ID/EX 스테이지를 홀드합니다. Chapter 10에서 배운 Load-Use 스톨과 동일한 메커니즘입니다.</li>
+    <li><strong>결과 바이패스(Result Bypass)</strong>: 곱셈기를 파이프라인화하여 스톨 없이 동작시키되,
+        후속 명령어가 곱셈 결과를 참조하는 경우에만 스톨합니다.</li>
+  </ol>
+
+  <p>
+    이 챕터의 설계에서는 방법 1(파이프라인 스톨)을 채택합니다.
+    구현이 단순하고, Basys 3의 목표 주파수(50MHz)에서 충분한 성능을 제공하기 때문입니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:</p>
+    <ul>
+      <li>M 확장 8개 명령어의 opcode와 funct7 값은 무엇입니까? funct3만으로 어떻게 8개를 구분합니까?</li>
+      <li>MUL과 MULH를 연속으로 발행하면 왜 64비트 전체 결과를 얻을 수 있습니까?</li>
+      <li>RISC-V에서 0으로 나누기가 x86과 다르게 처리되는 이유는 무엇입니까?</li>
+    </ul>
+  </aside>
+
+</section>
+
+<!-- ========== 24.2 F 확장 개요 ========== -->
+<section id="sec-24-2">
+  <h2>24.2 F 확장 개요</h2>
+
+  <p>
+    앞 절에서 정수 연산의 확장을 다루었다면, 이번 절에서는 실수 연산의 영역으로 나아갑니다.
+    F 확장(Standard Extension for Single-Precision Floating-Point)은 IEEE 754 단정밀도
+    부동소수점(Single-Precision Floating-Point) 연산을 지원하며, RV32IF로 표기합니다.
+  </p>
+
+  <p>
+    부동소수점 연산은 과학 계산, 신호 처리, 그래픽스 등 광범위한 응용에서 필수적입니다.
+    그러나 하드웨어 구현의 복잡도가 높아, 소규모 임베디드 프로세서나 교육용 FPGA에서는
+    신중한 판단이 필요합니다. 이 절에서는 F 확장의 아키텍처적 특징을 이해하고,
+    Basys 3 환경에서의 현실적인 구현 전략을 논의합니다.
+  </p>
+
+  <h3>IEEE 754 단정밀도 형식</h3>
+
+  <p>
+    IEEE 754 표준의 단정밀도 부동소수점 수는 32비트로 구성됩니다.
+    일상생활의 과학적 표기법(scientific notation)과 비슷합니다. 예를 들어
+    3.14 x 10<sup>2</sup>에서 3.14가 가수부, 2가 지수부, 양수/음수 부호가 부호 비트에 해당합니다.
+    다만, 컴퓨터에서는 10진수 대신 2진수를 사용합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch24_sec02_f_extension_overview.svg" alt="IEEE 754 단정밀도 형식과 하드웨어/소프트웨어 비교">
+    <figcaption>그림 24.3: IEEE 754 단정밀도 형식 — 1비트 부호 + 8비트 지수 + 23비트 가수, 그리고 구현 방식 비교.</figcaption>
+  </figure>
+
+  <table>
+    <tr>
+      <th>필드</th>
+      <th>비트 범위</th>
+      <th>크기</th>
+      <th>역할</th>
+    </tr>
+    <tr>
+      <td>부호(Sign)</td>
+      <td>[31]</td>
+      <td>1비트</td>
+      <td>0 = 양수, 1 = 음수</td>
+    </tr>
+    <tr>
+      <td>지수(Exponent)</td>
+      <td>[30:23]</td>
+      <td>8비트</td>
+      <td>바이어스 127, 실제 지수 = 필드 - 127</td>
+    </tr>
+    <tr>
+      <td>가수(Mantissa)</td>
+      <td>[22:0]</td>
+      <td>23비트</td>
+      <td>숨은 1(Hidden Bit) 포함 시 24비트 유효 정밀도</td>
+    </tr>
+  </table>
+
+  <h3>F 확장의 아키텍처적 특징</h3>
+
+  <p>
+    F 확장은 기존 RV32I 아키텍처에 다음과 같은 중요한 변화를 도입합니다.
+  </p>
+
+  <ol>
+    <li><strong>전용 부동소수점 레지스터 파일</strong>: 기존 정수 레지스터(x0~x31)와 별도로
+        32개의 부동소수점 레지스터(f0~f31)를 추가합니다. 이는 레지스터 파일 면적이 2배로 증가함을 의미합니다.</li>
+    <li><strong>부동소수점 상태 레지스터(fcsr)</strong>: 반올림 모드(Rounding Mode), 예외 플래그(Accrued Exceptions)를
+        저장하는 CSR이 추가됩니다.</li>
+    <li><strong>새로운 명령어 형식</strong>: R4-Type이 추가됩니다. 이는 4개의 레지스터 오퍼랜드를 가지며,
+        융합 곱셈-덧셈(Fused Multiply-Add, FMA) 명령어에 사용됩니다.</li>
+  </ol>
+
+  <h3>F 확장 명령어 분류</h3>
+
+  <table>
+    <tr>
+      <th>분류</th>
+      <th>명령어</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td>산술 연산</td>
+      <td>FADD.S, FSUB.S, FMUL.S, FDIV.S, FSQRT.S</td>
+      <td>덧셈, 뺄셈, 곱셈, 나눗셈, 제곱근</td>
+    </tr>
+    <tr>
+      <td>융합 곱셈-덧셈</td>
+      <td>FMADD.S, FMSUB.S, FNMADD.S, FNMSUB.S</td>
+      <td>a x b +/- c를 한 번의 반올림으로 수행</td>
+    </tr>
+    <tr>
+      <td>비교/분류</td>
+      <td>FEQ.S, FLT.S, FLE.S, FCLASS.S</td>
+      <td>부동소수점 비교, NaN/Inf 분류</td>
+    </tr>
+    <tr>
+      <td>변환</td>
+      <td>FCVT.W.S, FCVT.S.W, FCVT.WU.S, FCVT.S.WU</td>
+      <td>정수-부동소수점 변환</td>
+    </tr>
+    <tr>
+      <td>부호 조작</td>
+      <td>FSGNJ.S, FSGNJN.S, FSGNJX.S</td>
+      <td>부호 비트 조작 (ABS, NEG, COPYSIGN)</td>
+    </tr>
+    <tr>
+      <td>전송</td>
+      <td>FMV.X.W, FMV.W.X, FLW, FSW</td>
+      <td>정수-부동소수점 레지스터 간 이동, 메모리 접근</td>
+    </tr>
+  </table>
+
+  <h3>하드웨어 FPU vs 소프트웨어 에뮬레이션</h3>
+
+  <p>
+    F 확장 구현에는 두 가지 근본적으로 다른 접근법이 있습니다.
+  </p>
+
+  <p>
+    <strong>하드웨어 FPU(Floating-Point Unit)</strong>는 부동소수점 연산을 전용 회로로 수행합니다.
+    FADD.S는 3~5사이클, FMUL.S는 3~8사이클, FDIV.S는 10~30사이클 정도의 지연으로 처리됩니다.
+    그러나 Basys 3의 XC7A35T는 LUT 20,800개, DSP48E1 90개로 리소스가 제한적입니다.
+    기존 파이프라인 프로세서 + 캐시 + AMBA 버스에 이미 LUT의 60~70%를 사용한 상태에서,
+    FPU 추가는 리소스 예산을 초과할 가능성이 높습니다.
+  </p>
+
+  <p>
+    <strong>소프트웨어 에뮬레이션(Software Emulation)</strong>은 부동소수점 연산을 정수 명령어의 조합으로
+    수행합니다. GCC의 <code>-msoft-float</code> 옵션이 이를 지원합니다. 추가 하드웨어가 전혀 필요 없지만,
+    하나의 부동소수점 덧셈에 수십~수백 개의 정수 명령어가 필요하므로 성능이 100배 이상 저하됩니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      산업 현장에서 Basys 3 급의 소규모 FPGA에 부동소수점을 구현해야 하는 경우,
+      다음 전략이 자주 사용됩니다:
+      (1) 고정소수점(Fixed-Point) 연산으로 대체 — DSP48E1의 48비트 누적기를 활용,
+      (2) Vivado IP Catalog의 Floating-Point Operator IP를 사용하되 한두 개 연산만 선택적으로 구현,
+      (3) 대형 FPGA(Kintex, Virtex)로 보드를 교체.
+    </p>
+  </aside>
+
+  <h3>Basys 3에서의 현실적 전략</h3>
+
+  <p>
+    본 교재의 최종 SoC는 Basys 3 위에서 동작해야 하므로, F 확장의 <strong>전체 하드웨어 구현은
+    권장하지 않습니다</strong>. 대신 다음과 같은 단계적 접근을 제안합니다.
+  </p>
+
+  <ol>
+    <li><strong>1단계 (본 교재 범위)</strong>: 소프트웨어 에뮬레이션. GCC soft-float 라이브러리를 사용하여
+        RV32IM 프로세서에서 부동소수점 연산을 수행합니다.</li>
+    <li><strong>2단계 (심화 과제)</strong>: 불법 명령어 예외(Illegal Instruction Trap)를 활용한 트랩-에뮬레이션.
+        F 확장 명령어 실행 시 트랩을 발생시키고, 소프트웨어 핸들러에서 에뮬레이션합니다.</li>
+    <li><strong>3단계 (대형 FPGA)</strong>: Kintex-7 이상의 보드에서 전체 하드웨어 FPU를 구현합니다.</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> RV32IF에서 정수 레지스터와 부동소수점 레지스터가 왜 분리되어 있나요? ARM처럼 통합하면 안 되나요?</p>
+    <p><strong>A:</strong> 레지스터 파일 분리에는 마이크로아키텍처적 이점이 있습니다.
+    정수 연산과 부동소수점 연산이 서로 다른 레지스터 파일을 사용하면, 두 유닛이 동시에 동작할 때
+    포트 경합(port contention)이 발생하지 않습니다. 또한, 컨텍스트 스위치 시 부동소수점 레지스터의
+    저장/복원을 선택적으로 수행(lazy context switching)하여 오버헤드를 줄일 수 있습니다.
+    다만, 통합 레지스터 파일도 장점이 있으며 이는 아키텍처 설계 트레이드오프입니다.</p>
+  </aside>
+
+  <h3>D 확장과 Q 확장 맛보기</h3>
+
+  <p>
+    RISC-V는 단정밀도(F) 외에도 <strong>D 확장</strong>(배정밀도, Double-Precision, 64비트)과
+    <strong>Q 확장</strong>(4배 정밀도, Quad-Precision, 128비트)을 정의합니다.
+    D 확장은 RV64 시스템에서 일반적으로 사용되며, Q 확장은 과학 계산의 극히 높은 정밀도가
+    필요한 특수 환경에서 사용됩니다. 본 교재의 RV32I 환경에서는 이들을 다루지 않지만,
+    아키텍처적 구조는 F 확장과 동일하므로 F 확장을 이해하면 D/Q 확장으로의 확장은 자연스럽습니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:</p>
+    <ul>
+      <li>IEEE 754 단정밀도에서 숨은 1(Hidden Bit)이란 무엇이며, 왜 유효 정밀도가 24비트인가요?</li>
+      <li>Basys 3에서 F 확장의 전체 하드웨어 구현이 어려운 이유는 무엇입니까?</li>
+      <li>소프트웨어 에뮬레이션과 트랩-에뮬레이션의 차이는 무엇입니까?</li>
+    </ul>
+  </aside>
+
+</section>
+
+<!-- ========== 24.3 Zicntr 확장 ========== -->
+<section id="sec-24-3">
+  <h2>24.3 Zicntr 확장: 성능 카운터 표준화</h2>
+
+  <p>
+    프로세서를 설계하는 것만으로는 충분하지 않습니다. 설계한 프로세서가 <em>얼마나 잘</em> 동작하는지를
+    정량적으로 측정할 수 있어야 합니다. Chapter 21에서 <code>mcycle</code>과 <code>minstret</code>
+    CSR을 성능 카운터로 간략히 다루었다면, 이번 절에서는 Zicntr 확장(Standard Extension for Base Counters
+    and Timers)이 이 카운터들을 어떻게 표준화하는지 깊이 있게 살펴봅니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 자동차의 계기판을 생각해 보십시오. 속도계(IPC)는 현재 성능을,
+    주행거리계(minstret)는 지금까지 실행한 명령어 수를, 엔진 회전수(mcycle)는 소비한 사이클 수를
+    보여줍니다. Zicntr 확장은 프로세서에 이 계기판을 표준화된 방식으로 장착하는 것입니다.
+    다만, 자동차 계기판과 달리 이 카운터들은 나노초 단위의 해상도를 가집니다.
+  </div>
+
+  <h3>Zicntr이 정의하는 카운터</h3>
+
+  <p>
+    Zicntr 확장은 다음 세 가지 64비트 카운터를 표준화합니다. RV32 아키텍처에서 64비트 카운터는
+    하위 32비트와 상위 32비트를 별도의 CSR로 접근합니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>카운터</th>
+      <th>CSR 주소 (M-mode)</th>
+      <th>CSR 주소 (U-mode, 읽기전용)</th>
+      <th>증가 조건</th>
+    </tr>
+    <tr>
+      <td>mcycle / mcycleh</td>
+      <td>0xB00 / 0xB80</td>
+      <td>0xC00 / 0xC80</td>
+      <td>매 클럭 사이클</td>
+    </tr>
+    <tr>
+      <td>minstret / minstreth</td>
+      <td>0xB02 / 0xB82</td>
+      <td>0xC02 / 0xC82</td>
+      <td>명령어 은퇴(retire) 시</td>
+    </tr>
+    <tr>
+      <td>mtime / mtimeh</td>
+      <td>메모리 매핑 (CLINT)</td>
+      <td>0xC01 / 0xC81 (time)</td>
+      <td>실시간 클럭 (별도 타이머)</td>
+    </tr>
+  </table>
+
+  <figure>
+    <img src="../figures/ch24_sec03_zicntr_counters.svg" alt="Zicntr 성능 카운터 CSR 구조와 파이프라인 연결">
+    <figcaption>그림 24.4: Zicntr 성능 카운터 구조 — mcycle은 클럭에, minstret은 WB 스테이지의 retire 신호에 연결된다.</figcaption>
+  </figure>
+
+  <h3>mcycle: 사이클 카운터</h3>
+
+  <p>
+    <code>mcycle</code>은 프로세서가 동작하는 동안 매 클럭 사이클마다 1씩 증가하는 64비트 카운터입니다.
+    구현은 매우 직관적입니다 — <code>always_ff</code> 블록에서 매 클럭 에지마다 +1을 수행합니다.
+  </p>
+
+  <p>
+    64비트 카운터가 오버플로우되려면, 100MHz 클럭 기준으로 약 5,845년이 걸립니다.
+    따라서 실질적으로 오버플로우를 걱정할 필요는 없습니다.
+  </p>
+
+  <h3>minstret: 은퇴 명령어 카운터</h3>
+
+  <p>
+    <code>minstret</code>은 WB(Write-Back) 스테이지에서 정상적으로 완료(은퇴, retire)된 명령어의
+    수를 셉니다. 중요한 것은, 파이프라인에서 플러시(flush)된 명령어는 세지 않는다는 점입니다.
+    분기 예측 실패로 취소된 명령어, 예외에 의해 중단된 명령어는 <code>minstret</code>에 포함되지 않습니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// minstret 증가 조건 (ch24_zicntr_counters.sv에서 발췌)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      minstret_reg <= 64'd0;
+   else if (csr_wen && csr_addr == CSR_MINSTRET)
+      minstret_reg[31:0] <= csr_wdata;    // CSR 쓰기 시 직접 설정
+   else if (csr_wen && csr_addr == CSR_MINSTRETH)
+      minstret_reg[63:32] <= csr_wdata;
+   else if (instr_retire)
+      minstret_reg <= minstret_reg + 64'd1;  // 명령어 은퇴 시 증가
+end
+  </code></pre>
+
+  <h3>IPC와 CPI 계산</h3>
+
+  <p>
+    두 카운터의 비율로 프로세서의 핵심 성능 지표를 계산할 수 있습니다.
+  </p>
+
+  <ul>
+    <li><strong>IPC (Instructions Per Cycle)</strong> = minstret / mcycle — 사이클당 실행한 명령어 수.
+        이상적인 파이프라인에서 IPC = 1, 해저드 스톨이 많으면 IPC &lt; 1.</li>
+    <li><strong>CPI (Cycles Per Instruction)</strong> = mcycle / minstret — 명령어당 소요 사이클 수.
+        CPI = 1/IPC.</li>
+  </ul>
+
+  <p>
+    Chapter 12에서 단일 사이클(CPI=1), 멀티사이클(CPI=3~5), 파이프라인(이상적 CPI=1)을 비교했던 것을
+    기억하십시오. Zicntr 카운터를 사용하면 <em>실제 프로그램 실행 중</em>의 CPI를 정밀하게 측정할 수 있습니다.
+    예를 들어, 버블 정렬 프로그램의 CPI가 1.3이라면, 30%의 사이클이 해저드 스톨에 소비되고 있음을 의미합니다.
+  </p>
+
+  <h3>RV32에서 64비트 카운터 읽기 문제</h3>
+
+  <p>
+    RV32 아키텍처에서 64비트 카운터를 원자적으로 읽는 것은 불가능합니다. 하위 32비트를 읽는 동안
+    상위 32비트가 변할 수 있기 때문입니다. RISC-V 스펙은 이를 해결하기 위해 다음과 같은
+    소프트웨어 패턴을 권장합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// 어셈블리: 64비트 카운터 안전 읽기 패턴
+// a0에 하위 32비트, a1에 상위 32비트를 반환
+retry:
+   csrrs a1, cycleh, zero    // 상위 32비트 읽기
+   csrrs a0, cycle,  zero    // 하위 32비트 읽기
+   csrrs a2, cycleh, zero    // 상위 32비트 재읽기
+   bne   a1, a2, retry       // 상위가 변했으면 재시도
+  </code></pre>
+
+  <p>
+    이 패턴에서 상위 32비트를 두 번 읽어 동일한지 확인합니다. 하위 32비트를 읽는 사이에
+    상위 비트가 캐리(carry)로 증가했다면, 처음부터 다시 읽습니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q:</strong> "프로세서의 성능을 어떻게 측정합니까?"<br>
+      <strong>A:</strong> 하드웨어 성능 카운터(Hardware Performance Counter)를 사용합니다. RISC-V에서는
+      Zicntr 확장이 mcycle(사이클 카운터)과 minstret(은퇴 명령어 카운터)를 표준화하며,
+      이 두 값의 비율로 IPC(Instructions Per Cycle)를 계산합니다.
+      더 세밀한 분석이 필요하면 Zihpm 확장의 이벤트 카운터(캐시 미스 횟수, 분기 예측 실패 횟수 등)를
+      활용합니다. 이는 x86의 PMU(Performance Monitoring Unit)나 ARM의 PMU와 유사한 개념입니다.
+    </p>
+  </aside>
+
+  <h3>mcounteren: 사용자 모드 접근 제어</h3>
+
+  <p>
+    보안 관점에서, 성능 카운터의 사용자 모드(U-mode) 접근은 <code>mcounteren</code> CSR(주소 0x306)로
+    제어됩니다. 이 레지스터의 각 비트가 해당 카운터의 사용자 모드 읽기를 허용하거나 금지합니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>비트</th>
+      <th>카운터</th>
+      <th>0: 금지</th>
+      <th>1: 허용</th>
+    </tr>
+    <tr>
+      <td>[0]</td>
+      <td>cycle</td>
+      <td>Illegal Instruction 예외</td>
+      <td>사용자 모드에서 읽기 가능</td>
+    </tr>
+    <tr>
+      <td>[1]</td>
+      <td>time</td>
+      <td>Illegal Instruction 예외</td>
+      <td>사용자 모드에서 읽기 가능</td>
+    </tr>
+    <tr>
+      <td>[2]</td>
+      <td>instret</td>
+      <td>Illegal Instruction 예외</td>
+      <td>사용자 모드에서 읽기 가능</td>
+    </tr>
+  </table>
+
+  <p>
+    본 교재의 설계는 M-mode만 지원하므로, <code>mcounteren</code>의 구현은 선택 사항입니다.
+    그러나 향후 U-mode를 추가할 때를 대비하여 구조를 알아 두는 것이 유익합니다.
+  </p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      학생들에게 버블 정렬, 퀵 정렬, 행렬 곱셈 등 다양한 프로그램을 실행하고
+      mcycle/minstret 값을 비교하게 하면, CPI의 의미를 체감할 수 있습니다.
+      "왜 퀵 정렬의 CPI가 버블 정렬보다 높은가?"라는 질문은 분기 예측 실패(제어 해저드)와
+      캐시 미스(메모리 해저드)의 영향을 논의하는 좋은 출발점입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:</p>
+    <ul>
+      <li>mcycle과 minstret의 증가 조건 차이는 무엇입니까?</li>
+      <li>플러시된 명령어는 minstret에 포함됩니까?</li>
+      <li>RV32에서 64비트 카운터를 안전하게 읽기 위해 왜 상위 비트를 두 번 읽어야 합니까?</li>
+    </ul>
+  </aside>
+
+</section>
+
+<!-- ========== 24.4 미니 설계 과제: M 확장 곱셈기 구현 ========== -->
+<section id="sec-24-4">
+  <h2>24.4 미니 설계 과제: M 확장 곱셈기 구현</h2>
+
+  <p>
+    이번 절에서는 앞서 학습한 내용을 종합하여, DSP48E1 기반 곱셈기를 설계하고
+    기존 파이프라인 프로세서에 통합하는 미니 프로젝트를 수행합니다.
+    블룸 분류의 "창조(Create)" 수준에 해당하는 과제로,
+    단순히 코드를 따라 치는 것이 아니라 설계 결정을 내리고 트레이드오프를 평가해야 합니다.
+  </p>
+
+  <h3>설계 목표와 사양</h3>
+
+  <table>
+    <tr>
+      <th>항목</th>
+      <th>사양</th>
+    </tr>
+    <tr>
+      <td>지원 명령어</td>
+      <td>MUL, MULH, MULHSU, MULHU (곱셈 4종)</td>
+    </tr>
+    <tr>
+      <td>곱셈 지연</td>
+      <td>3사이클 (파이프라인 곱셈기)</td>
+    </tr>
+    <tr>
+      <td>DSP48E1 사용량</td>
+      <td>4개 이내</td>
+    </tr>
+    <tr>
+      <td>스톨 메커니즘</td>
+      <td>결과 미완료 시 파이프라인 홀드</td>
+    </tr>
+    <tr>
+      <td>대상 주파수</td>
+      <td>50MHz (Basys 3)</td>
+    </tr>
+  </table>
+
+  <h3>모듈 계층 구조</h3>
+
+  <figure>
+    <img src="../figures/ch24_sec04_mul_pipeline_integration.svg" alt="M 확장 곱셈기의 파이프라인 통합 구조">
+    <figcaption>그림 24.5: M 확장 곱셈기 통합 — 기존 ALU와 병렬로 DSP48E1 곱셈기와 반복 나눗셈기를 배치한다.</figcaption>
+  </figure>
+
+  <p>
+    전체 모듈 계층은 다음과 같습니다.
+  </p>
+
+  <ul>
+    <li><code>m_extension_top</code> — M 확장 최상위 모듈
+      <ul>
+        <li><code>m_extension_decoder</code> — M 확장 명령어 디코더</li>
+        <li><code>multiplier_dsp48e1</code> — 3단계 파이프라인 곱셈기 (DSP48E1 추론)</li>
+        <li><code>divider_iterative</code> — 반복 방식 나눗셈기 (32사이클)</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>단계 1: 곱셈기 설계</h3>
+
+  <p>
+    곱셈기의 핵심은 Vivado가 DSP48E1 슬라이스를 자동 추론하도록 코딩하는 것입니다.
+    이를 위해 다음 두 가지 조건을 만족해야 합니다.
+  </p>
+
+  <ol>
+    <li><strong>파이프라인 레지스터</strong>: 입력 레지스터 → 곱셈 → 출력 레지스터의 3단계 구조로 작성합니다.
+        이는 DSP48E1 내부의 A/B 입력 레지스터, M 레지스터, P 출력 레지스터에 자연스럽게 매핑됩니다.</li>
+    <li><strong>합성 속성</strong>: <code>(* use_dsp = "yes" *)</code>를 모듈 선언 앞에 추가하여
+        Vivado에게 DSP 추론을 명시적으로 요청합니다.</li>
+  </ol>
+
+  <pre><code class="language-systemverilog">
+// 3단계 파이프라인 곱셈기 핵심 코드 (ch24_multiplier_dsp48e1.sv에서 발췌)
+(* use_dsp = "yes" *)
+module multiplier_dsp48e1 (
+   input  logic        clk,
+   input  logic        rst_n,
+   input  logic        start,
+   input  logic [1:0]  mul_op,     // 00:MUL, 01:MULH, 10:MULHSU, 11:MULHU
+   input  logic [31:0] operand_a,
+   input  logic [31:0] operand_b,
+   output logic [31:0] result,
+   output logic        valid
+);
+   // 부호 확장: 33비트로 확장하여 signed/unsigned를 통일 처리
+   logic signed [32:0] ext_a, ext_b;
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         // 리셋 처리 ...
+      end else begin
+         // Stage 1: 입력 래치 (DSP48E1 A/B 레지스터)
+         stage1_a <= ext_a;
+         stage1_b <= ext_b;
+
+         // Stage 2: 곱셈 수행 (DSP48E1 M 레지스터)
+         stage2_product <= stage1_a * stage1_b;
+
+         // Stage 3: 결과 선택 (DSP48E1 P 레지스터)
+         case (stage2_op)
+            2'b00:   stage3_result <= stage2_product[31:0];
+            default: stage3_result <= stage2_product[63:32];
+         endcase
+      end
+   end
+endmodule
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      Vivado에서 DSP48E1 추론이 제대로 되었는지 확인하려면, 합성 후
+      <code>report_utilization -hierarchical</code>을 실행하십시오.
+      "DSP" 열에 사용된 DSP48E1 개수가 표시됩니다.
+      0이면 추론에 실패한 것이므로 코딩 스타일을 점검해야 합니다.
+      가장 흔한 실패 원인은 리셋 로직이 곱셈 경로에 삽입되어
+      Vivado가 DSP 패턴을 인식하지 못하는 경우입니다.
+    </p>
+  </aside>
+
+  <h3>단계 2: 나눗셈기 설계</h3>
+
+  <p>
+    나눗셈기는 비복원 나눗셈(Non-Restoring Division) 알고리즘으로 구현합니다.
+    매 사이클마다 1비트의 몫을 산출하므로, 32비트 나눗셈에 32사이클이 소요됩니다.
+    이는 면적 효율적이지만 성능은 낮은 전형적인 트레이드오프입니다.
+  </p>
+
+  <p>
+    RISC-V 스펙이 요구하는 두 가지 특수 상황(0으로 나누기, 부호 오버플로)을
+    FSM의 초기 단계에서 검출하여, 해당 경우 32사이클을 기다리지 않고 즉시 결과를 반환합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// 나눗셈 특수 상황 처리 (ch24_divider_iterative.sv에서 발췌)
+S_IDLE: begin
+   if (start) begin
+      // RISC-V 스펙: 0으로 나누기 → 즉시 결과 반환
+      div_by_zero <= (divisor == 32'd0);
+
+      // RISC-V 스펙: signed overflow (-2^31 / -1)
+      overflow <= is_signed &&
+                  (dividend == 32'h8000_0000) &&
+                  (divisor  == 32'hFFFF_FFFF);
+   end
+end
+  </code></pre>
+
+  <h3>단계 3: 파이프라인 통합</h3>
+
+  <p>
+    M 확장 모듈을 기존 파이프라인의 EX 스테이지에 통합하는 핵심은 <strong>스톨 신호</strong>입니다.
+    곱셈/나눗셈이 완료될 때까지 IF, ID 스테이지를 홀드하고, EX/MEM 파이프라인 레지스터에
+    NOP(버블)을 삽입합니다. 이는 Chapter 10의 Load-Use 스톨과 동일한 패턴입니다.
+  </p>
+
+  <p>
+    통합 시 수정이 필요한 기존 모듈은 다음과 같습니다.
+  </p>
+
+  <ol>
+    <li><strong>디코더</strong>: <code>funct7 == 7'b0000001</code> 검사 추가</li>
+    <li><strong>EX 스테이지</strong>: ALU 출력과 M 확장 출력을 MUX로 선택</li>
+    <li><strong>해저드 유닛</strong>: <code>m_stall</code> 신호를 기존 스톨 논리에 OR 결합</li>
+    <li><strong>WB 스테이지</strong>: 결과 선택 MUX에 M 확장 결과 경로 추가</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 나눗셈 32사이클 동안 파이프라인이 멈추면 성능이 크게 떨어지지 않나요?</p>
+    <p><strong>A:</strong> 맞습니다. 나눗셈이 빈번한 프로그램에서는 IPC가 크게 하락합니다.
+    고성능 프로세서는 이를 해결하기 위해 (1) 나눗셈기를 별도의 기능 유닛으로 분리하여
+    다른 명령어가 먼저 실행되도록 하거나(out-of-order), (2) SRT 나눗셈 알고리즘으로
+    매 사이클 2~4비트를 산출하는 기법을 사용합니다.
+    본 교재의 설계는 단순성을 우선하므로 반복 나눗셈기 + 스톨 방식을 채택합니다.</p>
+  </aside>
+
+  <h3>단계 4: 테스트벤치</h3>
+
+  <p>
+    곱셈기 검증은 다음의 경계값 테스트 케이스를 반드시 포함해야 합니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>테스트 케이스</th>
+      <th>operand_a</th>
+      <th>operand_b</th>
+      <th>검증 포인트</th>
+    </tr>
+    <tr>
+      <td>0 곱셈</td>
+      <td><code>0x0000_0000</code></td>
+      <td>임의 값</td>
+      <td>결과가 0인지 확인</td>
+    </tr>
+    <tr>
+      <td>1 곱셈</td>
+      <td><code>0x0000_0001</code></td>
+      <td>임의 값</td>
+      <td>항등원 검증</td>
+    </tr>
+    <tr>
+      <td>최대 양수 x 최대 양수</td>
+      <td><code>0x7FFF_FFFF</code></td>
+      <td><code>0x7FFF_FFFF</code></td>
+      <td>MULH 상위 비트 검증</td>
+    </tr>
+    <tr>
+      <td>-1 x -1</td>
+      <td><code>0xFFFF_FFFF</code></td>
+      <td><code>0xFFFF_FFFF</code></td>
+      <td>부호 처리 검증</td>
+    </tr>
+    <tr>
+      <td>-1 x 1 (MULH)</td>
+      <td><code>0xFFFF_FFFF</code></td>
+      <td><code>0x0000_0001</code></td>
+      <td>MULH = <code>0xFFFF_FFFF</code></td>
+    </tr>
+  </table>
+
+  <pre><code class="language-systemverilog">
+// 테스트벤치 검증 태스크 예시 (ch24_multiplier_tb.sv에서 발췌)
+task automatic check_mul(
+   input string   test_name,
+   input [1:0]    op,
+   input [31:0]   a,
+   input [31:0]   b,
+   input [31:0]   expected
+);
+   @(posedge clk);
+   mul_op = op; operand_a = a; operand_b = b; start = 1'b1;
+   @(posedge clk);
+   start = 1'b0;
+   repeat (3) @(posedge clk);  // 3사이클 파이프라인 대기
+   if (result === expected)
+      $display("[PASS] %s", test_name);
+   else
+      $display("[FAIL] %s: got 0x%08h, exp 0x%08h", test_name, result, expected);
+endtask
+  </code></pre>
+
+  <h3>Vivado 합성 결과 예상</h3>
+
+  <p>
+    M 확장을 추가한 후 Basys 3에서의 리소스 사용량 변화를 예측하면 다음과 같습니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>리소스</th>
+      <th>M 확장 없이 (RV32I)</th>
+      <th>M 확장 추가 (RV32IM)</th>
+      <th>증가량</th>
+    </tr>
+    <tr>
+      <td>LUT</td>
+      <td>~12,000</td>
+      <td>~13,500</td>
+      <td>+1,500 (~7%)</td>
+    </tr>
+    <tr>
+      <td>FF</td>
+      <td>~6,000</td>
+      <td>~6,800</td>
+      <td>+800 (~2%)</td>
+    </tr>
+    <tr>
+      <td>DSP48E1</td>
+      <td>0</td>
+      <td>4</td>
+      <td>+4 (4.4%)</td>
+    </tr>
+    <tr>
+      <td>BRAM</td>
+      <td>~20</td>
+      <td>~20</td>
+      <td>0</td>
+    </tr>
+  </table>
+
+  <p>
+    M 확장은 DSP48E1을 4개 사용하지만, Basys 3에 90개가 있으므로 5% 미만의 사용률입니다.
+    LUT 증가도 7% 수준으로, Basys 3의 리소스 예산 내에서 충분히 수용 가능합니다.
+    M 확장은 비용 대비 효과가 가장 좋은 확장이라 할 수 있습니다.
+  </p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      이 미니 프로젝트를 과제로 낼 때, 단계별로 제출하게 하면 효과적입니다.
+      1주차: 디코더 + 곱셈기 단독 시뮬레이션, 2주차: 나눗셈기 + 파이프라인 통합.
+      한 번에 전체를 통합하면 디버깅이 매우 어렵습니다.
+      "먼저 곱셈기만 독립적으로 검증하고, 그 다음에 파이프라인에 연결하라"는 원칙을
+      강조하십시오. 이는 산업 현장의 IP 통합 절차와 동일합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:</p>
+    <ul>
+      <li>DSP48E1이 곱셈 연산에 적합한 이유는 무엇입니까?</li>
+      <li>곱셈기의 3단계 파이프라인이 DSP48E1 내부 구조와 어떻게 대응됩니까?</li>
+      <li><code>m_stall</code> 신호는 기존 파이프라인의 어떤 제어 신호와 OR 결합됩니까?</li>
+    </ul>
+  </aside>
+
+</section>
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>M 확장</strong>은 8개의 정수 곱셈/나눗셈 명령어를 추가하며, 모두 R-Type 형식에 <code>funct7=0000001</code>로 식별된다.
+        Basys 3의 DSP48E1 슬라이스를 활용하면 4개의 슬라이스로 32x32 곱셈을 3사이클 만에 수행할 수 있다.</li>
+    <li><strong>F 확장</strong>은 32개의 전용 부동소수점 레지스터(f0~f31)와 IEEE 754 단정밀도 연산을 지원하나,
+        Basys 3의 리소스 제약으로 소프트웨어 에뮬레이션이 현실적인 선택이다.</li>
+    <li><strong>Zicntr 확장</strong>은 mcycle(사이클 카운터)과 minstret(은퇴 명령어 카운터)를 표준화하며,
+        이 두 값의 비율로 IPC/CPI를 정밀하게 측정할 수 있다.</li>
+    <li>M 확장의 파이프라인 통합은 Load-Use 스톨과 동일한 메커니즘을 사용하며,
+        <code>m_stall</code> 신호를 기존 해저드 유닛에 OR 결합하면 된다.</li>
+    <li>RISC-V의 모듈형 확장 철학 덕분에, 기존 디코더에 <code>funct7</code> 검사 한 줄만 추가하면
+        M 확장을 식별할 수 있다. 이는 ISA 설계의 직교성(orthogonality)이 구현 용이성으로 이어지는 좋은 예이다.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> M 확장의 8개 명령어를 나열하고, 각각의 funct3 값을 적으시오.
+        이 명령어들이 기존 R-Type ADD/SUB와 구분되는 필드는 무엇인가?</li>
+    <li><strong>[이해]</strong> RISC-V에서 0으로 나누기(division by zero) 시 예외(trap)를 발생시키지 않고
+        정해진 값을 반환하는 설계 결정의 장단점을 설명하시오.
+        x86 아키텍처와 비교하여 논하시오.</li>
+    <li><strong>[적용]</strong> 제공된 <code>ch24_multiplier_dsp48e1.sv</code>를 Vivado에서 합성하고,
+        <code>report_utilization</code>으로 DSP48E1 사용량을 확인하시오.
+        <code>(* use_dsp = "yes" *)</code> 속성을 제거하면 결과가 어떻게 달라지는가?</li>
+    <li><strong>[분석]</strong> 다음 프로그램의 CPI를 추정하시오. 파이프라인 곱셈기(3사이클)와
+        반복 나눗셈기(32사이클)를 가정한다.
+        <pre><code>
+loop:
+   MUL  x5, x1, x2    // 곱셈
+   ADD  x6, x5, x3    // x5 의존 → 스톨 발생
+   DIV  x7, x6, x4    // 나눗셈
+   ADDI x1, x1, 1
+   BNE  x1, x10, loop
+        </code></pre>
+    </li>
+    <li><strong>[평가]</strong> Basys 3에서 F 확장의 하드웨어 FPU 전체 구현이 비현실적인 이유를
+        리소스 관점(LUT, DSP48E1, BRAM)에서 정량적으로 분석하시오.
+        대안으로 어떤 전략이 있는지 제시하시오.</li>
+    <li><strong>[창조]</strong> 제공된 <code>ch24_divider_iterative.sv</code>를 기존 5단계 파이프라인
+        프로세서에 통합하시오. 해저드 유닛의 스톨 로직에 <code>div_busy</code> 신호를 추가하고,
+        0으로 나누기 테스트 케이스가 RISC-V 스펙에 부합하는지 검증하시오.</li>
+    <li><strong>[창조]</strong> Zicntr 카운터를 구현하고, 버블 정렬 프로그램과 삽입 정렬 프로그램의
+        IPC를 측정하여 비교하시오. IPC 차이의 원인을 분석하시오.</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    Chapter 25에서는 멀티코어 프로세서와 캐시 일관성(Cache Coherence)의 기초를 다룹니다.
+    단일 코어에서 시작한 우리의 여정이 멀티코어로 확장될 때, 가장 먼저 부딪히는 문제가
+    바로 "여러 코어가 동일한 메모리 주소를 동시에 접근하면 어떻게 되는가?"입니다.
+    MESI 프로토콜의 개요와 RISC-V A 확장(Atomic Extension)의 LR/SC 명령어를 학습하며,
+    이 챕터에서 구현한 M 확장 프로세서가 멀티코어 환경에서 어떻게 활용되는지 살펴봅니다.
+  </p>
+</section>
+
+</body>
+</html>

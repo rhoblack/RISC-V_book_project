@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 520" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="880" height="520" fill="#F8FAFC" rx="8"/>
+  <text x="440" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">정적 분기 예측: Predict-Not-Taken 전략</text>
+
+  <!-- 시나리오 A: 예측 성공 (분기 안함) -->
+  <rect x="30" y="55" width="820" height="190" rx="8" fill="white" stroke="#059669" stroke-width="2"/>
+  <text x="50" y="80" font-size="14" font-weight="700" fill="#059669">시나리오 A: 분기 Not-Taken (예측 성공) → 페널티 0사이클</text>
+
+  <text x="50" y="110" font-size="11" fill="#64748B">BEQ</text>
+  <rect x="100" y="95" width="90" height="28" rx="4" fill="#2563EB"/><text x="145" y="114" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
+  <rect x="200" y="95" width="90" height="28" rx="4" fill="#2563EB"/><text x="245" y="114" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID</text>
+  <rect x="300" y="95" width="90" height="28" rx="4" fill="#2563EB"/><text x="345" y="114" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX ✓</text>
+  <rect x="400" y="95" width="90" height="28" rx="4" fill="#2563EB"/><text x="445" y="114" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM</text>
+  <rect x="500" y="95" width="90" height="28" rx="4" fill="#2563EB"/><text x="545" y="114" text-anchor="middle" font-size="11" font-weight="600" fill="white">WB</text>
+
+  <text x="50" y="145" font-size="11" fill="#64748B">PC+4</text>
+  <rect x="200" y="130" width="90" height="28" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+  <text x="245" y="149" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">IF ✓</text>
+  <rect x="300" y="130" width="90" height="28" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+  <text x="345" y="149" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">ID ✓</text>
+
+  <text x="50" y="180" font-size="11" fill="#64748B">PC+8</text>
+  <rect x="300" y="165" width="90" height="28" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+  <text x="345" y="184" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">IF ✓</text>
+
+  <rect x="620" y="95" width="210" height="50" rx="6" fill="#ECFDF5"/>
+  <text x="725" y="117" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">예측 성공!</text>
+  <text x="725" y="137" text-anchor="middle" font-size="11" fill="#059669">페널티: 0사이클 (이상적)</text>
+
+  <!-- 시나리오 B: 예측 실패 (분기 발생) -->
+  <rect x="30" y="260" width="820" height="190" rx="8" fill="white" stroke="#DC2626" stroke-width="2"/>
+  <text x="50" y="285" font-size="14" font-weight="700" fill="#DC2626">시나리오 B: 분기 Taken (예측 실패) → 페널티 2사이클</text>
+
+  <text x="50" y="315" font-size="11" fill="#64748B">BEQ</text>
+  <rect x="100" y="300" width="90" height="28" rx="4" fill="#2563EB"/><text x="145" y="319" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
+  <rect x="200" y="300" width="90" height="28" rx="4" fill="#2563EB"/><text x="245" y="319" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID</text>
+  <rect x="300" y="300" width="90" height="28" rx="4" fill="#DC2626"/><text x="345" y="319" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX ✗</text>
+  <rect x="400" y="300" width="90" height="28" rx="4" fill="#2563EB"/><text x="445" y="319" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM</text>
+  <rect x="500" y="300" width="90" height="28" rx="4" fill="#2563EB"/><text x="545" y="319" text-anchor="middle" font-size="11" font-weight="600" fill="white">WB</text>
+
+  <text x="50" y="350" font-size="11" fill="#DC2626">PC+4 ✗</text>
+  <rect x="200" y="335" width="90" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="245" y="354" text-anchor="middle" font-size="10" fill="#DC2626">IF → flush</text>
+  <rect x="300" y="335" width="90" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="345" y="354" text-anchor="middle" font-size="10" fill="#DC2626">ID → flush</text>
+
+  <text x="50" y="385" font-size="11" fill="#DC2626">PC+8 ✗</text>
+  <rect x="300" y="370" width="90" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="345" y="389" text-anchor="middle" font-size="10" fill="#DC2626">IF → flush</text>
+
+  <text x="50" y="420" font-size="11" fill="#059669">Target</text>
+  <rect x="400" y="405" width="90" height="28" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+  <text x="445" y="424" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">IF ✓</text>
+
+  <rect x="620" y="300" width="210" height="80" rx="6" fill="#FEF2F2"/>
+  <text x="725" y="322" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">예측 실패!</text>
+  <text x="725" y="342" text-anchor="middle" font-size="11" fill="#DC2626">IF/ID, ID/EX flush</text>
+  <text x="725" y="362" text-anchor="middle" font-size="11" fill="#DC2626">페널티: 2사이클</text>
+
+  <!-- 성능 분석 -->
+  <rect x="30" y="465" width="820" height="42" rx="6" fill="#DBEAFE"/>
+  <text x="440" y="485" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">성능 분석: 분기 비율 20%, 분기 성공률 60% 가정 → 평균 CPI = 1 + 0.20 × 0.60 × 2 = 1.24 (24% 성능 저하)</text>
+  <text x="440" y="502" text-anchor="middle" font-size="11" fill="#64748B">동적 분기 예측(11.5절)으로 예측 정확도를 90% 이상으로 높이면 CPI ≈ 1.04까지 개선 가능</text>
+</svg>

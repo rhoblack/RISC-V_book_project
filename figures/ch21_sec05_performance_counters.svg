@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr5" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">성능 카운터 구조 — mcycle / minstret CSR</text>
+
+  <!-- Pipeline -->
+  <rect x="30" y="55" width="540" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="300" y="75" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">5단계 파이프라인</text>
+
+  <rect x="45" y="90" width="90" height="30" rx="5" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="90" y="110" text-anchor="middle" font-size="10" fill="#1F2937">IF</text>
+
+  <rect x="150" y="90" width="90" height="30" rx="5" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="195" y="110" text-anchor="middle" font-size="10" fill="#1F2937">ID</text>
+
+  <rect x="255" y="90" width="90" height="30" rx="5" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="300" y="110" text-anchor="middle" font-size="10" fill="#1F2937">EX</text>
+
+  <rect x="360" y="90" width="90" height="30" rx="5" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="405" y="110" text-anchor="middle" font-size="10" fill="#1F2937">MEM</text>
+
+  <rect x="465" y="90" width="90" height="30" rx="5" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="510" y="110" text-anchor="middle" font-size="10" fill="#1F2937">WB</text>
+
+  <!-- Clock signal to mcycle -->
+  <line x1="300" y1="135" x2="300" y2="175" stroke="#2563EB" stroke-width="2" marker-end="url(#arr5)"/>
+  <text x="315" y="160" font-size="9" fill="#2563EB">clk</text>
+
+  <!-- WB commit signal to minstret -->
+  <line x1="510" y1="120" x2="510" y2="175" stroke="#059669" stroke-width="2" marker-end="url(#arr5)"/>
+  <text x="540" y="155" font-size="9" fill="#059669">commit</text>
+  <text x="540" y="168" font-size="8" fill="#6B7280">(WB 스테이지)</text>
+
+  <!-- mcycle CSR -->
+  <rect x="180" y="180" width="240" height="100" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="300" y="205" text-anchor="middle" font-size="12" font-weight="bold" fill="#D97706">mcycle (0xB00)</text>
+  <text x="300" y="225" text-anchor="middle" font-size="10" fill="#1F2937">64비트 사이클 카운터</text>
+  <text x="300" y="245" text-anchor="middle" font-size="10" fill="#6B7280">매 클럭 상승 에지마다 +1</text>
+  <text x="300" y="265" text-anchor="middle" font-size="9" fill="#6B7280">mcycleh (0xB80) = 상위 32비트</text>
+
+  <!-- minstret CSR -->
+  <rect x="440" y="180" width="240" height="100" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="560" y="205" text-anchor="middle" font-size="12" font-weight="bold" fill="#059669">minstret (0xB02)</text>
+  <text x="560" y="225" text-anchor="middle" font-size="10" fill="#1F2937">64비트 명령어 리타이어 카운터</text>
+  <text x="560" y="245" text-anchor="middle" font-size="10" fill="#6B7280">WB에서 유효 명령어 커밋 시 +1</text>
+  <text x="560" y="265" text-anchor="middle" font-size="9" fill="#6B7280">minstreth (0xB82) = 상위 32비트</text>
+
+  <!-- IPC Calculation -->
+  <line x1="300" y1="280" x2="300" y2="320" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="560" y1="280" x2="560" y2="320" stroke="#059669" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <rect x="200" y="320" width="400" height="110" rx="10" fill="#F5F3FF" stroke="#7C3AED" stroke-width="2"/>
+  <text x="400" y="348" text-anchor="middle" font-size="14" font-weight="bold" fill="#7C3AED">IPC (Instructions Per Cycle) 계산</text>
+
+  <text x="400" y="378" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">IPC = minstret / mcycle</text>
+
+  <text x="260" y="408" font-size="10" fill="#6B7280">이상적 파이프라인:</text>
+  <text x="370" y="408" font-size="10" font-weight="bold" fill="#059669">IPC = 1.0</text>
+  <text x="260" y="425" font-size="10" fill="#6B7280">해저드/스톨 포함 실측:</text>
+  <text x="370" y="425" font-size="10" font-weight="bold" fill="#DC2626">IPC ≈ 0.6 ~ 0.8</text>
+
+  <!-- Note -->
+  <rect x="30" y="180" width="140" height="100" rx="6" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="100" y="200" text-anchor="middle" font-size="10" font-weight="bold" fill="#1F2937">카운트 제외</text>
+  <text x="100" y="220" text-anchor="middle" font-size="9" fill="#6B7280">NOP (버블)</text>
+  <text x="100" y="238" text-anchor="middle" font-size="9" fill="#6B7280">플러시된 명령어</text>
+  <text x="100" y="256" text-anchor="middle" font-size="9" fill="#6B7280">스톨 중 명령어</text>
+  <text x="100" y="274" text-anchor="middle" font-size="9" fill="#DC2626">→ minstret 증가 안 함</text>
+</svg>

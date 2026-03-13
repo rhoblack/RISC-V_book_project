@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 550" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="525" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1F2937">Load-Use 해저드 — 포워딩만으로 해결 불가, 1사이클 스톨 필수</text>
+
+  <!-- ===== 상단: 포워딩만 시도 (실패) ===== -->
+  <rect x="20" y="45" width="1010" height="200" rx="8" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="40" y="70" font-size="14" font-weight="bold" fill="#DC2626">포워딩만 시도 (불가능!)</text>
+
+  <!-- 사이클 헤더 -->
+  <text x="260" y="95" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC1</text>
+  <text x="350" y="95" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC2</text>
+  <text x="440" y="95" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC3</text>
+  <text x="530" y="95" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC4</text>
+  <text x="620" y="95" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC5</text>
+  <text x="710" y="95" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC6</text>
+
+  <!-- I1: lw x1, 0(x2) -->
+  <text x="130" y="125" text-anchor="middle" font-size="11" fill="#1F2937" font-family="monospace">lw x1, 0(x2)</text>
+  <rect x="222" y="108" width="76" height="26" rx="3" fill="#2563EB"/>
+  <text x="260" y="126" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IF</text>
+  <rect x="312" y="108" width="76" height="26" rx="3" fill="#3B82F6"/>
+  <text x="350" y="126" text-anchor="middle" font-size="10" fill="white" font-weight="bold">ID</text>
+  <rect x="402" y="108" width="76" height="26" rx="3" fill="#60A5FA"/>
+  <text x="440" y="126" text-anchor="middle" font-size="10" fill="white" font-weight="bold">EX</text>
+  <rect x="492" y="108" width="76" height="26" rx="3" fill="#93C5FD"/>
+  <text x="530" y="126" text-anchor="middle" font-size="10" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="582" y="108" width="76" height="26" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="0.5"/>
+  <text x="620" y="126" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- I2: add x3, x1, x4 -->
+  <text x="130" y="165" text-anchor="middle" font-size="11" fill="#DC2626" font-family="monospace" font-weight="bold">add x3, x1, x4</text>
+  <rect x="312" y="148" width="76" height="26" rx="3" fill="#2563EB"/>
+  <text x="350" y="166" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IF</text>
+  <rect x="402" y="148" width="76" height="26" rx="3" fill="#3B82F6"/>
+  <text x="440" y="166" text-anchor="middle" font-size="10" fill="white" font-weight="bold">ID</text>
+  <rect x="492" y="148" width="76" height="26" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="2"/>
+  <text x="530" y="166" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="bold">EX??</text>
+
+  <!-- 시간 여행 불가 화살표 -->
+  <path d="M 530 134 Q 530 145, 520 148" stroke="#DC2626" stroke-width="2.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arr)"/>
+  <text x="545" y="150" font-size="9" fill="#DC2626" font-weight="bold">MEM 끝나기 전</text>
+  <text x="545" y="162" font-size="9" fill="#DC2626" font-weight="bold">EX 시작 불가!</text>
+  <text x="700" y="165" font-size="12" fill="#DC2626" font-weight="bold">로드 데이터가 아직 없음!</text>
+  <text x="700" y="185" font-size="10" fill="#DC2626">→ 시간을 거슬러 포워딩할 수 없음</text>
+
+  <!-- ===== 하단: 스톨 + 포워딩 (성공) ===== -->
+  <rect x="20" y="260" width="1010" height="280" rx="8" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="40" y="285" font-size="14" font-weight="bold" fill="#059669">1사이클 스톨 + MEM-EX 포워딩 (해결!)</text>
+
+  <!-- 사이클 헤더 -->
+  <text x="260" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC1</text>
+  <text x="350" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC2</text>
+  <text x="440" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC3</text>
+  <text x="530" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC4</text>
+  <text x="620" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC5</text>
+  <text x="710" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC6</text>
+  <text x="800" y="310" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">CC7</text>
+
+  <!-- I1: lw x1, 0(x2) -->
+  <text x="130" y="340" text-anchor="middle" font-size="11" fill="#1F2937" font-family="monospace">lw x1, 0(x2)</text>
+  <rect x="222" y="323" width="76" height="26" rx="3" fill="#2563EB"/>
+  <text x="260" y="341" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IF</text>
+  <rect x="312" y="323" width="76" height="26" rx="3" fill="#3B82F6"/>
+  <text x="350" y="341" text-anchor="middle" font-size="10" fill="white" font-weight="bold">ID</text>
+  <rect x="402" y="323" width="76" height="26" rx="3" fill="#60A5FA"/>
+  <text x="440" y="341" text-anchor="middle" font-size="10" fill="white" font-weight="bold">EX</text>
+  <rect x="492" y="323" width="76" height="26" rx="3" fill="#93C5FD"/>
+  <text x="530" y="341" text-anchor="middle" font-size="10" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="582" y="323" width="76" height="26" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="0.5"/>
+  <text x="620" y="341" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- I2: add x3, x1, x4 (스톨됨) -->
+  <text x="130" y="380" text-anchor="middle" font-size="11" fill="#059669" font-family="monospace" font-weight="bold">add x3, x1, x4</text>
+  <rect x="312" y="363" width="76" height="26" rx="3" fill="#2563EB"/>
+  <text x="350" y="381" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IF</text>
+  <rect x="402" y="363" width="76" height="26" rx="3" fill="#3B82F6"/>
+  <text x="440" y="381" text-anchor="middle" font-size="10" fill="white" font-weight="bold">ID</text>
+
+  <!-- 버블 (스톨) -->
+  <rect x="492" y="363" width="76" height="26" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="530" y="381" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">bubble</text>
+
+  <!-- I2 재개 -->
+  <rect x="582" y="363" width="76" height="26" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="620" y="381" text-anchor="middle" font-size="10" fill="#D97706" font-weight="bold">EX</text>
+  <rect x="672" y="363" width="76" height="26" rx="3" fill="#93C5FD"/>
+  <text x="710" y="381" text-anchor="middle" font-size="10" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="762" y="363" width="76" height="26" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="0.5"/>
+  <text x="800" y="381" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- MEM-EX 포워딩 화살표 -->
+  <path d="M 568 340 Q 590 350, 590 363" stroke="#059669" stroke-width="2.5" fill="none" marker-end="url(#arr-green)"/>
+  <text x="595" y="355" font-size="9" fill="#059669" font-weight="bold">MEM-EX 포워딩</text>
+
+  <!-- 스톨 동작 설명 -->
+  <rect x="40" y="410" width="970" height="120" rx="6" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="60" y="435" font-size="12" font-weight="bold" fill="#059669">스톨 동작 3가지 신호:</text>
+
+  <rect x="60" y="445" width="280" height="35" rx="4" fill="#DBEAFE"/>
+  <text x="70" y="468" font-size="11" fill="#2563EB" font-weight="bold">1. PC_en = 0</text>
+  <text x="165" y="468" font-size="11" fill="#1F2937"> (PC 홀드)</text>
+
+  <rect x="360" y="445" width="280" height="35" rx="4" fill="#DBEAFE"/>
+  <text x="370" y="468" font-size="11" fill="#2563EB" font-weight="bold">2. IF/ID_en = 0</text>
+  <text x="480" y="468" font-size="11" fill="#1F2937"> (IF/ID 홀드)</text>
+
+  <rect x="660" y="445" width="340" height="35" rx="4" fill="#FEE2E2"/>
+  <text x="670" y="468" font-size="11" fill="#DC2626" font-weight="bold">3. ID/EX_flush = 1</text>
+  <text x="810" y="468" font-size="11" fill="#1F2937"> (버블 삽입)</text>
+
+  <text x="60" y="515" font-size="11" fill="#1F2937">Load-Use 감지 조건: ID/EX.mem_read == 1  AND  (ID/EX.rd == IF/ID.rs1  OR  ID/EX.rd == IF/ID.rs2)  AND  ID/EX.rd != 0</text>
+</svg>

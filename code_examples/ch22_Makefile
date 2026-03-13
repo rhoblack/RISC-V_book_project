@@ -1,0 +1,86 @@
+# ============================================================
+# ch22_Makefile — RV32I 크로스 컴파일 빌드 시스템
+# RISC-V 프로세서 설계 완전정복 | Chapter 22
+# ============================================================
+# 사용법:
+#   make            — 전체 빌드 (ELF → BIN → HEX)
+#   make sim        — 시뮬레이션용 HEX 생성
+#   make clean      — 빌드 산출물 삭제
+#   make dump       — 디스어셈블리 출력
+# ============================================================
+
+# ---- 툴체인 설정 ----
+PREFIX   = riscv32-unknown-elf-
+CC       = $(PREFIX)gcc
+AS       = $(PREFIX)as
+LD       = $(PREFIX)ld
+OBJCOPY  = $(PREFIX)objcopy
+OBJDUMP  = $(PREFIX)objdump
+SIZE     = $(PREFIX)size
+
+# ---- 컴파일 옵션 ----
+ARCH     = rv32i
+ABI      = ilp32
+CFLAGS   = -march=$(ARCH) -mabi=$(ABI) -Os -Wall -Wextra \
+           -ffreestanding -nostdlib -nostartfiles \
+           -fno-builtin -fdata-sections -ffunction-sections
+ASFLAGS  = -march=$(ARCH) -mabi=$(ABI)
+LDFLAGS  = -T ch22_linker.ld -nostdlib --gc-sections \
+           -Map=firmware.map
+
+# ---- 소스 파일 ----
+ASM_SRCS = ch22_startup.S
+C_SRCS   = ch22_main.c ch22_drivers.c
+
+# ---- 오브젝트 파일 ----
+OBJS     = $(ASM_SRCS:.S=.o) $(C_SRCS:.c=.o)
+
+# ---- 출력 파일 ----
+TARGET   = firmware
+
+# ============================================================
+# 빌드 규칙
+# ============================================================
+
+.PHONY: all sim clean dump
+
+all: $(TARGET).elf $(TARGET).bin $(TARGET).hex
+	@echo "============================================"
+	@echo "  Build complete: $(TARGET).elf"
+	@echo "============================================"
+	$(SIZE) $(TARGET).elf
+
+# ELF 링크
+$(TARGET).elf: $(OBJS) ch22_linker.ld
+	$(LD) $(LDFLAGS) -o $@ $(OBJS)
+
+# 바이너리 변환 (FPGA BRAM 초기화용)
+$(TARGET).bin: $(TARGET).elf
+	$(OBJCOPY) -O binary $< $@
+
+# 16진수 파일 변환 (시뮬레이션 $readmemh용)
+$(TARGET).hex: $(TARGET).elf
+	$(OBJCOPY) -O verilog $< $@
+
+# 어셈블리 파일 컴파일
+%.o: %.S
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# C 파일 컴파일
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# ---- 시뮬레이션 타겟 ----
+sim: $(TARGET).hex
+	@echo "Simulation HEX file: $(TARGET).hex"
+	@echo "Use with: \$$readmemh(\"$(TARGET).hex\", mem);"
+
+# ---- 디스어셈블리 ----
+dump: $(TARGET).elf
+	$(OBJDUMP) -d -S -t $< > $(TARGET).dump
+	@echo "Disassembly: $(TARGET).dump"
+
+# ---- 정리 ----
+clean:
+	rm -f $(OBJS) $(TARGET).elf $(TARGET).bin $(TARGET).hex \
+	      $(TARGET).map $(TARGET).dump

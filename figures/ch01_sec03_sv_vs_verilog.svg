@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 520" font-family="sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="#00000020"/>
+    </filter>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="850" height="520" rx="12" fill="#F8FAFC"/>
+
+  <!-- 제목 -->
+  <text x="425" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E293B">SystemVerilog vs Verilog 핵심 비교</text>
+  <text x="425" y="55" text-anchor="middle" font-size="12" fill="#64748B">합성 가능 코드 작성 시 반드시 알아야 할 차이점</text>
+
+  <!-- Verilog 영역 (왼쪽) -->
+  <rect x="30" y="75" width="380" height="420" rx="10" fill="white" stroke="#94A3B8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="30" y="75" width="380" height="36" rx="10" fill="#94A3B8"/>
+  <text x="220" y="99" text-anchor="middle" font-size="14" font-weight="bold" fill="white">Verilog (IEEE 1364)</text>
+
+  <!-- SystemVerilog 영역 (오른쪽) -->
+  <rect x="440" y="75" width="380" height="420" rx="10" fill="white" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="440" y="75" width="380" height="36" rx="10" fill="#2563EB"/>
+  <text x="630" y="99" text-anchor="middle" font-size="14" font-weight="bold" fill="white">SystemVerilog (IEEE 1800)</text>
+
+  <!-- 비교 항목 1: 데이터 타입 -->
+  <rect x="50" y="125" width="340" height="55" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="60" y="143" font-size="11" font-weight="bold" fill="#475569">데이터 타입</text>
+  <text x="60" y="168" font-size="12" fill="#64748B" font-family="monospace">reg, wire</text>
+
+  <rect x="460" y="125" width="340" height="55" rx="6" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="143" font-size="11" font-weight="bold" fill="#1E40AF">데이터 타입</text>
+  <text x="470" y="168" font-size="12" fill="#2563EB" font-family="monospace">logic (통합 타입)</text>
+
+  <!-- 비교 항목 2: 조합 논리 -->
+  <rect x="50" y="195" width="340" height="55" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="60" y="213" font-size="11" font-weight="bold" fill="#475569">조합 논리</text>
+  <text x="60" y="238" font-size="12" fill="#64748B" font-family="monospace">always @(*)</text>
+
+  <rect x="460" y="195" width="340" height="55" rx="6" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="213" font-size="11" font-weight="bold" fill="#1E40AF">조합 논리</text>
+  <text x="470" y="238" font-size="12" fill="#2563EB" font-family="monospace">always_comb (래치 방지 검사)</text>
+
+  <!-- 비교 항목 3: 순차 논리 -->
+  <rect x="50" y="265" width="340" height="55" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="60" y="283" font-size="11" font-weight="bold" fill="#475569">순차 논리</text>
+  <text x="60" y="308" font-size="12" fill="#64748B" font-family="monospace">always @(posedge clk)</text>
+
+  <rect x="460" y="265" width="340" height="55" rx="6" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="283" font-size="11" font-weight="bold" fill="#1E40AF">순차 논리</text>
+  <text x="470" y="308" font-size="12" fill="#2563EB" font-family="monospace">always_ff @(posedge clk)</text>
+
+  <!-- 비교 항목 4: 열거형 -->
+  <rect x="50" y="335" width="340" height="55" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="60" y="353" font-size="11" font-weight="bold" fill="#475569">상태 정의</text>
+  <text x="60" y="378" font-size="12" fill="#64748B" font-family="monospace">parameter / localparam</text>
+
+  <rect x="460" y="335" width="340" height="55" rx="6" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="353" font-size="11" font-weight="bold" fill="#1E40AF">상태 정의</text>
+  <text x="470" y="378" font-size="12" fill="#2563EB" font-family="monospace">typedef enum logic {...}</text>
+
+  <!-- 비교 항목 5: 인터페이스 -->
+  <rect x="50" y="405" width="340" height="55" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="60" y="423" font-size="11" font-weight="bold" fill="#475569">모듈 포트</text>
+  <text x="60" y="448" font-size="12" fill="#64748B" font-family="monospace">개별 wire/reg 선언</text>
+
+  <rect x="460" y="405" width="340" height="55" rx="6" fill="#DBEAFE" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="423" font-size="11" font-weight="bold" fill="#1E40AF">모듈 포트</text>
+  <text x="470" y="448" font-size="12" fill="#2563EB" font-family="monospace">interface + modport</text>
+
+  <!-- 화살표 (업그레이드) -->
+  <text x="425" y="155" text-anchor="middle" font-size="16" fill="#059669">&#x27A1;</text>
+  <text x="425" y="225" text-anchor="middle" font-size="16" fill="#059669">&#x27A1;</text>
+  <text x="425" y="295" text-anchor="middle" font-size="16" fill="#059669">&#x27A1;</text>
+  <text x="425" y="365" text-anchor="middle" font-size="16" fill="#059669">&#x27A1;</text>
+  <text x="425" y="435" text-anchor="middle" font-size="16" fill="#059669">&#x27A1;</text>
+
+  <!-- 하단 메시지 -->
+  <text x="425" y="510" text-anchor="middle" font-size="10" fill="#94A3B8">그림 1.2: Verilog에서 SystemVerilog로의 핵심 변경 사항 — 본 교재는 오른쪽(SystemVerilog) 문법만 사용</text>
+</svg>

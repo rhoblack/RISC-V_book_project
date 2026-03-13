@@ -1,0 +1,283 @@
+/* ================================================
+   RISC-V 프로세서 설계 완전정복 — 교재 스타일시트
+   ================================================ */
+
+/* --- 색상 변수 --- */
+:root {
+  --color-primary: #2563EB;
+  --color-primary-light: #3B82F6;
+  --color-primary-bg: #DBEAFE;
+  --color-secondary: #059669;
+  --color-accent: #D97706;
+  --color-danger: #DC2626;
+  --color-text: #1F2937;
+  --color-text-light: #6B7280;
+  --color-bg: #FFFFFF;
+  --color-bg-gray: #F9FAFB;
+  --color-border: #E5E7EB;
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* --- 기본 레이아웃 --- */
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  line-height: 1.8;
+  font-size: 16px;
+}
+
+/* --- 챕터 헤더 --- */
+.chapter-header {
+  border-bottom: 3px solid var(--color-primary);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chapter-number {
+  display: block;
+  font-size: 1rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.chapter-header h1 {
+  font-size: 2.2rem;
+  color: var(--color-text);
+  margin: 0.3rem 0;
+}
+
+.chapter-intro {
+  font-size: 1.1rem;
+  color: var(--color-text-light);
+  font-style: italic;
+}
+
+/* --- 학습 목표 --- */
+.learning-objectives {
+  background: var(--color-primary-bg);
+  border-left: 4px solid var(--color-primary);
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.learning-objectives h2 {
+  color: var(--color-primary);
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+
+.learning-objectives li {
+  margin: 0.4rem 0;
+}
+
+/* --- 제목 --- */
+h2 {
+  color: var(--color-primary);
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+  margin-top: 2.5rem;
+}
+
+h3 {
+  color: var(--color-text);
+  font-size: 1.2rem;
+  margin-top: 1.5rem;
+}
+
+/* --- 비유 박스 --- */
+.analogy {
+  background: #FEF3C7;
+  border-left: 4px solid var(--color-accent);
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+}
+
+/* --- 코드 블록 --- */
+pre {
+  background: #1E293B;
+  color: #E2E8F0;
+  padding: 1.2rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+code {
+  font-family: var(--font-mono);
+}
+
+p code, li code {
+  background: var(--color-bg-gray);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--color-danger);
+}
+
+/* --- SystemVerilog 구문 하이라이트 --- */
+.keyword { color: #C084FC; font-weight: 600; }
+.type { color: #67E8F9; }
+.comment { color: #94A3B8; font-style: italic; }
+.string { color: #86EFAC; }
+.number { color: #FCA5A5; }
+.signal { color: #FDE68A; }
+.module-name { color: #93C5FD; font-weight: 600; }
+
+/* --- 그림/다이어그램 --- */
+figure {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+figure img {
+  max-width: 100%;
+  height: auto;
+}
+
+figcaption {
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* --- 표 --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+}
+
+th {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.7rem 1rem;
+  text-align: left;
+}
+
+td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+tr:nth-child(even) {
+  background: var(--color-bg-gray);
+}
+
+/* --- aside 박스 공통 --- */
+aside {
+  padding: 1rem 1.2rem;
+  margin: 1.2rem 0;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+aside strong:first-child {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+/* 💡 실무 팁 */
+aside.tip {
+  background: #ECFDF5;
+  border-color: var(--color-secondary);
+}
+
+/* ❓ 수강생 단골 질문 */
+aside.faq {
+  background: #EFF6FF;
+  border-color: var(--color-primary-light);
+}
+
+/* 🎯 면접 포인트 */
+aside.interview {
+  background: #FEF2F2;
+  border-color: var(--color-danger);
+}
+
+/* 📌 강사 꿀팁 */
+aside.instructor-tip {
+  background: #FFFBEB;
+  border-color: var(--color-accent);
+}
+
+/* 🔍 스스로 점검 */
+aside.metacognition {
+  background: #F5F3FF;
+  border-color: #7C3AED;
+}
+
+/* --- 챕터 마무리 --- */
+.chapter-summary {
+  background: var(--color-bg-gray);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-top: 3rem;
+  border: 1px solid var(--color-border);
+}
+
+.chapter-summary h2 {
+  border-bottom: none;
+  margin-top: 0;
+}
+
+/* --- 연습문제 --- */
+.exercises {
+  margin-top: 2rem;
+}
+
+.exercises ol li {
+  margin: 1rem 0;
+  line-height: 1.6;
+}
+
+/* --- 다음 챕터 예고 --- */
+.next-chapter {
+  background: var(--color-primary-bg);
+  padding: 1.2rem 1.5rem;
+  border-radius: 8px;
+  margin-top: 2rem;
+}
+
+.next-chapter h2 {
+  color: var(--color-primary);
+  border-bottom: none;
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+/* --- 인쇄 스타일 --- */
+@media print {
+  body {
+    max-width: 100%;
+    padding: 0;
+    font-size: 11pt;
+  }
+
+  pre {
+    background: #F1F5F9;
+    color: #1E293B;
+    border: 1px solid #CBD5E1;
+  }
+
+  aside {
+    break-inside: avoid;
+  }
+
+  .chapter-header {
+    break-after: avoid;
+  }
+}

@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 520" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 16px; font-weight: bold; fill: #1e293b; text-anchor: middle; }
+    .label { font-size: 12px; fill: #1e293b; text-anchor: middle; }
+    .small { font-size: 10px; fill: #64748b; text-anchor: middle; }
+    .box { rx: 8; ry: 8; }
+  </style>
+
+  <text x="440" y="30" class="title">토너먼트 분기 예측기 구조</text>
+
+  <!-- PC 입력 -->
+  <rect x="360" y="50" width="160" height="40" fill="#2563EB" class="box"/>
+  <text x="440" y="75" class="label" fill="white" font-weight="bold">분기 PC</text>
+
+  <!-- 화살표: PC → 3개 테이블 -->
+  <line x1="400" y1="90" x2="150" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+  <line x1="440" y1="90" x2="440" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+  <line x1="480" y1="90" x2="730" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 지역 예측기 (Local Predictor) -->
+  <rect x="40" y="140" width="220" height="160" fill="#DBEAFE" class="box" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="150" y="165" class="label" font-weight="bold">지역 예측기 (Local)</text>
+
+  <!-- Local History Table -->
+  <rect x="60" y="180" width="180" height="30" fill="white" class="box" stroke="#3B82F6"/>
+  <text x="150" y="200" class="label">지역 이력 테이블 (BHT)</text>
+
+  <!-- Local Pattern Table -->
+  <rect x="60" y="220" width="180" height="30" fill="white" class="box" stroke="#3B82F6"/>
+  <text x="150" y="240" class="label">지역 패턴 테이블 (PHT)</text>
+
+  <text x="150" y="275" class="small">각 분기의 개별 이력 추적</text>
+  <text x="150" y="290" class="small">loop 분기에 강함</text>
+
+  <!-- 선택기 (Chooser) -->
+  <rect x="310" y="140" width="260" height="160" fill="#DBEAFE" class="box" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="440" y="165" class="label" font-weight="bold">메타 예측기 (Chooser)</text>
+
+  <!-- 2-bit Counter Array -->
+  <rect x="330" y="185" width="220" height="40" fill="white" class="box" stroke="#3B82F6"/>
+  <text x="440" y="200" class="label">2-bit 포화 카운터 배열</text>
+  <text x="440" y="215" class="small">(PC 인덱싱)</text>
+
+  <text x="440" y="255" class="small">00, 01 → 지역 예측기 선택</text>
+  <text x="440" y="275" class="small">10, 11 → 전역 예측기 선택</text>
+  <text x="440" y="295" class="small">예측 결과에 따라 갱신</text>
+
+  <!-- 전역 예측기 (Global Predictor) -->
+  <rect x="620" y="140" width="220" height="160" fill="#DBEAFE" class="box" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="730" y="165" class="label" font-weight="bold">전역 예측기 (Global)</text>
+
+  <!-- GHR -->
+  <rect x="640" y="180" width="180" height="30" fill="white" class="box" stroke="#3B82F6"/>
+  <text x="730" y="200" class="label">전역 이력 레지스터 (GHR)</text>
+
+  <!-- Global PHT -->
+  <rect x="640" y="220" width="180" height="30" fill="white" class="box" stroke="#3B82F6"/>
+  <text x="730" y="240" class="label">전역 패턴 테이블 (PHT)</text>
+
+  <text x="730" y="275" class="small">모든 분기의 전체 이력 공유</text>
+  <text x="730" y="290" class="small">상관 분기(correlated)에 강함</text>
+
+  <!-- 화살표: 예측기 → MUX -->
+  <line x1="150" y1="300" x2="150" y2="360" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+  <text x="150" y="340" class="small">예측 P_L</text>
+
+  <line x1="730" y1="300" x2="730" y2="360" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+  <text x="730" y="340" class="small">예측 P_G</text>
+
+  <line x1="440" y1="300" x2="440" y2="360" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+  <text x="440" y="340" class="small">선택 신호</text>
+
+  <!-- MUX -->
+  <rect x="300" y="360" width="280" height="50" fill="#2563EB" class="box"/>
+  <text x="440" y="390" class="label" fill="white" font-weight="bold">선택 멀티플렉서 (MUX)</text>
+
+  <!-- 화살표: MUX → 최종 예측 -->
+  <line x1="440" y1="410" x2="440" y2="450" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow2)"/>
+
+  <!-- 최종 예측 결과 -->
+  <rect x="330" y="450" width="220" height="45" fill="#2563EB" class="box"/>
+  <text x="440" y="470" class="label" fill="white" font-weight="bold">최종 예측 결과</text>
+  <text x="440" y="487" class="small" fill="#DBEAFE">Taken / Not-Taken</text>
+
+  <!-- 갱신 화살표 (피드백) -->
+  <path d="M 550,475 L 830,475 L 830,200 L 840,200" stroke="#64748b" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow2)"/>
+  <text x="830" y="350" class="small" transform="rotate(-90, 830, 350)">실제 결과 피드백 (갱신)</text>
+
+  <path d="M 330,475 L 30,475 L 30,200 L 40,200" stroke="#64748b" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow2)"/>
+  <text x="30" y="350" class="small" transform="rotate(-90, 30, 350)">실제 결과 피드백 (갱신)</text>
+</svg>

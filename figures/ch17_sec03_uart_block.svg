@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 500" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr3r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="500" fill="#FFFFFF" rx="8"/>
+  <text x="425" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2563EB">UART 컨트롤러 블록 다이어그램</text>
+
+  <!-- APB Interface -->
+  <rect x="30" y="100" width="120" height="280" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="90" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">APB</text>
+  <text x="90" y="146" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">인터페이스</text>
+  <text x="90" y="180" text-anchor="middle" font-size="10" fill="#1F2937">PSEL</text>
+  <text x="90" y="196" text-anchor="middle" font-size="10" fill="#1F2937">PENABLE</text>
+  <text x="90" y="212" text-anchor="middle" font-size="10" fill="#1F2937">PWRITE</text>
+  <text x="90" y="228" text-anchor="middle" font-size="10" fill="#1F2937">PADDR[3:0]</text>
+  <text x="90" y="244" text-anchor="middle" font-size="10" fill="#1F2937">PWDATA</text>
+  <text x="90" y="260" text-anchor="middle" font-size="10" fill="#1F2937">PRDATA</text>
+  <text x="90" y="276" text-anchor="middle" font-size="10" fill="#1F2937">PREADY</text>
+
+  <!-- Register Map -->
+  <rect x="190" y="70" width="160" height="180" rx="6" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="270" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">레지스터 맵</text>
+  <text x="200" y="115" font-size="10" fill="#1F2937" font-family="monospace">0x00: TX_DATA</text>
+  <text x="200" y="133" font-size="10" fill="#1F2937" font-family="monospace">0x04: RX_DATA</text>
+  <text x="200" y="151" font-size="10" fill="#1F2937" font-family="monospace">0x08: STATUS</text>
+  <text x="200" y="169" font-size="10" fill="#1F2937" font-family="monospace">0x0C: CTRL</text>
+  <text x="200" y="187" font-size="10" fill="#1F2937" font-family="monospace">0x10: BAUD_DIV</text>
+  <text x="200" y="205" font-size="10" fill="#1F2937" font-family="monospace">0x14: INT_EN</text>
+  <text x="200" y="223" font-size="10" fill="#1F2937" font-family="monospace">0x18: INT_STATUS</text>
+
+  <!-- TX Path -->
+  <rect x="400" y="70" width="130" height="60" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="465" y="96" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">TX FIFO</text>
+  <text x="465" y="114" text-anchor="middle" font-size="10" fill="#1F2937">8엔트리 × 8비트</text>
+
+  <rect x="580" y="70" width="130" height="60" rx="6" fill="#2563EB"/>
+  <text x="645" y="96" text-anchor="middle" font-size="12" font-weight="bold" fill="white">TX 시프트</text>
+  <text x="645" y="114" text-anchor="middle" font-size="10" fill="white">레지스터</text>
+
+  <!-- RX Path -->
+  <rect x="580" y="180" width="130" height="60" rx="6" fill="#2563EB"/>
+  <text x="645" y="206" text-anchor="middle" font-size="12" font-weight="bold" fill="white">RX 시프트</text>
+  <text x="645" y="224" text-anchor="middle" font-size="10" fill="white">레지스터</text>
+
+  <rect x="400" y="180" width="130" height="60" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="465" y="206" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">RX FIFO</text>
+  <text x="465" y="224" text-anchor="middle" font-size="10" fill="#1F2937">8엔트리 × 8비트</text>
+
+  <!-- Baud Rate Generator -->
+  <rect x="400" y="290" width="310" height="55" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="555" y="314" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">보드레이트 생성기 (Baud Rate Generator)</text>
+  <text x="555" y="332" text-anchor="middle" font-size="10" fill="#1F2937">BAUD_DIV 레지스터 기반 분주 → 16× 오버샘플링 클럭</text>
+
+  <!-- TX/RX external -->
+  <rect x="760" y="80" width="70" height="40" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="795" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">TX 핀</text>
+
+  <rect x="760" y="190" width="70" height="40" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="795" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">RX 핀</text>
+
+  <!-- Arrows -->
+  <line x1="150" y1="200" x2="185" y2="200" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="350" y1="100" x2="395" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="530" y1="100" x2="575" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="710" y1="100" x2="755" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+
+  <line x1="755" y1="210" x2="715" y2="210" stroke="#DC2626" stroke-width="2" marker-end="url(#arr3r)"/>
+  <line x1="575" y1="210" x2="535" y2="210" stroke="#DC2626" stroke-width="2" marker-end="url(#arr3r)"/>
+  <line x1="395" y1="210" x2="355" y2="210" stroke="#DC2626" stroke-width="2" marker-end="url(#arr3r)"/>
+
+  <!-- Interrupt -->
+  <rect x="190" y="380" width="160" height="45" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="270" y="400" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626">인터럽트 로직</text>
+  <text x="270" y="416" text-anchor="middle" font-size="10" fill="#1F2937">uart_irq 출력</text>
+
+  <!-- Basys 3 label -->
+  <rect x="400" y="400" width="310" height="80" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="555" y="425" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">Basys 3 USB-UART (FTDI)</text>
+  <text x="555" y="445" text-anchor="middle" font-size="10" fill="#1F2937">TX → J1 Pin A18 (FPGA → PC)</text>
+  <text x="555" y="461" text-anchor="middle" font-size="10" fill="#1F2937">RX ← J1 Pin B18 (PC → FPGA)</text>
+  <text x="555" y="477" text-anchor="middle" font-size="10" fill="#6B7280">기본 설정: 115200 baud, 8N1</text>
+</svg>

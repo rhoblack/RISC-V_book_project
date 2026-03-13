@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="a1" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="550" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1F2937">파이프라인 레지스터 상세 구조</text>
+  <text x="550" y="48" text-anchor="middle" font-size="12" fill="#6B7280">각 파이프라인 레지스터가 전달하는 필드를 상세 표기</text>
+
+  <!-- ===== IF/ID 레지스터 ===== -->
+  <rect x="30" y="75" width="230" height="260" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <rect x="30" y="75" width="230" height="32" rx="8" fill="#D97706"/>
+  <rect x="30" y="95" width="230" height="12" fill="#D97706"/>
+  <text x="145" y="97" text-anchor="middle" font-size="14" fill="white" font-weight="bold">IF/ID 레지스터</text>
+
+  <rect x="45" y="120" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="145" y="139" text-anchor="middle" font-size="11" fill="#1F2937">instr [31:0] — 명령어</text>
+
+  <rect x="45" y="155" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="145" y="174" text-anchor="middle" font-size="11" fill="#1F2937">pc [31:0] — 현재 PC</text>
+
+  <rect x="45" y="190" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="145" y="209" text-anchor="middle" font-size="11" fill="#1F2937">pc_plus4 [31:0] — PC+4</text>
+
+  <text x="145" y="245" text-anchor="middle" font-size="10" fill="#92400E" font-weight="bold">총 96비트</text>
+  <text x="145" y="265" text-anchor="middle" font-size="10" fill="#6B7280">IF 스테이지 출력을</text>
+  <text x="145" y="280" text-anchor="middle" font-size="10" fill="#6B7280">ID 스테이지 입력으로 전달</text>
+
+  <!-- 화살표 IF/ID → ID/EX -->
+  <line x1="260" y1="205" x2="290" y2="205" stroke="#2563EB" stroke-width="2" marker-end="url(#a1)"/>
+
+  <!-- ===== ID/EX 레지스터 ===== -->
+  <rect x="300" y="65" width="230" height="380" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <rect x="300" y="65" width="230" height="32" rx="8" fill="#D97706"/>
+  <rect x="300" y="85" width="230" height="12" fill="#D97706"/>
+  <text x="415" y="87" text-anchor="middle" font-size="14" fill="white" font-weight="bold">ID/EX 레지스터</text>
+
+  <rect x="315" y="110" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="129" text-anchor="middle" font-size="11" fill="#1F2937">rs1_data [31:0]</text>
+
+  <rect x="315" y="145" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="164" text-anchor="middle" font-size="11" fill="#1F2937">rs2_data [31:0]</text>
+
+  <rect x="315" y="180" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="199" text-anchor="middle" font-size="11" fill="#1F2937">imm [31:0] — 즉치수</text>
+
+  <rect x="315" y="215" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="234" text-anchor="middle" font-size="11" fill="#1F2937">pc [31:0]</text>
+
+  <rect x="315" y="250" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="269" text-anchor="middle" font-size="11" fill="#1F2937">pc_plus4 [31:0]</text>
+
+  <rect x="315" y="285" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="304" text-anchor="middle" font-size="11" fill="#1F2937">rs1_addr [4:0], rs2_addr [4:0]</text>
+
+  <rect x="315" y="320" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="415" y="339" text-anchor="middle" font-size="11" fill="#1F2937">rd_addr [4:0]</text>
+
+  <rect x="315" y="355" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6"/>
+  <text x="415" y="374" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">제어 신호 묶음</text>
+
+  <text x="415" y="410" text-anchor="middle" font-size="10" fill="#92400E" font-weight="bold">총 ~180비트</text>
+  <text x="415" y="430" text-anchor="middle" font-size="10" fill="#6B7280">데이터 + 제어 신호 모두 전달</text>
+
+  <!-- 화살표 ID/EX → EX/MEM -->
+  <line x1="530" y1="255" x2="560" y2="255" stroke="#2563EB" stroke-width="2" marker-end="url(#a1)"/>
+
+  <!-- ===== EX/MEM 레지스터 ===== -->
+  <rect x="570" y="75" width="230" height="340" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <rect x="570" y="75" width="230" height="32" rx="8" fill="#D97706"/>
+  <rect x="570" y="95" width="230" height="12" fill="#D97706"/>
+  <text x="685" y="97" text-anchor="middle" font-size="14" fill="white" font-weight="bold">EX/MEM 레지스터</text>
+
+  <rect x="585" y="120" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="685" y="139" text-anchor="middle" font-size="11" fill="#1F2937">alu_result [31:0]</text>
+
+  <rect x="585" y="155" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="685" y="174" text-anchor="middle" font-size="11" fill="#1F2937">rs2_data [31:0] — Store 데이터</text>
+
+  <rect x="585" y="190" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="685" y="209" text-anchor="middle" font-size="11" fill="#1F2937">pc_plus4 [31:0]</text>
+
+  <rect x="585" y="225" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="685" y="244" text-anchor="middle" font-size="11" fill="#1F2937">rd_addr [4:0]</text>
+
+  <rect x="585" y="260" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="685" y="279" text-anchor="middle" font-size="11" fill="#1F2937">funct3 [2:0]</text>
+
+  <rect x="585" y="295" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6"/>
+  <text x="685" y="314" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">제어 신호 (MEM/WB용)</text>
+
+  <text x="685" y="355" text-anchor="middle" font-size="10" fill="#92400E" font-weight="bold">총 ~110비트</text>
+  <text x="685" y="375" text-anchor="middle" font-size="10" fill="#6B7280">ALU 결과 + 메모리 접근 정보</text>
+
+  <!-- 화살표 EX/MEM → MEM/WB -->
+  <line x1="800" y1="235" x2="830" y2="235" stroke="#2563EB" stroke-width="2" marker-end="url(#a1)"/>
+
+  <!-- ===== MEM/WB 레지스터 ===== -->
+  <rect x="840" y="75" width="230" height="300" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <rect x="840" y="75" width="230" height="32" rx="8" fill="#D97706"/>
+  <rect x="840" y="95" width="230" height="12" fill="#D97706"/>
+  <text x="955" y="97" text-anchor="middle" font-size="14" fill="white" font-weight="bold">MEM/WB 레지스터</text>
+
+  <rect x="855" y="120" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="955" y="139" text-anchor="middle" font-size="11" fill="#1F2937">alu_result [31:0]</text>
+
+  <rect x="855" y="155" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="955" y="174" text-anchor="middle" font-size="11" fill="#1F2937">mem_rdata [31:0] — 메모리 데이터</text>
+
+  <rect x="855" y="190" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="955" y="209" text-anchor="middle" font-size="11" fill="#1F2937">pc_plus4 [31:0]</text>
+
+  <rect x="855" y="225" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="955" y="244" text-anchor="middle" font-size="11" fill="#1F2937">rd_addr [4:0]</text>
+
+  <rect x="855" y="260" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6"/>
+  <text x="955" y="279" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">제어 신호 (WB용)</text>
+
+  <text x="955" y="320" text-anchor="middle" font-size="10" fill="#92400E" font-weight="bold">총 ~105비트</text>
+  <text x="955" y="340" text-anchor="middle" font-size="10" fill="#6B7280">WB 선택에 필요한 데이터</text>
+
+  <!-- 하단 설명 -->
+  <rect x="30" y="470" width="1040" height="100" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="550" y="498" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">파이프라인 레지스터 설계 핵심 원칙</text>
+  <text x="50" y="522" font-size="11" fill="#1F2937">1. 각 스테이지에서 생성된 결과와, 이후 스테이지에서 필요한 모든 정보를 전달해야 합니다.</text>
+  <text x="50" y="542" font-size="11" fill="#1F2937">2. 제어 신호도 데이터와 함께 파이프라인을 따라 전파됩니다 (예: reg_w_en은 WB까지 전달).</text>
+  <text x="50" y="562" font-size="11" fill="#1F2937">3. 모든 파이프라인 레지스터는 동일한 클록 에지(posedge clk)에서 동시에 래치됩니다.</text>
+
+  <!-- 제어 신호 전파 표시 -->
+  <rect x="315" y="355" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6" stroke-dasharray="4,2"/>
+  <rect x="585" y="295" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6" stroke-dasharray="4,2"/>
+  <rect x="855" y="260" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6" stroke-dasharray="4,2"/>
+
+  <!-- 범례 -->
+  <rect x="30" y="590" width="200" height="28" rx="4" fill="white" stroke="#E5E7EB"/>
+  <text x="140" y="609" text-anchor="middle" font-size="10" fill="#6B7280">= 데이터 필드</text>
+  <rect x="250" y="590" width="200" height="28" rx="4" fill="#EFF6FF" stroke="#3B82F6" stroke-dasharray="4,2"/>
+  <text x="360" y="609" text-anchor="middle" font-size="10" fill="#2563EB">= 제어 신호 필드</text>
+
+  <!-- 제어 신호 세부 항목 -->
+  <rect x="30" y="630" width="1040" height="60" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+  <text x="50" y="652" font-size="11" font-weight="bold" fill="#D97706">제어 신호 전파 경로:</text>
+  <text x="50" y="672" font-size="10" fill="#1F2937">ID/EX: alu_sel, a_sel, b_sel, mem_rw, wb_sel, reg_w_en, pc_sel, funct3 | EX/MEM: mem_rw, wb_sel, reg_w_en, funct3 | MEM/WB: wb_sel, reg_w_en</text>
+</svg>

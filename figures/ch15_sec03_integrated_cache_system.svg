@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 580" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr3r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <filter id="sh" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">그림 15.3: 통합 캐시-메모리 시스템 블록 다이어그램</text>
+
+  <!-- Pipeline CPU -->
+  <rect x="30" y="130" width="160" height="280" rx="10" fill="#EFF6FF" stroke="#2563EB" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="110" y="160" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">파이프라인</text>
+  <text x="110" y="178" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">프로세서</text>
+
+  <!-- IF stage -->
+  <rect x="50" y="195" width="120" height="35" rx="5" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="110" y="217" text-anchor="middle" font-size="12" fill="#1F2937">IF 스테이지</text>
+
+  <!-- MEM stage -->
+  <rect x="50" y="250" width="120" height="35" rx="5" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="110" y="272" text-anchor="middle" font-size="12" fill="#1F2937">MEM 스테이지</text>
+
+  <!-- Stall signal -->
+  <rect x="50" y="310" width="120" height="30" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="110" y="330" text-anchor="middle" font-size="11" fill="#D97706">stall 제어</text>
+
+  <!-- I-Cache -->
+  <rect x="260" y="100" width="160" height="120" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="340" y="130" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">L1 I-Cache</text>
+  <text x="340" y="150" text-anchor="middle" font-size="11" fill="#1F2937">4KB, Direct-Mapped</text>
+  <text x="340" y="168" text-anchor="middle" font-size="11" fill="#1F2937">128 sets x 32B line</text>
+  <rect x="275" y="180" width="130" height="25" rx="4" fill="white" stroke="#3B82F6" stroke-width="1"/>
+  <text x="340" y="197" text-anchor="middle" font-size="10" font-family="monospace" fill="#3B82F6">icache_stall</text>
+
+  <!-- D-Cache -->
+  <rect x="260" y="280" width="160" height="140" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="340" y="310" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">L1 D-Cache</text>
+  <text x="340" y="330" text-anchor="middle" font-size="11" fill="#1F2937">4KB, 2-Way SA</text>
+  <text x="340" y="348" text-anchor="middle" font-size="11" fill="#1F2937">Write-Back + LRU</text>
+  <rect x="275" y="358" width="130" height="25" rx="4" fill="white" stroke="#3B82F6" stroke-width="1"/>
+  <text x="340" y="375" text-anchor="middle" font-size="10" font-family="monospace" fill="#3B82F6">dcache_stall</text>
+  <rect x="275" y="390" width="130" height="25" rx="4" fill="white" stroke="#D97706" stroke-width="1"/>
+  <text x="340" y="407" text-anchor="middle" font-size="10" font-family="monospace" fill="#D97706">dirty eviction</text>
+
+  <!-- Memory Controller -->
+  <rect x="500" y="160" width="170" height="220" rx="10" fill="#EFF6FF" stroke="#2563EB" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="585" y="195" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">메모리</text>
+  <text x="585" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">컨트롤러</text>
+
+  <!-- FSM inside memory controller -->
+  <rect x="515" y="230" width="140" height="30" rx="5" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="585" y="250" text-anchor="middle" font-size="11" fill="#1F2937">미스 처리 FSM</text>
+
+  <rect x="515" y="270" width="140" height="30" rx="5" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="585" y="290" text-anchor="middle" font-size="11" fill="#1F2937">버스트 카운터</text>
+
+  <rect x="515" y="310" width="140" height="30" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="585" y="330" text-anchor="middle" font-size="11" fill="#D97706">아비터 (I/D 선택)</text>
+
+  <rect x="515" y="350" width="140" height="18" rx="3" fill="white" stroke="#3B82F6" stroke-width="1"/>
+  <text x="585" y="363" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B82F6">D-Cache 우선</text>
+
+  <!-- Main Memory -->
+  <rect x="740" y="190" width="130" height="160" rx="10" fill="#F0FDF4" stroke="#059669" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="805" y="225" text-anchor="middle" font-size="14" font-weight="bold" fill="#059669">메인 메모리</text>
+  <text x="805" y="248" text-anchor="middle" font-size="11" fill="#1F2937">SRAM / BRAM</text>
+  <text x="805" y="268" text-anchor="middle" font-size="11" fill="#1F2937">64KB</text>
+  <text x="805" y="300" text-anchor="middle" font-size="11" fill="#6B7280">2-cycle latency</text>
+  <text x="805" y="318" text-anchor="middle" font-size="11" fill="#6B7280">4-beat burst</text>
+
+  <!-- Connections: CPU <-> I-Cache -->
+  <line x1="170" y1="212" x2="260" y2="165" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="260" y1="175" x2="170" y2="215" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="215" y="175" text-anchor="middle" font-size="10" fill="#1F2937">addr/instr</text>
+
+  <!-- CPU <-> D-Cache -->
+  <line x1="170" y1="267" x2="260" y2="320" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="260" y1="340" x2="170" y2="275" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="215" y="310" text-anchor="middle" font-size="10" fill="#1F2937">addr/data</text>
+
+  <!-- Stall connections -->
+  <path d="M 275 193 Q 230 230 170 325" fill="none" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr3r)"/>
+  <path d="M 275 370 Q 230 350 170 335" fill="none" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr3r)"/>
+
+  <!-- I-Cache <-> Mem Controller -->
+  <line x1="420" y1="160" x2="500" y2="240" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="500" y1="250" x2="420" y2="170" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr3)"/>
+
+  <!-- D-Cache <-> Mem Controller -->
+  <line x1="420" y1="340" x2="500" y2="290" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <line x1="500" y1="300" x2="420" y2="360" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr3)"/>
+
+  <!-- Mem Controller <-> Main Memory -->
+  <line x1="670" y1="260" x2="740" y2="260" stroke="#2563EB" stroke-width="3" marker-end="url(#arr3)"/>
+  <line x1="740" y1="280" x2="670" y2="280" stroke="#3B82F6" stroke-width="3" marker-end="url(#arr3)"/>
+  <text x="705" y="252" text-anchor="middle" font-size="10" fill="#1F2937">req/addr</text>
+  <text x="705" y="298" text-anchor="middle" font-size="10" fill="#1F2937">rdata/valid</text>
+
+  <!-- Performance annotations -->
+  <rect x="30" y="460" width="840" height="100" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="50" y="485" font-size="12" font-weight="bold" fill="#1F2937">성능 파라미터 요약</text>
+  <g font-size="11" fill="#1F2937">
+    <text x="50" y="508">I-Cache 히트: 0 사이클 페널티 (CPI 기여 = 0)</text>
+    <text x="50" y="528">D-Cache 히트: 0 사이클 페널티 (CPI 기여 = 0)</text>
+    <text x="450" y="508">I-Cache 미스: 6 사이클 페널티 (대기 2 + 전송 4)</text>
+    <text x="450" y="528">D-Cache 미스 (clean): 6 사이클 | D-Cache 미스 (dirty): 12 사이클</text>
+    <text x="50" y="548" fill="#DC2626" font-weight="bold">CPI = 1 + (i_miss_rate x 6) + (d_miss_rate x 6~12)</text>
+  </g>
+</svg>

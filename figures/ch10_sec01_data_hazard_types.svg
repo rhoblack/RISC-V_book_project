@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 580" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+    <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="525" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1F2937">데이터 해저드의 3가지 유형 — RAW / WAR / WAW</text>
+
+  <!-- ===== RAW 섹션 ===== -->
+  <rect x="20" y="50" width="330" height="220" rx="8" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="185" y="75" text-anchor="middle" font-size="15" font-weight="bold" fill="#DC2626">RAW (Read After Write)</text>
+  <text x="185" y="95" text-anchor="middle" font-size="11" fill="#DC2626">진정한 의존성 (True Dependency)</text>
+
+  <!-- RAW 명령어 -->
+  <rect x="40" y="110" width="290" height="28" rx="4" fill="white" stroke="#DC2626" stroke-width="1"/>
+  <text x="50" y="129" font-size="13" fill="#1F2937" font-family="monospace">I1: add  x1, x2, x3</text>
+  <text x="280" y="129" font-size="11" fill="#DC2626" font-weight="bold">쓰기: x1</text>
+
+  <rect x="40" y="150" width="290" height="28" rx="4" fill="white" stroke="#DC2626" stroke-width="1"/>
+  <text x="50" y="169" font-size="13" fill="#1F2937" font-family="monospace">I2: sub  x4, x1, x5</text>
+  <text x="280" y="169" font-size="11" fill="#DC2626" font-weight="bold">읽기: x1</text>
+
+  <!-- RAW 화살표 -->
+  <line x1="300" y1="138" x2="300" y2="150" stroke="#DC2626" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- RAW 설명 -->
+  <text x="40" y="205" font-size="11" fill="#1F2937">I1이 x1에 값을 쓰기 전에</text>
+  <text x="40" y="220" font-size="11" fill="#1F2937">I2가 x1을 읽으려 함</text>
+  <rect x="40" y="232" width="120" height="22" rx="4" fill="#DC2626"/>
+  <text x="100" y="248" text-anchor="middle" font-size="11" fill="white" font-weight="bold">RV32I에서 발생!</text>
+
+  <!-- ===== WAR 섹션 ===== -->
+  <rect x="365" y="50" width="330" height="220" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="530" y="75" text-anchor="middle" font-size="15" font-weight="bold" fill="#2563EB">WAR (Write After Read)</text>
+  <text x="530" y="95" text-anchor="middle" font-size="11" fill="#2563EB">반의존성 (Anti-Dependency)</text>
+
+  <!-- WAR 명령어 -->
+  <rect x="385" y="110" width="290" height="28" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="395" y="129" font-size="13" fill="#1F2937" font-family="monospace">I1: add  x4, x1, x2</text>
+  <text x="625" y="129" font-size="11" fill="#2563EB" font-weight="bold">읽기: x1</text>
+
+  <rect x="385" y="150" width="290" height="28" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="395" y="169" font-size="13" fill="#1F2937" font-family="monospace">I2: sub  x1, x3, x5</text>
+  <text x="625" y="169" font-size="11" fill="#2563EB" font-weight="bold">쓰기: x1</text>
+
+  <!-- WAR 화살표 -->
+  <line x1="645" y1="138" x2="645" y2="150" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-blue)"/>
+
+  <!-- WAR 설명 -->
+  <text x="385" y="205" font-size="11" fill="#1F2937">I1이 x1을 읽기 전에</text>
+  <text x="385" y="220" font-size="11" fill="#1F2937">I2가 x1을 덮어쓸 수 있음</text>
+  <rect x="385" y="232" width="200" height="22" rx="4" fill="#059669"/>
+  <text x="485" y="248" text-anchor="middle" font-size="11" fill="white" font-weight="bold">RV32I 인-오더 파이프라인: 불발생</text>
+
+  <!-- ===== WAW 섹션 ===== -->
+  <rect x="710" y="50" width="330" height="220" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="875" y="75" text-anchor="middle" font-size="15" font-weight="bold" fill="#2563EB">WAW (Write After Write)</text>
+  <text x="875" y="95" text-anchor="middle" font-size="11" fill="#2563EB">출력 의존성 (Output Dependency)</text>
+
+  <!-- WAW 명령어 -->
+  <rect x="730" y="110" width="290" height="28" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="740" y="129" font-size="13" fill="#1F2937" font-family="monospace">I1: add  x1, x2, x3</text>
+  <text x="970" y="129" font-size="11" fill="#2563EB" font-weight="bold">쓰기: x1</text>
+
+  <rect x="730" y="150" width="290" height="28" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="740" y="169" font-size="13" fill="#1F2937" font-family="monospace">I2: sub  x1, x4, x5</text>
+  <text x="970" y="169" font-size="11" fill="#2563EB" font-weight="bold">쓰기: x1</text>
+
+  <!-- WAW 화살표 -->
+  <line x1="990" y1="138" x2="990" y2="150" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-blue)"/>
+
+  <!-- WAW 설명 -->
+  <text x="730" y="205" font-size="11" fill="#1F2937">두 명령어가 같은 레지스터에 쓰기</text>
+  <text x="730" y="220" font-size="11" fill="#1F2937">순서가 뒤바뀌면 최종값 오류</text>
+  <rect x="730" y="232" width="200" height="22" rx="4" fill="#059669"/>
+  <text x="830" y="248" text-anchor="middle" font-size="11" fill="white" font-weight="bold">RV32I 인-오더 파이프라인: 불발생</text>
+
+  <!-- ===== RV32I 파이프라인에서 RAW만 발생하는 이유 ===== -->
+  <rect x="20" y="290" width="1010" height="280" rx="8" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="525" y="320" text-anchor="middle" font-size="15" font-weight="bold" fill="#059669">RV32I 인-오더(In-Order) 파이프라인에서 RAW만 발생하는 이유</text>
+
+  <!-- 파이프라인 타이밍: RAW 예시 -->
+  <text x="40" y="350" font-size="12" font-weight="bold" fill="#1F2937">RAW 해저드 발생 시나리오:</text>
+
+  <!-- 사이클 헤더 -->
+  <text x="260" y="370" text-anchor="middle" font-size="11" fill="#6B7280">CC1</text>
+  <text x="340" y="370" text-anchor="middle" font-size="11" fill="#6B7280">CC2</text>
+  <text x="420" y="370" text-anchor="middle" font-size="11" fill="#6B7280">CC3</text>
+  <text x="500" y="370" text-anchor="middle" font-size="11" fill="#6B7280">CC4</text>
+  <text x="580" y="370" text-anchor="middle" font-size="11" fill="#6B7280">CC5</text>
+  <text x="660" y="370" text-anchor="middle" font-size="11" fill="#6B7280">CC6</text>
+
+  <!-- I1 -->
+  <text x="130" y="400" text-anchor="middle" font-size="11" fill="#1F2937" font-family="monospace">add x1,x2,x3</text>
+  <rect x="222" y="383" width="76" height="26" rx="3" fill="#2563EB"/>
+  <text x="260" y="401" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="302" y="383" width="76" height="26" rx="3" fill="#3B82F6"/>
+  <text x="340" y="401" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+  <rect x="382" y="383" width="76" height="26" rx="3" fill="#60A5FA"/>
+  <text x="420" y="401" text-anchor="middle" font-size="11" fill="white" font-weight="bold">EX</text>
+  <rect x="462" y="383" width="76" height="26" rx="3" fill="#93C5FD"/>
+  <text x="500" y="401" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="542" y="383" width="76" height="26" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="0.5"/>
+  <text x="580" y="401" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- I2 -->
+  <text x="130" y="440" text-anchor="middle" font-size="11" fill="#1F2937" font-family="monospace">sub x4,x1,x5</text>
+  <rect x="302" y="423" width="76" height="26" rx="3" fill="#2563EB"/>
+  <text x="340" y="441" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="382" y="423" width="76" height="26" rx="3" fill="#3B82F6"/>
+  <text x="420" y="441" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+
+  <!-- 의존성 화살표: WB(CC5) → ID(CC3) 충돌 -->
+  <path d="M 580 409 Q 580 440, 510 440 Q 440 440, 420 423" stroke="#DC2626" stroke-width="2.5" fill="none" stroke-dasharray="6,3" marker-end="url(#arr)"/>
+  <text x="530" y="455" font-size="10" fill="#DC2626" font-weight="bold">x1: WB(CC5)에 쓰지만 ID(CC3)에 읽어야 함!</text>
+
+  <!-- 설명 박스 -->
+  <rect x="40" y="475" width="480" height="80" rx="6" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="55" y="497" font-size="12" font-weight="bold" fill="#059669">WAR이 발생하지 않는 이유</text>
+  <text x="55" y="515" font-size="11" fill="#1F2937">ID 스테이지(CC2)에서 읽기가 완료된 후에</text>
+  <text x="55" y="533" font-size="11" fill="#1F2937">후속 명령어가 WB 스테이지(CC5+)에서 쓰기를 수행 → 순서 보장</text>
+
+  <rect x="540" y="475" width="480" height="80" rx="6" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="555" y="497" font-size="12" font-weight="bold" fill="#059669">WAW가 발생하지 않는 이유</text>
+  <text x="555" y="515" font-size="11" fill="#1F2937">인-오더(순차) 실행 → 항상 프로그램 순서대로 WB 도달</text>
+  <text x="555" y="533" font-size="11" fill="#1F2937">I1이 반드시 I2보다 먼저 WB 완료 → 쓰기 순서 보장</text>
+</svg>

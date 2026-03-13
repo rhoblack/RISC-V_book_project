@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 560" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <text x="475" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E3A5F">2-Way Set-Associative Cache 구조</text>
+
+  <!-- 주소 분해 -->
+  <rect x="30" y="50" width="890" height="55" rx="8" fill="#F0F7FF" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="50" y="82" font-size="13" fill="#1E3A5F" font-weight="bold">Address:</text>
+  <rect x="140" y="60" width="250" height="32" rx="4" fill="#2563EB"/>
+  <text x="265" y="82" text-anchor="middle" font-size="13" fill="white" font-weight="bold">Tag [31:12] (21 bits)</text>
+  <rect x="390" y="60" width="160" height="32" rx="4" fill="#3B82F6"/>
+  <text x="470" y="82" text-anchor="middle" font-size="13" fill="white" font-weight="bold">Index [11:5] (6 bits)</text>
+  <rect x="550" y="60" width="120" height="32" rx="4" fill="#DBEAFE" stroke="#3B82F6"/>
+  <text x="610" y="82" text-anchor="middle" font-size="13" fill="#1E3A5F" font-weight="bold">Offset [4:0]</text>
+  <text x="710" y="82" font-size="11" fill="#6B7280">64 sets x 2 ways x 32B</text>
+
+  <!-- Way 0 -->
+  <rect x="30" y="125" width="420" height="210" rx="10" fill="white" stroke="#2563EB" stroke-width="2"/>
+  <text x="240" y="150" text-anchor="middle" font-size="15" font-weight="bold" fill="#2563EB">Way 0</text>
+
+  <rect x="45" y="160" width="390" height="25" rx="3" fill="#1E3A5F"/>
+  <text x="60" y="178" font-size="11" fill="white" font-weight="bold">V</text>
+  <text x="90" y="178" font-size="11" fill="#FDE68A" font-weight="bold">D</text>
+  <text x="135" y="178" font-size="11" fill="white" font-weight="bold">Tag (21b)</text>
+  <text x="300" y="178" font-size="11" fill="white" font-weight="bold">Data (32 bytes)</text>
+
+  <rect x="45" y="185" width="390" height="22" fill="#F0F7FF" stroke="#CBD5E1"/>
+  <text x="60" y="201" font-size="10" fill="#059669">1</text>
+  <text x="90" y="201" font-size="10" fill="#E11D48">1</text>
+  <text x="135" y="201" font-size="10" fill="#1E3A5F" font-family="monospace">Tag_A</text>
+  <text x="300" y="201" font-size="10" fill="#6B7280" font-family="monospace">Data_A[0..7]</text>
+  <text x="415" y="201" font-size="9" fill="#6B7280">Set 0</text>
+
+  <rect x="45" y="207" width="390" height="22" fill="white" stroke="#CBD5E1"/>
+  <text x="60" y="223" font-size="10" fill="#059669">1</text>
+  <text x="90" y="223" font-size="10" fill="#059669">0</text>
+  <text x="135" y="223" font-size="10" fill="#1E3A5F" font-family="monospace">Tag_C</text>
+  <text x="300" y="223" font-size="10" fill="#6B7280" font-family="monospace">Data_C[0..7]</text>
+  <text x="415" y="223" font-size="9" fill="#6B7280">Set 1</text>
+
+  <text x="240" y="258" font-size="14" fill="#6B7280">. . .</text>
+
+  <rect x="45" y="275" width="390" height="22" fill="#F0F7FF" stroke="#CBD5E1"/>
+  <text x="60" y="291" font-size="10" fill="#9CA3AF">0</text>
+  <text x="90" y="291" font-size="10" fill="#9CA3AF">0</text>
+  <text x="135" y="291" font-size="10" fill="#9CA3AF" font-family="monospace">------</text>
+  <text x="300" y="291" font-size="10" fill="#9CA3AF" font-family="monospace">-----------</text>
+  <text x="415" y="291" font-size="9" fill="#6B7280">Set 63</text>
+
+  <!-- Way 1 -->
+  <rect x="500" y="125" width="420" height="210" rx="10" fill="white" stroke="#3B82F6" stroke-width="2"/>
+  <text x="710" y="150" text-anchor="middle" font-size="15" font-weight="bold" fill="#3B82F6">Way 1</text>
+
+  <rect x="515" y="160" width="390" height="25" rx="3" fill="#1E3A5F"/>
+  <text x="530" y="178" font-size="11" fill="white" font-weight="bold">V</text>
+  <text x="560" y="178" font-size="11" fill="#FDE68A" font-weight="bold">D</text>
+  <text x="605" y="178" font-size="11" fill="white" font-weight="bold">Tag (21b)</text>
+  <text x="770" y="178" font-size="11" fill="white" font-weight="bold">Data (32 bytes)</text>
+
+  <rect x="515" y="185" width="390" height="22" fill="#F0F7FF" stroke="#CBD5E1"/>
+  <text x="530" y="201" font-size="10" fill="#059669">1</text>
+  <text x="560" y="201" font-size="10" fill="#059669">0</text>
+  <text x="605" y="201" font-size="10" fill="#1E3A5F" font-family="monospace">Tag_B</text>
+  <text x="770" y="201" font-size="10" fill="#6B7280" font-family="monospace">Data_B[0..7]</text>
+  <text x="885" y="201" font-size="9" fill="#6B7280">Set 0</text>
+
+  <rect x="515" y="207" width="390" height="22" fill="white" stroke="#CBD5E1"/>
+  <text x="530" y="223" font-size="10" fill="#059669">1</text>
+  <text x="560" y="223" font-size="10" fill="#E11D48">1</text>
+  <text x="605" y="223" font-size="10" fill="#1E3A5F" font-family="monospace">Tag_D</text>
+  <text x="770" y="223" font-size="10" fill="#6B7280" font-family="monospace">Data_D[0..7]</text>
+  <text x="885" y="223" font-size="9" fill="#6B7280">Set 1</text>
+
+  <text x="710" y="258" font-size="14" fill="#6B7280">. . .</text>
+
+  <rect x="515" y="275" width="390" height="22" fill="#F0F7FF" stroke="#CBD5E1"/>
+  <text x="530" y="291" font-size="10" fill="#9CA3AF">0</text>
+  <text x="560" y="291" font-size="10" fill="#9CA3AF">0</text>
+  <text x="605" y="291" font-size="10" fill="#9CA3AF" font-family="monospace">------</text>
+  <text x="770" y="291" font-size="10" fill="#9CA3AF" font-family="monospace">-----------</text>
+  <text x="885" y="291" font-size="9" fill="#6B7280">Set 63</text>
+
+  <!-- LRU 비트 -->
+  <rect x="250" y="350" width="450" height="45" rx="8" fill="#FDE68A" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="475" y="378" text-anchor="middle" font-size="14" font-weight="bold" fill="#92400E">LRU Bit Array (64 bits) - 1 bit per set</text>
+
+  <!-- 비교기 로직 -->
+  <rect x="80" y="420" width="130" height="40" rx="8" fill="#2563EB"/>
+  <text x="145" y="445" text-anchor="middle" font-size="12" fill="white" font-weight="bold">Tag == Way0?</text>
+
+  <rect x="350" y="420" width="130" height="40" rx="8" fill="#3B82F6"/>
+  <text x="415" y="445" text-anchor="middle" font-size="12" fill="white" font-weight="bold">Tag == Way1?</text>
+
+  <!-- OR/MUX -->
+  <rect x="560" y="420" width="100" height="40" rx="8" fill="#059669"/>
+  <text x="610" y="445" text-anchor="middle" font-size="12" fill="white" font-weight="bold">Hit MUX</text>
+
+  <line x1="210" y1="440" x2="348" y2="440" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="480" y1="440" x2="558" y2="440" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Result -->
+  <rect x="720" y="420" width="160" height="40" rx="8" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="800" y="445" text-anchor="middle" font-size="12" fill="#1E3A5F" font-weight="bold">Hit Data / Miss</text>
+
+  <line x1="660" y1="440" x2="718" y2="440" stroke="#059669" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- LRU 교체 설명 -->
+  <rect x="30" y="490" width="890" height="55" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1"/>
+  <text x="50" y="515" font-size="12" font-weight="bold" fill="#92400E">LRU 교체 정책:</text>
+  <text x="180" y="515" font-size="12" fill="#1E3A5F">Hit 시 LRU[set]=접근하지 않은 Way | Miss 시 LRU[set]이 가리키는 Way를 교체 (Dirty면 먼저 Write-Back)</text>
+</svg>

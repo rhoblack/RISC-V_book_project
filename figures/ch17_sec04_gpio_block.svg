@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr4" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect width="800" height="420" fill="#FFFFFF" rx="8"/>
+  <text x="400" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2563EB">GPIO 컨트롤러 블록 다이어그램</text>
+
+  <!-- APB side -->
+  <rect x="30" y="80" width="120" height="200" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="90" y="110" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">APB</text>
+  <text x="90" y="126" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">인터페이스</text>
+  <text x="90" y="160" text-anchor="middle" font-size="10" fill="#1F2937">PADDR[3:0]</text>
+  <text x="90" y="176" text-anchor="middle" font-size="10" fill="#1F2937">PWDATA</text>
+  <text x="90" y="192" text-anchor="middle" font-size="10" fill="#1F2937">PRDATA</text>
+  <text x="90" y="208" text-anchor="middle" font-size="10" fill="#1F2937">PWRITE</text>
+  <text x="90" y="224" text-anchor="middle" font-size="10" fill="#1F2937">PSEL, PENABLE</text>
+  <text x="90" y="260" text-anchor="middle" font-size="10" fill="#1F2937">PREADY=1</text>
+
+  <!-- Register block -->
+  <rect x="200" y="60" width="250" height="250" rx="6" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="325" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">레지스터 맵</text>
+
+  <rect x="220" y="100" width="210" height="35" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="230" y="122" font-size="10" fill="#1F2937" font-family="monospace">0x00: GPIO_DIR  (방향)</text>
+
+  <rect x="220" y="145" width="210" height="35" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="230" y="167" font-size="10" fill="#1F2937" font-family="monospace">0x04: GPIO_OUT  (출력)</text>
+
+  <rect x="220" y="190" width="210" height="35" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="230" y="212" font-size="10" fill="#1F2937" font-family="monospace">0x08: GPIO_IN   (입력)</text>
+
+  <rect x="220" y="235" width="210" height="35" rx="4" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="230" y="257" font-size="10" fill="#1F2937" font-family="monospace">0x0C: GPIO_INTE (인터럽트)</text>
+
+  <!-- Output Logic -->
+  <rect x="500" y="70" width="130" height="70" rx="6" fill="#2563EB"/>
+  <text x="565" y="100" text-anchor="middle" font-size="12" font-weight="bold" fill="white">출력 드라이버</text>
+  <text x="565" y="120" text-anchor="middle" font-size="10" fill="white">DIR &amp; OUT</text>
+
+  <!-- Input Sync -->
+  <rect x="500" y="170" width="130" height="70" rx="6" fill="#2563EB"/>
+  <text x="565" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="white">입력 동기화</text>
+  <text x="565" y="220" text-anchor="middle" font-size="10" fill="white">2단 FF 동기화기</text>
+
+  <!-- Basys 3 peripherals -->
+  <rect x="680" y="50" width="100" height="50" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="730" y="72" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">LED[15:0]</text>
+  <text x="730" y="88" text-anchor="middle" font-size="9" fill="#6B7280">출력</text>
+
+  <rect x="680" y="120" width="100" height="50" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="730" y="142" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">SW[15:0]</text>
+  <text x="730" y="158" text-anchor="middle" font-size="9" fill="#6B7280">입력</text>
+
+  <rect x="680" y="190" width="100" height="50" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="730" y="212" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">BTN[4:0]</text>
+  <text x="730" y="228" text-anchor="middle" font-size="9" fill="#6B7280">입력</text>
+
+  <!-- Arrows -->
+  <line x1="150" y1="180" x2="195" y2="180" stroke="#2563EB" stroke-width="2" marker-end="url(#arr4)"/>
+  <line x1="450" y1="120" x2="495" y2="105" stroke="#2563EB" stroke-width="2" marker-end="url(#arr4)"/>
+  <line x1="450" y1="210" x2="495" y2="205" stroke="#2563EB" stroke-width="2" marker-end="url(#arr4)"/>
+  <line x1="630" y1="100" x2="675" y2="80" stroke="#2563EB" stroke-width="2" marker-end="url(#arr4)"/>
+  <line x1="675" y1="145" x2="635" y2="195" stroke="#2563EB" stroke-width="2" marker-end="url(#arr4)"/>
+  <line x1="675" y1="215" x2="635" y2="210" stroke="#2563EB" stroke-width="2" marker-end="url(#arr4)"/>
+
+  <!-- Description box -->
+  <rect x="50" y="340" width="700" height="60" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="70" y="363" font-size="11" fill="#1F2937"><tspan font-weight="bold">GPIO_DIR:</tspan> 비트=1이면 출력, 비트=0이면 입력 (Basys 3 LED=출력, SW/BTN=입력)</text>
+  <text x="70" y="383" font-size="11" fill="#1F2937"><tspan font-weight="bold">입력 동기화:</tspan> 외부 비동기 신호(스위치/버튼)를 2단 FF로 메타안정성 방지</text>
+</svg>

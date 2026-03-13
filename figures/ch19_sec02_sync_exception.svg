@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+  <style>
+    .box     { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; rx: 8; }
+    .exc-box { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; rx: 8; }
+    .csr-box { fill: #FEF3C7; stroke: #D97706; stroke-width: 2; rx: 8; }
+    .label   { font-size: 13px; fill: #1E3A5F; text-anchor: middle; font-weight: bold; }
+    .sub     { font-size: 11px; fill: #475569; text-anchor: middle; }
+    .title   { font-size: 18px; fill: #1E3A5F; font-weight: bold; text-anchor: middle; }
+    .exc-label { font-size: 12px; fill: #DC2626; text-anchor: middle; font-weight: bold; }
+    .code    { font-size: 11px; fill: #6B7280; text-anchor: middle; font-family: monospace; }
+  </style>
+
+  <text x="430" y="30" class="title">동기 예외 감지 위치와 처리 흐름</text>
+
+  <!-- Pipeline stages -->
+  <rect x="30" y="60" width="130" height="80" class="box"/>
+  <text x="95" y="95" class="label">IF</text>
+  <text x="95" y="115" class="sub">명령어 인출</text>
+
+  <rect x="190" y="60" width="130" height="80" class="box"/>
+  <text x="255" y="95" class="label">ID</text>
+  <text x="255" y="115" class="sub">디코딩</text>
+
+  <rect x="350" y="60" width="130" height="80" class="box"/>
+  <text x="415" y="95" class="label">EX</text>
+  <text x="415" y="115" class="sub">실행</text>
+
+  <rect x="510" y="60" width="130" height="80" class="box"/>
+  <text x="575" y="95" class="label">MEM</text>
+  <text x="575" y="115" class="sub">메모리 접근</text>
+
+  <rect x="670" y="60" width="130" height="80" class="box"/>
+  <text x="735" y="95" class="label">WB</text>
+  <text x="735" y="115" class="sub">Write-Back</text>
+
+  <!-- Arrows between stages -->
+  <line x1="160" y1="100" x2="190" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+  <line x1="320" y1="100" x2="350" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+  <line x1="480" y1="100" x2="510" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+  <line x1="640" y1="100" x2="670" y2="100" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+
+  <!-- Exception detection boxes -->
+  <rect x="190" y="170" width="130" height="70" class="exc-box"/>
+  <text x="255" y="195" class="exc-label">Illegal Instr</text>
+  <text x="255" y="215" class="code">mcause = 2</text>
+  <text x="255" y="230" class="sub">ECALL: mcause = 11</text>
+
+  <rect x="350" y="170" width="130" height="70" class="exc-box"/>
+  <text x="415" y="195" class="exc-label">Misaligned</text>
+  <text x="415" y="215" class="code">Branch Target</text>
+  <text x="415" y="230" class="sub">mcause = 0</text>
+
+  <rect x="510" y="170" width="130" height="70" class="exc-box"/>
+  <text x="575" y="195" class="exc-label">Misaligned</text>
+  <text x="575" y="215" class="code">Load: mcause = 4</text>
+  <text x="575" y="230" class="sub">Store: mcause = 6</text>
+
+  <!-- Detection arrows -->
+  <line x1="255" y1="140" x2="255" y2="170" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <line x1="415" y1="140" x2="415" y2="170" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-red)"/>
+  <line x1="575" y1="140" x2="575" y2="170" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-red)"/>
+
+  <!-- Exception aggregation -->
+  <rect x="280" y="280" width="360" height="50" class="csr-box"/>
+  <text x="460" y="300" class="label" style="fill:#92400E;">예외 수집 (Exception Aggregation)</text>
+  <text x="460" y="318" class="sub" style="fill:#92400E;">WB 스테이지에서 최종 커밋 — 정확한 예외 보장</text>
+
+  <line x1="255" y1="240" x2="350" y2="280" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="415" y1="240" x2="440" y2="280" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="575" y1="240" x2="540" y2="280" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- CSR Write -->
+  <rect x="320" y="370" width="280" height="80" class="csr-box"/>
+  <text x="460" y="395" class="label" style="fill:#92400E;">CSR 업데이트</text>
+  <text x="460" y="415" class="code">mepc  ← 예외 발생 명령어 PC</text>
+  <text x="460" y="433" class="code">mcause ← 예외 코드</text>
+  <text x="460" y="448" class="code">PC    ← mtvec (트랩 핸들러)</text>
+
+  <line x1="460" y1="330" x2="460" y2="370" stroke="#D97706" stroke-width="2" marker-end="url(#arr2)"/>
+
+  <!-- Legend -->
+  <rect x="30" y="460" width="14" height="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="50" y="470" class="sub" style="text-anchor:start;">파이프라인 스테이지</text>
+  <rect x="180" y="460" width="14" height="10" fill="#FEE2E2" stroke="#DC2626" stroke-width="1"/>
+  <text x="200" y="470" class="sub" style="text-anchor:start;">예외 감지 지점</text>
+  <rect x="340" y="460" width="14" height="10" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="360" y="470" class="sub" style="text-anchor:start;">예외 처리 로직</text>
+</svg>

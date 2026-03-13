@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 16 — AMBA AHB 버스 설계</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 16</span>
+  <h1>AMBA AHB 버스 설계</h1>
+  <p class="chapter-intro">Chapter 15에서 구현한 캐시-메모리 인터페이스는 우리만의 자체 프로토콜이었습니다. 이번 챕터에서는 그것을 산업 표준인 AMBA AHB-Lite 버스로 교체하여, 프로세서가 다양한 외부 IP와 호환 가능한 SoC 구조를 완성합니다. AHB Master, Slave, 인터커넥트를 설계하고 SVA로 프로토콜을 검증합니다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>AMBA 버스 패밀리(AHB, APB, AXI)의 역할과 적용 시나리오를 <strong>비교</strong>할 수 있다.</li>
+    <li>AHB-Lite의 핵심 신호(HADDR, HTRANS, HREADY, HRESP 등)를 <strong>정의</strong>하고 타이밍 관계를 <strong>설명</strong>할 수 있다.</li>
+    <li>캐시 미스 핸들러를 AHB Master로 <strong>구현</strong>할 수 있다.</li>
+    <li>SRAM 컨트롤러를 AHB Slave로 <strong>설계</strong>하고 웨이트 스테이트를 처리할 수 있다.</li>
+    <li>주소 디코더와 슬레이브 MUX로 구성된 AHB 인터커넥트를 <strong>구현</strong>할 수 있다.</li>
+    <li>SVA(SystemVerilog Assertion)를 활용하여 AHB 프로토콜 준수 여부를 <strong>검증</strong>할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 16.1절 시작 ========== -->
+<section id="sec-16-1">
+  <h2>16.1 왜 버스가 필요한가 — Ch15 자체 프로토콜의 한계</h2>
+
+  <p>Chapter 15에서 우리는 캐시 미스 처리 FSM이 메모리 컨트롤러와 핸드셰이크하는 인터페이스를 설계하였습니다. <code>mem_req</code>, <code>mem_addr</code>, <code>mem_rdata</code>, <code>mem_valid</code> 같은 신호를 직접 정의하고, 클럭 경계에서의 타이밍도 우리 스스로 결정하였습니다. 프로세서가 단 하나의 메모리만 접근하는 상황에서는 이 방식이 충분히 잘 동작합니다.</p>
+
+  <p>그러나 실제 시스템온칩(System-on-Chip, SoC)에서는 프로세서가 접근해야 하는 대상이 SRAM 하나에 그치지 않습니다. UART, GPIO, 타이머 같은 주변 장치(Peripheral)가 추가되어야 하고, 향후 DMA 컨트롤러나 외부 메모리 컨트롤러도 연결해야 할 수 있습니다. 이때 자체 프로토콜을 사용하면 세 가지 심각한 문제가 발생합니다.</p>
+
+  <h3>자체 프로토콜의 한계</h3>
+
+  <p>첫째, <strong>확장성(Scalability) 부재</strong>입니다. 새 슬레이브를 추가할 때마다 CPU의 포트 목록을 수정해야 합니다. UART를 연결하려면 <code>uart_req</code>, <code>uart_addr</code>, <code>uart_wdata</code>, <code>uart_rdata</code> 같은 전용 신호를 추가해야 하며, GPIO를 연결할 때도 마찬가지입니다. 슬레이브가 N개이면 CPU의 포트 수는 O(N)으로 증가합니다.</p>
+
+  <p>둘째, <strong>재사용성(Reusability) 부재</strong>입니다. 우리가 정의한 <code>mem_req</code>/<code>mem_valid</code> 핸드셰이크 규약은 이 교재에서만 통용됩니다. 외부에서 설계된 IP(Intellectual Property) 블록 — 예를 들어 ARM에서 제공하는 UART 컨트롤러나 오픈소스 DMA 엔진 — 은 우리의 핀 이름과 타이밍을 알지 못합니다. 매번 "어댑터" 모듈을 작성해야 하며, 이 어댑터의 정확성을 별도로 검증해야 합니다.</p>
+
+  <p>셋째, <strong>검증 도구 부재</strong>입니다. 산업 현장에서는 버스 프로토콜의 정확성을 자동으로 확인하는 프로토콜 체커(Protocol Checker)를 사용합니다. 그러나 우리만의 비표준 프로토콜에는 검증 IP(VIP)가 존재하지 않으므로, 모든 타이밍 위반을 눈으로 확인해야 합니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 자체 프로토콜은 집집마다 다른 규격의 콘센트를 사용하는 것과 같습니다. 새 가전제품(IP)을 살 때마다 전용 어댑터가 필요합니다. 반면 표준 버스는 전국 어디서나 동일한 규격의 콘센트입니다. 플러그만 꽂으면 즉시 동작합니다. AMBA AHB가 바로 "전자 세계의 표준 콘센트"입니다.
+  </div>
+
+  <figure>
+    <img src="../figures/ch16_sec01_bus_necessity.svg" alt="자체 프로토콜 vs 표준 버스 비교">
+    <figcaption>그림 16.1: 자체 프로토콜(좌)은 슬레이브 추가 시마다 CPU 포트 수정이 필요하지만, AMBA AHB 표준 버스(우)는 디코더만 수정하면 인터페이스가 불변합니다.</figcaption>
+  </figure>
+
+  <h3>표준 버스가 제공하는 해결책</h3>
+
+  <p>표준 버스 프로토콜은 위 세 가지 문제를 한꺼번에 해결합니다. CPU는 단일 버스 인터페이스만 구현하면 되고, 슬레이브 추가 시에는 주소 디코더(Address Decoder)만 수정합니다. 모든 참여자가 동일한 신호 이름과 타이밍을 사용하므로, 외부 IP를 그대로 연결할 수 있습니다. ARM에서 제공하는 공식 프로토콜 체커를 활용하면 프로토콜 위반을 시뮬레이션 단계에서 자동 탐지할 수 있습니다.</p>
+
+  <p>이것이 우리가 Ch15의 자체 프로토콜을 AMBA AHB로 교체하는 이유입니다. 걱정하지 마십시오. 교체 과정은 "전면 재설계"가 아니라 "인터페이스 래핑(wrapping)"에 가깝습니다. Ch15에서 구현한 캐시 미스 처리 FSM의 내부 로직은 그대로 유지하고, 외부 신호만 AHB 규격에 맞춰 변환하면 됩니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>산업 현장에서 SoC를 설계할 때, 버스 프로토콜 선택은 프로젝트 초기에 확정합니다. 프로토콜이 결정되면 모든 IP가 해당 인터페이스에 맞춰 설계되므로, 통합(Integration) 단계에서의 "신호 이름 불일치" 문제가 사라집니다. 면접에서 "SoC 설계 시 가장 먼저 결정하는 것은?"이라는 질문에 "버스 프로토콜과 메모리 맵"이라고 답하면 좋은 인상을 줍니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: Ch15의 자체 프로토콜에서 UART 슬레이브를 추가하려면 몇 개의 신호가 CPU에 추가되어야 합니까? AMBA AHB 버스에서는 그 수가 어떻게 달라집니까?</p>
+  </aside>
+</section>
+<!-- ========== 16.1절 끝 ========== -->
+
+
+<!-- ========== 16.2절 시작 ========== -->
+<section id="sec-16-2">
+  <h2>16.2 AMBA 버스 패밀리 개요</h2>
+
+  <p>AMBA(Advanced Microcontroller Bus Architecture)는 ARM이 1996년에 발표한 온칩 버스 규격으로, 현재 전 세계 SoC 설계의 사실상 표준(de facto standard)입니다. AMBA는 단일 프로토콜이 아니라 <strong>패밀리(Family)</strong>로 구성되어 있으며, 각 프로토콜은 성능 수준과 복잡도에 따라 역할이 다릅니다.</p>
+
+  <h3>AMBA 패밀리 구성원</h3>
+
+  <p><strong>AXI(Advanced eXtensible Interface)</strong>는 AMBA 4/5에서 정의된 최고 성능 프로토콜입니다. 읽기와 쓰기가 독립된 5개의 채널(AR, R, AW, W, B)로 분리되어 있어, 읽기와 쓰기가 동시에 진행될 수 있습니다. 아웃오브오더(Out-of-Order) 완료를 지원하며, 다중 마스터 환경에서 높은 대역폭을 제공합니다. 그러나 설계 복잡도가 매우 높아, Basys 3 수준의 FPGA에는 과도합니다.</p>
+
+  <p><strong>AHB(Advanced High-performance Bus)</strong>는 AMBA 2/3에서 정의된 고성능 프로토콜입니다. 단일 채널로 주소 페이즈(Address Phase)와 데이터 페이즈(Data Phase)를 파이프라인 처리하여, 매 사이클 하나의 전송을 완료할 수 있습니다. AXI보다 단순하면서도 높은 대역폭을 제공하므로, SRAM이나 부트 ROM 같은 고속 메모리 접근에 적합합니다. 특히 <strong>AHB-Lite</strong> 변종은 단일 마스터 환경에 최적화되어 아비터(Arbiter)가 불필요하며, 이것이 우리 교재의 구현 대상입니다.</p>
+
+  <p><strong>APB(Advanced Peripheral Bus)</strong>는 AMBA 2/4에서 정의된 저전력, 저복잡도 프로토콜입니다. 파이프라인 전송을 지원하지 않으며, 모든 전송이 최소 2사이클에 완료됩니다. UART, GPIO, 타이머 같이 대역폭 요구가 낮은 주변 장치에 사용됩니다. 설계가 극도로 단순하여 게이트 수가 최소화됩니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> AMBA 패밀리를 도로 체계에 비유하면, AXI는 <strong>고속철도</strong>(KTX)입니다 — 대용량, 고속, 하지만 건설 비용이 높습니다. AHB는 <strong>고속도로</strong>입니다 — 빠르고 효율적이며, 대부분의 교통량을 처리합니다. APB는 <strong>이면도로</strong>입니다 — 느리지만 저렴하고, 동네 가게(주변 장치)에 접근하기에 충분합니다. 우리 SoC에서는 CPU ↔ SRAM 연결에 고속도로(AHB)를, UART/GPIO 연결에 이면도로(APB)를 사용합니다. 이 비유에는 한계가 있습니다 — 실제 AHB 버스에서는 물리적 거리가 아닌 <strong>클럭 주파수와 데이터 폭</strong>이 대역폭을 결정합니다. 이제부터는 프로토콜 이름으로 돌아갑니다.
+  </div>
+
+  <figure>
+    <img src="../figures/ch16_sec02_amba_family.svg" alt="AMBA 버스 패밀리 비교">
+    <figcaption>그림 16.2: AMBA 패밀리 비교. AHB-Lite(가운데)가 이번 챕터의 구현 대상이며, APB(오른쪽)는 Chapter 17에서 다룹니다.</figcaption>
+  </figure>
+
+  <h3>왜 AHB-Lite인가?</h3>
+
+  <p>우리 프로세서는 단일 마스터(CPU 1개) 구조입니다. 이 환경에서 AXI는 5채널 인터페이스의 복잡도에 비해 얻는 이점이 적습니다. 반면 AHB-Lite는 파이프라인 전송을 통해 매 사이클 하나의 전송을 처리할 수 있으면서도, 마스터와 슬레이브의 설계 복잡도가 상대적으로 낮습니다. Basys 3의 LUT 20,800개 예산 안에서 프로세서 + 캐시 + 버스 인터커넥트를 모두 수용해야 하므로, AHB-Lite가 성능 대비 면적 효율이 가장 높은 선택입니다.</p>
+
+  <table>
+    <tr>
+      <th>기준</th>
+      <th>AXI</th>
+      <th>AHB-Lite</th>
+      <th>APB</th>
+    </tr>
+    <tr>
+      <td>대역폭</td>
+      <td>최고 (다채널)</td>
+      <td>높음 (파이프라인)</td>
+      <td>낮음 (2사이클)</td>
+    </tr>
+    <tr>
+      <td>게이트 수</td>
+      <td>대규모</td>
+      <td>중간</td>
+      <td>최소</td>
+    </tr>
+    <tr>
+      <td>다중 마스터</td>
+      <td>지원</td>
+      <td>AHB는 지원, Lite는 미지원</td>
+      <td>미지원</td>
+    </tr>
+    <tr>
+      <td>버스트 전송</td>
+      <td>지원 (OOO)</td>
+      <td>지원 (순차)</td>
+      <td>미지원</td>
+    </tr>
+    <tr>
+      <td><strong>우리 교재</strong></td>
+      <td>미사용</td>
+      <td><strong>CPU ↔ SRAM (Ch16)</strong></td>
+      <td><strong>UART/GPIO (Ch17)</strong></td>
+    </tr>
+  </table>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> AMBA AHB와 AXI의 차이는 무엇이며, 각각 어떤 상황에서 사용합니까?</p>
+    <p><strong>A:</strong> AHB는 단일 채널 파이프라인 전송으로 중간 복잡도의 고성능 버스이며, M-class 프로세서나 SRAM 접근에 적합합니다. AXI는 5채널(AR, R, AW, W, B)의 분리된 읽기/쓰기 경로를 제공하여 최고 대역폭을 달성하며, A-class 프로세서나 DRAM 컨트롤러에 사용됩니다. 핵심 차이는 AXI가 아웃오브오더 완료를 지원하는 반면, AHB는 순차 처리만 지원한다는 점입니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> AHB와 AHB-Lite는 무엇이 다릅니까?</p>
+    <p><strong>A:</strong> AHB는 다중 마스터를 지원하여 아비터(Arbiter)와 마스터 간 HBUSREQ/HGRANT 핸드셰이크가 필요합니다. AHB-Lite는 단일 마스터 전용으로, 아비트레이션 신호가 제거되어 설계가 대폭 간소화됩니다. 우리처럼 CPU가 하나인 SoC에서는 AHB-Lite가 표준 선택입니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: 우리 교재의 SoC에서 AXI 대신 AHB-Lite를 선택한 기술적 근거 두 가지를 말해 보십시오. 또한 APB가 SRAM 접근에 부적합한 이유는 무엇입니까?</p>
+  </aside>
+</section>
+<!-- ========== 16.2절 끝 ========== -->
+
+
+<!-- ========== 16.3절 시작 ========== -->
+<section id="sec-16-3">
+  <h2>16.3 AHB 신호 정의</h2>
+
+  <p>AHB-Lite 프로토콜의 신호는 크게 세 그룹으로 나뉩니다. <strong>마스터 출력 신호</strong>(Master → Slave), <strong>슬레이브 출력 신호</strong>(Slave → Master), 그리고 <strong>공통 신호</strong>(클럭, 리셋)입니다. 총 신호 수는 약 10개로, AXI의 수십 개에 비하면 매우 간결합니다.</p>
+
+  <h3>공통 신호</h3>
+
+  <p><strong>HCLK</strong>은 AHB 버스의 글로벌 클럭입니다. 모든 AHB 전송은 HCLK의 상승 에지(Rising Edge)에 동기화됩니다. 우리 Basys 3 시스템에서는 50MHz로 설정합니다.</p>
+
+  <p><strong>HRESETn</strong>은 액티브 로우(Active Low) 비동기 리셋입니다. LOW일 때 모든 AHB 인터페이스가 초기 상태로 돌아갑니다. 'n' 접미사는 액티브 로우를 의미하며, AMBA 스펙의 관례입니다.</p>
+
+  <h3>마스터 출력 신호 (Master → Slave)</h3>
+
+  <table>
+    <tr>
+      <th>신호명</th>
+      <th>비트 폭</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td><strong>HADDR[31:0]</strong></td>
+      <td>32</td>
+      <td>버스 주소. 바이트 주소 지정(Byte Addressing) 사용.</td>
+    </tr>
+    <tr>
+      <td><strong>HTRANS[1:0]</strong></td>
+      <td>2</td>
+      <td>전송 타입. IDLE(00), BUSY(01), NONSEQ(10), SEQ(11).</td>
+    </tr>
+    <tr>
+      <td><strong>HWRITE</strong></td>
+      <td>1</td>
+      <td>전송 방향. 1=쓰기, 0=읽기.</td>
+    </tr>
+    <tr>
+      <td><strong>HSIZE[2:0]</strong></td>
+      <td>3</td>
+      <td>전송 크기. 000=바이트, 001=하프워드, 010=워드.</td>
+    </tr>
+    <tr>
+      <td><strong>HBURST[2:0]</strong></td>
+      <td>3</td>
+      <td>버스트 타입. SINGLE(000), INCR4(011) 등.</td>
+    </tr>
+    <tr>
+      <td><strong>HWDATA[31:0]</strong></td>
+      <td>32</td>
+      <td>쓰기 데이터. 데이터 페이즈에서 유효.</td>
+    </tr>
+  </table>
+
+  <h3>슬레이브 출력 신호 (Slave → Master)</h3>
+
+  <table>
+    <tr>
+      <th>신호명</th>
+      <th>비트 폭</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td><strong>HRDATA[31:0]</strong></td>
+      <td>32</td>
+      <td>읽기 데이터. 데이터 페이즈에서 유효.</td>
+    </tr>
+    <tr>
+      <td><strong>HREADY</strong></td>
+      <td>1</td>
+      <td>전송 완료. HIGH=현재 전송 완료, LOW=웨이트 스테이트.</td>
+    </tr>
+    <tr>
+      <td><strong>HRESP</strong></td>
+      <td>1</td>
+      <td>전송 응답. OKAY(0)=성공, ERROR(1)=오류.</td>
+    </tr>
+  </table>
+
+  <figure>
+    <img src="../figures/ch16_sec03_ahb_signals.svg" alt="AHB-Lite 신호 정의 블록 다이어그램">
+    <figcaption>그림 16.3: AHB-Lite 신호 흐름. 파란 화살표가 마스터 출력, 초록 화살표가 슬레이브 출력입니다.</figcaption>
+  </figure>
+
+  <h3>HTRANS 전송 타입 상세</h3>
+
+  <p>HTRANS는 AHB 프로토콜에서 가장 중요한 신호 중 하나입니다. 4가지 전송 타입이 있으며, 이 값에 따라 슬레이브의 동작이 결정됩니다.</p>
+
+  <table>
+    <tr>
+      <th>HTRANS</th>
+      <th>이름</th>
+      <th>의미</th>
+    </tr>
+    <tr>
+      <td>2'b00</td>
+      <td><strong>IDLE</strong></td>
+      <td>버스 유휴. 슬레이브는 이 전송을 무시하고 OKAY 응답.</td>
+    </tr>
+    <tr>
+      <td>2'b01</td>
+      <td><strong>BUSY</strong></td>
+      <td>버스트 중 마스터 지연. 슬레이브는 이 전송을 무시.</td>
+    </tr>
+    <tr>
+      <td>2'b10</td>
+      <td><strong>NONSEQ</strong></td>
+      <td>단일 전송 또는 버스트의 첫 번째 전송. 새로운 주소.</td>
+    </tr>
+    <tr>
+      <td>2'b11</td>
+      <td><strong>SEQ</strong></td>
+      <td>버스트의 연속 전송. 이전 주소에서 자동 증분.</td>
+    </tr>
+  </table>
+
+  <h3>SystemVerilog 패키지 정의</h3>
+
+  <p>위 상수들을 SystemVerilog 패키지로 정리하면, 모든 모듈에서 일관된 타입을 사용할 수 있습니다.</p>
+
+  <pre><code class="language-systemverilog">
+package ahb_pkg;
+
+   // HTRANS[1:0] — 전송 타입
+   typedef enum logic [1:0] {
+      HTRANS_IDLE   = 2'b00,   // 버스 유휴 상태
+      HTRANS_BUSY   = 2'b01,   // 버스트 중 지연
+      HTRANS_NONSEQ = 2'b10,   // 새로운 전송 시작
+      HTRANS_SEQ    = 2'b11    // 버스트 연속 전송
+   } htrans_t;
+
+   // HBURST[2:0] — 버스트 타입
+   typedef enum logic [2:0] {
+      HBURST_SINGLE = 3'b000,  // 단일 전송
+      HBURST_INCR   = 3'b001,  // 길이 미정 증분 버스트
+      HBURST_INCR4  = 3'b011   // 4-beat 증분 버스트
+   } hburst_t;
+
+   // HSIZE[2:0] — 전송 크기
+   typedef enum logic [2:0] {
+      HSIZE_BYTE = 3'b000,     // 8비트
+      HSIZE_HALF = 3'b001,     // 16비트
+      HSIZE_WORD = 3'b010      // 32비트
+   } hsize_t;
+
+   // HRESP — 전송 응답
+   typedef enum logic {
+      HRESP_OKAY  = 1'b0,      // 전송 성공
+      HRESP_ERROR = 1'b1       // 전송 오류
+   } hresp_t;
+
+endpackage
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>AHB 신호를 처음 접하면 이름이 많아 보이지만, 핵심은 단 4개입니다: <strong>HADDR</strong>(어디?), <strong>HTRANS</strong>(무엇?), <strong>HWDATA/HRDATA</strong>(데이터), <strong>HREADY</strong>(됐나?). 나머지 신호(HSIZE, HBURST, HWRITE, HRESP)는 이 4개를 보조하는 역할입니다. "주소 → 타입 → 데이터 → 완료"의 4단계 흐름으로 기억하면 혼란이 줄어듭니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: HTRANS=IDLE일 때 슬레이브는 어떻게 응답해야 합니까? HREADY 신호가 LOW인 동안 마스터는 무엇을 해야 합니까?</p>
+  </aside>
+</section>
+<!-- ========== 16.3절 끝 ========== -->
+
+
+<!-- ========== 16.4절 시작 ========== -->
+<section id="sec-16-4">
+  <h2>16.4 AHB 프로토콜 타이밍</h2>
+
+  <p>AHB 프로토콜의 가장 핵심적인 특성은 <strong>파이프라인 전송(Pipelined Transfer)</strong>입니다. 모든 전송은 두 개의 페이즈로 나뉘며, 이 두 페이즈가 1사이클 오프셋으로 중첩됩니다. 이 메커니즘 덕분에 AHB는 매 사이클 하나의 전송을 완료할 수 있습니다.</p>
+
+  <h3>두 페이즈 구조</h3>
+
+  <p><strong>주소 페이즈(Address Phase)</strong>에서 마스터는 HADDR, HTRANS, HWRITE, HSIZE, HBURST를 출력합니다. 이 신호들은 "다음에 어떤 전송을 할 것인가"를 슬레이브에 알려줍니다.</p>
+
+  <p><strong>데이터 페이즈(Data Phase)</strong>에서 실제 데이터가 전달됩니다. 쓰기 전송이면 마스터가 HWDATA를 출력하고, 읽기 전송이면 슬레이브가 HRDATA를 출력합니다. 핵심은 이것입니다: <strong>현재 사이클의 데이터 페이즈와 다음 전송의 주소 페이즈가 동시에 진행됩니다</strong>.</p>
+
+  <p>이 구조는 우리가 Part 4에서 배운 프로세서 파이프라인과 원리가 동일합니다. 프로세서에서 IF 스테이지가 다음 명령어를 가져오는 동안 EX 스테이지가 현재 명령어를 실행하듯이, AHB에서도 주소 페이즈가 다음 전송을 준비하는 동안 데이터 페이즈가 현재 전송을 완료합니다.</p>
+
+  <figure>
+    <img src="../figures/ch16_sec04_ahb_timing.svg" alt="AHB 파이프라인 전송 타이밍 다이어그램">
+    <figcaption>그림 16.4: AHB 파이프라인 전송 타이밍. 주소 페이즈(T1)와 데이터 페이즈(T2)가 1사이클 오프셋으로 중첩됩니다. T3~T4에서 HREADY=LOW로 웨이트 스테이트가 발생하면, 마스터는 주소/제어 신호를 유지해야 합니다.</figcaption>
+  </figure>
+
+  <h3>단일 전송 (SINGLE Transfer)</h3>
+
+  <p>가장 기본적인 전송입니다. 마스터가 HTRANS=NONSEQ를 출력하면 단일 전송이 시작됩니다. 주소 페이즈 1사이클 + 데이터 페이즈 1사이클 = 총 2사이클이 소요됩니다. 단, 파이프라인 덕분에 연속된 단일 전송은 매 사이클 하나씩 완료됩니다.</p>
+
+  <h3>버스트 전송 (Burst Transfer)</h3>
+
+  <p>캐시 라인 채움(Cache Line Fill)처럼 연속된 주소에 대해 여러 워드를 전송할 때 사용합니다. 첫 번째 전송은 HTRANS=NONSEQ이고, 이후 전송은 HTRANS=SEQ입니다. 4-beat 증분 버스트(INCR4)의 경우, 첫 주소 이후 자동으로 +4(워드 단위)씩 증분됩니다.</p>
+
+  <p>4워드 캐시 라인(128비트)을 채우려면 INCR4 버스트를 사용합니다. 주소 페이즈 1사이클 + 데이터 페이즈 4사이클 = 총 5사이클이 소요됩니다. 이는 단일 전송 4회(8사이클)보다 3사이클 더 효율적입니다.</p>
+
+  <h3>웨이트 스테이트 (Wait State)</h3>
+
+  <p>슬레이브가 즉시 응답할 수 없는 경우, HREADY를 LOW로 내려 웨이트 스테이트를 삽입합니다. 예를 들어 느린 Flash 메모리는 읽기에 여러 사이클이 필요하므로, 데이터가 준비될 때까지 HREADY=LOW를 유지합니다.</p>
+
+  <p><strong>이것이 AHB 프로토콜에서 가장 흔한 오류 지점입니다.</strong> HREADY가 LOW인 동안, 마스터는 현재 출력 중인 주소/제어 신호를 반드시 유지해야 합니다. 신호를 변경하면 프로토콜 위반이며, 데이터 손상이 발생합니다.</p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>학생들에게 "HREADY=LOW일 때 마스터가 주소를 변경하면?"이라는 질문을 던져 보십시오. 이 규칙은 면접에서도 빈출이며, 실무에서 AHB 프로토콜 위반의 약 60%가 이 규칙 위반입니다. SVA(SystemVerilog Assertion)로 이 규칙을 자동 검증하는 방법은 16.8절에서 다룹니다.</p>
+  </aside>
+
+  <h3>전송 타입별 타이밍 요약</h3>
+
+  <table>
+    <tr>
+      <th>전송 유형</th>
+      <th>HTRANS</th>
+      <th>최소 사이클</th>
+      <th>파이프라인 효과</th>
+    </tr>
+    <tr>
+      <td>유휴</td>
+      <td>IDLE (00)</td>
+      <td>1</td>
+      <td>슬레이브 무시, OKAY 응답</td>
+    </tr>
+    <tr>
+      <td>단일 전송</td>
+      <td>NONSEQ (10)</td>
+      <td>2 (Addr+Data)</td>
+      <td>연속 시 1사이클/전송</td>
+    </tr>
+    <tr>
+      <td>버스트 첫 전송</td>
+      <td>NONSEQ (10)</td>
+      <td>2</td>
+      <td>이후 SEQ와 중첩</td>
+    </tr>
+    <tr>
+      <td>버스트 연속</td>
+      <td>SEQ (11)</td>
+      <td>1</td>
+      <td>매 사이클 1워드 전송</td>
+    </tr>
+    <tr>
+      <td>웨이트 삽입</td>
+      <td>유지</td>
+      <td>+N사이클</td>
+      <td>HREADY=LOW 동안 정지</td>
+    </tr>
+  </table>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> AHB에서 파이프라인 전송이란 무엇이며, 이것이 성능에 어떤 이점을 줍니까?</p>
+    <p><strong>A:</strong> AHB의 모든 전송은 주소 페이즈와 데이터 페이즈로 나뉘며, 현재 전송의 데이터 페이즈와 다음 전송의 주소 페이즈가 동일 사이클에 중첩됩니다. 따라서 연속 전송 시 매 사이클 하나의 전송을 완료할 수 있어, 비파이프라인 방식(APB)의 2배 대역폭을 달성합니다. 웨이트 스테이트가 삽입되면 HREADY=LOW로 파이프라인이 정지(stall)하며, 이 동안 마스터는 주소/제어 신호를 유지해야 합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: 4워드 캐시 라인을 INCR4 버스트로 읽을 때 필요한 최소 사이클 수는 몇입니까? 같은 데이터를 SINGLE 전송 4회로 읽으면 몇 사이클입니까?</p>
+  </aside>
+</section>
+<!-- ========== 16.4절 끝 ========== -->
+
+
+<!-- ========== 16.5절 시작 ========== -->
+<section id="sec-16-5">
+  <h2>16.5 AHB Master 설계: 캐시-버스 브리지</h2>
+
+  <p>이제 실제 설계로 들어갑니다. AHB Master는 캐시 미스가 발생했을 때 AHB 버스를 통해 외부 메모리에 접근하는 모듈입니다. Chapter 15에서 구현한 캐시 미스 처리 FSM의 "외부 인터페이스"를 AHB 규격으로 변환하는 것이 핵심입니다.</p>
+
+  <h3>설계 요구사항</h3>
+
+  <p>AHB Master는 두 개의 인터페이스를 갖습니다. 캐시 측에서는 <code>cache_miss</code>, <code>miss_addr</code>, <code>fill_data</code>, <code>fill_valid</code> 등의 신호로 통신합니다. 버스 측에서는 HADDR, HTRANS, HWDATA, HRDATA 등의 AHB 신호로 통신합니다. Master의 역할은 이 두 인터페이스 사이의 프로토콜 변환입니다.</p>
+
+  <h3>FSM 설계</h3>
+
+  <p>Master FSM은 5개의 상태로 구성됩니다.</p>
+
+  <table>
+    <tr>
+      <th>상태</th>
+      <th>HTRANS 출력</th>
+      <th>동작</th>
+    </tr>
+    <tr>
+      <td><strong>IDLE</strong></td>
+      <td>00 (IDLE)</td>
+      <td>캐시 미스 대기. <code>cache_miss</code>=1이면 ADDR로 전이</td>
+    </tr>
+    <tr>
+      <td><strong>ADDR</strong></td>
+      <td>10 (NONSEQ)</td>
+      <td>주소 페이즈. HADDR 출력. HREADY=1이면 DATA 또는 BURST로 전이</td>
+    </tr>
+    <tr>
+      <td><strong>DATA</strong></td>
+      <td>—</td>
+      <td>데이터 페이즈. 쓰기 시 HWDATA 출력, 읽기 시 HRDATA 수신</td>
+    </tr>
+    <tr>
+      <td><strong>BURST</strong></td>
+      <td>11 (SEQ)</td>
+      <td>버스트 연속 전송. beat_cnt 감소. 마지막 beat이면 DATA로 전이</td>
+    </tr>
+    <tr>
+      <td><strong>DONE</strong></td>
+      <td>00 (IDLE)</td>
+      <td>캐시에 완료 알림. 즉시 IDLE로 복귀</td>
+    </tr>
+  </table>
+
+  <figure>
+    <img src="../figures/ch16_sec05_ahb_master.svg" alt="AHB Master FSM 상태 전이도">
+    <figcaption>그림 16.5: AHB Master FSM. 캐시 인터페이스(좌)와 AHB 버스 인터페이스(우) 사이의 프로토콜 변환을 수행합니다.</figcaption>
+  </figure>
+
+  <h3>핵심 구현: HREADY 기반 스톨 처리</h3>
+
+  <p>Master 설계에서 가장 중요한 부분은 HREADY=LOW 처리입니다. ADDR 상태에서 HREADY가 LOW이면, 마스터는 HADDR과 HTRANS를 유지한 채 ADDR 상태에 머물러야 합니다. 이것은 다음 코드의 <code>if (hready)</code> 조건으로 구현됩니다.</p>
+
+  <pre><code class="language-systemverilog">
+// FSM 다음 상태 로직 (핵심 발췌)
+always_comb begin
+   next_state = state;
+   case (state)
+      ST_IDLE: begin
+         if (cache_miss)
+            next_state = ST_ADDR;
+      end
+
+      ST_ADDR: begin
+         // HREADY=1일 때만 다음 상태로 전이
+         // HREADY=0이면 현재 상태 유지 → 신호 불변
+         if (hready)
+            next_state = burst_mode ? ST_BURST : ST_DATA;
+      end
+
+      ST_DATA: begin
+         if (hready)
+            next_state = ST_DONE;
+      end
+
+      ST_BURST: begin
+         if (hready) begin
+            if (beat_cnt == 2'd0)
+               next_state = ST_DATA;  // 마지막 beat
+            else
+               next_state = ST_BURST; // 연속
+         end
+      end
+
+      ST_DONE: next_state = ST_IDLE;
+      default: next_state = ST_IDLE;
+   endcase
+end
+  </code></pre>
+
+  <h3>AHB 출력 신호 생성</h3>
+
+  <pre><code class="language-systemverilog">
+// AHB 출력 (조합 로직)
+always_comb begin
+   haddr  = '0;
+   htrans = HTRANS_IDLE;
+   hwrite = 1'b0;
+   hsize  = HSIZE_WORD;
+   hburst = HBURST_SINGLE;
+   hwdata = '0;
+
+   case (state)
+      ST_ADDR: begin
+         haddr  = addr_r;
+         htrans = HTRANS_NONSEQ;       // 새 전송 시작
+         hwrite = write_r;
+         hburst = burst_mode ? HBURST_INCR4 : HBURST_SINGLE;
+      end
+
+      ST_DATA: begin
+         hwdata = wdata_r;              // 쓰기 데이터 출력
+      end
+
+      ST_BURST: begin
+         haddr  = addr_r;
+         htrans = HTRANS_SEQ;           // 버스트 연속
+         hwrite = write_r;
+         hburst = HBURST_INCR4;
+         hwdata = wdata_r;
+      end
+
+      default: ;
+   endcase
+end
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>AHB Master를 설계할 때 흔히 범하는 실수는 HWDATA의 타이밍입니다. HWDATA는 <strong>데이터 페이즈</strong>에서 유효해야 합니다. 즉, HADDR를 출력한 다음 사이클에 HWDATA를 출력해야 합니다. 주소와 데이터를 같은 사이클에 출력하면 프로토콜 위반입니다. 이 "1사이클 오프셋"이 AHB 파이프라인의 핵심입니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> IDLE 상태에서 HTRANS=IDLE을 출력하면, 슬레이브가 오류로 처리하지 않습니까?</p>
+    <p><strong>A:</strong> 아닙니다. AHB 스펙에 의하면, HTRANS=IDLE은 "이번 사이클에 전송이 없다"는 의미이며, 슬레이브는 이를 무시하고 HREADY=HIGH, HRESP=OKAY를 응답합니다. 버스가 유휴 상태임을 나타내는 정상적인 동작입니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: Master가 ADDR 상태에서 HREADY=LOW를 받으면 어떻게 동작합니까? 만약 HADDR를 변경하면 어떤 문제가 발생합니까?</p>
+  </aside>
+</section>
+<!-- ========== 16.5절 끝 ========== -->
+
+
+<!-- ========== 16.6절 시작 ========== -->
+<section id="sec-16-6">
+  <h2>16.6 AHB Slave 설계: SRAM 컨트롤러</h2>
+
+  <p>AHB Slave는 마스터의 요청을 받아 실제 하드웨어(이 경우 SRAM)를 제어하는 모듈입니다. Slave 설계의 핵심은 <strong>주소 페이즈와 데이터 페이즈의 분리</strong>입니다. 주소는 한 사이클 먼저 도착하므로, Slave는 주소를 래치(Latch)한 뒤 다음 사이클에 데이터를 처리합니다.</p>
+
+  <h3>SRAM Slave 구조</h3>
+
+  <p>우리 SRAM Slave는 다음 네 가지 블록으로 구성됩니다.</p>
+
+  <table>
+    <tr>
+      <th>블록</th>
+      <th>역할</th>
+    </tr>
+    <tr>
+      <td><strong>주소 래치</strong></td>
+      <td>Address Phase의 HADDR, HWRITE를 1사이클 지연시켜 Data Phase에 사용</td>
+    </tr>
+    <tr>
+      <td><strong>SRAM 배열</strong></td>
+      <td>16KB(4096 x 32비트) 메모리 배열. BRAM으로 추론</td>
+    </tr>
+    <tr>
+      <td><strong>웨이트 FSM</strong></td>
+      <td>SRAM 접근 지연 시 HREADY=LOW 생성 (본 구현에서는 0-wait)</td>
+    </tr>
+    <tr>
+      <td><strong>응답 생성</strong></td>
+      <td>HRESP(OKAY/ERROR) 및 HREADY 출력</td>
+    </tr>
+  </table>
+
+  <figure>
+    <img src="../figures/ch16_sec06_ahb_slave.svg" alt="AHB Slave SRAM 컨트롤러 구조">
+    <figcaption>그림 16.6: AHB Slave(SRAM 컨트롤러) 내부 구조. 주소 래치가 Address Phase와 Data Phase를 분리합니다.</figcaption>
+  </figure>
+
+  <h3>주소 래치 구현</h3>
+
+  <p>AHB의 주소 페이즈/데이터 페이즈 파이프라인에서, 슬레이브는 주소 페이즈에서 받은 정보를 데이터 페이즈까지 기억해야 합니다. 이를 위해 <code>addr_r</code>, <code>write_r</code>, <code>valid_r</code> 레지스터를 사용합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 유효 전송 판별
+wire valid_transfer = hsel && hready_in &&
+                      (htrans == HTRANS_NONSEQ || htrans == HTRANS_SEQ);
+
+// 주소 래치 (Address Phase → Data Phase)
+always_ff @(posedge hclk or negedge hreset_n) begin
+   if (!hreset_n) begin
+      valid_r <= 1'b0;
+      write_r <= 1'b0;
+      addr_r  <= '0;
+      error_r <= 1'b0;
+   end else if (hready_in) begin
+      valid_r <= valid_transfer;
+      write_r <= hwrite;
+      addr_r  <= haddr[ADDR_BITS+1:2];  // 바이트→워드 주소 변환
+      error_r <= valid_transfer && !addr_in_range;
+   end
+end
+  </code></pre>
+
+  <p><code>haddr[ADDR_BITS+1:2]</code>로 하위 2비트를 버리는 이유는, AHB가 바이트 주소 지정(Byte Addressing)을 사용하는 반면 SRAM은 워드 단위로 접근하기 때문입니다. 예를 들어 바이트 주소 0x0004는 워드 주소 1에 해당합니다.</p>
+
+  <h3>SRAM 읽기/쓰기</h3>
+
+  <pre><code class="language-systemverilog">
+// SRAM 메모리 배열 (BRAM 추론 가능)
+logic [31:0] mem [0:MEM_DEPTH-1];
+
+// SRAM 쓰기 (Data Phase)
+always_ff @(posedge hclk) begin
+   if (valid_r && write_r && !error_r)
+      mem[addr_r] <= hwdata;
+end
+
+// SRAM 읽기 (Data Phase)
+always_ff @(posedge hclk) begin
+   if (valid_r && !write_r && !error_r)
+      hrdata <= mem[addr_r];
+   else
+      hrdata <= '0;
+end
+  </code></pre>
+
+  <h3>응답 생성</h3>
+
+  <p>본 SRAM 컨트롤러는 0-wait state로 동작합니다. 즉, HREADY는 항상 HIGH이며, 슬레이브가 웨이트 스테이트를 삽입하지 않습니다. Basys 3의 BRAM은 1사이클 읽기/쓰기를 지원하므로 이 설정이 가능합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 0-wait state: HREADY 항상 HIGH
+assign hready_out = 1'b1;
+
+// 주소 범위 초과 시 ERROR 응답
+assign hresp = error_r ? HRESP_ERROR : HRESP_OKAY;
+  </code></pre>
+
+  <p>만약 느린 외부 메모리(Flash 등)에 접속하는 슬레이브를 설계한다면, HREADY를 제어하는 웨이트 FSM이 필요합니다. 예를 들어 2사이클 읽기 지연이 있는 Flash 슬레이브는, 첫 사이클에 HREADY=LOW를 출력하고 두 번째 사이클에 HREADY=HIGH + HRDATA를 출력합니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>슬레이브 설계 시 HSEL 신호를 반드시 확인해야 합니다. AHB 인터커넥트에서 디코더가 이 슬레이브를 선택하지 않았는데(HSEL=0), 쓰기를 수행하면 의도치 않은 메모리 오염이 발생합니다. <code>valid_transfer</code> 조건에 <code>hsel</code>을 포함하는 것이 필수입니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> <code>hready_in</code>과 <code>hready_out</code>의 차이는 무엇입니까?</p>
+    <p><strong>A:</strong> <code>hready_in</code>은 인터커넥트에서 슬레이브로 들어오는 신호로, "현재 활성 슬레이브의 전송이 완료되었는가?"를 알려줍니다. 주소 래치의 갱신 조건으로 사용됩니다. <code>hready_out</code>은 슬레이브에서 인터커넥트로 나가는 신호로, "이 슬레이브가 현재 전송을 완료했는가?"를 알려줍니다. 단일 슬레이브만 활성일 때 이 두 신호는 결국 같은 값이 됩니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: 주소 래치가 없다면 — 즉, HADDR를 직접 SRAM 주소로 사용하면 — 어떤 문제가 발생합니까? AHB 파이프라인 전송과의 관계에서 설명해 보십시오.</p>
+  </aside>
+</section>
+<!-- ========== 16.6절 끝 ========== -->
+
+
+<!-- ========== 16.7절 시작 ========== -->
+<section id="sec-16-7">
+  <h2>16.7 AHB 인터커넥트: 단일 마스터 버스</h2>
+
+  <p>AHB 인터커넥트(Interconnect)는 마스터와 슬레이브들을 연결하는 "교통 관제 시스템"입니다. 단일 마스터 AHB-Lite 환경에서 인터커넥트는 세 가지 컴포넌트로 구성됩니다: <strong>주소 디코더(Address Decoder)</strong>, <strong>슬레이브 멀티플렉서(Slave MUX)</strong>, 그리고 <strong>기본 슬레이브(Default Slave)</strong>.</p>
+
+  <h3>주소 디코더</h3>
+
+  <p>주소 디코더는 HADDR의 상위 비트를 확인하여 해당 주소가 어느 슬레이브에 속하는지 판별하고, 해당 슬레이브의 HSEL(Slave Select) 신호를 활성화합니다. 우리 메모리 맵은 다음과 같습니다.</p>
+
+  <table>
+    <tr>
+      <th>주소 범위</th>
+      <th>슬레이브</th>
+      <th>HSEL</th>
+    </tr>
+    <tr>
+      <td>0x0000_0000 ~ 0x0000_3FFF</td>
+      <td>Slave 0: SRAM (16KB)</td>
+      <td>s0_hsel</td>
+    </tr>
+    <tr>
+      <td>0x4000_0000 ~ 0x4FFF_FFFF</td>
+      <td>Slave 1: APB Bridge (Ch17)</td>
+      <td>s1_hsel</td>
+    </tr>
+    <tr>
+      <td>기타 모든 주소</td>
+      <td>Default Slave (ERROR 응답)</td>
+      <td>hsel_default</td>
+    </tr>
+  </table>
+
+  <pre><code class="language-systemverilog">
+// 주소 디코더: HADDR[31:28]로 슬레이브 선택
+always_comb begin
+   s0_hsel      = 1'b0;
+   s1_hsel      = 1'b0;
+   hsel_default = 1'b0;
+
+   case (m_haddr[31:28])
+      4'h0: s0_hsel = 1'b1;         // 0x0xxx_xxxx → SRAM
+      4'h4: s1_hsel = 1'b1;         // 0x4xxx_xxxx → APB Bridge
+      default: hsel_default = 1'b1;  // 미매핑 → ERROR
+   endcase
+end
+  </code></pre>
+
+  <figure>
+    <img src="../figures/ch16_sec07_ahb_interconnect.svg" alt="AHB-Lite 인터커넥트 구조">
+    <figcaption>그림 16.7: AHB-Lite 인터커넥트. 주소 디코더가 HSELx를 생성하고, 슬레이브 MUX가 활성 슬레이브의 응답을 마스터에 전달합니다.</figcaption>
+  </figure>
+
+  <h3>슬레이브 멀티플렉서</h3>
+
+  <p>마스터는 하나의 HRDATA, HREADY, HRESP 포트만 가지고 있으므로, 여러 슬레이브의 응답 중 현재 활성인 슬레이브의 응답만 선택해야 합니다. 이것이 슬레이브 MUX의 역할입니다.</p>
+
+  <p>중요한 점은, MUX의 선택 신호가 <strong>래치된 HSEL</strong>이어야 한다는 것입니다. 주소 디코더는 주소 페이즈에서 HSEL을 생성하지만, 슬레이브의 응답은 데이터 페이즈에서 나옵니다. 따라서 HSEL을 1사이클 래치하여 데이터 페이즈에서 올바른 슬레이브를 선택합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// HSEL 래치 (Address Phase → Data Phase)
+logic [1:0] sel_r;
+
+always_ff @(posedge hclk or negedge hreset_n) begin
+   if (!hreset_n)
+      sel_r <= 2'b00;
+   else if (m_hready)
+      sel_r <= {s1_hsel, s0_hsel};
+end
+
+// 슬레이브 MUX
+always_comb begin
+   case (sel_r)
+      2'b01: begin  // Slave 0 (SRAM)
+         m_hrdata = s0_hrdata;
+         m_hready = s0_hready_out;
+         m_hresp  = s0_hresp;
+      end
+      2'b10: begin  // Slave 1 (APB Bridge)
+         m_hrdata = s1_hrdata;
+         m_hready = s1_hready_out;
+         m_hresp  = s1_hresp;
+      end
+      default: begin  // Default Slave
+         m_hrdata = '0;
+         m_hready = 1'b1;
+         m_hresp  = HRESP_ERROR;
+      end
+   endcase
+end
+  </code></pre>
+
+  <h3>기본 슬레이브 (Default Slave)</h3>
+
+  <p>기본 슬레이브는 어떤 슬레이브에도 매핑되지 않는 주소에 접근했을 때 ERROR 응답을 반환합니다. 이 모듈이 없으면, 미매핑 주소에 대한 읽기는 불확정(undefined) 데이터를 반환하고, 쓰기는 무시됩니다. 기본 슬레이브는 별도 모듈이 아니라 MUX의 default 분기로 구현합니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>실제 SoC에서 기본 슬레이브의 ERROR 응답은 소프트웨어 디버깅에 매우 유용합니다. 프로그램이 잘못된 주소를 접근하면 버스 에러가 발생하여 예외(Exception)로 트랩됩니다. 이것이 Chapter 19에서 다룰 "Bus Error" 예외의 하드웨어 출처입니다.</p>
+  </aside>
+
+  <h3>신호 분배</h3>
+
+  <p>마스터의 주소/제어/데이터 신호는 모든 슬레이브에 동시에 전달됩니다. 슬레이브는 자신의 HSEL이 활성일 때만 전송에 응답하고, 비활성이면 무시합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 마스터 신호를 모든 슬레이브에 분배
+assign s0_haddr  = m_haddr;
+assign s0_htrans = m_htrans;
+assign s0_hwrite = m_hwrite;
+assign s0_hwdata = m_hwdata;
+
+assign s1_haddr  = m_haddr;
+assign s1_htrans = m_htrans;
+assign s1_hwrite = m_hwrite;
+assign s1_hwdata = m_hwdata;
+
+// HREADY 분배
+assign s0_hready_in = m_hready;
+assign s1_hready_in = m_hready;
+  </code></pre>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>인터커넥트 설계를 가르칠 때, HSEL 래치의 필요성을 학생들에게 "왜 주소 페이즈의 HSEL을 데이터 페이즈에서 바로 사용하면 안 됩니까?"라는 질문으로 유도하면 효과적입니다. 파이프라인 전송에서 주소 페이즈의 슬레이브와 데이터 페이즈의 슬레이브가 다를 수 있다는 점이 핵심 통찰입니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: HSEL 래치 없이 주소 디코더의 출력을 직접 MUX 선택 신호로 사용하면, 파이프라인 전송에서 어떤 오류가 발생합니까? 구체적 시나리오를 그려 보십시오.</p>
+  </aside>
+</section>
+<!-- ========== 16.7절 끝 ========== -->
+
+
+<!-- ========== 16.8절 시작 ========== -->
+<section id="sec-16-8">
+  <h2>16.8 AHB 버스 시뮬레이션 검증</h2>
+
+  <p>설계를 완료했으니 이제 검증할 차례입니다. AHB 버스 검증은 두 가지 접근법을 병행합니다. 첫째, 전통적인 <strong>테스트벤치</strong>로 기능적 정확성(Functional Correctness)을 확인합니다. 둘째, <strong>SVA(SystemVerilog Assertion)</strong>로 프로토콜 타이밍 규칙의 준수 여부를 자동 검사합니다.</p>
+
+  <h3>테스트벤치 구성</h3>
+
+  <p>테스트벤치는 인터커넥트와 SRAM 슬레이브를 인스턴스화하고, 마스터 역할의 테스트 시퀀스를 실행합니다. 검증할 시나리오는 다음과 같습니다.</p>
+
+  <table>
+    <tr>
+      <th>테스트</th>
+      <th>시나리오</th>
+      <th>확인 사항</th>
+    </tr>
+    <tr>
+      <td>TEST 1</td>
+      <td>단일 워드 쓰기 3회</td>
+      <td>쓰기 완료, HRESP=OKAY</td>
+    </tr>
+    <tr>
+      <td>TEST 2</td>
+      <td>단일 워드 읽기 3회</td>
+      <td>읽기 데이터 일치 확인</td>
+    </tr>
+    <tr>
+      <td>TEST 3</td>
+      <td>쓰기 → 읽기 일관성</td>
+      <td>쓴 값과 읽은 값이 동일</td>
+    </tr>
+    <tr>
+      <td>TEST 4</td>
+      <td>미매핑 주소 접근</td>
+      <td>Default Slave ERROR 응답</td>
+    </tr>
+  </table>
+
+  <h3>AHB 쓰기 태스크</h3>
+
+  <pre><code class="language-systemverilog">
+task automatic ahb_write(
+   input logic [31:0] addr,
+   input logic [31:0] data
+);
+   // 주소 페이즈
+   @(posedge hclk);
+   m_haddr  <= addr;
+   m_htrans <= HTRANS_NONSEQ;
+   m_hwrite <= 1'b1;
+   m_hsize  <= HSIZE_WORD;
+   m_hburst <= HBURST_SINGLE;
+
+   // 데이터 페이즈
+   @(posedge hclk);
+   while (!m_hready) @(posedge hclk);  // 웨이트 스테이트 처리
+   m_hwdata <= data;
+   m_htrans <= HTRANS_IDLE;
+
+   @(posedge hclk);
+   while (!m_hready) @(posedge hclk);
+endtask
+  </code></pre>
+
+  <h3>AHB 읽기 태스크</h3>
+
+  <pre><code class="language-systemverilog">
+task automatic ahb_read(
+   input  logic [31:0] addr,
+   output logic [31:0] data
+);
+   // 주소 페이즈
+   @(posedge hclk);
+   m_haddr  <= addr;
+   m_htrans <= HTRANS_NONSEQ;
+   m_hwrite <= 1'b0;
+   m_hsize  <= HSIZE_WORD;
+   m_hburst <= HBURST_SINGLE;
+
+   // 데이터 페이즈
+   @(posedge hclk);
+   while (!m_hready) @(posedge hclk);
+   m_htrans <= HTRANS_IDLE;
+
+   @(posedge hclk);
+   while (!m_hready) @(posedge hclk);
+   data = m_hrdata;                    // 읽기 데이터 캡처
+endtask
+  </code></pre>
+
+  <figure>
+    <img src="../figures/ch16_sec08_ahb_waveform.svg" alt="AHB 버스 시뮬레이션 파형">
+    <figcaption>그림 16.8: 시뮬레이션 파형. 읽기(Cycle 1~2)와 쓰기(Cycle 2~3)가 파이프라인으로 중첩되는 모습을 확인할 수 있습니다.</figcaption>
+  </figure>
+
+  <h3>SVA 프로토콜 체커</h3>
+
+  <p>SVA(SystemVerilog Assertion)는 설계 의도를 시간적 속성(Temporal Property)으로 표현하고, 시뮬레이션 중 자동으로 검사하는 기법입니다. AHB 프로토콜에는 반드시 지켜야 할 타이밍 규칙이 있으며, 이를 SVA로 코딩하면 프로토콜 위반을 즉시 탐지할 수 있습니다.</p>
+
+  <h4>규칙 1: HREADY=LOW 동안 주소/제어 신호 유지</h4>
+
+  <p>이것이 앞서 반복해서 강조한 규칙입니다. SVA로는 다음과 같이 표현합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// SVA: HREADY=LOW일 때 주소/제어 신호가 변경되면 오류
+property p_addr_stable_during_wait;
+   @(posedge hclk) disable iff (!hreset_n)
+   (!m_hready && m_htrans != HTRANS_IDLE)
+   |=> ($stable(m_haddr) && $stable(m_htrans) && $stable(m_hwrite));
+endproperty
+
+assert property (p_addr_stable_during_wait)
+   else $error("[SVA] HREADY LOW 동안 주소/제어 신호 변경!");
+  </code></pre>
+
+  <p>이 어서션의 의미는 다음과 같습니다: "HREADY가 LOW이고 유효 전송(IDLE이 아닌)이 진행 중이면, 다음 사이클에서 HADDR, HTRANS, HWRITE가 모두 안정(stable)해야 한다." <code>|=></code>는 "다음 사이클에서"를 의미하는 SVA의 시간 연산자입니다.</p>
+
+  <h4>규칙 2: IDLE 전송 시 OKAY 응답</h4>
+
+  <pre><code class="language-systemverilog">
+property p_idle_okay_response;
+   @(posedge hclk) disable iff (!hreset_n)
+   (m_htrans == HTRANS_IDLE && m_hready)
+   |-> (m_hresp == HRESP_OKAY);
+endproperty
+  </code></pre>
+
+  <p><code>|-></code>는 <code>|=></code>와 달리 "같은 사이클에서"를 의미합니다. IDLE 전송과 동시에 OKAY 응답이 있어야 합니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>ARM에서는 AHB 프로토콜 검증을 위한 공식 VIP(Verification IP)를 제공합니다. 그러나 교육 목적으로는 위와 같이 핵심 규칙 3~5개를 직접 SVA로 작성하는 것이 프로토콜 이해에 더 효과적입니다. 면접에서 "SVA로 AHB 규칙을 어떻게 검증합니까?"라는 질문에 위 코드를 설명할 수 있으면 큰 차별화가 됩니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> SVA(SystemVerilog Assertion)란 무엇이며, 어떤 상황에서 사용합니까?</p>
+    <p><strong>A:</strong> SVA는 설계의 시간적 속성(예: "A가 발생하면 2사이클 이내에 B가 발생해야 한다")을 선언적으로 표현하는 언어 기능입니다. 크게 즉시 어서션(Immediate Assertion)과 동시 어서션(Concurrent Assertion)으로 나뉘며, 버스 프로토콜 규칙 검증, 인터페이스 타이밍 확인, FIFO 오버플로 방지 등에 사용됩니다. 시뮬레이션뿐 아니라 정형 검증(Formal Verification)에서도 활용됩니다.</p>
+  </aside>
+
+  <h3>시뮬레이션 실행 방법</h3>
+
+  <pre><code class="language-systemverilog">
+// VCS 실행 명령
+// vcs -sverilog ch16_ahb_pkg.sv ch16_ahb_slave_sram.sv \
+//     ch16_ahb_interconnect.sv ch16_ahb_bus_tb.sv -assert enable_diag
+//
+// Vivado Simulator 실행
+// xvlog --sv ch16_ahb_pkg.sv ch16_ahb_slave_sram.sv \
+//       ch16_ahb_interconnect.sv ch16_ahb_bus_tb.sv
+// xelab ahb_bus_tb -s sim_snapshot
+// xsim sim_snapshot -R
+  </code></pre>
+
+  <p>시뮬레이션 결과에서 모든 TEST가 PASS이고, SVA 위반 메시지가 없으면 설계가 AHB 프로토콜을 올바르게 준수하는 것입니다.</p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: SVA에서 <code>|=></code>와 <code>|-></code>의 차이를 설명하십시오. 또한 <code>$stable(signal)</code>은 무엇을 확인합니까?</p>
+  </aside>
+</section>
+<!-- ========== 16.8절 끝 ========== -->
+
+
+<!-- ========== 16.9절 시작 ========== -->
+<section id="sec-16-9">
+  <h2>16.9 본 챕터 요약 및 다음 단계</h2>
+
+  <p>이번 챕터에서 우리는 Chapter 15의 자체 프로토콜을 산업 표준 AMBA AHB-Lite 버스로 교체하는 전 과정을 다루었습니다. 자체 프로토콜의 확장성·재사용성·검증 한계를 인식하고, AHB-Lite를 통해 이 문제들을 해결하였습니다.</p>
+</section>
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>AMBA 패밀리</strong>: AXI(고성능 다채널), AHB(파이프라인 전송), APB(저전력 2사이클). 우리 SoC에서는 CPU↔SRAM에 AHB-Lite, 주변 장치에 APB를 사용한다.</li>
+    <li><strong>AHB 파이프라인 전송</strong>: 모든 전송은 주소 페이즈(Address Phase)와 데이터 페이즈(Data Phase)로 나뉘며, 이 두 페이즈가 1사이클 오프셋으로 중첩된다. 따라서 연속 전송 시 매 사이클 하나의 전송이 완료된다.</li>
+    <li><strong>HREADY 규칙</strong>: HREADY=LOW일 때 마스터는 주소/제어 신호를 유지해야 한다. 이것이 AHB 프로토콜에서 가장 흔한 오류이며, SVA로 자동 검증할 수 있다.</li>
+    <li><strong>AHB Master</strong>: 캐시 인터페이스 신호를 AHB 규격으로 변환하는 FSM. IDLE→ADDR→DATA→DONE 상태를 순회하며, 버스트 모드에서는 BURST 상태가 추가된다.</li>
+    <li><strong>AHB Slave</strong>: 주소 래치로 Address Phase/Data Phase를 분리하고, SRAM에 대한 읽기/쓰기를 수행한다. HSEL 확인과 주소 범위 검사가 필수이다.</li>
+    <li><strong>AHB 인터커넥트</strong>: 주소 디코더(HADDR→HSELx), 슬레이브 MUX(활성 슬레이브 응답 선택), 기본 슬레이브(미매핑 주소 ERROR 응답)로 구성된다.</li>
+    <li><strong>SVA 프로토콜 체커</strong>: 시간적 속성을 선언적으로 표현하여 프로토콜 위반을 시뮬레이션 중 자동 탐지한다.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> AHB-Lite에서 HTRANS의 4가지 전송 타입(IDLE, BUSY, NONSEQ, SEQ)의 각 코드 값과 의미를 기술하시오.</li>
+    <li><strong>[이해]</strong> AHB의 주소 페이즈와 데이터 페이즈가 파이프라인으로 중첩되는 원리를 타이밍 다이어그램을 그려 설명하시오. SINGLE 읽기 2회 연속 시나리오를 사용하시오.</li>
+    <li><strong>[적용]</strong> 현재 SRAM Slave는 0-wait state로 동작합니다. 2사이클 읽기 지연을 가진 Flash Slave를 설계하시오. HREADY를 제어하는 웨이트 FSM을 추가하시오.</li>
+    <li><strong>[분석]</strong> 우리 인터커넥트에 세 번째 슬레이브(주소 범위: 0x8000_0000~0x8FFF_FFFF)를 추가하려면, 주소 디코더와 슬레이브 MUX에 어떤 수정이 필요합니까? 코드 변경량을 자체 프로토콜 방식과 비교하시오.</li>
+    <li><strong>[분석]</strong> 다음 SVA 어서션이 검증하는 AHB 규칙을 한국어로 설명하시오:
+      <pre><code class="language-systemverilog">
+property p_burst_seq;
+   @(posedge hclk)
+   (m_htrans == HTRANS_NONSEQ && m_hburst == HBURST_INCR4 && m_hready)
+   |=> (m_htrans == HTRANS_SEQ);
+endproperty
+      </code></pre>
+    </li>
+    <li><strong>[평가]</strong> 우리 SoC에서 AHB-Lite 대신 AXI를 사용한다고 가정하면, Basys 3의 LUT 사용량이 어떻게 변할지 추정하고, AHB-Lite 선택의 타당성을 평가하시오.</li>
+    <li><strong>[적용]</strong> 테스트벤치에 INCR4 버스트 읽기 테스트를 추가하시오. 4개의 연속 주소에 데이터를 쓴 후, 버스트로 읽어서 모든 데이터가 일치하는지 검증하시오.</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>다음 Chapter 17에서는 AHB 버스에 <strong>APB 브리지(AHB-to-APB Bridge)</strong>를 연결하여, UART, GPIO, 타이머 같은 저속 주변 장치를 SoC에 통합합니다. 이번 챕터에서 설계한 AHB 인터커넥트의 Slave 1 포트가 APB 브리지로 연결되며, 프로토콜 변환 FSM을 설계합니다. 최종적으로 UART를 통해 "Hello RISC-V" 메시지를 PC로 전송하는 마일스톤에 도달합니다.</p>
+</section>
+
+</body>
+</html>

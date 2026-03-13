@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 19 — 예외/인터럽트와 파이프라인 통합</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 19</span>
+  <h1>예외/인터럽트와 파이프라인 통합</h1>
+  <p class="chapter-intro">Chapter 18에서 CSR 레지스터와 시스템 명령어의 기본 동작을 이해하였습니다. 이제 이들을 실제 5단계 파이프라인에 통합하여, 예외와 인터럽트가 발생했을 때 프로세서가 정확하고 안전하게 반응하는 메커니즘을 설계합니다. 이 챕터는 Part 7의 최종 목표인 "타이머 인터럽트 기반 LED 깜빡임"을 가능하게 하는 핵심 단계입니다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>파이프라인 각 스테이지에서 발생하는 동기 예외(Synchronous Exception)의 종류와 감지 위치를 <strong>설명</strong>할 수 있다.</li>
+    <li>비동기 인터럽트(Asynchronous Interrupt)의 우선순위와 인에이블 조건을 <strong>분석</strong>할 수 있다.</li>
+    <li>트랩 진입(trap entry)과 MRET 복귀 시 CSR 업데이트 시퀀스를 <strong>설계</strong>할 수 있다.</li>
+    <li>정확한 예외(Precise Exception)를 보장하는 파이프라인 플러시 로직을 <strong>구현</strong>할 수 있다.</li>
+    <li>예외와 인터럽트 시나리오를 검증하는 테스트벤치를 <strong>작성</strong>할 수 있다.</li>
+  </ul>
+</nav>
+
+<aside class="instructor-tip">
+  <strong>📌 강사 꿀팁</strong>
+  <p>이 챕터는 교재 후반부의 최고 난이도 구간 중 하나입니다. 학생들이 "파이프라인도 어려운데 예외까지?"라고 느끼는 것은 자연스러운 반응입니다. 강의 시작 시 "파이프라인은 이미 여러분이 완성했고, 오늘은 그 위에 안전장치를 추가하는 것"이라는 프레이밍을 해 주십시오. Chapter 12에서 완성한 파이프라인을 먼저 1페이지로 복습하고 진입하면 심리적 부담이 크게 줄어듭니다.</p>
+</aside>
+
+
+<!-- ========== 19.1절 시작 ========== -->
+<section id="sec-19-1">
+  <h2>19.1 파이프라인 구조 핵심 복습</h2>
+
+  <p>Chapter 12에서 우리는 IF/ID/EX/MEM/WB 5단계 파이프라인을 완성하였습니다. 데이터 해저드는 포워딩 유닛으로, Load-Use 해저드는 1사이클 스톨로, 제어 해저드는 분기 판정 후 플러시로 해결하였습니다. 예외와 인터럽트 처리를 파이프라인에 통합하기 전에, 이 핵심 메커니즘을 간결하게 재확인합시다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 5단계 파이프라인을 공장의 조립 라인이라고 생각하십시오. 각 스테이지는 조립 공정(IF: 부품 인출, ID: 도면 해독, EX: 가공, MEM: 창고 입출고, WB: 완성품 등록)에 해당합니다. 스톨은 "앞 공정 대기", 포워딩은 "중간 결과물 직배송", 플러시는 "불량품 폐기"입니다. 이번 챕터에서 추가하는 예외 처리는 <strong>"응급 상황 발생 시 전체 라인 정지 후 안전 프로토콜 가동"</strong>에 해당합니다.
+  </div>
+
+  <h3>5단계 파이프라인 구조 요약</h3>
+
+  <figure>
+    <img src="../figures/ch19_sec01_pipeline_review.svg" alt="5단계 파이프라인 구조와 제어 신호">
+    <figcaption>그림 19.1: 5단계 파이프라인 구조 핵심 복습. 각 스테이지 사이의 파이프라인 레지스터, 스톨/플러시 제어 신호, 포워딩 경로를 한눈에 보여준다.</figcaption>
+  </figure>
+
+  <p>각 스테이지의 역할을 한 문장으로 정리합니다.</p>
+
+  <table>
+    <tr>
+      <th>스테이지</th>
+      <th>역할</th>
+      <th>핵심 하드웨어</th>
+    </tr>
+    <tr>
+      <td><strong>IF</strong> (Instruction Fetch)</td>
+      <td>PC가 가리키는 주소에서 명령어를 인출</td>
+      <td>PC 레지스터, IMEM(또는 I-Cache)</td>
+    </tr>
+    <tr>
+      <td><strong>ID</strong> (Instruction Decode)</td>
+      <td>명령어를 해독하고 레지스터 파일에서 소스 피연산자를 읽음</td>
+      <td>디코더, 레지스터 파일, 즉치수 생성기</td>
+    </tr>
+    <tr>
+      <td><strong>EX</strong> (Execute)</td>
+      <td>ALU 연산 수행, 분기 조건 판정, 메모리 주소 계산</td>
+      <td>ALU, 분기 비교기, 포워딩 MUX</td>
+    </tr>
+    <tr>
+      <td><strong>MEM</strong> (Memory Access)</td>
+      <td>데이터 메모리(또는 D-Cache) 읽기/쓰기</td>
+      <td>DMEM, 바이트 인에이블 로직</td>
+    </tr>
+    <tr>
+      <td><strong>WB</strong> (Write-Back)</td>
+      <td>연산 결과 또는 메모리 데이터를 레지스터 파일에 기록</td>
+      <td>WB MUX, 레지스터 파일 쓰기 포트</td>
+    </tr>
+  </table>
+
+  <h3>스톨과 플러시 메커니즘 재확인</h3>
+
+  <p><strong>스톨(Stall)</strong>은 특정 스테이지의 진행을 일시 정지시키는 것입니다. Load-Use 해저드가 대표적 원인으로, ID 스테이지에서 이전 Load 명령어의 결과가 필요할 때 1사이클 동안 PC와 IF/ID 레지스터를 홀드(hold)하고, ID/EX 레지스터에 버블(NOP)을 삽입합니다.</p>
+
+  <p><strong>플러시(Flush)</strong>는 잘못된 경로에서 인출된 명령어를 무효화하는 것입니다. 분기 예측 실패 시 IF/ID와 ID/EX 파이프라인 레지스터를 클리어하여, 잘못 인출된 명령어가 실행되지 않도록 합니다. 예외와 인터럽트 처리에서도 이 플러시 메커니즘이 핵심 역할을 합니다.</p>
+
+  <p>Chapter 10~11에서 설계한 <strong>해저드 제어 유닛(Hazard Control Unit)</strong>의 제어 신호를 정리합니다.</p>
+
+  <table>
+    <tr>
+      <th>제어 신호</th>
+      <th>조건</th>
+      <th>동작</th>
+    </tr>
+    <tr>
+      <td><code>pc_en</code></td>
+      <td>Load-Use 해저드 감지</td>
+      <td>PC 레지스터 홀드 (0 = 홀드)</td>
+    </tr>
+    <tr>
+      <td><code>if_id_en</code></td>
+      <td>Load-Use 해저드 감지</td>
+      <td>IF/ID 레지스터 홀드</td>
+    </tr>
+    <tr>
+      <td><code>id_ex_flush</code></td>
+      <td>Load-Use 해저드 또는 분기 미스</td>
+      <td>ID/EX 레지스터를 NOP으로 클리어</td>
+    </tr>
+    <tr>
+      <td><code>if_id_flush</code></td>
+      <td>분기 미스</td>
+      <td>IF/ID 레지스터를 NOP으로 클리어</td>
+    </tr>
+  </table>
+
+  <p>이번 챕터에서는 이 제어 신호에 <strong>예외/인터럽트 조건</strong>을 추가합니다. 예외가 발생하면 분기 미스보다 더 강력한 플러시가 필요합니다. 파이프라인 내 모든 스테이지를 플러시하고, PC를 트랩 핸들러(trap handler) 주소로 강제 변경해야 합니다.</p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 질문에 답해 보십시오: Load-Use 스톨 시 IF/ID 레지스터는 홀드하고 ID/EX 레지스터는 플러시합니다. 만약 이 두 동작을 반대로 하면(IF/ID를 플러시, ID/EX를 홀드) 어떤 문제가 발생할까요? Chapter 10의 내용을 떠올려 보십시오.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Chapter 12에서 파이프라인을 이미 완성했는데, 왜 다시 복습하나요?</p>
+    <p><strong>A:</strong> 예외 처리는 기존 파이프라인 제어 신호를 확장하는 방식으로 구현됩니다. 스톨과 플러시의 동작 원리를 정확히 이해하지 않으면, 예외 발생 시 "어떤 명령어를 살리고 어떤 명령어를 죽일지"를 결정하는 로직을 설계할 수 없습니다. 이 복습은 1페이지 분량이지만, 이후 절의 이해도를 크게 높여줍니다.</p>
+  </aside>
+</section>
+<!-- ========== 19.1절 끝 ========== -->
+
+
+<!-- ========== 19.2절 시작 ========== -->
+<section id="sec-19-2">
+  <h2>19.2 동기 예외 처리</h2>
+
+  <p>동기 예외(Synchronous Exception)란 특정 명령어의 실행 과정에서 <strong>결정론적(deterministic)</strong>으로 발생하는 비정상 이벤트입니다. 같은 명령어를 같은 상태에서 실행하면 반드시 같은 예외가 발생합니다. 이는 외부 이벤트에 의해 비결정론적으로 발생하는 비동기 인터럽트와 구별되는 핵심 특성입니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 동기 예외는 요리 레시피를 따르다가 "500도에서 가열하시오"라는 잘못된 지시를 만난 것과 같습니다. 이 지시에 도달하면 <strong>반드시</strong> 문제가 발생합니다. 반면 비동기 인터럽트는 요리 중 갑자기 울리는 화재 경보기입니다. 레시피와 무관하게 언제든 발생할 수 있습니다.
+  </div>
+
+  <h3>RV32I에서 발생하는 주요 동기 예외</h3>
+
+  <p>RISC-V 특권 스펙(Privileged Specification)은 Machine 모드에서 처리해야 하는 동기 예외를 정의합니다. 우리 RV32I 구현에서 하드웨어적으로 감지하고 처리해야 하는 예외는 다음과 같습니다.</p>
+
+  <table>
+    <tr>
+      <th>예외</th>
+      <th>mcause 코드</th>
+      <th>감지 스테이지</th>
+      <th>발생 조건</th>
+    </tr>
+    <tr>
+      <td><strong>Instruction address misaligned</strong></td>
+      <td>0</td>
+      <td>EX</td>
+      <td>분기/점프 대상 주소의 하위 비트가 0이 아님 (PC[1:0] != 2'b00)</td>
+    </tr>
+    <tr>
+      <td><strong>Illegal instruction</strong></td>
+      <td>2</td>
+      <td>ID</td>
+      <td>정의되지 않은 opcode/funct3/funct7 조합</td>
+    </tr>
+    <tr>
+      <td><strong>Breakpoint</strong></td>
+      <td>3</td>
+      <td>ID</td>
+      <td>EBREAK 명령어 실행</td>
+    </tr>
+    <tr>
+      <td><strong>Load address misaligned</strong></td>
+      <td>4</td>
+      <td>MEM</td>
+      <td>LW 주소가 4바이트 정렬되지 않음, LH/LHU 주소가 2바이트 정렬되지 않음</td>
+    </tr>
+    <tr>
+      <td><strong>Store/AMO address misaligned</strong></td>
+      <td>6</td>
+      <td>MEM</td>
+      <td>SW 주소가 4바이트 정렬되지 않음, SH 주소가 2바이트 정렬되지 않음</td>
+    </tr>
+    <tr>
+      <td><strong>Environment call from M-mode</strong></td>
+      <td>11</td>
+      <td>ID</td>
+      <td>ECALL 명령어 실행</td>
+    </tr>
+  </table>
+
+  <h3>예외 감지 위치와 파이프라인의 관계</h3>
+
+  <figure>
+    <img src="../figures/ch19_sec02_sync_exception.svg" alt="동기 예외 감지 위치와 처리 흐름">
+    <figcaption>그림 19.2: 파이프라인 각 스테이지에서 감지되는 동기 예외의 종류. 예외 정보는 파이프라인 레지스터를 통해 WB 스테이지까지 전달되며, 최종 커밋 시점에서 CSR을 업데이트한다.</figcaption>
+  </figure>
+
+  <p>예외 감지 위치가 스테이지마다 다른 이유는 간단합니다. <strong>각 예외의 원인이 되는 정보가 해당 스테이지에서 비로소 확정되기 때문</strong>입니다. Illegal Instruction은 디코더가 명령어를 해석하는 ID 스테이지에서, Load/Store Misaligned는 ALU가 메모리 주소를 계산한 후 MEM 스테이지에서 확인 가능합니다.</p>
+
+  <h3>Illegal Instruction 감지</h3>
+
+  <p>Illegal Instruction 예외는 디코더가 유효하지 않은 명령어를 만났을 때 발생합니다. Chapter 06의 디코더에서 이미 <code>illegal_instr</code> 출력을 설계했었습니다. 이 신호를 예외 처리 로직과 연결하면 됩니다.</p>
+
+  <pre><code class="language-systemverilog">
+// ID 스테이지: Illegal Instruction 감지
+// 디코더(Ch06)의 illegal_instr 출력을 예외 파이프라인 레지스터에 전달
+always_comb begin
+   id_exception      = 1'b0;
+   id_exception_code = 32'd0;
+
+   if (illegal_instr) begin
+      id_exception      = 1'b1;
+      id_exception_code = 32'd2;   // mcause = 2: Illegal instruction
+   end else if (ecall_instr) begin
+      id_exception      = 1'b1;
+      id_exception_code = 32'd11;  // mcause = 11: ECALL
+   end else if (ebreak_instr) begin
+      id_exception      = 1'b1;
+      id_exception_code = 32'd3;   // mcause = 3: Breakpoint
+   end
+end
+  </code></pre>
+
+  <h3>Load/Store Misaligned 감지</h3>
+
+  <p>RISC-V 스펙은 Load/Store 명령어의 주소 정렬(alignment)을 <strong>하드웨어가 반드시 확인</strong>하도록 규정합니다. 워드(4바이트) 접근 시 주소의 하위 2비트가 <code>2'b00</code>이어야 하고, 하프워드(2바이트) 접근 시 하위 1비트가 <code>1'b0</code>이어야 합니다. 바이트 접근은 항상 정렬되어 있으므로 예외가 발생하지 않습니다.</p>
+
+  <pre><code class="language-systemverilog">
+// MEM 스테이지: Load/Store Misaligned 감지
+// funct3 필드로 접근 폭을 결정하고, 주소 하위 비트를 확인
+always_comb begin
+   mem_load_misaligned  = 1'b0;
+   mem_store_misaligned = 1'b0;
+
+   case (mem_funct3)
+      3'b010: begin  // LW / SW (워드: 4바이트 정렬)
+         if (mem_alu_result[1:0] != 2'b00) begin
+            if (mem_is_load)  mem_load_misaligned  = 1'b1;
+            if (mem_is_store) mem_store_misaligned = 1'b1;
+         end
+      end
+      3'b001, 3'b101: begin  // LH / LHU / SH (하프워드: 2바이트 정렬)
+         if (mem_alu_result[0] != 1'b0) begin
+            if (mem_is_load)  mem_load_misaligned  = 1'b1;
+            if (mem_is_store) mem_store_misaligned = 1'b1;
+         end
+      end
+      default: ; // LB / LBU / SB: 정렬 제약 없음
+   endcase
+end
+  </code></pre>
+
+  <h3>예외 정보의 파이프라인 전달</h3>
+
+  <p>핵심 설계 결정이 있습니다. 예외는 감지 즉시 처리하지 않고, <strong>파이프라인 레지스터를 통해 WB 스테이지까지 전달</strong>한 후 최종 커밋 시점에서 처리합니다. 이렇게 하는 이유는 <strong>정확한 예외(Precise Exception)</strong>를 보장하기 위해서입니다. 만약 ID 스테이지에서 Illegal Instruction을 감지하자마자 즉시 트랩에 진입하면, MEM 스테이지에 있는 더 오래된 명령어가 아직 완료되지 않은 상태에서 예외가 처리되어 아키텍처 상태가 꼬일 수 있습니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 예외 정보를 파이프라인 레지스터로 전달
+// ID/EX → EX/MEM → MEM/WB 각 단계에서 예외 플래그와 코드를 함께 전달
+
+// ID/EX 파이프라인 레지스터에 예외 필드 추가
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n || id_ex_flush) begin
+      id_ex_exception      <= 1'b0;
+      id_ex_exception_code <= 32'd0;
+      id_ex_exception_pc   <= 32'd0;
+      id_ex_exception_tval <= 32'd0;
+   end else if (id_ex_en) begin
+      id_ex_exception      <= id_exception;
+      id_ex_exception_code <= id_exception_code;
+      id_ex_exception_pc   <= id_pc;
+      id_ex_exception_tval <= 32'd0;  // ID 예외에는 tval 불필요
+   end
+end
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>예외 정보를 파이프라인 레지스터에 추가하면 레지스터 폭이 증가합니다. 실무에서는 예외 플래그(1비트)와 예외 코드(4~5비트)만으로 충분하며, <code>mtval</code>에 해당하는 정보는 이미 파이프라인 레지스터에 존재하는 값(ALU 결과, PC 등)을 재활용합니다. 별도 레지스터를 추가하는 것은 교육 목적의 단순화이며, 실제 설계에서는 면적 최적화를 반드시 고려해야 합니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> 동기 예외와 비동기 인터럽트의 차이점을 설명하시오.</p>
+    <p><strong>A:</strong> 동기 예외는 특정 명령어의 실행에 의해 결정론적으로 발생하며, 같은 명령어를 같은 상태에서 실행하면 반드시 같은 예외가 재현됩니다. 예: Illegal Instruction, Misaligned Access, ECALL. 비동기 인터럽트는 외부 이벤트에 의해 비결정론적으로 발생하며, 현재 실행 중인 명령어와 무관합니다. 예: 타이머 인터럽트, 외부 I/O 인터럽트. 파이프라인에서 동기 예외는 해당 명령어의 PC를 <code>mepc</code>에 저장하고, 비동기 인터럽트는 다음에 실행할 명령어의 PC를 저장합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p><code>LW x5, 3(x10)</code> 명령어에서 <code>x10 = 0x1000</code>일 때, 유효 주소는 <code>0x1003</code>입니다. 이 명령어는 예외를 발생시킬까요? 발생한다면 <code>mcause</code> 값은 무엇이고, <code>mtval</code>에는 어떤 값이 기록될까요?</p>
+  </aside>
+</section>
+<!-- ========== 19.2절 끝 ========== -->
+
+
+<!-- ========== 19.3절 시작 ========== -->
+<section id="sec-19-3">
+  <h2>19.3 비동기 인터럽트 처리</h2>
+
+  <p>비동기 인터럽트(Asynchronous Interrupt)는 현재 실행 중인 명령어와 무관하게, 외부 이벤트에 의해 발생하는 서비스 요청입니다. Chapter 17에서 설계한 타이머 카운터, UART 컨트롤러, GPIO 컨트롤러가 바로 이 인터럽트 소스(interrupt source)에 해당합니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 비동기 인터럽트는 <strong>응급실의 트리아지(triage) 시스템</strong>과 같습니다. 의사(프로세서)가 현재 환자(명령어)를 진료하는 중에도, 더 긴급한 환자(인터럽트)가 도착하면 현재 진료를 일시 중단하고 긴급 환자를 먼저 처리합니다. 진료 중단 전에 현재 환자의 차트(mepc, mstatus)를 기록해 두어야 나중에 정확히 이어서 진료할 수 있습니다. 이 비유의 한계: 실제 프로세서에서는 현재 명령어가 "완료"된 후에만 인터럽트를 받아들이므로, 진료 도중 중단이 아니라 진료 완료 후 중단에 가깝습니다.
+  </div>
+
+  <h3>RISC-V Machine 모드 인터럽트 종류</h3>
+
+  <p>RISC-V 특권 스펙은 Machine 모드에서 세 가지 인터럽트 소스를 정의합니다.</p>
+
+  <table>
+    <tr>
+      <th>인터럽트</th>
+      <th>약어</th>
+      <th>mcause (bit[31]=1)</th>
+      <th>소스</th>
+      <th>우선순위</th>
+    </tr>
+    <tr>
+      <td>Machine External Interrupt</td>
+      <td>MEI</td>
+      <td>0x8000_000B (11)</td>
+      <td>외부 인터럽트 컨트롤러 (PLIC)</td>
+      <td>최고</td>
+    </tr>
+    <tr>
+      <td>Machine Software Interrupt</td>
+      <td>MSI</td>
+      <td>0x8000_0003 (3)</td>
+      <td>MSIP 레지스터 (CLINT)</td>
+      <td>중간</td>
+    </tr>
+    <tr>
+      <td>Machine Timer Interrupt</td>
+      <td>MTI</td>
+      <td>0x8000_0007 (7)</td>
+      <td>타이머 비교 레지스터 (CLINT)</td>
+      <td>최저</td>
+    </tr>
+  </table>
+
+  <p><code>mcause</code>의 최상위 비트(bit[31])가 <code>1</code>이면 인터럽트, <code>0</code>이면 동기 예외를 나타냅니다. 이 한 비트의 차이가 트랩 핸들러에서 예외와 인터럽트를 구분하는 첫 번째 분기 조건이 됩니다.</p>
+
+  <h3>인터럽트 인에이블 메커니즘: 3단계 게이트</h3>
+
+  <p>인터럽트가 실제로 프로세서에 전달되려면 <strong>세 가지 조건</strong>이 모두 충족되어야 합니다. 이를 3단계 게이트(three-level gate)라 부릅니다.</p>
+
+  <figure>
+    <img src="../figures/ch19_sec03_interrupt_priority.svg" alt="비동기 인터럽트 처리 및 우선순위">
+    <figcaption>그림 19.3: 인터럽트 처리의 3단계 게이트. 인터럽트 소스(mip 펜딩) → 개별 인에이블(mie) → 전역 인에이블(mstatus.MIE) 세 조건이 모두 충족되어야 인터럽트가 프로세서에 전달된다.</figcaption>
+  </figure>
+
+  <p><strong>1단계 — 인터럽트 펜딩(mip):</strong> 외부 장치가 인터럽트 신호를 어설트(assert)하면, <code>mip</code>(Machine Interrupt Pending) 레지스터의 해당 비트가 <code>1</code>로 설정됩니다. <code>mip.MEIP</code>(bit 11)은 외부 인터럽트, <code>mip.MTIP</code>(bit 7)은 타이머 인터럽트, <code>mip.MSIP</code>(bit 3)은 소프트웨어 인터럽트의 펜딩 상태를 나타냅니다.</p>
+
+  <p><strong>2단계 — 개별 인에이블(mie):</strong> <code>mie</code>(Machine Interrupt Enable) 레지스터의 해당 비트가 <code>1</code>이어야 합니다. <code>mie.MEIE</code>, <code>mie.MTIE</code>, <code>mie.MSIE</code> 각각이 개별 인터럽트 소스의 게이트 역할을 합니다. 소프트웨어가 특정 인터럽트만 선택적으로 활성화/비활성화할 수 있습니다.</p>
+
+  <p><strong>3단계 — 전역 인에이블(mstatus.MIE):</strong> <code>mstatus</code> 레지스터의 MIE(Machine Interrupt Enable) 비트가 <code>1</code>이어야 합니다. 이 비트가 <code>0</code>이면 모든 Machine 모드 인터럽트가 차단됩니다. 트랩 핸들러 진입 시 자동으로 <code>0</code>으로 설정되어, 트랩 처리 중 중첩 인터럽트(nested interrupt)를 방지합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 인터럽트 펜딩 조건 계산
+// 각 인터럽트: 소스 활성 AND 개별 인에이블 AND 전역 인에이블
+logic mei_pending;  // 외부 인터럽트 펜딩
+logic msi_pending;  // 소프트웨어 인터럽트 펜딩
+logic mti_pending;  // 타이머 인터럽트 펜딩
+
+assign mei_pending = mip_meip & mie_meie & mstatus_mie;
+assign msi_pending = mip_msip & mie_msie & mstatus_mie;
+assign mti_pending = mip_mtip & mie_mtie & mstatus_mie;
+
+// 인터럽트 우선순위 인코딩
+// RISC-V 스펙: MEI > MSI > MTI
+always_comb begin
+   interrupt_taken = 1'b0;
+   interrupt_cause = 32'd0;
+
+   if (mei_pending) begin
+      interrupt_taken = 1'b1;
+      interrupt_cause = 32'h8000_000B;  // Machine external interrupt
+   end else if (msi_pending) begin
+      interrupt_taken = 1'b1;
+      interrupt_cause = 32'h8000_0003;  // Machine software interrupt
+   end else if (mti_pending) begin
+      interrupt_taken = 1'b1;
+      interrupt_cause = 32'h8000_0007;  // Machine timer interrupt
+   end
+end
+  </code></pre>
+
+  <h3>인터럽트 수용 시점: 명령어 경계</h3>
+
+  <p>비동기 인터럽트는 임의 시점에 발생할 수 있지만, 프로세서가 인터럽트를 실제로 수용(accept)하는 것은 <strong>명령어 경계(instruction boundary)</strong>, 즉 하나의 명령어가 완전히 커밋되는 시점입니다. 파이프라인에서는 WB 스테이지에서 명령어가 커밋된 직후가 됩니다. 이는 정확한 예외를 보장하기 위한 필수 조건입니다.</p>
+
+  <p>구현에서는 인터럽트 펜딩 신호를 WB 스테이지의 커밋 로직에서 확인합니다. WB 스테이지에 동기 예외가 없고, 인터럽트가 펜딩되어 있으면, 현재 명령어 커밋 후 트랩에 진입합니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>타이머 인터럽트의 <strong>응답 시간(interrupt latency)</strong>은 임베디드 시스템에서 중요한 성능 지표입니다. 5단계 파이프라인에서 최악의 경우 인터럽트 응답 시간은 약 5~7 사이클입니다(인터럽트 감지 → WB 스테이지 도달 → 파이프라인 플러시 → 트랩 핸들러 첫 명령어 인출). 실시간 시스템(RTOS)에서는 이 지연을 사양서에 명시해야 합니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 트랩 핸들러 실행 중에 또 다른 인터럽트가 발생하면 어떻게 되나요?</p>
+    <p><strong>A:</strong> 트랩 진입 시 <code>mstatus.MIE</code>가 자동으로 <code>0</code>으로 설정되므로, 기본적으로 중첩 인터럽트는 차단됩니다. 만약 중첩 인터럽트를 허용하고 싶다면, 트랩 핸들러 코드에서 <code>mscratch</code>를 이용해 컨텍스트를 저장한 후 <code>mstatus.MIE</code>를 다시 <code>1</code>로 설정하면 됩니다. 그러나 이는 스택 오버플로 위험이 있으므로 신중하게 설계해야 합니다.</p>
+  </aside>
+</section>
+<!-- ========== 19.3절 끝 ========== -->
+
+
+<!-- ========== 19.4절 시작 ========== -->
+<section id="sec-19-4">
+  <h2>19.4 트랩 진입/복귀 메커니즘</h2>
+
+  <p>예외가 감지되거나 인터럽트가 수용되면, 프로세서는 <strong>트랩(trap)</strong>에 진입합니다. 트랩이란 정상 실행 흐름을 중단하고 트랩 핸들러(trap handler)로 제어를 이전하는 하드웨어 메커니즘의 총칭입니다. RISC-V에서 동기 예외와 비동기 인터럽트 모두 동일한 트랩 메커니즘을 통해 처리됩니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 트랩 진입은 비행기의 <strong>블랙박스(Flight Data Recorder)</strong> 기록과 같습니다. 비상 상황 발생 시 현재 비행 상태(고도, 속도, 방향 — 프로세서의 PC, mstatus)를 블랙박스(CSR)에 기록하고, 비상 절차(트랩 핸들러)를 시작합니다. 비상 상황이 해결되면 블랙박스의 기록을 참조하여 원래 비행 경로(MRET으로 복귀)로 돌아갑니다.
+  </div>
+
+  <h3>트랩 진입 시퀀스</h3>
+
+  <p>프로세서가 트랩에 진입할 때, 하드웨어는 <strong>하나의 사이클</strong> 안에 다음 동작을 원자적(atomically)으로 수행합니다.</p>
+
+  <figure>
+    <img src="../figures/ch19_sec04_trap_mechanism.svg" alt="트랩 진입/복귀 메커니즘">
+    <figcaption>그림 19.4: 트랩 진입(좌측)과 MRET 복귀(우측)의 CSR 업데이트 시퀀스. 트랩 진입 시 6단계, 복귀 시 4단계가 하드웨어에 의해 자동으로 수행된다.</figcaption>
+  </figure>
+
+  <p>트랩 진입의 각 단계를 자세히 살펴봅시다.</p>
+
+  <p><strong>단계 1 — mepc 저장:</strong> 예외 발생 명령어의 PC를 <code>mepc</code>(Machine Exception Program Counter)에 저장합니다. 동기 예외의 경우 예외를 일으킨 명령어의 PC를, 비동기 인터럽트의 경우 다음에 실행할 명령어의 PC를 저장합니다. 이 차이가 중요합니다. 예외는 원인 명령어를 재시도(retry)할 수 있어야 하고, 인터럽트는 중단된 지점부터 이어서 실행해야 하기 때문입니다.</p>
+
+  <p><strong>단계 2 — mcause 기록:</strong> 트랩의 원인을 <code>mcause</code> 레지스터에 기록합니다. bit[31]이 <code>1</code>이면 인터럽트, <code>0</code>이면 예외입니다. bit[30:0]은 구체적인 원인 코드입니다.</p>
+
+  <p><strong>단계 3 — mtval 기록:</strong> 트랩에 대한 부가 정보를 <code>mtval</code>(Machine Trap Value)에 기록합니다. Misaligned 예외의 경우 잘못된 주소를, Illegal Instruction의 경우 해당 명령어의 비트 패턴을 기록합니다. 이 정보는 트랩 핸들러가 예외 원인을 분석하는 데 사용됩니다.</p>
+
+  <p><strong>단계 4 — mstatus.MPIE 백업:</strong> 현재 <code>mstatus.MIE</code> 값을 <code>mstatus.MPIE</code>(Machine Previous Interrupt Enable)에 복사합니다. MRET 시 인터럽트 인에이블 상태를 복원하기 위한 백업입니다.</p>
+
+  <p><strong>단계 5 — mstatus.MIE 비활성화:</strong> <code>mstatus.MIE</code>를 <code>0</code>으로 설정하여 트랩 핸들러 실행 중 추가 인터럽트를 차단합니다.</p>
+
+  <p><strong>단계 6 — PC ← mtvec:</strong> PC를 <code>mtvec</code>(Machine Trap-Handler Vector Base Address)로 설정하여 트랩 핸들러로 점프합니다. 동시에 파이프라인의 모든 진행 중인 명령어를 플러시합니다.</p>
+
+  <h3>mtvec의 두 가지 모드</h3>
+
+  <p><code>mtvec</code> 레지스터의 하위 2비트(MODE 필드)에 따라 트랩 핸들러 주소 계산 방식이 달라집니다.</p>
+
+  <table>
+    <tr>
+      <th>MODE</th>
+      <th>이름</th>
+      <th>트랩 핸들러 주소</th>
+    </tr>
+    <tr>
+      <td>0 (Direct)</td>
+      <td>직접 모드</td>
+      <td>모든 트랩이 <code>BASE</code> 주소로 점프</td>
+    </tr>
+    <tr>
+      <td>1 (Vectored)</td>
+      <td>벡터 모드</td>
+      <td>예외: <code>BASE</code>, 인터럽트: <code>BASE + 4 × cause</code></td>
+    </tr>
+  </table>
+
+  <p>교육용 구현에서는 Direct 모드를 사용합니다. 모든 트랩이 <code>mtvec[31:2] || 2'b00</code> 주소로 점프하며, 트랩 핸들러 소프트웨어가 <code>mcause</code>를 읽어 원인을 분기합니다.</p>
+
+  <h3>MRET: 트랩 복귀</h3>
+
+  <p>MRET(Machine Return) 명령어는 트랩 핸들러에서 정상 실행으로 복귀하는 특권 명령어입니다. MRET 실행 시 하드웨어는 다음을 수행합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// MRET 명령어 감지 (ID 스테이지)
+// MRET 인코딩: 0011 0000 0010 00000 000 00000 1110011
+// instr[31:0] = 32'h3020_0073
+assign mret_instr = (instr == 32'h3020_0073);
+
+// MRET 실행 시 하드웨어 동작
+// A. PC ← mepc (저장된 복귀 주소)
+// B. mstatus.MIE ← mstatus.MPIE (인터럽트 인에이블 복원)
+// C. mstatus.MPIE ← 1 (기본값 복원)
+// D. 파이프라인 플러시 (MRET 이후의 잘못된 명령어 제거)
+  </code></pre>
+
+  <p>MRET 후 PC가 <code>mepc</code>로 복귀하면, 동기 예외의 경우 예외를 발생시킨 명령어부터 다시 실행됩니다(재시도). 비동기 인터럽트의 경우 중단된 다음 명령어부터 실행이 재개됩니다.</p>
+
+  <h3>트랩 컨트롤러 SystemVerilog 구현</h3>
+
+  <p>트랩 진입과 MRET 복귀를 관리하는 트랩 컨트롤러의 핵심 구현입니다. 이 모듈은 Chapter 18의 CSR 모듈과 연동하여 <code>mepc</code>, <code>mcause</code>, <code>mstatus</code>를 업데이트합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 트랩 컨트롤러 — PC 제어 및 파이프라인 플러시 핵심 로직
+// (전체 구현은 code_examples/ch19_trap_controller.sv 참조)
+
+always_comb begin
+   pc_trap        = 1'b0;
+   pc_next        = 32'd0;
+   pipeline_flush = 1'b0;
+
+   // 트랩 진입: mtvec 주소로 점프
+   if (trap_taken) begin
+      pc_trap        = 1'b1;
+      pc_next        = csr_mtvec;     // 트랩 핸들러 주소
+      pipeline_flush = 1'b1;          // 전체 파이프라인 플러시
+   end
+   // MRET: mepc 주소로 복귀
+   else if (mret_instr) begin
+      pc_trap        = 1'b1;
+      pc_next        = csr_mepc;      // 저장된 복귀 주소
+      pipeline_flush = 1'b1;          // 파이프라인 플러시
+   end
+end
+  </code></pre>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> 프로세서에서 예외와 인터럽트의 처리 흐름을 설명하시오. (반도체 면접 빈출 Top 8)</p>
+    <p><strong>A:</strong> 예외/인터럽트 발생 시 프로세서는 다음 순서로 처리합니다: (1) 현재 PC를 <code>mepc</code>에 저장 — 예외는 현재 명령어 PC, 인터럽트는 다음 명령어 PC. (2) 원인 코드를 <code>mcause</code>에 기록 — bit[31]로 예외/인터럽트 구분. (3) <code>mstatus.MIE</code>를 <code>0</code>으로 설정하여 중첩 인터럽트 방지, 이전 값은 <code>MPIE</code>에 백업. (4) PC를 <code>mtvec</code>(트랩 핸들러 주소)로 변경하고 파이프라인 플러시. 트랩 핸들러에서 원인 분석 및 처리 후 <code>MRET</code> 명령어로 복귀하면, <code>mepc</code>로 PC가 복원되고 <code>mstatus.MIE</code>가 복원됩니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>트랩 진입 시 <code>mstatus.MIE</code>를 <code>0</code>으로 설정하지 않으면 어떤 문제가 발생할 수 있을까요? 타이머 인터럽트가 1ms마다 발생하는 상황을 가정하고, 트랩 핸들러 코드가 2ms 이상 걸린다면 어떤 일이 벌어질지 생각해 보십시오.</p>
+  </aside>
+</section>
+<!-- ========== 19.4절 끝 ========== -->
+
+
+<!-- ========== 19.5절 시작 ========== -->
+<section id="sec-19-5">
+  <h2>19.5 파이프라인과 예외 처리 통합</h2>
+
+  <p>이제 이번 챕터의 핵심, 예외 처리 로직을 5단계 파이프라인에 통합하는 단계에 도달하였습니다. 이 절에서 다루는 <strong>정확한 예외(Precise Exception)</strong> 보장은 파이프라인 프로세서 설계에서 가장 까다로운 주제 중 하나입니다.</p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>이 절은 교재 후반부 최고 난이도입니다. 학생들에게 "이 부분이 어렵다고 느끼는 것은 정상입니다. 산업 현장에서도 정확한 예외 구현은 가장 많은 버그가 발생하는 영역입니다"라고 실패를 정상화해 주십시오. 단계별로 하나씩 추가하며 시뮬레이션으로 확인하는 방식이 효과적입니다.</p>
+  </aside>
+
+  <h3>정확한 예외란 무엇인가</h3>
+
+  <p>정확한 예외(Precise Exception)란 다음 세 가지 조건을 만족하는 예외 처리를 의미합니다.</p>
+
+  <ol>
+    <li>예외를 발생시킨 명령어(I<sub>n</sub>) <strong>이전</strong>의 모든 명령어(I<sub>0</sub> ~ I<sub>n-1</sub>)는 완전히 커밋(commit)되어야 한다.</li>
+    <li>예외를 발생시킨 명령어(I<sub>n</sub>) <strong>자체</strong>는 아키텍처 상태(레지스터, 메모리)를 변경하지 않아야 한다.</li>
+    <li>예외를 발생시킨 명령어 <strong>이후</strong>의 명령어(I<sub>n+1</sub>, I<sub>n+2</sub>, ...)는 모두 취소되어야 한다.</li>
+  </ol>
+
+  <figure>
+    <img src="../figures/ch19_sec05_precise_exception.svg" alt="정확한 예외 파이프라인 타이밍 다이어그램">
+    <figcaption>그림 19.5: 정확한 예외의 파이프라인 타이밍. I(n)에서 예외가 발생하면, 이전 명령어(녹색)는 완료, 이후 명령어(빨간색)는 취소된다. WB 스테이지에서 트랩 진입이 결정되고 트랩 핸들러가 인출된다.</figcaption>
+  </figure>
+
+  <p>왜 정확한 예외가 중요할까요? 트랩 핸들러가 예외 원인을 분석하고 적절한 조치를 취한 후, <code>MRET</code>으로 복귀할 때 <strong>예외 발생 명령어부터 다시 실행</strong>해야 합니다. 만약 I<sub>n</sub> 이전 명령어가 완료되지 않았거나, I<sub>n</sub> 이후 명령어가 부분적으로 실행되었다면, 복귀 후 아키텍처 상태가 일관되지 않아 프로그램이 올바르게 동작할 수 없습니다.</p>
+
+  <h3>구현 전략: 예외 정보의 지연 처리</h3>
+
+  <p>파이프라인에서 정확한 예외를 보장하는 가장 일반적인 전략은 <strong>예외 정보의 지연 처리(deferred exception handling)</strong>입니다. 핵심 아이디어는 다음과 같습니다.</p>
+
+  <ol>
+    <li>각 스테이지에서 예외를 감지하면, <strong>즉시 처리하지 않고</strong> 예외 플래그와 예외 코드를 파이프라인 레지스터에 기록한다.</li>
+    <li>예외 정보는 명령어와 함께 파이프라인을 따라 WB 스테이지까지 이동한다.</li>
+    <li><strong>WB 스테이지에서</strong> 예외 플래그가 활성화된 명령어가 도달하면, 그때 비로소 트랩에 진입한다.</li>
+    <li>예외가 표시된 명령어는 WB 스테이지에서 레지스터 파일 쓰기를 금지한다(아키텍처 상태 변경 방지).</li>
+  </ol>
+
+  <p>이 전략의 장점은 <strong>프로그램 순서(program order)</strong>에 따라 예외가 처리된다는 것입니다. 파이프라인에서 여러 명령어가 동시에 예외를 일으킬 수 있지만, WB 스테이지에는 가장 오래된 명령어가 먼저 도달하므로 자연스럽게 프로그램 순서가 보장됩니다.</p>
+
+  <h3>파이프라인 레지스터에 예외 필드 추가</h3>
+
+  <p>기존 파이프라인 레지스터에 다음 필드를 추가합니다.</p>
+
+  <table>
+    <tr>
+      <th>필드</th>
+      <th>폭</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td><code>exception</code></td>
+      <td>1비트</td>
+      <td>예외 발생 여부</td>
+    </tr>
+    <tr>
+      <td><code>exception_code</code></td>
+      <td>4비트</td>
+      <td>mcause 하위 코드 (0~15)</td>
+    </tr>
+    <tr>
+      <td><code>exception_pc</code></td>
+      <td>32비트</td>
+      <td>예외 발생 명령어 PC (mepc용)</td>
+    </tr>
+    <tr>
+      <td><code>exception_tval</code></td>
+      <td>32비트</td>
+      <td>부가 정보 (mtval용)</td>
+    </tr>
+  </table>
+
+  <p>예외 필드는 각 스테이지 경계에서 다음과 같이 전달됩니다.</p>
+
+  <pre><code class="language-systemverilog">
+// EX/MEM 파이프라인 레지스터: 예외 필드 업데이트
+// EX 스테이지에서 새 예외가 발생하면 기존 예외를 덮어쓰지 않는다.
+// (선행 명령어의 예외가 우선)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n || ex_mem_flush) begin
+      ex_mem_exception      <= 1'b0;
+      ex_mem_exception_code <= 4'd0;
+      ex_mem_exception_pc   <= 32'd0;
+      ex_mem_exception_tval <= 32'd0;
+   end else begin
+      if (id_ex_exception) begin
+         // ID 스테이지에서 이미 예외 감지됨 → 그대로 전달
+         ex_mem_exception      <= 1'b1;
+         ex_mem_exception_code <= id_ex_exception_code;
+         ex_mem_exception_pc   <= id_ex_exception_pc;
+         ex_mem_exception_tval <= id_ex_exception_tval;
+      end else if (ex_new_exception) begin
+         // EX 스테이지에서 새 예외 감지 (예: branch misaligned)
+         ex_mem_exception      <= 1'b1;
+         ex_mem_exception_code <= ex_exception_code;
+         ex_mem_exception_pc   <= ex_pc;
+         ex_mem_exception_tval <= ex_branch_target;
+      end else begin
+         ex_mem_exception      <= 1'b0;
+         ex_mem_exception_code <= 4'd0;
+         ex_mem_exception_pc   <= 32'd0;
+         ex_mem_exception_tval <= 32'd0;
+      end
+   end
+end
+  </code></pre>
+
+  <h3>WB 스테이지의 트랩 커밋 로직</h3>
+
+  <p>WB 스테이지에서 예외 플래그가 활성화된 명령어가 도달하면, 트랩에 진입합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// WB 스테이지: 트랩 커밋 결정
+always_comb begin
+   trap_commit    = 1'b0;
+   trap_is_irq    = 1'b0;
+   commit_mcause  = 32'd0;
+   commit_mepc    = 32'd0;
+   commit_mtval   = 32'd0;
+
+   if (mem_wb_exception) begin
+      // 동기 예외: 레지스터 쓰기 금지 + 트랩 진입
+      trap_commit   = 1'b1;
+      trap_is_irq   = 1'b0;
+      commit_mcause = {28'd0, mem_wb_exception_code};
+      commit_mepc   = mem_wb_exception_pc;
+      commit_mtval  = mem_wb_exception_tval;
+   end else if (interrupt_pending && wb_valid) begin
+      // 비동기 인터럽트: 현재 명령어 커밋 후 트랩 진입
+      trap_commit   = 1'b1;
+      trap_is_irq   = 1'b1;
+      commit_mcause = interrupt_cause;
+      commit_mepc   = mem_wb_pc + 32'd4; // 다음 명령어 PC
+      commit_mtval  = 32'd0;
+   end
+end
+
+// 예외 발생 명령어는 레지스터 쓰기를 금지
+assign wb_reg_we = mem_wb_reg_we & ~mem_wb_exception;
+  </code></pre>
+
+  <h3>CSR 해저드 처리</h3>
+
+  <p>CSR 명령어(CSRRW, CSRRS, CSRRC 등)는 파이프라인에서 특별한 해저드를 발생시킵니다. CSR 읽기-수정-쓰기가 원자적(atomic)이어야 하므로, CSR 명령어가 파이프라인에 있는 동안 다른 명령어가 동일 CSR에 접근하면 데이터 해저드가 발생합니다.</p>
+
+  <p>가장 간단한 해결책은 CSR 명령어가 ID 스테이지에 있을 때 <strong>파이프라인을 스톨</strong>시켜, CSR 명령어가 WB 스테이지에서 완전히 커밋될 때까지 후속 명령어의 진입을 차단하는 것입니다. 이는 성능에 불리하지만 구현이 단순합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// CSR 해저드 감지: ID 스테이지에 CSR 명령어가 있으면 스톨
+// CSR 명령어 opcode: 7'b1110011 (SYSTEM)
+// funct3 != 3'b000 이면 CSR 접근 명령어 (CSRRW/CSRRS/CSRRC 등)
+logic csr_hazard;
+assign csr_hazard = (id_opcode == 7'b1110011) && (id_funct3 != 3'b000);
+
+// 기존 해저드 제어 유닛에 CSR 해저드 조건 추가
+assign stall_if = load_use_hazard | csr_hazard;
+assign stall_id = load_use_hazard | csr_hazard;
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>고성능 프로세서에서는 CSR 스톨 대신 <strong>CSR 포워딩</strong> 또는 <strong>CSR 스코어보드</strong>를 구현하여 성능 저하를 최소화합니다. 그러나 CSR 접근은 일반 명령어에 비해 매우 드물게 발생하므로(전체 명령어의 1% 미만), 교육용 구현에서 CSR 스톨은 충분히 합리적인 선택입니다.</p>
+  </aside>
+
+  <h3>해저드 제어 유닛 통합: 최종 우선순위</h3>
+
+  <p>기존 해저드 제어 유닛에 예외/인터럽트 조건을 추가하면, 제어 신호의 우선순위가 중요해집니다.</p>
+
+  <table>
+    <tr>
+      <th>우선순위</th>
+      <th>조건</th>
+      <th>동작</th>
+    </tr>
+    <tr>
+      <td>1 (최고)</td>
+      <td>트랩 발생 (예외 또는 인터럽트)</td>
+      <td>전체 파이프라인 플러시, PC ← mtvec</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>MRET 명령어</td>
+      <td>전체 파이프라인 플러시, PC ← mepc</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>분기 미스 (EX 스테이지)</td>
+      <td>IF/ID, ID/EX 플러시, PC ← 분기 대상</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>CSR 해저드</td>
+      <td>IF, ID 스톨</td>
+    </tr>
+    <tr>
+      <td>5 (최저)</td>
+      <td>Load-Use 해저드</td>
+      <td>IF, ID 스톨, ID/EX 플러시</td>
+    </tr>
+  </table>
+
+  <pre><code class="language-systemverilog">
+// 통합 해저드 제어 유닛 — 최종 PC 선택 로직
+always_comb begin
+   // 기본값: 순차 실행
+   pc_next_sel = PC_SEL_PLUS4;
+   flush_all   = 1'b0;
+
+   if (trap_commit) begin
+      // 최우선: 트랩 발생 → mtvec으로 점프
+      pc_next_sel = PC_SEL_MTVEC;
+      flush_all   = 1'b1;
+   end else if (mret_commit) begin
+      // MRET → mepc로 복귀
+      pc_next_sel = PC_SEL_MEPC;
+      flush_all   = 1'b1;
+   end else if (branch_taken) begin
+      // 분기 미스 → 분기 대상으로 점프
+      pc_next_sel = PC_SEL_BRANCH;
+   end else begin
+      pc_next_sel = PC_SEL_PLUS4;
+   end
+end
+  </code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 트랩과 분기 미스가 동시에 발생할 수 있나요?</p>
+    <p><strong>A:</strong> 네, 가능합니다. 예를 들어, MEM 스테이지에서 Load Misaligned 예외가 발생하고, 동시에 EX 스테이지에서 분기 판정이 완료될 수 있습니다. 이 경우 트랩이 분기 미스보다 <strong>항상 우선</strong>합니다. 트랩은 프로그램의 정상 실행을 중단하는 비상 상황이며, 분기 미스는 정상 실행 흐름 내의 문제이기 때문입니다. 트랩이 처리되고 MRET으로 복귀하면 분기 명령어가 다시 실행되어 자연스럽게 올바른 경로를 선택합니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> 정확한 예외(Precise Exception)의 정의와, 파이프라인에서 이를 보장하기 위한 방법을 설명하시오.</p>
+    <p><strong>A:</strong> 정확한 예외란 (1) 예외 명령어 이전의 모든 명령어가 완료되고, (2) 예외 명령어 자체와 이후 명령어는 아키텍처 상태를 변경하지 않는 것을 의미합니다. 파이프라인에서 이를 보장하는 방법은 예외 정보를 파이프라인 레지스터에 태그하여 WB 스테이지까지 전달하고, WB에서 커밋 시점에 트랩 진입을 결정하는 것입니다. 예외가 태그된 명령어는 레지스터 쓰기와 메모리 쓰기를 금지합니다. 이를 통해 프로그램 순서대로 예외가 처리되며, MRET 후 정확한 재시도가 가능합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 시나리오를 분석해 보십시오: 파이프라인에서 I<sub>n</sub>(LW, Misaligned)이 MEM 스테이지에 있고, I<sub>n+1</sub>(ADD)이 EX 스테이지에 있으며, I<sub>n+2</sub>(SW)가 ID 스테이지에 있습니다. I<sub>n</sub>의 예외가 WB에서 커밋될 때, I<sub>n+1</sub>과 I<sub>n+2</sub>는 어떻게 처리되어야 할까요? I<sub>n+1</sub>의 ADD 결과가 이미 EX/MEM 레지스터에 기록되었다면 문제가 될까요?</p>
+  </aside>
+</section>
+<!-- ========== 19.5절 끝 ========== -->
+
+
+<!-- ========== 19.6절 시작 ========== -->
+<section id="sec-19-6">
+  <h2>19.6 예외/인터럽트 테스트벤치</h2>
+
+  <p>예외와 인터럽트 처리 로직은 파이프라인의 다양한 상태 조합에서 올바르게 동작해야 합니다. 하나의 시나리오만으로는 검증이 충분하지 않으며, 다양한 예외 유형과 타이밍 조합을 체계적으로 테스트해야 합니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 건물의 화재 경보 시스템을 설치한 후, 단순히 "경보가 울리는지"만 확인하고 끝내지 않습니다. 화재 위치별(각 층, 각 방), 시간대별(주간, 야간, 비상 발전 중), 복합 상황(정전 + 화재, 지진 + 화재)에서 모두 경보가 올바르게 작동하는지 검증해야 합니다. 테스트벤치도 마찬가지입니다.
+  </div>
+
+  <h3>검증 시나리오 설계</h3>
+
+  <figure>
+    <img src="../figures/ch19_sec06_testbench_flow.svg" alt="예외/인터럽트 테스트벤치 검증 흐름">
+    <figcaption>그림 19.6: 테스트벤치 구조. 5가지 시나리오를 순차적으로 실행하고, 각 시나리오에서 CSR 값, 파이프라인 동작, MRET 복귀, 응답 시간을 검증한다.</figcaption>
+  </figure>
+
+  <table>
+    <tr>
+      <th>시나리오</th>
+      <th>예외/인터럽트 유형</th>
+      <th>검증 항목</th>
+      <th>기대 결과</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>ECALL 예외</td>
+      <td>mcause, mepc, 플러시</td>
+      <td>mcause=11, mepc=ECALL 명령어 PC</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Illegal Instruction</td>
+      <td>mcause, 파이프라인 플러시</td>
+      <td>mcause=2, 전체 플러시</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Load Misaligned</td>
+      <td>mcause, mtval</td>
+      <td>mcause=4, mtval=비정렬 주소</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>타이머 인터럽트</td>
+      <td>mcause, 응답 시간</td>
+      <td>mcause=0x80000007, 응답 &le; 7 사이클</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>예외 + 인터럽트 동시</td>
+      <td>우선순위</td>
+      <td>동기 예외가 인터럽트보다 우선</td>
+    </tr>
+  </table>
+
+  <h3>시나리오 1: ECALL 예외</h3>
+
+  <p>ECALL은 소프트웨어가 의도적으로 트랩을 발생시키는 명령어입니다. 운영체제의 시스템 콜(system call)에 해당하며, 가장 기본적인 예외 처리 검증에 사용합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 시나리오 1: ECALL 예외 검증
+task test_ecall();
+   $display("\n===== 시나리오 1: ECALL 예외 =====");
+   reset_inputs();
+   @(posedge clk);
+
+   // ECALL 명령어가 ID 스테이지에 도달
+   id_ecall = 1'b1;
+   id_pc    = 32'h0000_0100;
+   @(posedge clk);
+
+   // 검증: trap_taken 활성화, mcause = 11
+   assert (trap_taken == 1'b1)
+      else $error("[FAIL] ECALL: trap_taken이 활성화되지 않음");
+   assert (trap_mcause == 32'd11)
+      else $error("[FAIL] ECALL: mcause 불일치 (기대: 11, 실제: %0d)",
+                  trap_mcause);
+   assert (trap_mepc == 32'h0000_0100)
+      else $error("[FAIL] ECALL: mepc 불일치");
+   assert (flush_if && flush_id)
+      else $error("[FAIL] ECALL: 플러시 신호 미활성화");
+
+   $display("[PASS] ECALL 예외: mcause=%0d, mepc=0x%08h",
+            trap_mcause, trap_mepc);
+endtask
+  </code></pre>
+
+  <h3>시나리오 4: 타이머 인터럽트 응답 시간 측정</h3>
+
+  <p>인터럽트 응답 시간(Interrupt Latency)은 인터럽트 신호가 어설트된 시점부터 트랩 핸들러의 첫 번째 명령어가 실행되는 시점까지의 사이클 수입니다. 이 값은 실시간 시스템에서 매우 중요한 성능 지표입니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 시나리오 4: 타이머 인터럽트 응답 시간 측정
+task test_timer_interrupt();
+   $display("\n===== 시나리오 4: 타이머 인터럽트 =====");
+   reset_inputs();
+   @(posedge clk);
+
+   // 타이머 인터럽트 어설트
+   timer_irq = 1'b1;
+   mem_pc    = 32'h0000_0400;
+   irq_assert_cycle = $time / CLK_PERIOD;
+   @(posedge clk);
+
+   if (trap_taken) begin
+      trap_taken_cycle = $time / CLK_PERIOD;
+      response_time = trap_taken_cycle - irq_assert_cycle;
+      $display("[PASS] 타이머 인터럽트: 응답시간=%0d 사이클",
+               response_time);
+   end else begin
+      $error("[FAIL] 타이머 인터럽트: trap_taken 미활성화");
+   end
+endtask
+  </code></pre>
+
+  <h3>시나리오 5: 예외 + 인터럽트 동시 발생</h3>
+
+  <p>동기 예외와 비동기 인터럽트가 동시에 발생할 때, <strong>동기 예외가 항상 우선</strong>합니다. 이는 RISC-V 스펙의 명시적 요구사항입니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 시나리오 5: 예외/인터럽트 우선순위 검증
+task test_priority();
+   $display("\n===== 시나리오 5: 우선순위 검증 =====");
+   reset_inputs();
+   @(posedge clk);
+
+   // Load Misaligned 예외 + 타이머 인터럽트 동시 발생
+   mem_load_misaligned = 1'b1;
+   mem_alu_result      = 32'h0001_0001; // 비정렬 주소
+   mem_pc              = 32'h0000_0500;
+   timer_irq           = 1'b1;
+   @(posedge clk);
+
+   // 동기 예외(mcause=4)가 인터럽트보다 우선
+   assert (trap_mcause == 32'd4)
+      else $error("[FAIL] 우선순위: 예외가 인터럽트보다 우선이어야 함");
+
+   $display("[PASS] 우선순위: 동기 예외(mcause=%0d) 우선 처리",
+            trap_mcause);
+endtask
+  </code></pre>
+
+  <h3>전체 테스트벤치 실행</h3>
+
+  <p>위 시나리오를 모두 포함하는 전체 테스트벤치는 <code>code_examples/ch19_exception_tb.sv</code>에 구현되어 있습니다. 시뮬레이션 실행 방법은 다음과 같습니다.</p>
+
+  <pre><code class="language-systemverilog">
+// Vivado Simulator 실행
+// xvlog ch19_exception_unit.sv ch19_exception_tb.sv
+// xelab -debug typical exception_tb
+// xsim exception_tb -R
+
+// VCS 실행
+// vcs -sverilog ch19_exception_unit.sv ch19_exception_tb.sv -o simv
+// ./simv
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>산업 현장에서 예외 처리 검증은 <strong>SystemVerilog Assertion (SVA)</strong>을 적극 활용합니다. 예를 들어, "트랩 진입 후 3사이클 이내에 파이프라인이 완전히 플러시되어야 한다"와 같은 시간적 속성을 SVA로 기술하면, 시뮬레이션 전체에 걸쳐 자동으로 검증됩니다. Chapter 16에서 AHB 프로토콜 검증에 SVA를 사용한 경험이 여기서도 동일하게 적용됩니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 테스트벤치에서 모든 시나리오가 통과했는데, FPGA에서는 다르게 동작할 수 있나요?</p>
+    <p><strong>A:</strong> 네, 가능합니다. 시뮬레이션은 이상적인 환경(지연 없음, 글리치 없음)이지만, FPGA에서는 비동기 인터럽트 신호의 메타스태빌리티(metastability), 클럭 도메인 크로싱(CDC) 문제가 발생할 수 있습니다. 외부 인터럽트 신호는 반드시 <strong>더블 싱크로나이저(double synchronizer)</strong>를 통과시켜야 합니다. 이 주제는 Chapter 21(하드웨어 검증)에서 상세히 다룹니다.</p>
+  </aside>
+</section>
+<!-- ========== 19.6절 끝 ========== -->
+
+
+<!-- ========== 19.7절 시작 ========== -->
+<section id="sec-19-7">
+  <h2>19.7 본 챕터 요약 및 다음 단계</h2>
+
+  <p>이 챕터에서는 Chapter 18의 CSR 레지스터를 기반으로, 예외와 인터럽트 처리 로직을 5단계 파이프라인에 통합하는 전체 과정을 다루었습니다. Part 7의 최종 목표인 "타이머 인터럽트 기반 LED 깜빡임"을 위한 하드웨어 인프라가 완성되었습니다.</p>
+</section>
+
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>동기 예외</strong>는 특정 명령어에 의해 결정론적으로 발생하며, 파이프라인의 각 스테이지에서 감지된다. Illegal Instruction(ID), Branch Misaligned(EX), Load/Store Misaligned(MEM)이 대표적이다.</li>
+    <li><strong>비동기 인터럽트</strong>는 외부 이벤트에 의해 발생하며, 3단계 게이트(<code>mip</code> 펜딩 AND <code>mie</code> 개별 인에이블 AND <code>mstatus.MIE</code> 전역 인에이블)를 모두 통과해야 프로세서에 전달된다. 우선순위는 MEI > MSI > MTI 순이다.</li>
+    <li><strong>트랩 진입</strong> 시 하드웨어는 <code>mepc</code>(복귀 PC), <code>mcause</code>(원인 코드), <code>mtval</code>(부가 정보)를 저장하고, <code>mstatus.MIE</code>를 비활성화한 후 PC를 <code>mtvec</code>으로 설정한다. <strong>MRET</strong>은 이 과정을 역순으로 수행하여 정상 실행으로 복귀한다.</li>
+    <li><strong>정확한 예외</strong>를 보장하기 위해, 예외 정보는 파이프라인 레지스터를 통해 WB 스테이지까지 전달되어 커밋 시점에서 처리된다. 예외 명령어 이전은 완료, 이후는 취소된다.</li>
+    <li><strong>CSR 해저드</strong>는 CSR 명령어 검출 시 파이프라인 스톨로 해결한다. 트랩과 분기 미스가 동시에 발생하면 트랩이 항상 우선한다.</li>
+    <li>테스트벤치는 ECALL, Illegal Instruction, Misaligned Access, 타이머 인터럽트, 동시 발생 우선순위 등 다양한 시나리오를 체계적으로 검증해야 한다.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> RISC-V Machine 모드에서 지원하는 세 가지 인터럽트 유형(MEI, MSI, MTI)의 <code>mcause</code> 코드와 우선순위를 나열하시오.</li>
+
+    <li><strong>[이해]</strong> 트랩 진입 시 <code>mstatus.MIE</code>를 <code>0</code>으로 설정하고 이전 값을 <code>mstatus.MPIE</code>에 백업하는 이유를 설명하시오. 만약 이 메커니즘이 없다면 어떤 문제가 발생할 수 있는가?</li>
+
+    <li><strong>[적용]</strong> 다음 명령어 시퀀스에서 예외가 발생하는 명령어를 찾고, <code>mcause</code>와 <code>mtval</code> 값을 예측하시오.
+    <pre><code>
+    0x100: ADDI x10, x0, 0x1003
+    0x104: LW   x5, 0(x10)      // x10 = 0x1003
+    0x108: ADD  x6, x5, x7
+    </code></pre>
+    </li>
+
+    <li><strong>[분석]</strong> 5단계 파이프라인에서 I<sub>n</sub>(MEM 스테이지, Load Misaligned), I<sub>n+1</sub>(EX 스테이지, Illegal Instruction), I<sub>n+2</sub>(ID 스테이지)가 동시에 존재할 때, 어떤 예외가 먼저 처리되는지 분석하시오. 이 순서가 정확한 예외를 보장하는 이유를 설명하시오.</li>
+
+    <li><strong>[분석]</strong> CSR 명령어에 의한 파이프라인 스톨 대신, CSR 값을 포워딩하는 방법을 설계하시오. 어떤 조건에서 포워딩이 가능하고, 어떤 조건에서 스톨이 불가피한지 분석하시오.</li>
+
+    <li><strong>[평가]</strong> 우리 구현에서 인터럽트 응답 시간은 최악의 경우 몇 사이클인가? 캐시 미스(Chapter 13~14)가 발생한 상태에서 인터럽트가 들어오면 응답 시간이 어떻게 변하는지 평가하시오.</li>
+
+    <li><strong>[평가]</strong> RISC-V의 Vectored 인터럽트 모드(<code>mtvec.MODE = 1</code>)를 구현하면, Direct 모드 대비 어떤 성능 이점이 있는가? Basys 3의 리소스 제약에서 Vectored 모드 구현이 합리적인지 평가하시오.</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>Part 7이 완료되었습니다. 이제 우리의 RV32I 프로세서는 5단계 파이프라인, L1 캐시, AMBA 버스, CSR, 예외/인터럽트 처리를 모두 갖추었습니다. Chapter 20에서는 이 설계를 Basys 3 FPGA에 실제로 합성하고, <strong>타이밍 클로저(timing closure)</strong>를 달성하는 방법을 다룹니다. Vivado의 합성 전략, XDC 제약 파일 작성, 타이밍 분석과 최적화 기법을 배우게 됩니다. 시뮬레이션에서 동작하던 설계가 실제 하드웨어에서도 동작하는 것을 확인하는 것은 이 교재의 감정적 클라이맥스입니다.</p>
+</section>
+
+</body>
+</html>

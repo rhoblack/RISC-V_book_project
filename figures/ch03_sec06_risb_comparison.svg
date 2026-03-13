@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .field-funct7 { fill: #F3E8FF; stroke: #7C3AED; stroke-width: 1.5; }
+      .field-rs2 { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1.5; }
+      .field-rs1 { fill: #D1FAE5; stroke: #059669; stroke-width: 1.5; }
+      .field-funct3 { fill: #FEF3C7; stroke: #D97706; stroke-width: 1.5; }
+      .field-rd { fill: #FEE2E2; stroke: #DC2626; stroke-width: 1.5; }
+      .field-opcode { fill: #F1F5F9; stroke: #475569; stroke-width: 1.5; }
+      .field-imm { fill: #E0E7FF; stroke: #4F46E5; stroke-width: 1.5; }
+      .label { font-size: 11px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .type-label { font-size: 14px; fill: #1E293B; font-weight: 700; }
+      .title { font-size: 16px; fill: #1E293B; font-weight: 700; }
+      .bit-num { font-size: 8px; fill: #9CA3AF; text-anchor: middle; font-family: 'JetBrains Mono', monospace; }
+      .note { font-size: 10px; fill: #6B7280; }
+    </style>
+  </defs>
+
+  <text x="400" y="22" text-anchor="middle" class="title">R / I / S / B 타입 비교 — 공통 필드와 즉치수 배치</text>
+
+  <!-- Bit position header -->
+  <text x="160" y="45" class="bit-num">31</text>
+  <text x="200" y="45" class="bit-num">30</text>
+  <text x="260" y="45" class="bit-num">25</text>
+  <text x="310" y="45" class="bit-num">24</text>
+  <text x="355" y="45" class="bit-num">20</text>
+  <text x="395" y="45" class="bit-num">19</text>
+  <text x="440" y="45" class="bit-num">15</text>
+  <text x="475" y="45" class="bit-num">14</text>
+  <text x="510" y="45" class="bit-num">12</text>
+  <text x="545" y="45" class="bit-num">11</text>
+  <text x="580" y="45" class="bit-num">8</text>
+  <text x="610" y="45" class="bit-num">7</text>
+  <text x="680" y="45" class="bit-num">6  0</text>
+
+  <!-- R-Type -->
+  <text x="70" y="75" class="type-label">R 타입</text>
+  <rect x="140" y="55" width="120" height="32" rx="3" class="field-funct7"/>
+  <rect x="260" y="55" width="100" height="32" rx="3" class="field-rs2"/>
+  <rect x="360" y="55" width="90" height="32" rx="3" class="field-rs1"/>
+  <rect x="450" y="55" width="80" height="32" rx="3" class="field-funct3"/>
+  <rect x="530" y="55" width="100" height="32" rx="3" class="field-rd"/>
+  <rect x="630" y="55" width="110" height="32" rx="3" class="field-opcode"/>
+  <text x="200" y="75" class="label" style="fill:#7C3AED;">funct7</text>
+  <text x="310" y="75" class="label" style="fill:#2563EB;">rs2</text>
+  <text x="405" y="75" class="label" style="fill:#059669;">rs1</text>
+  <text x="490" y="75" class="label" style="fill:#D97706;">f3</text>
+  <text x="580" y="75" class="label" style="fill:#DC2626;">rd</text>
+  <text x="685" y="75" class="label" style="fill:#475569;">opcode</text>
+
+  <!-- I-Type -->
+  <text x="70" y="120" class="type-label">I 타입</text>
+  <rect x="140" y="100" width="220" height="32" rx="3" class="field-imm"/>
+  <rect x="360" y="100" width="90" height="32" rx="3" class="field-rs1"/>
+  <rect x="450" y="100" width="80" height="32" rx="3" class="field-funct3"/>
+  <rect x="530" y="100" width="100" height="32" rx="3" class="field-rd"/>
+  <rect x="630" y="100" width="110" height="32" rx="3" class="field-opcode"/>
+  <text x="250" y="120" class="label" style="fill:#4F46E5;">imm[11:0]</text>
+  <text x="405" y="120" class="label" style="fill:#059669;">rs1</text>
+  <text x="490" y="120" class="label" style="fill:#D97706;">f3</text>
+  <text x="580" y="120" class="label" style="fill:#DC2626;">rd</text>
+  <text x="685" y="120" class="label" style="fill:#475569;">opcode</text>
+
+  <!-- S-Type -->
+  <text x="70" y="165" class="type-label">S 타입</text>
+  <rect x="140" y="145" width="120" height="32" rx="3" class="field-imm"/>
+  <rect x="260" y="145" width="100" height="32" rx="3" class="field-rs2"/>
+  <rect x="360" y="145" width="90" height="32" rx="3" class="field-rs1"/>
+  <rect x="450" y="145" width="80" height="32" rx="3" class="field-funct3"/>
+  <rect x="530" y="145" width="100" height="32" rx="3" class="field-imm"/>
+  <rect x="630" y="145" width="110" height="32" rx="3" class="field-opcode"/>
+  <text x="200" y="165" class="label" style="fill:#4F46E5;">imm[11:5]</text>
+  <text x="310" y="165" class="label" style="fill:#2563EB;">rs2</text>
+  <text x="405" y="165" class="label" style="fill:#059669;">rs1</text>
+  <text x="490" y="165" class="label" style="fill:#D97706;">f3</text>
+  <text x="580" y="165" class="label" style="fill:#4F46E5;">imm[4:0]</text>
+  <text x="685" y="165" class="label" style="fill:#475569;">opcode</text>
+
+  <!-- B-Type -->
+  <text x="70" y="210" class="type-label">B 타입</text>
+  <rect x="140" y="190" width="30" height="32" rx="3" class="field-imm"/>
+  <rect x="170" y="190" width="90" height="32" rx="3" class="field-imm"/>
+  <rect x="260" y="190" width="100" height="32" rx="3" class="field-rs2"/>
+  <rect x="360" y="190" width="90" height="32" rx="3" class="field-rs1"/>
+  <rect x="450" y="190" width="80" height="32" rx="3" class="field-funct3"/>
+  <rect x="530" y="190" width="80" height="32" rx="3" class="field-imm"/>
+  <rect x="610" y="190" width="20" height="32" rx="3" class="field-imm"/>
+  <rect x="630" y="190" width="110" height="32" rx="3" class="field-opcode"/>
+  <text x="155" y="210" class="label" style="fill:#4F46E5; font-size:9px;">[12]</text>
+  <text x="215" y="210" class="label" style="fill:#4F46E5;">[10:5]</text>
+  <text x="310" y="210" class="label" style="fill:#2563EB;">rs2</text>
+  <text x="405" y="210" class="label" style="fill:#059669;">rs1</text>
+  <text x="490" y="210" class="label" style="fill:#D97706;">f3</text>
+  <text x="570" y="210" class="label" style="fill:#4F46E5;">[4:1]</text>
+  <text x="620" y="210" class="label" style="fill:#4F46E5; font-size:9px;">[11]</text>
+  <text x="685" y="210" class="label" style="fill:#475569;">opcode</text>
+
+  <!-- Annotations: common fields -->
+  <!-- Vertical lines showing shared fields -->
+  <line x1="360" y1="50" x2="360" y2="225" stroke="#059669" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>
+  <line x1="450" y1="50" x2="450" y2="225" stroke="#D97706" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>
+  <line x1="630" y1="50" x2="630" y2="225" stroke="#475569" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>
+
+  <!-- Key insights -->
+  <rect x="40" y="240" width="720" height="130" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="400" y="262" text-anchor="middle" style="font-size:13px; fill:#2563EB; font-weight:700;">핵심 패턴 관찰</text>
+
+  <text x="60" y="285" class="note" style="font-size:11px; fill:#059669; font-weight:600;">1. rs1 위치 고정:</text>
+  <text x="175" y="285" class="note" style="font-size:11px;">4가지 타입 모두 비트 [19:15]에 rs1이 위치 (디코더 설계 단순화)</text>
+
+  <text x="60" y="305" class="note" style="font-size:11px; fill:#2563EB; font-weight:600;">2. rs2 위치 고정:</text>
+  <text x="175" y="305" class="note" style="font-size:11px;">R/S/B 타입 모두 비트 [24:20]에 rs2가 위치</text>
+
+  <text x="60" y="325" class="note" style="font-size:11px; fill:#4F46E5; font-weight:600;">3. 부호 비트 고정:</text>
+  <text x="180" y="325" class="note" style="font-size:11px;">I/S/B 타입 모두 비트 [31]이 즉치수의 부호 비트 (부호 확장 하드웨어 공유)</text>
+
+  <text x="60" y="345" class="note" style="font-size:11px; fill:#DC2626; font-weight:600;">4. rd vs imm 교대:</text>
+  <text x="180" y="345" class="note" style="font-size:11px;">R/I 타입은 [11:7]이 rd, S/B 타입은 [11:7]이 즉치수의 일부 (결과 저장 vs 오프셋)</text>
+
+  <text x="60" y="365" class="note" style="font-size:11px; fill:#D97706; font-weight:600;">5. funct3 고정:</text>
+  <text x="175" y="365" class="note" style="font-size:11px;">4가지 타입 모두 비트 [14:12]에 funct3 위치 — 연산 종류 구분의 핵심 필드</text>
+</svg>

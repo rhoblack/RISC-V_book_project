@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 400" font-family="Pretendard, sans-serif">
+  <text x="390" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#1F2937">L1 I-Cache 시뮬레이션 파형 (Waveform)</text>
+
+  <!-- Time axis -->
+  <line x1="120" y1="50" x2="750" y2="50" stroke="#6B7280" stroke-width="1"/>
+  <text x="60" y="55" font-size="11" font-weight="bold" fill="#6B7280">시간</text>
+
+  <!-- Cycle markers -->
+  <text x="155" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C1</text>
+  <text x="210" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C2</text>
+  <text x="265" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C3</text>
+  <text x="320" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C4</text>
+  <text x="375" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C5</text>
+  <text x="430" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C6</text>
+  <text x="485" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C7</text>
+  <text x="540" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C8</text>
+  <text x="595" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C9</text>
+  <text x="650" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C10</text>
+  <text x="705" y="45" text-anchor="middle" font-size="9" fill="#6B7280">C11</text>
+
+  <!-- Vertical grid lines -->
+  <line x1="127" y1="50" x2="127" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="182" y1="50" x2="182" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="237" y1="50" x2="237" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="292" y1="50" x2="292" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="347" y1="50" x2="347" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="402" y1="50" x2="402" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="457" y1="50" x2="457" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="512" y1="50" x2="512" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="567" y1="50" x2="567" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="622" y1="50" x2="622" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+  <line x1="677" y1="50" x2="677" y2="380" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- CLK signal -->
+  <text x="110" y="82" text-anchor="end" font-size="11" font-weight="bold" fill="#1F2937">clk</text>
+  <polyline points="127,85 127,65 155,65 155,85 182,85 182,65 210,65 210,85 237,85 237,65 265,65 265,85 292,85 292,65 320,65 320,85 347,85 347,65 375,65 375,85 402,85 402,65 430,65 430,85 457,85 457,65 485,65 485,85 512,85 512,65 540,65 540,85 567,85 567,65 595,65 595,85 622,85 622,65 650,65 650,85 677,85 677,65 705,65 705,85 733,85" stroke="#2563EB" stroke-width="1.5" fill="none"/>
+
+  <!-- PC address -->
+  <text x="110" y="120" text-anchor="end" font-size="11" font-weight="bold" fill="#1F2937">pc[31:0]</text>
+  <rect x="127" y="100" width="55" height="28" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="155" y="118" text-anchor="middle" font-size="9" font-family="monospace" fill="#2563EB">0x00</text>
+  <rect x="182" y="100" width="55" height="28" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="210" y="118" text-anchor="middle" font-size="9" font-family="monospace" fill="#2563EB">0x04</text>
+  <rect x="237" y="100" width="55" height="28" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="265" y="118" text-anchor="middle" font-size="9" font-family="monospace" fill="#2563EB">0x08</text>
+  <!-- Stall: PC holds at 0x0C -->
+  <rect x="292" y="100" width="275" height="28" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="430" y="118" text-anchor="middle" font-size="9" font-family="monospace" font-weight="bold" fill="#DC2626">0x0C (STALL — PC 홀드)</text>
+  <rect x="567" y="100" width="55" height="28" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="595" y="118" text-anchor="middle" font-size="9" font-family="monospace" fill="#2563EB">0x0C</text>
+  <rect x="622" y="100" width="55" height="28" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="650" y="118" text-anchor="middle" font-size="9" font-family="monospace" fill="#2563EB">0x10</text>
+  <rect x="677" y="100" width="56" height="28" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="705" y="118" text-anchor="middle" font-size="9" font-family="monospace" fill="#2563EB">0x14</text>
+
+  <!-- cache_hit -->
+  <text x="110" y="165" text-anchor="end" font-size="11" font-weight="bold" fill="#1F2937">cache_hit</text>
+  <!-- High for C1-C3 -->
+  <polyline points="127,170 127,148 292,148 292,170 567,170 567,148 733,148" stroke="#059669" stroke-width="2" fill="none"/>
+  <text x="210" y="146" text-anchor="middle" font-size="9" font-weight="bold" fill="#059669">HIT</text>
+  <text x="430" y="182" text-anchor="middle" font-size="9" font-weight="bold" fill="#DC2626">MISS</text>
+  <text x="650" y="146" text-anchor="middle" font-size="9" font-weight="bold" fill="#059669">HIT</text>
+
+  <!-- icache_stall -->
+  <text x="110" y="215" text-anchor="end" font-size="11" font-weight="bold" fill="#DC2626">icache_stall</text>
+  <polyline points="127,220 127,220 292,220 292,198 567,198 567,220 733,220" stroke="#DC2626" stroke-width="2" fill="none"/>
+  <text x="210" y="230" text-anchor="middle" font-size="9" fill="#059669">0</text>
+  <text x="430" y="195" text-anchor="middle" font-size="9" font-weight="bold" fill="#DC2626">1 (STALL)</text>
+  <text x="650" y="230" text-anchor="middle" font-size="9" fill="#059669">0</text>
+
+  <!-- mem_req -->
+  <text x="110" y="260" text-anchor="end" font-size="11" font-weight="bold" fill="#1F2937">mem_req</text>
+  <polyline points="127,265 127,265 292,265 292,243 512,243 512,265 733,265" stroke="#7C3AED" stroke-width="2" fill="none"/>
+  <text x="402" y="240" text-anchor="middle" font-size="9" font-weight="bold" fill="#7C3AED">블록 전송 요청</text>
+
+  <!-- mem_ready -->
+  <text x="110" y="305" text-anchor="end" font-size="11" font-weight="bold" fill="#1F2937">mem_ready</text>
+  <polyline points="127,310 127,310 512,310 512,288 567,288 567,310 733,310" stroke="#D97706" stroke-width="2" fill="none"/>
+  <text x="540" y="286" text-anchor="middle" font-size="9" font-weight="bold" fill="#D97706">완료</text>
+
+  <!-- rdata -->
+  <text x="110" y="348" text-anchor="end" font-size="11" font-weight="bold" fill="#1F2937">rdata[31:0]</text>
+  <rect x="127" y="332" width="55" height="24" fill="#ECFDF5" stroke="#059669"/>
+  <text x="155" y="348" text-anchor="middle" font-size="8" font-family="monospace" fill="#059669">instr0</text>
+  <rect x="182" y="332" width="55" height="24" fill="#ECFDF5" stroke="#059669"/>
+  <text x="210" y="348" text-anchor="middle" font-size="8" font-family="monospace" fill="#059669">instr1</text>
+  <rect x="237" y="332" width="55" height="24" fill="#ECFDF5" stroke="#059669"/>
+  <text x="265" y="348" text-anchor="middle" font-size="8" font-family="monospace" fill="#059669">instr2</text>
+  <rect x="292" y="332" width="275" height="24" fill="#F9FAFB" stroke="#6B7280" stroke-dasharray="4"/>
+  <text x="430" y="348" text-anchor="middle" font-size="8" fill="#6B7280">(무효 — stall 중)</text>
+  <rect x="567" y="332" width="55" height="24" fill="#ECFDF5" stroke="#059669"/>
+  <text x="595" y="348" text-anchor="middle" font-size="8" font-family="monospace" fill="#059669">instr3</text>
+  <rect x="622" y="332" width="55" height="24" fill="#ECFDF5" stroke="#059669"/>
+  <text x="650" y="348" text-anchor="middle" font-size="8" font-family="monospace" fill="#059669">instr4</text>
+
+  <!-- Annotation: miss penalty -->
+  <line x1="292" y1="375" x2="567" y2="375" stroke="#DC2626" stroke-width="2"/>
+  <line x1="292" y1="370" x2="292" y2="380" stroke="#DC2626" stroke-width="2"/>
+  <line x1="567" y1="370" x2="567" y2="380" stroke="#DC2626" stroke-width="2"/>
+  <text x="430" y="395" text-anchor="middle" font-size="12" font-weight="bold" fill="#DC2626">미스 페널티: 5 사이클</text>
+</svg>

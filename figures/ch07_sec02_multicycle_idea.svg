@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="a2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="a2g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="620" fill="#F8FAFC" rx="12"/>
+  <text x="500" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">멀티사이클 핵심 아이디어 -- 단계 분할과 자원 공유</text>
+
+  <!-- 단일 사이클 (위쪽) -->
+  <text x="50" y="68" font-size="14" font-weight="700" fill="#DC2626">단일 사이클: 모든 모듈이 각각 존재, 1사이클에 모두 통과</text>
+
+  <rect x="50" y="80" width="140" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="120" y="110" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">IMEM</text>
+  <line x1="190" y1="105" x2="210" y2="105" stroke="#2563EB" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <rect x="212" y="80" width="140" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="282" y="110" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">Reg Read</text>
+  <line x1="352" y1="105" x2="372" y2="105" stroke="#2563EB" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <rect x="374" y="80" width="140" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="444" y="110" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">ALU</text>
+  <line x1="514" y1="105" x2="534" y2="105" stroke="#2563EB" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <rect x="536" y="80" width="140" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="606" y="110" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">DMEM</text>
+  <line x1="676" y1="105" x2="696" y2="105" stroke="#2563EB" stroke-width="1.5" marker-end="url(#a2)"/>
+
+  <rect x="698" y="80" width="140" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="768" y="110" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">Reg Write</text>
+
+  <text x="880" y="105" font-size="11" fill="#DC2626" font-weight="600">IMEM, DMEM,</text>
+  <text x="880" y="120" font-size="11" fill="#DC2626" font-weight="600">ALU 각각 별도</text>
+
+  <!-- 구분선 -->
+  <line x1="30" y1="155" x2="970" y2="155" stroke="#E5E7EB" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="500" y="175" text-anchor="middle" font-size="13" font-weight="700" fill="#059669">핵심 전환: 한 사이클에 하나의 단계만 수행하고, 하드웨어를 재사용한다!</text>
+
+  <!-- 멀티사이클 (아래쪽) -->
+  <text x="50" y="210" font-size="14" font-weight="700" fill="#059669">멀티사이클: 공유 메모리 + 공유 ALU, 단계별로 하나씩 사용</text>
+
+  <!-- 공유 메모리 블록 -->
+  <rect x="100" y="230" width="200" height="90" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="200" y="260" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">통합 메모리</text>
+  <text x="200" y="280" text-anchor="middle" font-size="11" fill="#6B7280">(Memory)</text>
+  <text x="200" y="300" text-anchor="middle" font-size="10" fill="#475569">IF: 명령어 인출 / MEM: 데이터 접근</text>
+
+  <!-- 공유 ALU 블록 -->
+  <rect x="400" y="230" width="200" height="90" rx="8" fill="#2563EB" stroke="#1D4ED8" stroke-width="2.5"/>
+  <text x="500" y="260" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">공유 ALU</text>
+  <text x="500" y="280" text-anchor="middle" font-size="11" fill="#DBEAFE">(Shared ALU)</text>
+  <text x="500" y="300" text-anchor="middle" font-size="10" fill="#93C5FD">EX: 연산 / IF: PC+4 / MEM: 주소 계산</text>
+
+  <!-- 레지스터 파일 -->
+  <rect x="700" y="230" width="200" height="90" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="800" y="260" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">레지스터 파일</text>
+  <text x="800" y="280" text-anchor="middle" font-size="11" fill="#6B7280">(Register File)</text>
+  <text x="800" y="300" text-anchor="middle" font-size="10" fill="#475569">ID: 읽기 / WB: 쓰기</text>
+
+  <!-- 중간 레지스터들 -->
+  <text x="500" y="355" text-anchor="middle" font-size="13" font-weight="700" fill="#D97706">중간 결과를 저장하는 임시 레지스터들 (단계 간 데이터 전달)</text>
+
+  <rect x="80" y="370" width="120" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="140" y="390" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">IR</text>
+  <text x="140" y="405" text-anchor="middle" font-size="9" fill="#6B7280">명령어 레지스터</text>
+
+  <rect x="230" y="370" width="120" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="290" y="390" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">MDR</text>
+  <text x="290" y="405" text-anchor="middle" font-size="9" fill="#6B7280">메모리 데이터 레지스터</text>
+
+  <rect x="380" y="370" width="100" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="430" y="390" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">A</text>
+  <text x="430" y="405" text-anchor="middle" font-size="9" fill="#6B7280">rs1 임시 저장</text>
+
+  <rect x="510" y="370" width="100" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="560" y="390" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">B</text>
+  <text x="560" y="405" text-anchor="middle" font-size="9" fill="#6B7280">rs2 임시 저장</text>
+
+  <rect x="640" y="370" width="120" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="700" y="390" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">ALUOut</text>
+  <text x="700" y="405" text-anchor="middle" font-size="9" fill="#6B7280">ALU 결과 임시 저장</text>
+
+  <rect x="790" y="370" width="120" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="850" y="390" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">PC</text>
+  <text x="850" y="405" text-anchor="middle" font-size="9" fill="#6B7280">프로그램 카운터</text>
+
+  <!-- 타이밍 다이어그램 -->
+  <text x="500" y="450" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">LW 명령어의 멀티사이클 실행 (5단계)</text>
+
+  <!-- 사이클 헤더 -->
+  <text x="155" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cycle 1</text>
+  <text x="315" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cycle 2</text>
+  <text x="475" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cycle 3</text>
+  <text x="635" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cycle 4</text>
+  <text x="795" y="475" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Cycle 5</text>
+
+  <!-- 타이밍 블록 -->
+  <rect x="80" y="483" width="150" height="35" rx="4" fill="#2563EB"/>
+  <text x="155" y="505" text-anchor="middle" font-size="11" font-weight="600" fill="#FFFFFF">IF (메모리 읽기)</text>
+
+  <rect x="240" y="483" width="150" height="35" rx="4" fill="#3B82F6"/>
+  <text x="315" y="505" text-anchor="middle" font-size="11" font-weight="600" fill="#FFFFFF">ID (디코드+레지스터)</text>
+
+  <rect x="400" y="483" width="150" height="35" rx="4" fill="#60A5FA"/>
+  <text x="475" y="505" text-anchor="middle" font-size="11" font-weight="600" fill="#FFFFFF">EX (주소 계산)</text>
+
+  <rect x="560" y="483" width="150" height="35" rx="4" fill="#93C5FD"/>
+  <text x="635" y="505" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">MEM (메모리 읽기)</text>
+
+  <rect x="720" y="483" width="150" height="35" rx="4" fill="#BFDBFE"/>
+  <text x="795" y="505" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">WB (레지스터 기록)</text>
+
+  <!-- 클럭 주기 비교 -->
+  <rect x="80" y="530" width="150" height="26" rx="4" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="155" y="548" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">T_clk = 200 ps</text>
+
+  <text x="500" y="560" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">각 단계의 최대 지연 = 200 ps --> 클럭 주파수 4배 향상 가능 (800 ps --> 200 ps)</text>
+
+  <!-- 핵심 포인트 -->
+  <rect x="80" y="575" width="840" height="35" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="500" y="598" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">절감 효과: IMEM/DMEM 통합 --> 메모리 1개로 충분, ALU 하나로 PC+4 계산 + 연산 + 주소 계산 모두 처리</text>
+</svg>

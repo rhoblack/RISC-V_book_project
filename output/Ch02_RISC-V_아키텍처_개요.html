@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 02 — RISC-V 아키텍처 개요</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 02</span>
+  <h1>RISC-V 아키텍처 개요</h1>
+  <p class="chapter-intro">
+    이 챕터에서는 RISC-V ISA의 탄생 배경과 설계 철학을 살펴보고, 레지스터 파일, 메모리 모델, 그리고 6가지 명령어 형식의 구조를 학습합니다.
+    프로세서를 설계하기 전에 "무엇을 만들 것인가"를 명확히 이해하는 것이 이 챕터의 핵심 목표입니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>RISC-V의 모듈형 ISA 구조와 RV32I의 범위를 설명할 수 있다.</li>
+    <li>32개 범용 레지스터의 역할과 ABI 이름을 열거할 수 있다.</li>
+    <li>리틀 엔디언 바이트 순서와 메모리 정렬 요구사항을 설명할 수 있다.</li>
+    <li>R/I/S/B/U/J 6가지 명령어 형식의 필드 구조를 구분할 수 있다.</li>
+    <li>간단한 명령어의 32비트 인코딩을 수작업으로 해독할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 2.1절 시작 ========== -->
+<section id="sec-02-1">
+  <h2>2.1 RISC-V의 탄생과 설계 철학</h2>
+
+  <p>
+    프로세서를 설계한다는 것은 곧 <strong>명령어 집합 구조(ISA, Instruction Set Architecture)</strong>라는 "약속"을 구현하는 일입니다.
+    ISA는 소프트웨어와 하드웨어 사이의 계약서와 같습니다. 소프트웨어 개발자는 ISA가 정의한 명령어를 사용하여 프로그램을 작성하고,
+    하드웨어 설계자는 그 명령어가 올바르게 동작하도록 회로를 구현합니다.
+    이 챕터에서는 우리가 구현할 ISA, 즉 RISC-V에 대해 깊이 이해하는 시간을 가질 것입니다.
+  </p>
+
+  <h3>RISC vs CISC: 두 가지 설계 철학</h3>
+
+  <p>
+    컴퓨터 아키텍처의 역사는 크게 두 가지 철학의 대립으로 요약할 수 있습니다.
+    <strong>CISC(Complex Instruction Set Computer)</strong>는 "하나의 명령어가 가능한 많은 일을 하게 하자"는 접근입니다.
+    x86 아키텍처가 대표적이며, 문자열 복사, 루프 카운터 감소와 분기를 동시에 수행하는 명령어 등
+    수천 가지의 복잡한 명령어를 제공합니다.
+  </p>
+
+  <p>
+    반면 <strong>RISC(Reduced Instruction Set Computer)</strong>는 "명령어를 단순하게 유지하고, 그 대신 빠르게 실행하자"는 철학입니다.
+    각 명령어가 한 가지 일만 수행하므로 하드웨어 구현이 단순해지고, 파이프라이닝(pipelining)에 유리합니다.
+    ARM, MIPS, 그리고 우리가 다룰 RISC-V가 이 계열에 속합니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> CISC를 "스위스 아미 나이프"에 비유할 수 있습니다. 하나의 도구에 칼, 가위, 드라이버, 병따개가 모두 들어 있어 편리하지만,
+    각 기능의 성능은 전용 도구보다 떨어질 수 있습니다.
+    RISC는 "전문 요리사의 칼 세트"와 같습니다. 각 칼은 한 가지 용도에 최적화되어 있으며, 요리사는 필요에 따라 올바른 칼을 빠르게 선택하여 사용합니다.
+    프로세서가 그 "요리사" 역할을 하여, 단순한 명령어들을 빠르게 연속 실행함으로써 복잡한 작업을 수행하는 것입니다.
+  </div>
+
+  <h3>RISC-V의 탄생</h3>
+
+  <p>
+    RISC-V(리스크 파이브라고 읽습니다)는 2010년 미국 UC 버클리(University of California, Berkeley)의 크르스테 아사노비치(Krste Asanovic) 교수와
+    데이비드 패터슨(David Patterson) 교수 연구팀에서 시작되었습니다.
+    패터슨 교수는 RISC 아키텍처의 창시자 중 한 명이자 컴퓨터 아키텍처 교과서의 저자로 유명하며, RISC-V는 버클리에서 개발한 다섯 번째 RISC 아키텍처라는 의미입니다.
+  </p>
+
+  <p>
+    기존의 상용 ISA들은 심각한 문제를 안고 있었습니다. x86은 인텔의 독점 자산이고, ARM은 고액의 라이선스 비용을 요구하며,
+    MIPS는 특허 문제로 자유로운 사용이 어려웠습니다.
+    학술 연구나 교육 목적으로 프로세서를 설계하려면, ISA 자체가 자유롭게 사용 가능해야 합니다.
+    이러한 필요에서 RISC-V는 <strong>오픈 소스 ISA</strong>로 탄생했습니다.
+  </p>
+
+  <p>
+    RISC-V는 단순히 "무료"인 것 이상의 의미를 가집니다. RISC-V International이라는 비영리 재단이 표준을 관리하며,
+    누구든 라이선스 비용 없이 RISC-V 프로세서를 설계하고, 제조하고, 판매할 수 있습니다.
+    이는 마치 C 프로그래밍 언어의 표준처럼, 누구나 컴파일러를 만들 수 있는 개방형 표준과 같습니다.
+    2024년 현재 RISC-V는 산업계에서도 빠르게 채택되고 있으며, 중국의 반도체 산업, 유럽의 자동차 반도체, 그리고 임베디드 IoT 분야에서 특히 주목받고 있습니다.
+  </p>
+
+  <h3>모듈형 ISA: 레고 블록 같은 설계</h3>
+
+  <p>
+    RISC-V의 가장 혁신적인 특징은 <strong>모듈형 ISA(Modular ISA)</strong> 구조입니다.
+    x86이나 ARM처럼 수천 개의 명령어가 하나의 거대한 덩어리로 묶여 있는 것이 아니라,
+    RISC-V는 <strong>기본 정수 ISA(Base Integer ISA)</strong> 위에 필요한 <strong>확장(Extension)</strong>을 선택적으로 추가하는 방식입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> RISC-V를 레고 블록 세트에 비유할 수 있습니다.
+    기본 블록 세트(RV32I)만으로도 집을 지을 수 있지만, 필요하다면 창문 세트(M 확장: 곱셈/나눗셈),
+    전기 세트(F 확장: 부동소수점), 자동차 세트(A 확장: 원자 연산) 등을 추가할 수 있습니다.
+    모든 세트를 사 모을 필요 없이, 자신의 프로젝트에 필요한 것만 골라서 사용하면 됩니다.
+    단, 이 비유에는 한계가 있습니다. 실제 하드웨어에서는 확장을 추가할 때마다 게이트 수와 전력 소비가 증가하므로,
+    레고처럼 단순히 "끼우기만" 하면 되는 것은 아닙니다.
+  </div>
+
+  <figure>
+    <img src="../figures/ch02_sec01_isa_modular.svg" alt="RISC-V 모듈형 ISA 구조도: RV32I 기본 ISA와 M, A, F, D, C 확장">
+    <figcaption>그림 2.1: RISC-V 모듈형 ISA 구조. 기본 정수 ISA(RV32I)는 필수이며, 나머지 확장은 선택적으로 추가한다.</figcaption>
+  </figure>
+
+  <p>
+    RV32I의 "RV"는 RISC-V를, "32"는 레지스터와 주소 버스의 비트 폭을, "I"는 기본 정수(Integer) 명령어 세트를 의미합니다.
+    RV32I는 47개의 명령어만으로 구성되어 있으며, 이것만으로도 범용 컴퓨터에 필요한 모든 정수 연산을 수행할 수 있습니다.
+    실제로 GCC 컴파일러는 RV32I만으로 C 프로그램을 컴파일할 수 있으며, 곱셈이나 나눗셈은 소프트웨어 라이브러리로 대체됩니다.
+  </p>
+
+  <p>
+    주요 표준 확장은 다음과 같습니다:
+  </p>
+
+  <table>
+    <tr>
+      <th>확장</th>
+      <th>이름</th>
+      <th>설명</th>
+      <th>이 책에서의 다루기</th>
+    </tr>
+    <tr>
+      <td><code>I</code></td>
+      <td>기본 정수</td>
+      <td>산술, 논리, 분기, 로드/스토어 (47개 명령어)</td>
+      <td>전체 구현 (Ch02~Ch22)</td>
+    </tr>
+    <tr>
+      <td><code>M</code></td>
+      <td>곱셈/나눗셈</td>
+      <td>MUL, DIV, REM 등 8개 명령어</td>
+      <td>선택 구현 (Ch24)</td>
+    </tr>
+    <tr>
+      <td><code>A</code></td>
+      <td>원자 연산</td>
+      <td>LR, SC, AMO 등 멀티코어용 동기화</td>
+      <td>개념 소개 (Ch25)</td>
+    </tr>
+    <tr>
+      <td><code>F</code></td>
+      <td>단정밀도 부동소수점</td>
+      <td>32비트 IEEE 754 부동소수점</td>
+      <td>개요만 (Ch24)</td>
+    </tr>
+    <tr>
+      <td><code>D</code></td>
+      <td>배정밀도 부동소수점</td>
+      <td>64비트 IEEE 754 부동소수점</td>
+      <td>언급만</td>
+    </tr>
+    <tr>
+      <td><code>Zicsr</code></td>
+      <td>CSR 접근</td>
+      <td>제어/상태 레지스터 읽기/쓰기</td>
+      <td>전체 구현 (Ch18)</td>
+    </tr>
+  </table>
+
+  <p>
+    이들을 조합한 <code>RV32G</code>(= RV32IMAFDZicsr_Zifencei)는 리눅스를 실행할 수 있는 범용(General-purpose) 조합이지만,
+    이 책에서는 <strong>RV32I + Zicsr</strong>을 핵심 구현 범위로 삼습니다.
+    47개의 기본 명령어와 CSR 접근 명령어만으로도 완전한 파이프라인 프로세서를 설계하고 FPGA에서 C 프로그램을 실행하는 데 충분합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      산업계에서 RISC-V 프로세서를 설계할 때, 최초 설계는 거의 항상 RV32I(또는 RV32E, 16개 레지스터 축소판)에서 시작합니다.
+      기본 ISA가 올바르게 동작하는 것을 검증한 후에야 M, F 등의 확장을 점진적으로 추가합니다.
+      "작게 시작하여 점진적으로 확장한다"는 이 원칙은 프로세서 설계에서 가장 중요한 실무 규칙입니다.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q:</strong> RISC-V가 ARM이나 x86 대비 가지는 장점은 무엇인가요?<br>
+      <strong>A:</strong> (1) 오픈 소스 ISA로 라이선스 비용이 없습니다.
+      (2) 모듈형 구조로 필요한 확장만 선택적으로 구현할 수 있어 면적과 전력을 최적화할 수 있습니다.
+      (3) ISA가 깔끔하게 설계되어 있어 하드웨어 구현이 단순합니다. 예를 들어, 모든 명령어가 32비트 고정 길이이며,
+      소스 레지스터 필드의 위치가 명령어 타입에 무관하게 일정합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      여기까지 읽었다면, 다음 질문에 답해 보십시오: RV32I의 "32"와 "I"는 각각 무엇을 의미합니까?
+      그리고 RISC-V가 모듈형 ISA라고 불리는 이유를 한 문장으로 설명할 수 있습니까?
+    </p>
+  </aside>
+</section>
+<!-- ========== 2.1절 끝 ========== -->
+
+
+<!-- ========== 2.2절 시작 ========== -->
+<section id="sec-02-2">
+  <h2>2.2 레지스터 파일: x0~x31과 PC</h2>
+
+  <p>
+    프로세서의 핵심 자원 중 하나는 <strong>레지스터 파일(Register File)</strong>입니다.
+    레지스터는 프로세서 내부에 위치한 초고속 저장 장치로, ALU가 연산을 수행할 때 피연산자(operand)를 가져오고 결과를 저장하는 곳입니다.
+    메모리 접근이 수 사이클에서 수백 사이클이 걸리는 반면, 레지스터 접근은 단 1사이클이면 충분합니다.
+    따라서 프로세서 설계에서 레지스터 파일의 구조를 이해하는 것은 데이터패스(datapath) 설계의 첫걸음입니다.
+  </p>
+
+  <h3>32개의 범용 레지스터</h3>
+
+  <p>
+    RV32I는 <strong>32개의 32비트 범용 레지스터(General-Purpose Register)</strong>를 제공합니다.
+    이 레지스터들은 <code>x0</code>부터 <code>x31</code>까지 번호가 매겨져 있으며,
+    명령어 내에서 5비트(2<sup>5</sup> = 32)로 인코딩됩니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 레지스터 파일을 "프로세서의 작업 책상"이라고 생각해 보십시오.
+    32개의 서랍이 있는 책상에서, 각 서랍에는 32비트(4바이트) 크기의 데이터 하나를 넣을 수 있습니다.
+    프로세서(사람)는 계산을 할 때 메모리(서고)까지 가지 않고, 가까운 책상 서랍에서 데이터를 꺼내고 결과를 다시 서랍에 넣습니다.
+    서랍 32개가 적다고 느낄 수 있지만, 컴파일러가 매우 효율적으로 서랍을 할당하므로 대부분의 프로그램에 충분합니다.
+  </div>
+
+  <h3>x0: 하드와이어드 제로</h3>
+
+  <p>
+    32개 레지스터 중 <code>x0</code>는 특별합니다. 이 레지스터는 <strong>항상 0</strong>을 반환하도록 하드웨어적으로 고정(hardwired)되어 있습니다.
+    <code>x0</code>에 어떤 값을 쓰더라도 무시되며, 읽으면 언제나 <code>0x00000000</code>이 나옵니다.
+  </p>
+
+  <p>
+    이것이 왜 유용할까요? 상수 0은 프로그래밍에서 매우 자주 사용됩니다. 예를 들어:
+  </p>
+
+  <ul>
+    <li><strong>레지스터 초기화</strong>: <code>add x5, x0, x0</code>은 x5를 0으로 설정합니다 (0 + 0 = 0).</li>
+    <li><strong>레지스터 복사</strong>: <code>add x5, x6, x0</code>은 x6의 값을 x5에 복사합니다 (x6 + 0 = x6).</li>
+    <li><strong>결과 버리기</strong>: <code>add x0, x1, x2</code>는 덧셈을 수행하지만 결과를 버립니다 (x0에 쓰기는 무시됨).</li>
+    <li><strong>NOP 구현</strong>: <code>addi x0, x0, 0</code>은 아무 일도 하지 않는 명령어(NOP)로 사용됩니다.</li>
+  </ul>
+
+  <p>
+    하드와이어드 제로 레지스터 덕분에 별도의 "0을 만드는" 명령어가 필요 없으며, 기존 명령어를 조합하여 다양한 의사 명령어(pseudo-instruction)를 구현할 수 있습니다.
+    이는 ISA를 단순하게 유지하면서도 표현력을 높이는 RISC-V의 핵심 설계 기법입니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> x0에 쓰기가 무시된다면, 하드웨어에서는 어떻게 구현합니까?</p>
+    <p><strong>A:</strong> 가장 간단한 방법은 레지스터 파일의 쓰기 로직에서 목적 레지스터(rd) 주소가 0일 때 쓰기를 비활성화하는 것입니다.
+    SystemVerilog로 표현하면 <code>if (rd_addr != 5'b00000) reg_file[rd_addr] &lt;= wr_data;</code>처럼
+    한 줄의 조건문으로 구현됩니다. 이 코드는 Chapter 04에서 실제로 작성하게 됩니다.</p>
+  </aside>
+
+  <h3>ABI 이름: 소프트웨어의 별명</h3>
+
+  <p>
+    하드웨어 관점에서 32개 레지스터는 단순히 <code>x0</code>~<code>x31</code>이라는 번호를 가진 저장소일 뿐입니다.
+    하지만 소프트웨어 세계에서는 이 레지스터들에 <strong>ABI(Application Binary Interface) 이름</strong>이라는 별명을 부여합니다.
+  </p>
+
+  <p>
+    ABI란 무엇일까요? ABI는 "소프트웨어가 레지스터를 부르는 별명"입니다. 더 정확히 말하면,
+    서로 다른 컴파일러나 라이브러리가 함수를 호출할 때 "어떤 레지스터에 인수를 넣고, 어떤 레지스터로 결과를 돌려받을 것인가"를 합의한 규약입니다.
+    하드웨어는 ABI를 전혀 신경 쓰지 않습니다. 이는 순전히 소프트웨어 컨벤션(convention)입니다.
+    그러나 프로세서 설계자도 ABI를 이해해야 하는 이유가 있습니다: 디버깅할 때 어셈블리 코드를 읽어야 하기 때문입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch02_sec02_register_file.svg" alt="RISC-V RV32I 레지스터 파일 구조: x0~x31과 PC, ABI 이름 및 호출 규약">
+    <figcaption>그림 2.2: RV32I 레지스터 파일. 32개 범용 레지스터와 프로그램 카운터(PC). ABI 이름과 호출 규약을 함께 표시하였다.</figcaption>
+  </figure>
+
+  <p>
+    핵심 ABI 레지스터를 요약하면 다음과 같습니다:
+  </p>
+
+  <ul>
+    <li><code>zero</code> (x0): 항상 0. 위에서 설명한 하드와이어드 제로.</li>
+    <li><code>ra</code> (x1): 복귀 주소(Return Address). 함수 호출 시 돌아올 주소를 저장합니다.</li>
+    <li><code>sp</code> (x2): 스택 포인터(Stack Pointer). 함수의 지역 변수 영역을 가리킵니다.</li>
+    <li><code>a0</code>~<code>a7</code> (x10~x17): 함수 인수(Arguments)와 반환값(Return Value). <code>a0</code>과 <code>a1</code>은 반환값으로도 사용됩니다.</li>
+    <li><code>s0</code>~<code>s11</code> (x8~x9, x18~x27): 저장 레지스터(Saved Registers). 함수 호출 전후로 값이 보존되어야 합니다.</li>
+    <li><code>t0</code>~<code>t6</code> (x5~x7, x28~x31): 임시 레지스터(Temporaries). 함수 호출 시 값이 보존되지 않을 수 있습니다.</li>
+  </ul>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      학생들이 ABI 이름에 처음 접할 때 가장 혼란스러워하는 것은 "Caller-saved"와 "Callee-saved"의 차이입니다.
+      다음과 같은 비유를 사용해 보십시오: "친구(callee)에게 책상을 빌려줄 때, 친구가 돌려줄 때 원래 상태로 정리해야 하는 서랍이 Callee-saved(s0~s11)이고,
+      내가(caller) 빌려주기 전에 미리 중요한 것을 빼놓아야 하는 서랍이 Caller-saved(a0~a7, t0~t6)입니다."
+      다만 이 규약은 소프트웨어 규칙이지 하드웨어가 강제하는 것이 아님을 반드시 언급하십시오.
+    </p>
+  </aside>
+
+  <h3>프로그램 카운터(PC)</h3>
+
+  <p>
+    <strong>프로그램 카운터(PC, Program Counter)</strong>는 "현재 실행 중인 명령어의 주소"를 저장하는 특수 레지스터입니다.
+    PC는 범용 레지스터가 아닙니다. <code>x0</code>~<code>x31</code>과는 별도로 존재하며,
+    소프트웨어가 일반 명령어로 직접 읽거나 쓸 수 없습니다.
+    PC는 하드웨어에 의해 자동으로 관리됩니다: 일반적으로 매 사이클마다 PC = PC + 4로 갱신되며(명령어 크기가 4바이트이므로),
+    분기(branch)나 점프(jump) 명령어가 실행될 때만 다른 주소로 변경됩니다.
+  </p>
+
+  <p>
+    이것은 x86과의 중요한 차이점입니다. x86에서는 프로그램 카운터(EIP/RIP)를 범용 레지스터처럼 직접 조작할 수 있는 명령어가 있지만,
+    RISC-V에서 PC 값에 접근하는 유일한 방법은 <code>AUIPC</code>(PC 상대 주소 계산)나 <code>JAL</code>(점프 시 PC+4를 저장) 같은 특정 명령어를 사용하는 것입니다.
+    이러한 제한은 파이프라인 설계를 단순하게 만들어 줍니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q:</strong> RISC-V에서 x0 레지스터가 항상 0인 이유와 그 활용 예를 설명하세요.<br>
+      <strong>A:</strong> x0를 하드와이어드 0으로 고정함으로써 별도의 MOV, NOP, NEG 명령어 없이도 기존 산술 명령어를 조합하여 이들을 구현할 수 있습니다.
+      예: <code>addi rd, x0, imm</code>은 LI(Load Immediate), <code>add rd, rs, x0</code>은 MV(Move), <code>sub rd, x0, rs</code>는 NEG(Negate)입니다.
+      이는 ISA의 명령어 수를 줄이면서도 표현력을 유지하는 RISC 설계 철학의 핵심입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      여기까지 읽었다면, 다음 질문에 답해 보십시오:
+      (1) <code>x10</code>의 ABI 이름은 무엇이며, 어떤 용도로 사용됩니까?
+      (2) 하드웨어 설계 관점에서 레지스터 파일에 필요한 포트는 몇 개입니까? (읽기 포트와 쓰기 포트를 각각 생각해 보십시오.)
+    </p>
+  </aside>
+</section>
+<!-- ========== 2.2절 끝 ========== -->
+
+
+<!-- ========== 2.3절 시작 ========== -->
+<section id="sec-02-3">
+  <h2>2.3 메모리 모델과 주소 공간</h2>
+
+  <p>
+    프로세서는 레지스터만으로는 충분하지 않습니다. 32개의 레지스터에 저장할 수 있는 데이터는 128바이트(32 &times; 4바이트)에 불과하므로,
+    프로그램 코드와 대량의 데이터는 <strong>메모리(Memory)</strong>에 저장해야 합니다.
+    이 절에서는 RV32I가 메모리를 어떻게 바라보는지, 즉 메모리 모델(Memory Model)을 학습합니다.
+    메모리 모델을 이해하는 것은 로드(load)/스토어(store) 명령어의 동작을 정확히 파악하고,
+    나아가 Chapter 05에서 메모리 서브시스템을 설계하는 데 필수적인 기초입니다.
+  </p>
+
+  <h3>바이트 주소 지정(Byte Addressing)</h3>
+
+  <p>
+    RV32I에서 메모리의 기본 단위는 <strong>바이트(Byte, 8비트)</strong>입니다.
+    모든 메모리 주소는 하나의 바이트를 가리킵니다. 이를 <strong>바이트 주소 지정(Byte Addressing)</strong>이라고 합니다.
+    32비트 주소 버스를 사용하므로, 이론상 최대 2<sup>32</sup> = 4,294,967,296개의 바이트, 즉 <strong>4GB</strong>의 주소 공간을 가집니다.
+  </p>
+
+  <p>
+    32비트 워드(word)를 하나 읽으려면 4개의 연속된 바이트를 읽어야 합니다.
+    예를 들어, 주소 <code>0x100</code>에서 워드를 읽으면 <code>0x100</code>, <code>0x101</code>, <code>0x102</code>, <code>0x103</code> 네 바이트가 한꺼번에 읽힙니다.
+    이때 이 4바이트가 32비트 워드로 어떤 순서로 조합되는지가 바로 "엔디언(endianness)" 문제입니다.
+  </p>
+
+  <h3>리틀 엔디언(Little-Endian)</h3>
+
+  <p>
+    엔디언(Endianness)이란 멀티바이트 데이터를 메모리에 저장할 때 바이트의 순서를 결정하는 규칙입니다.
+    RISC-V는 <strong>리틀 엔디언(Little-Endian)</strong> 방식을 사용합니다. 이는 <strong>최하위 바이트(LSB, Least Significant Byte)</strong>가 가장 낮은 주소에 저장되는 방식입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 리틀 엔디언을 "한국식 주소 표기법"에 비유할 수 있습니다.
+    한국에서는 주소를 "도 → 시 → 구 → 동 → 번지" 순서로, 즉 큰 단위에서 작은 단위로 씁니다. 이것이 빅 엔디언과 유사합니다.
+    반면 미국식 주소는 "번지 → 거리 → 도시 → 주" 순서로, 작은 단위에서 큰 단위로 씁니다. 이것이 리틀 엔디언에 해당합니다.
+    RISC-V는 "미국식"(리틀 엔디언)을 선택한 것입니다.
+    다만 이 비유는 순서의 직관을 돕기 위한 것이며, 실제 메모리에서의 의미는 엄밀히 "바이트 단위의 주소 배치"입니다.
+  </p>
+  </div>
+
+  <p>
+    구체적인 예를 들어 보겠습니다. 32비트 값 <code>0x12345678</code>을 주소 <code>0x00</code>에 저장한다고 합시다:
+  </p>
+
+  <table>
+    <tr>
+      <th>주소</th>
+      <th>0x00</th>
+      <th>0x01</th>
+      <th>0x02</th>
+      <th>0x03</th>
+    </tr>
+    <tr>
+      <td><strong>저장 값</strong></td>
+      <td><code>0x78</code> (LSB)</td>
+      <td><code>0x56</code></td>
+      <td><code>0x34</code></td>
+      <td><code>0x12</code> (MSB)</td>
+    </tr>
+  </table>
+
+  <p>
+    리틀 엔디언은 x86에서도 사용되는 방식이므로, 대부분의 소프트웨어 도구와의 호환성이 좋습니다.
+    또한 하드웨어 관점에서 리틀 엔디언은 8비트, 16비트, 32비트 접근 시 시작 주소가 동일하다는 장점이 있습니다.
+    예를 들어 주소 <code>0x00</code>에서 바이트를 읽으면 <code>0x78</code>, 하프워드를 읽으면 <code>0x5678</code>, 워드를 읽으면 <code>0x12345678</code>을 얻습니다.
+    세 경우 모두 시작 주소가 <code>0x00</code>으로 같으므로, 주소 계산 로직이 단순해집니다.
+  </p>
+
+  <h3>정렬 요구사항(Alignment Requirements)</h3>
+
+  <p>
+    <strong>정렬(Alignment)</strong>이란 데이터의 시작 주소가 데이터 크기의 배수인지를 따지는 규칙입니다.
+    RV32I 기본 스펙에서 정렬 요구사항은 다음과 같습니다:
+  </p>
+
+  <table>
+    <tr>
+      <th>접근 유형</th>
+      <th>크기</th>
+      <th>정렬 조건</th>
+      <th>예시</th>
+    </tr>
+    <tr>
+      <td>바이트 (LB/SB)</td>
+      <td>1바이트</td>
+      <td>제한 없음</td>
+      <td>모든 주소 가능</td>
+    </tr>
+    <tr>
+      <td>하프워드 (LH/SH)</td>
+      <td>2바이트</td>
+      <td>2의 배수</td>
+      <td>0x00, 0x02, 0x04, ...</td>
+    </tr>
+    <tr>
+      <td>워드 (LW/SW)</td>
+      <td>4바이트</td>
+      <td>4의 배수</td>
+      <td>0x00, 0x04, 0x08, ...</td>
+    </tr>
+    <tr>
+      <td>명령어 인출(Fetch)</td>
+      <td>4바이트</td>
+      <td>4의 배수</td>
+      <td>PC는 항상 4의 배수</td>
+    </tr>
+  </table>
+
+  <p>
+    정렬되지 않은 접근(misaligned access)을 시도하면 <strong>예외(exception)</strong>가 발생합니다.
+    예를 들어, 주소 <code>0x03</code>에서 <code>LW</code>(워드 로드)를 실행하면 정렬 위반 예외가 발생하며,
+    이 예외 처리는 Chapter 19에서 다루게 됩니다.
+    하드웨어 설계 관점에서 정렬 요구사항은 메모리 인터페이스를 단순하게 만들어 줍니다.
+    워드 접근이 항상 4의 배수 주소에서 시작한다면, 메모리 뱅크 선택 로직이 간단해지기 때문입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch02_sec03_memory_model.svg" alt="RV32I 메모리 주소 공간 맵: IMEM, DMEM, MMIO 영역과 리틀 엔디언 바이트 순서">
+    <figcaption>그림 2.3: RV32I 메모리 주소 공간. 명령어 메모리(IMEM), 데이터 메모리(DMEM), MMIO 영역으로 분할된다. 리틀 엔디언 바이트 순서와 정렬 요구사항을 함께 표시하였다.</figcaption>
+  </figure>
+
+  <h3>메모리 주소 공간과 메모리 맵</h3>
+
+  <p>
+    4GB의 주소 공간을 실제로 어떻게 활용할 것인가는 <strong>메모리 맵(Memory Map)</strong>으로 정의합니다.
+    일반적인 RISC-V 시스템에서는 주소 공간을 다음과 같이 분할합니다:
+  </p>
+
+  <ul>
+    <li><strong>명령어 메모리(IMEM)</strong>: 프로그램 코드가 저장되는 영역. 주로 낮은 주소에 배치됩니다.</li>
+    <li><strong>데이터 메모리(DMEM)</strong>: 프로그램의 변수, 스택, 힙이 위치하는 영역.</li>
+    <li><strong>메모리 맵 I/O(MMIO)</strong>: GPIO, UART, Timer 등 주변 장치가 메모리 주소로 매핑되는 영역. 레지스터처럼 특정 주소에 읽기/쓰기하면 장치를 제어할 수 있습니다.</li>
+  </ul>
+
+  <p>
+    이 책에서 구현할 Basys 3 FPGA 시스템의 실제 메모리 크기는 4GB보다 훨씬 작습니다.
+    Basys 3의 BRAM(Block RAM)은 총 약 225KB이므로, IMEM과 DMEM을 합쳐 수십 KB 수준으로 설계합니다.
+    메모리 맵의 구체적인 설계는 Chapter 05에서 다룹니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> RISC-V에서 하버드 구조와 폰 노이만 구조 중 어느 것을 사용합니까?</p>
+    <p><strong>A:</strong> RISC-V ISA 자체는 폰 노이만(Von Neumann) 구조, 즉 명령어와 데이터가 같은 주소 공간에 존재하는 것을 가정합니다.
+    하지만 하드웨어 구현에서는 성능을 위해 IMEM과 DMEM을 물리적으로 분리하는 <strong>하버드 구조(Harvard Architecture)</strong>를 사용하는 경우가 많습니다.
+    이 책에서도 단일 사이클 및 파이프라인 프로세서를 하버드 구조로 설계합니다. 이는 명령어 인출(IF)과 데이터 접근(MEM)을 동시에 수행하기 위함입니다.</p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      FPGA 설계에서 BRAM 사용량은 항상 주의해야 할 자원입니다.
+      Basys 3의 Artix-7 XC7A35T는 36Kb BRAM 블록을 50개 가지고 있으며, 이를 IMEM, DMEM, 캐시 등에 분배해야 합니다.
+      메모리 크기를 결정할 때는 프로그램 크기(IMEM), 스택 크기(DMEM), 그리고 캐시 용량(Part 5)을 함께 고려하여 BRAM 예산을 계획해야 합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      여기까지 읽었다면, 다음 질문에 답해 보십시오:
+      32비트 값 <code>0xDEADBEEF</code>를 리틀 엔디언으로 주소 <code>0x10</code>에 저장하면,
+      주소 <code>0x10</code>에는 어떤 바이트가 저장됩니까? (정답: <code>0xEF</code>)
+    </p>
+  </aside>
+</section>
+<!-- ========== 2.3절 끝 ========== -->
+
+
+<!-- ========== 2.4절 시작 ========== -->
+<section id="sec-02-4">
+  <h2>2.4 명령어 형식 개관: 6가지 타입</h2>
+
+  <p>
+    이제 RV32I의 핵심에 도달했습니다. 프로세서가 실행하는 모든 명령어는 32비트 이진수로 표현되며,
+    이 32비트 안에 "어떤 연산을 할 것인가", "어떤 레지스터를 사용할 것인가", "즉치수(상수)는 무엇인가"라는 모든 정보가 담겨 있습니다.
+    RV32I는 이 32비트를 구성하는 방법을 <strong>6가지 명령어 타입</strong>으로 정의합니다:
+    <strong>R, I, S, B, U, J</strong> 타입입니다.
+  </p>
+
+  <p>
+    "6가지나 외워야 한다고?" 하고 불안해질 수 있지만, 걱정하지 마십시오.
+    6가지 타입은 서로 상당 부분이 공통되며, 차이점은 주로 <strong>즉치수(Immediate) 필드의 배치</strong>에 있습니다.
+    공통 패턴을 먼저 파악하면, 나머지는 자연스럽게 따라옵니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 6가지 명령어 타입을 "6가지 서류 양식"에 비유해 보겠습니다.
+    모든 양식에는 공통적으로 "문서 종류 코드"(opcode)와 "담당자 이름"(레지스터)이 적혀 있습니다.
+    차이점은 "비고란"(즉치수)의 위치와 크기가 양식마다 다르다는 것뿐입니다.
+    양식 종류를 바꾸더라도 "문서 종류 코드"는 항상 같은 자리에 있으므로,
+    접수 담당자(디코더)는 그 코드만 보면 어떤 양식인지 즉시 판별할 수 있습니다.
+  </div>
+
+  <h3>공통 필드 구조</h3>
+
+  <p>
+    6가지 타입 모두에서 공통으로 나타나는 필드와 그 위치는 다음과 같습니다:
+  </p>
+
+  <table>
+    <tr>
+      <th>필드</th>
+      <th>비트 위치</th>
+      <th>크기</th>
+      <th>역할</th>
+    </tr>
+    <tr>
+      <td><code>opcode</code></td>
+      <td>[6:0]</td>
+      <td>7비트</td>
+      <td>명령어 종류 식별 (모든 타입에 존재)</td>
+    </tr>
+    <tr>
+      <td><code>rd</code></td>
+      <td>[11:7]</td>
+      <td>5비트</td>
+      <td>목적 레지스터 (R, I, U, J 타입)</td>
+    </tr>
+    <tr>
+      <td><code>funct3</code></td>
+      <td>[14:12]</td>
+      <td>3비트</td>
+      <td>기능 코드 (R, I, S, B 타입)</td>
+    </tr>
+    <tr>
+      <td><code>rs1</code></td>
+      <td>[19:15]</td>
+      <td>5비트</td>
+      <td>소스 레지스터 1 (R, I, S, B 타입)</td>
+    </tr>
+    <tr>
+      <td><code>rs2</code></td>
+      <td>[24:20]</td>
+      <td>5비트</td>
+      <td>소스 레지스터 2 (R, S, B 타입)</td>
+    </tr>
+    <tr>
+      <td><code>funct7</code></td>
+      <td>[31:25]</td>
+      <td>7비트</td>
+      <td>확장 기능 코드 (R 타입에서 주로 사용)</td>
+    </tr>
+  </table>
+
+  <p>
+    이 표에서 주목할 점은 <code>opcode</code>, <code>rd</code>, <code>rs1</code>, <code>rs2</code>의 위치가 타입에 관계없이 일정하다는 것입니다.
+    이 일관성 덕분에 하드웨어 디코더는 명령어 타입을 판별하기 전에도 레지스터 번호를 추출할 수 있으며,
+    이는 파이프라인 설계에서 디코딩과 레지스터 읽기를 병렬로 수행하는 데 핵심적인 역할을 합니다.
+  </p>
+
+  <h3>6가지 타입 상세</h3>
+
+  <figure>
+    <img src="../figures/ch02_sec04_instruction_formats.svg" alt="RISC-V RV32I 6가지 명령어 타입(R/I/S/B/U/J)의 비트 필드 구조 비교">
+    <figcaption>그림 2.4: RV32I 6가지 명령어 형식. 색상으로 필드 유형을 구분하였다. 노란색이 즉치수(immediate) 필드이며, 타입마다 배치가 다르다.</figcaption>
+  </figure>
+
+  <p><strong>R 타입 (Register-Register)</strong></p>
+  <p>
+    R 타입은 두 레지스터의 값으로 연산하여 결과를 레지스터에 저장하는 형식입니다.
+    <code>ADD</code>, <code>SUB</code>, <code>AND</code>, <code>OR</code>, <code>XOR</code>, <code>SLL</code>(왼쪽 시프트),
+    <code>SRL</code>(논리 오른쪽 시프트), <code>SRA</code>(산술 오른쪽 시프트), <code>SLT</code>(비교), <code>SLTU</code>(부호 없는 비교) 등이 이 형식에 해당합니다.
+    <code>funct7</code>과 <code>funct3</code>의 조합으로 연산 종류를 결정합니다.
+    예를 들어, <code>ADD</code>와 <code>SUB</code>는 <code>funct3</code>이 같지만(000) <code>funct7</code>이 다릅니다(0000000 vs 0100000).
+    즉치수(immediate)가 없으므로, 32비트가 온전히 레지스터 번호와 기능 코드에 사용됩니다.
+  </p>
+
+  <p><strong>I 타입 (Immediate)</strong></p>
+  <p>
+    I 타입은 하나의 소스 레지스터와 12비트 즉치수(immediate)로 연산하는 형식입니다.
+    <code>ADDI</code>, <code>ANDI</code>, <code>ORI</code>, <code>XORI</code> 등의 산술/논리 연산,
+    <code>LW</code>, <code>LH</code>, <code>LB</code> 등의 로드(load) 명령어,
+    그리고 <code>JALR</code>(레지스터 간접 점프)이 이 형식을 사용합니다.
+    12비트 즉치수는 <strong>부호 확장(Sign Extension)</strong>되어 32비트로 확장됩니다.
+    즉, 비트 [31](최상위 비트)이 1이면 상위 20비트가 모두 1로 채워지고, 0이면 0으로 채워집니다.
+    이를 통해 -2048 ~ +2047 범위의 정수를 표현할 수 있습니다.
+  </p>
+
+  <p><strong>S 타입 (Store)</strong></p>
+  <p>
+    S 타입은 스토어(store) 명령어 전용 형식입니다. <code>SW</code>, <code>SH</code>, <code>SB</code>가 이에 해당합니다.
+    S 타입이 I 타입과 다른 점은 <strong>rd 필드가 없다</strong>는 것입니다.
+    스토어 명령어는 레지스터의 값을 메모리에 쓰는 것이므로, 결과를 레지스터에 저장할 필요가 없습니다.
+    대신 rd 필드의 위치([11:7])를 즉치수의 하위 5비트로 사용합니다.
+    즉치수의 상위 7비트는 [31:25]에 위치하므로, 12비트 즉치수가 두 조각으로 나뉘어 배치됩니다.
+    이렇게 쪼개진 이유는 <code>rs1</code>과 <code>rs2</code> 필드의 위치를 R/I 타입과 동일하게 유지하기 위함입니다.
+  </p>
+
+  <p><strong>B 타입 (Branch)</strong></p>
+  <p>
+    B 타입은 조건 분기(conditional branch) 명령어 전용입니다.
+    <code>BEQ</code>(같으면 분기), <code>BNE</code>(다르면 분기), <code>BLT</code>(작으면 분기),
+    <code>BGE</code>(크거나 같으면 분기), <code>BLTU</code>(부호 없는 비교), <code>BGEU</code>가 이에 해당합니다.
+    B 타입의 즉치수는 <strong>PC 상대 오프셋(PC-relative offset)</strong>을 나타내며, 분기 대상 주소 = PC + 즉치수로 계산됩니다.
+    주목할 점은 즉치수의 최하위 비트(bit 0)가 인코딩에 포함되지 않는다는 것입니다.
+    모든 명령어가 4바이트 정렬이므로, 분기 오프셋은 항상 2의 배수이기 때문입니다.
+    따라서 12비트의 인코딩으로 실제로는 13비트 범위(-4096 ~ +4094 바이트)의 분기를 표현할 수 있습니다.
+  </p>
+
+  <p>
+    B 타입에서 즉치수의 비트 순서가 다소 복잡하게 재배열(reordering)되어 있는데,
+    이는 하드웨어의 즉치수 추출 MUX를 최소화하기 위한 의도적인 설계 결정입니다.
+    구체적인 비트 배치는 Chapter 03에서 각 명령어를 상세 분석할 때 다시 다루겠습니다.
+  </p>
+
+  <p><strong>U 타입 (Upper Immediate)</strong></p>
+  <p>
+    U 타입은 20비트의 상위 즉치수(upper immediate)를 제공합니다.
+    <code>LUI</code>(Load Upper Immediate)와 <code>AUIPC</code>(Add Upper Immediate to PC) 두 명령어만 이 형식을 사용합니다.
+    20비트 즉치수는 32비트 값의 상위 20비트([31:12])에 배치되고, 하위 12비트는 0으로 채워집니다.
+    이를 <code>ADDI</code>와 조합하면 임의의 32비트 상수를 생성할 수 있습니다.
+    예를 들어, <code>0x12345678</code>이라는 상수를 레지스터에 로드하려면:
+  </p>
+
+  <ol>
+    <li><code>LUI x5, 0x12345</code> — x5에 <code>0x12345000</code>을 로드</li>
+    <li><code>ADDI x5, x5, 0x678</code> — x5에 <code>0x678</code>을 더해 <code>0x12345678</code> 완성</li>
+  </ol>
+
+  <p><strong>J 타입 (Jump)</strong></p>
+  <p>
+    J 타입은 무조건 점프(unconditional jump) 명령어 전용으로, <code>JAL</code>(Jump And Link) 한 명령어만 이 형식을 사용합니다.
+    20비트 즉치수가 제공되며, B 타입과 마찬가지로 최하위 비트(bit 0)는 인코딩에 포함되지 않습니다.
+    따라서 21비트 범위(약 &plusmn;1MB)의 점프가 가능합니다.
+    <code>JAL</code>은 점프하면서 동시에 복귀 주소(PC+4)를 rd 레지스터에 저장합니다.
+    이것이 함수 호출의 기반이 됩니다.
+  </p>
+
+  <h3>즉치수 부호 확장 규칙</h3>
+
+  <p>
+    6가지 타입 모두에서 즉치수의 <strong>부호 비트(sign bit)</strong>는 항상 명령어의 비트 [31]에 위치합니다.
+    이는 RISC-V의 중요한 설계 원칙 중 하나로, 부호 확장 로직을 매우 단순하게 만들어 줍니다.
+    하드웨어에서는 비트 [31]을 확인한 후, 필요한 만큼 상위 비트를 같은 값으로 채우기만 하면 됩니다.
+    이 단순함이 Chapter 04에서 설계할 즉치수 생성기(Immediate Generator)의 핵심 원리입니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      디코더를 설계할 때, 가장 먼저 추출해야 할 필드는 <code>opcode</code>(비트 [6:0])입니다.
+      opcode만으로 R/I/S/B/U/J 중 어떤 타입인지 판별할 수 있으며, 이후 <code>funct3</code>과 <code>funct7</code>으로 구체적인 연산을 결정합니다.
+      즉, 디코딩은 "계층적(hierarchical)" 구조로 진행됩니다: opcode → funct3 → funct7 순서입니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 왜 S 타입과 B 타입의 즉치수 비트가 분산되어 있습니까? 한 곳에 모아 놓으면 더 간단하지 않나요?</p>
+    <p><strong>A:</strong> 핵심 이유는 <code>rs1</code>, <code>rs2</code>, <code>rd</code> 필드의 위치를 모든 타입에서 동일하게 유지하기 위함입니다.
+    레지스터 파일 읽기 포트에 연결되는 신호가 타입에 따라 바뀌지 않으므로, 디코딩과 레지스터 읽기를 병렬로 수행할 수 있습니다.
+    즉치수 비트가 분산되는 복잡함은 즉치수 생성기라는 단순한 MUX 로직으로 해결됩니다. 이것은 전체 파이프라인 성능을 위한 현명한 트레이드오프입니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q:</strong> RISC-V 명령어 형식에서 레지스터 필드(rs1, rs2, rd)의 위치가 일정한 것이 왜 중요한가요?<br>
+      <strong>A:</strong> 파이프라인 프로세서에서 디코딩(ID 스테이지)과 레지스터 파일 읽기를 동시에 수행할 수 있기 때문입니다.
+      opcode를 아직 해석하지 않은 상태에서도 비트 [19:15]와 [24:20]으로 레지스터 파일에 읽기 요청을 보낼 수 있습니다.
+      이는 임계 경로(critical path)를 줄이는 데 직접적으로 기여합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      여기까지 읽었다면, 다음 질문에 답해 보십시오:
+      (1) R 타입과 I 타입의 주요 차이는 무엇입니까?
+      (2) S 타입에서 rd 필드가 없는 이유는 무엇입니까?
+      (3) B 타입과 J 타입의 즉치수에서 최하위 비트(bit 0)가 인코딩에 포함되지 않는 이유는 무엇입니까?
+    </p>
+  </aside>
+</section>
+<!-- ========== 2.4절 끝 ========== -->
+
+
+<!-- ========== 2.5절 시작 ========== -->
+<section id="sec-02-5">
+  <h2>2.5 직접 해보기: 명령어 비트 패턴 해독</h2>
+
+  <p>
+    이론만으로는 명령어 형식이 와닿지 않을 수 있습니다. 이 절에서는 실제 명령어 3개를 직접 인코딩하고 디코딩하는 미니 실습을 진행합니다.
+    연필과 종이를 준비하고, 각 단계를 직접 따라해 보십시오.
+    프로세서 하드웨어가 매 사이클 수행하는 작업을 사람이 손으로 해 보는 것이므로,
+    이 실습을 마치면 디코더의 동작을 직관적으로 이해할 수 있게 될 것입니다.
+  </p>
+
+  <h3>실습 1: ADD x5, x6, x7을 인코딩하기</h3>
+
+  <p>
+    <code>ADD x5, x6, x7</code>은 "x6과 x7을 더한 결과를 x5에 저장"하는 R 타입 명령어입니다. 단계별로 인코딩해 봅시다.
+  </p>
+
+  <p><strong>1단계: 명령어 타입과 opcode 결정</strong></p>
+  <p>
+    ADD는 레지스터-레지스터 연산이므로 R 타입입니다.
+    R 타입 산술 연산의 opcode는 <code>0110011</code> (10진수 51)입니다.
+  </p>
+
+  <p><strong>2단계: 레지스터 번호를 이진수로 변환</strong></p>
+  <ul>
+    <li><code>rd</code> = x5 = <code>00101</code></li>
+    <li><code>rs1</code> = x6 = <code>00110</code></li>
+    <li><code>rs2</code> = x7 = <code>00111</code></li>
+  </ul>
+
+  <p><strong>3단계: 기능 코드 확인</strong></p>
+  <ul>
+    <li><code>funct3</code> = <code>000</code> (ADD/SUB의 funct3)</li>
+    <li><code>funct7</code> = <code>0000000</code> (ADD는 0, SUB는 0100000)</li>
+  </ul>
+
+  <p><strong>4단계: 32비트 조립</strong></p>
+  <table>
+    <tr>
+      <th>funct7 [31:25]</th>
+      <th>rs2 [24:20]</th>
+      <th>rs1 [19:15]</th>
+      <th>funct3 [14:12]</th>
+      <th>rd [11:7]</th>
+      <th>opcode [6:0]</th>
+    </tr>
+    <tr>
+      <td><code>0000000</code></td>
+      <td><code>00111</code></td>
+      <td><code>00110</code></td>
+      <td><code>000</code></td>
+      <td><code>00101</code></td>
+      <td><code>0110011</code></td>
+    </tr>
+  </table>
+
+  <p>
+    연결하면: <code>0000000 00111 00110 000 00101 0110011</code><br>
+    16진수로 변환: <code>0x007302B3</code>
+  </p>
+
+  <h3>실습 2: ADDI x10, x0, 42를 인코딩하기</h3>
+
+  <p>
+    <code>ADDI x10, x0, 42</code>는 "x0(=0)에 42를 더해 x10에 저장", 즉 x10 = 42로 초기화하는 I 타입 명령어입니다.
+  </p>
+
+  <p><strong>1단계: 명령어 타입과 opcode 결정</strong></p>
+  <p>ADDI는 I 타입이며, opcode는 <code>0010011</code> (10진수 19)입니다.</p>
+
+  <p><strong>2단계: 필드 값 결정</strong></p>
+  <ul>
+    <li><code>imm[11:0]</code> = 42 = <code>000000101010</code> (12비트)</li>
+    <li><code>rs1</code> = x0 = <code>00000</code></li>
+    <li><code>funct3</code> = <code>000</code> (ADDI의 funct3)</li>
+    <li><code>rd</code> = x10 = <code>01010</code></li>
+  </ul>
+
+  <p><strong>3단계: 32비트 조립</strong></p>
+  <table>
+    <tr>
+      <th>imm[11:0] [31:20]</th>
+      <th>rs1 [19:15]</th>
+      <th>funct3 [14:12]</th>
+      <th>rd [11:7]</th>
+      <th>opcode [6:0]</th>
+    </tr>
+    <tr>
+      <td><code>000000101010</code></td>
+      <td><code>00000</code></td>
+      <td><code>000</code></td>
+      <td><code>01010</code></td>
+      <td><code>0010011</code></td>
+    </tr>
+  </table>
+
+  <p>
+    연결하면: <code>000000101010 00000 000 01010 0010011</code><br>
+    16진수로 변환: <code>0x02A00513</code>
+  </p>
+
+  <p>
+    참고로, 이 명령어는 의사 명령어(pseudo-instruction) <code>LI x10, 42</code> (Load Immediate)로도 표기됩니다.
+    어셈블러는 <code>LI</code>를 자동으로 <code>ADDI x10, x0, 42</code>로 변환합니다.
+  </p>
+
+  <h3>실습 3: 비트 패턴 0x00628463을 디코딩하기</h3>
+
+  <p>
+    이번에는 반대로, 주어진 32비트 이진 패턴으로부터 어셈블리 명령어를 복원해 보겠습니다.
+    <code>0x00628463</code>을 이진수로 변환하면:
+  </p>
+
+  <p>
+    <code>0000 0000 0110 0010 1000 0100 0110 0011</code>
+  </p>
+
+  <p>필드 단위로 분리하면:</p>
+
+  <p><strong>1단계: opcode 확인 [6:0]</strong></p>
+  <p>
+    <code>1100011</code> = 99(10진수). 이것은 B 타입(분기 명령어)의 opcode입니다.
+  </p>
+
+  <p><strong>2단계: funct3 확인 [14:12]</strong></p>
+  <p>
+    <code>000</code> = BEQ(같으면 분기)입니다.
+  </p>
+
+  <p><strong>3단계: 레지스터 확인</strong></p>
+  <ul>
+    <li><code>rs1</code> [19:15] = <code>00101</code> = x5</li>
+    <li><code>rs2</code> [24:20] = <code>00110</code> = x6</li>
+  </ul>
+
+  <p><strong>4단계: 즉치수 조립</strong></p>
+  <p>
+    B 타입의 즉치수 비트 배치를 기억합시다:
+    비트 [31] = imm[12], 비트 [30:25] = imm[10:5], 비트 [11:8] = imm[4:1], 비트 [7] = imm[11].
+  </p>
+  <ul>
+    <li>imm[12] = 비트[31] = 0</li>
+    <li>imm[10:5] = 비트[30:25] = <code>000000</code></li>
+    <li>imm[4:1] = 비트[11:8] = <code>1000</code></li>
+    <li>imm[11] = 비트[7] = 0</li>
+    <li>imm[0] = 0 (항상, 인코딩에 포함되지 않음)</li>
+  </ul>
+  <p>
+    조립하면: imm = <code>0_0_000000_1000_0</code> = 0x00000010(2진) = <code>0x00000010</code>... 아닙니다, 비트를 정렬합시다.
+    imm[12:0] = <code>0 0 000000 1000 0</code> = <code>0000000010000</code>(2진) = 16(10진).
+    즉, 분기 대상 주소는 PC + 8 입니다.
+  </p>
+
+  <p><strong>최종 결과:</strong></p>
+  <p>
+    <code>BEQ x5, x6, 8</code> — "x5와 x6이 같으면, 현재 PC에서 8바이트 앞으로 분기"
+  </p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      수업에서 이 실습을 진행할 때, 학생들에게 "RISC-V 명령어 인코딩 레퍼런스 카드"를 인쇄물로 나눠 주는 것을 권장합니다.
+      레퍼런스 카드에는 6가지 타입의 비트 맵과 주요 opcode/funct3/funct7 값이 요약되어 있습니다 (부록 A 참조).
+      학생들이 시험 중에도 카드를 참조할 수 있게 하면, "외우기"에서 "이해하기"로 학습 초점이 전환됩니다.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      실무에서 명령어를 수작업으로 인코딩/디코딩하는 일은 거의 없습니다. 하지만 시뮬레이션 파형에서
+      <code>instruction</code> 신호의 32비트 값을 보고 "이것이 어떤 명령어인지"를 빠르게 판별하는 능력은 디버깅에 필수적입니다.
+      특히 opcode(하위 7비트)와 funct3(비트 [14:12])만으로 대부분의 명령어를 식별할 수 있으므로, 이 두 필드의 위치를 기억해 두십시오.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      다음 연습 문제를 직접 풀어 보십시오:
+      (1) <code>SUB x3, x1, x2</code>를 32비트 16진수로 인코딩하십시오. (힌트: SUB의 funct7은 <code>0100000</code>)
+      (2) <code>0x00A12023</code>을 디코딩하여 어셈블리 명령어로 변환하십시오. (힌트: opcode [6:0]부터 확인)
+    </p>
+  </aside>
+</section>
+<!-- ========== 2.5절 끝 ========== -->
+
+
+<!-- ========== 2.6절 시작 ========== -->
+<section id="sec-02-6">
+  <h2>2.6 본 챕터 요약 및 다음 단계</h2>
+
+  <p>
+    이 챕터에서는 RISC-V ISA의 전체적인 구조를 조감(bird's-eye view)하였습니다.
+    프로세서 구현에 앞서 "무엇을 만들어야 하는가"를 명확히 이해하는 것이 이 챕터의 목적이었으며,
+    핵심 개념들을 다시 한번 정리하겠습니다.
+  </p>
+</section>
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>모듈형 ISA</strong>: RISC-V는 기본 정수 ISA(RV32I) 위에 M, F, A 등의 확장을 선택적으로 추가하는 모듈형 구조이다. 이 책에서는 RV32I + Zicsr을 구현한다.</li>
+    <li><strong>32개 레지스터 + PC</strong>: x0~x31의 32비트 범용 레지스터와 별도의 프로그램 카운터(PC)를 가진다. x0는 항상 0이다.</li>
+    <li><strong>ABI 이름</strong>: 소프트웨어 규약으로 레지스터에 별명(ra, sp, a0~a7, s0~s11, t0~t6)을 부여한다. 하드웨어는 ABI를 강제하지 않는다.</li>
+    <li><strong>리틀 엔디언</strong>: 멀티바이트 데이터의 최하위 바이트(LSB)가 가장 낮은 주소에 저장된다.</li>
+    <li><strong>정렬 요구사항</strong>: 워드는 4바이트 정렬, 하프워드는 2바이트 정렬이 필요하다. 위반 시 예외가 발생한다.</li>
+    <li><strong>6가지 명령어 타입</strong>: R(레지스터-레지스터), I(즉치수), S(스토어), B(분기), U(상위 즉치수), J(점프).</li>
+    <li><strong>필드 위치의 일관성</strong>: opcode는 항상 [6:0], rs1은 [19:15], rs2는 [24:20], rd는 [11:7]에 위치한다. 즉치수의 부호 비트는 항상 비트 [31]이다.</li>
+    <li><strong>부호 확장</strong>: 즉치수는 항상 부호 확장되어 32비트로 사용된다.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>자가 점검 질문</h2>
+  <ol>
+    <li><strong>[기억]</strong> RV32I에는 총 몇 개의 범용 레지스터가 있으며, 각 레지스터의 비트 폭은 얼마입니까?</li>
+    <li><strong>[기억]</strong> RISC-V의 6가지 명령어 타입 이름을 모두 열거하십시오.</li>
+    <li><strong>[이해]</strong> x0 레지스터가 항상 0인 것이 ISA 설계에 어떤 이점을 제공하는지 두 가지를 설명하십시오.</li>
+    <li><strong>[이해]</strong> S 타입 명령어에서 즉치수가 두 조각으로 분산 배치된 이유를 설명하십시오.</li>
+    <li><strong>[적용]</strong> <code>ADDI x15, x0, -1</code>을 32비트 16진수로 인코딩하십시오. (힌트: -1의 12비트 2의 보수 표현은 <code>111111111111</code>)</li>
+    <li><strong>[적용]</strong> 32비트 값 <code>0xCAFEBABE</code>를 리틀 엔디언으로 주소 <code>0x200</code>에 저장할 때, 주소 <code>0x200</code>~<code>0x203</code> 각각에 저장되는 바이트 값을 쓰십시오.</li>
+    <li><strong>[분석]</strong> RISC-V의 모듈형 ISA 구조가 x86의 단일 ISA 구조 대비 가지는 장점과 단점을 각각 하나씩 제시하십시오.</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    다음 <strong>Chapter 03 — RV32I 명령어 세트 완전 분석</strong>에서는 이 챕터에서 개관한 6가지 명령어 타입에 속하는 47개 명령어를 하나하나 상세히 분석합니다.
+    각 명령어의 정확한 인코딩, 실행 의미(semantics), 그리고 디코더 설계에 필요한 핵심 정보를 정리할 것입니다.
+    이번 챕터에서 배운 명령어 형식의 공통 패턴 — opcode, funct3, funct7, 즉치수 위치 — 이 Chapter 03의 기반이 됩니다.
+    또한 RISC-V 어셈블러를 사용하여 실제 프로그램을 작성하고, 시뮬레이터에서 실행하는 실습도 진행합니다.
+  </p>
+</section>
+
+</body>
+</html>

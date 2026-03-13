@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">UART 디버그 출력 시스템 구조</text>
+
+  <!-- CPU -->
+  <rect x="30" y="60" width="180" height="180" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="120" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">RV32I CPU</text>
+  <rect x="50" y="100" width="140" height="25" rx="4" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1"/>
+  <text x="120" y="118" text-anchor="middle" font-size="10" fill="#1F2937">PC (프로그램 카운터)</text>
+  <rect x="50" y="135" width="140" height="25" rx="4" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1"/>
+  <text x="120" y="153" text-anchor="middle" font-size="10" fill="#1F2937">Register File (x0~x31)</text>
+  <rect x="50" y="170" width="140" height="25" rx="4" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1"/>
+  <text x="120" y="188" text-anchor="middle" font-size="10" fill="#1F2937">CSR (mcycle 등)</text>
+  <rect x="50" y="205" width="140" height="25" rx="4" fill="#FFFFFF" stroke="#3B82F6" stroke-width="1"/>
+  <text x="120" y="223" text-anchor="middle" font-size="10" fill="#1F2937">Current Instruction</text>
+
+  <!-- Debug Monitor -->
+  <rect x="260" y="60" width="200" height="180" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="360" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#D97706">Debug Monitor</text>
+  <text x="360" y="105" text-anchor="middle" font-size="10" fill="#6B7280">(MMIO 0x4000_0100)</text>
+
+  <rect x="280" y="120" width="160" height="25" rx="4" fill="#FFFFFF" stroke="#D97706" stroke-width="1"/>
+  <text x="360" y="138" text-anchor="middle" font-size="10" fill="#1F2937">PC 추적 로직</text>
+  <rect x="280" y="155" width="160" height="25" rx="4" fill="#FFFFFF" stroke="#D97706" stroke-width="1"/>
+  <text x="360" y="173" text-anchor="middle" font-size="10" fill="#1F2937">레지스터 덤프 로직</text>
+  <rect x="280" y="190" width="160" height="25" rx="4" fill="#FFFFFF" stroke="#D97706" stroke-width="1"/>
+  <text x="360" y="208" text-anchor="middle" font-size="10" fill="#1F2937">Hex→ASCII 변환</text>
+
+  <line x1="210" y1="150" x2="260" y2="150" stroke="#2563EB" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="235" y="142" font-size="8" fill="#2563EB">AHB/APB</text>
+
+  <!-- UART TX -->
+  <rect x="510" y="60" width="140" height="180" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="2"/>
+  <text x="580" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#059669">UART TX</text>
+  <text x="580" y="105" text-anchor="middle" font-size="10" fill="#6B7280">(Ch17 모듈)</text>
+  <rect x="525" y="120" width="110" height="25" rx="4" fill="#FFFFFF" stroke="#059669" stroke-width="1"/>
+  <text x="580" y="138" text-anchor="middle" font-size="10" fill="#1F2937">TX FIFO</text>
+  <rect x="525" y="155" width="110" height="25" rx="4" fill="#FFFFFF" stroke="#059669" stroke-width="1"/>
+  <text x="580" y="173" text-anchor="middle" font-size="10" fill="#1F2937">Baud Gen</text>
+  <rect x="525" y="190" width="110" height="25" rx="4" fill="#FFFFFF" stroke="#059669" stroke-width="1"/>
+  <text x="580" y="208" text-anchor="middle" font-size="10" fill="#1F2937">Shift Reg</text>
+
+  <line x1="460" y1="150" x2="510" y2="150" stroke="#059669" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="485" y="142" font-size="8" fill="#059669">FIFO</text>
+
+  <!-- USB-UART -->
+  <rect x="700" y="100" width="80" height="100" rx="8" fill="#F5F3FF" stroke="#7C3AED" stroke-width="2"/>
+  <text x="740" y="135" text-anchor="middle" font-size="10" font-weight="bold" fill="#7C3AED">USB</text>
+  <text x="740" y="152" text-anchor="middle" font-size="10" font-weight="bold" fill="#7C3AED">UART</text>
+  <text x="740" y="172" text-anchor="middle" font-size="9" fill="#6B7280">Basys 3</text>
+  <text x="740" y="186" text-anchor="middle" font-size="9" fill="#6B7280">FTDI</text>
+
+  <line x1="650" y1="150" x2="700" y2="150" stroke="#7C3AED" stroke-width="2" marker-end="url(#arr3)"/>
+  <text x="675" y="142" font-size="8" fill="#7C3AED">TXD</text>
+
+  <!-- Debug output example -->
+  <rect x="30" y="275" width="750" height="130" rx="8" fill="#1E293B" stroke="#475569" stroke-width="1"/>
+  <text x="50" y="298" font-size="12" font-weight="bold" fill="#86EFAC">UART 디버그 출력 예시 (115200 baud, 8N1)</text>
+  <text x="50" y="320" font-size="11" fill="#E2E8F0" font-family="monospace">[PC=0x00000100] INSTR=0x00500093  x1=0x00000005  x2=0x00000000</text>
+  <text x="50" y="340" font-size="11" fill="#E2E8F0" font-family="monospace">[PC=0x00000104] INSTR=0x00A00113  x1=0x00000005  x2=0x0000000A</text>
+  <text x="50" y="360" font-size="11" fill="#E2E8F0" font-family="monospace">[PC=0x00000108] INSTR=0x002081B3  x1=0x00000005  x2=0x0000000A  x3=0x0000000F</text>
+  <text x="50" y="385" font-size="10" fill="#94A3B8">▲ 매 명령어 실행마다 PC, 명령어, 변경된 레지스터를 UART로 출력</text>
+  <text x="50" y="400" font-size="10" fill="#FDE68A">⚠ 115200 baud에서 한 줄 출력 ~700μs → 클럭 50MHz 기준 ~35,000 사이클 오버헤드</text>
+</svg>

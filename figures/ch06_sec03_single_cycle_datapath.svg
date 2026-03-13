@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 720" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="ad" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="adr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+    <marker id="adg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="1100" height="720" fill="#F8FAFC" rx="12"/>
+  <text x="550" y="32" text-anchor="middle" font-size="20" font-weight="700" fill="#1E293B">RV32I 단일 사이클 데이터패스 (Single-Cycle Datapath)</text>
+
+  <!-- ====== PC 영역 ====== -->
+  <rect x="20" y="280" width="70" height="100" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="55" y="325" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">PC</text>
+  <text x="55" y="345" text-anchor="middle" font-size="9" fill="#6B7280">32-bit</text>
+  <text x="55" y="360" text-anchor="middle" font-size="9" fill="#6B7280">register</text>
+
+  <!-- PC MUX -->
+  <polygon points="108,290 108,370 140,350 140,310" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="124" y="335" text-anchor="middle" font-size="9" font-weight="600" fill="#92400E">MUX</text>
+
+  <!-- +4 Adder -->
+  <circle cx="55" cy="230" r="22" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="55" y="235" text-anchor="middle" font-size="13" font-weight="700" fill="#2563EB">+4</text>
+
+  <!-- PC → +4 -->
+  <line x1="55" y1="280" x2="55" y2="254" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+  <!-- +4 → MUX -->
+  <line x1="77" y1="230" x2="106" y2="300" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+
+  <!-- PCSel 제어 -->
+  <text x="124" y="283" text-anchor="middle" font-size="9" fill="#DC2626" font-weight="600">PCSel</text>
+  <line x1="124" y1="286" x2="124" y2="290" stroke="#DC2626" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <!-- MUX → PC (피드백) -->
+  <path d="M 140,330 L 160,330 L 160,430 L 40,430 L 40,380" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#ad)"/>
+
+  <!-- ====== IMEM ====== -->
+  <rect x="170" y="270" width="100" height="120" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="220" y="310" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">IMEM</text>
+  <text x="220" y="330" text-anchor="middle" font-size="10" fill="#6B7280">명령어</text>
+  <text x="220" y="345" text-anchor="middle" font-size="10" fill="#6B7280">메모리</text>
+  <text x="220" y="365" text-anchor="middle" font-size="9" fill="#94A3B8">addr → instr</text>
+
+  <!-- PC → IMEM -->
+  <line x1="90" y1="330" x2="168" y2="330" stroke="#2563EB" stroke-width="2" marker-end="url(#ad)"/>
+  <text x="130" y="322" text-anchor="middle" font-size="8" fill="#6B7280">pc[31:0]</text>
+
+  <!-- ====== 제어 유닛 ====== -->
+  <rect x="310" y="55" width="200" height="90" rx="8" fill="#2563EB" stroke="#1D4ED8" stroke-width="2"/>
+  <text x="410" y="85" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">Control Unit</text>
+  <text x="410" y="105" text-anchor="middle" font-size="10" fill="#DBEAFE">명령어 디코더 + ALU 디코더</text>
+  <text x="410" y="122" text-anchor="middle" font-size="9" fill="#93C5FD">instr → 제어 신호</text>
+
+  <!-- IMEM → Control Unit -->
+  <path d="M 270,300 L 295,300 L 295,100 L 308,100" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#ad)"/>
+  <text x="290" y="200" font-size="8" fill="#6B7280" transform="rotate(-90 290 200)">instr[31:0]</text>
+
+  <!-- 제어 신호 분배 (점선) -->
+  <line x1="410" y1="145" x2="410" y2="175" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="410" y1="175" x2="55" y2="175" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="410" y1="175" x2="1050" y2="175" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="700" y="168" text-anchor="middle" font-size="9" fill="#DC2626" font-weight="600">제어 신호 버스 (PCSel, RegWEn, ImmSel, BSel, ASel, ALUSel, MemRW, WBSel, BrUn)</text>
+
+  <!-- ====== 레지스터 파일 ====== -->
+  <rect x="320" y="250" width="130" height="160" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="385" y="280" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Register</text>
+  <text x="385" y="298" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">File</text>
+  <text x="385" y="320" text-anchor="middle" font-size="10" fill="#6B7280">32 x 32-bit</text>
+  <text x="340" y="345" font-size="9" fill="#475569">rs1 → dataA</text>
+  <text x="340" y="360" font-size="9" fill="#475569">rs2 → dataB</text>
+  <text x="340" y="375" font-size="9" fill="#475569">rd  ← dataD</text>
+  <text x="340" y="395" font-size="9" fill="#DC2626">RegWEn ↓</text>
+
+  <!-- IMEM → RF (rs1, rs2, rd) -->
+  <line x1="270" y1="340" x2="318" y2="340" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+
+  <!-- ====== ImmGen ====== -->
+  <rect x="320" y="450" width="130" height="60" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="385" y="478" text-anchor="middle" font-size="13" font-weight="600" fill="#2563EB">ImmGen</text>
+  <text x="385" y="496" text-anchor="middle" font-size="9" fill="#6B7280">ImmSel → imm[31:0]</text>
+
+  <!-- IMEM → ImmGen -->
+  <path d="M 270,370 L 290,370 L 290,475 L 318,475" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#ad)"/>
+
+  <!-- ====== ALU A MUX ====== -->
+  <polygon points="490,280 490,360 520,345 520,295" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="505" y="325" text-anchor="middle" font-size="8" font-weight="600" fill="#92400E">A</text>
+  <text x="505" y="275" text-anchor="middle" font-size="8" fill="#DC2626">ASel</text>
+
+  <!-- ====== ALU B MUX ====== -->
+  <polygon points="490,380 490,460 520,445 520,395" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="505" y="425" text-anchor="middle" font-size="8" font-weight="600" fill="#92400E">B</text>
+  <text x="505" y="375" text-anchor="middle" font-size="8" fill="#DC2626">BSel</text>
+
+  <!-- RF dataA → A MUX -->
+  <line x1="450" y1="310" x2="488" y2="310" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+  <!-- PC → A MUX (for AUIPC/Branch) -->
+  <path d="M 55,280 L 55,195 L 475,195 L 475,300 L 488,300" stroke="#93C5FD" stroke-width="1" fill="none" marker-end="url(#ad)"/>
+
+  <!-- RF dataB → B MUX -->
+  <line x1="450" y1="360" x2="470" y2="360 L 470,400" stroke="#2563EB" stroke-width="1.5" fill="none"/>
+  <path d="M 450,360 L 470,360 L 470,400 L 488,400" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#ad)"/>
+  <!-- ImmGen → B MUX -->
+  <line x1="450" y1="480" x2="470" y2="480" stroke="#2563EB" stroke-width="1.5"/>
+  <path d="M 470,480 L 480,480 L 480,440 L 488,440" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#ad)"/>
+
+  <!-- ====== ALU ====== -->
+  <rect x="545" y="310" width="120" height="100" rx="6" fill="#2563EB" stroke="#1D4ED8" stroke-width="2"/>
+  <text x="605" y="350" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">ALU</text>
+  <text x="605" y="370" text-anchor="middle" font-size="10" fill="#DBEAFE">10 연산</text>
+  <text x="605" y="390" text-anchor="middle" font-size="9" fill="#93C5FD">ALUSel</text>
+
+  <!-- A MUX → ALU -->
+  <line x1="520" y1="320" x2="543" y2="340" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+  <!-- B MUX → ALU -->
+  <line x1="520" y1="420" x2="543" y2="390" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+
+  <!-- ====== Branch Comparator ====== -->
+  <rect x="545" y="450" width="120" height="60" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="605" y="478" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">Branch Comp</text>
+  <text x="605" y="496" text-anchor="middle" font-size="9" fill="#6B7280">BrEq, BrLt</text>
+
+  <!-- RF → Branch Comp -->
+  <path d="M 450,345 L 465,345 L 465,470 L 543,470" stroke="#93C5FD" stroke-width="1" fill="none" marker-end="url(#ad)"/>
+  <path d="M 450,355 L 460,355 L 460,490 L 543,490" stroke="#93C5FD" stroke-width="1" fill="none" marker-end="url(#ad)"/>
+
+  <!-- BrEq/BrLt → Control (피드백) -->
+  <path d="M 605,450 L 605,445 L 530,445 L 530,100 L 510,100" stroke="#059669" stroke-width="1.5" fill="none" marker-end="url(#adg)"/>
+  <text x="535" y="440" font-size="8" fill="#059669" font-weight="600">BrEq/BrLt</text>
+
+  <!-- ====== DMEM ====== -->
+  <rect x="710" y="290" width="120" height="130" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="770" y="330" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">DMEM</text>
+  <text x="770" y="350" text-anchor="middle" font-size="10" fill="#6B7280">데이터 메모리</text>
+  <text x="770" y="375" text-anchor="middle" font-size="9" fill="#475569">addr ← ALU result</text>
+  <text x="770" y="390" text-anchor="middle" font-size="9" fill="#475569">wdata ← rs2</text>
+  <text x="770" y="405" text-anchor="middle" font-size="9" fill="#DC2626">MemRW</text>
+
+  <!-- ALU → DMEM -->
+  <line x1="665" y1="360" x2="708" y2="360" stroke="#2563EB" stroke-width="2" marker-end="url(#ad)"/>
+  <text x="687" y="352" text-anchor="middle" font-size="8" fill="#6B7280">result</text>
+
+  <!-- rs2 → DMEM (store data) -->
+  <path d="M 450,370 L 458,370 L 458,530 L 730,530 L 730,420" stroke="#93C5FD" stroke-width="1" fill="none" marker-end="url(#ad)"/>
+  <text x="600" y="540" font-size="8" fill="#6B7280">rs2 data (store)</text>
+
+  <!-- ====== WB MUX ====== -->
+  <polygon points="870,290 870,420 910,400 910,310" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="890" y="350" text-anchor="middle" font-size="10" font-weight="600" fill="#92400E">WB</text>
+  <text x="890" y="365" text-anchor="middle" font-size="10" font-weight="600" fill="#92400E">MUX</text>
+  <text x="890" y="280" text-anchor="middle" font-size="9" fill="#DC2626" font-weight="600">WBSel</text>
+
+  <!-- DMEM → WB MUX -->
+  <line x1="830" y1="360" x2="868" y2="370" stroke="#2563EB" stroke-width="1.5" marker-end="url(#ad)"/>
+  <text x="850" y="380" font-size="8" fill="#6B7280">mem</text>
+
+  <!-- ALU → WB MUX -->
+  <path d="M 665,340 L 690,340 L 690,260 L 855,260 L 855,310 L 868,320" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#ad)"/>
+  <text x="850" y="310" font-size="8" fill="#6B7280">alu</text>
+
+  <!-- PC+4 → WB MUX -->
+  <path d="M 77,230 L 85,230 L 85,195 L 850,195 L 850,295 L 868,300" stroke="#93C5FD" stroke-width="1" fill="none" marker-end="url(#ad)"/>
+  <text x="850" y="296" font-size="8" fill="#6B7280">pc+4</text>
+
+  <!-- WB MUX → RF (write back) -->
+  <path d="M 910,355 L 950,355 L 950,580 L 385,580 L 385,412" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#adg)"/>
+  <text x="670" y="595" text-anchor="middle" font-size="10" fill="#059669" font-weight="600">Write-Back 경로 (WB → rd)</text>
+
+  <!-- Branch target → PC MUX -->
+  <path d="M 665,380 L 680,380 L 680,570 L 15,570 L 15,350 L 106,350" stroke="#DC2626" stroke-width="1.5" fill="none" marker-end="url(#adr)"/>
+  <text x="350" y="562" text-anchor="middle" font-size="9" fill="#DC2626" font-weight="600">분기/점프 목표 주소 (Branch/Jump Target)</text>
+
+  <!-- ====== 범례 ====== -->
+  <rect x="700" y="560" width="380" height="140" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="890" y="582" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">범례</text>
+  <line x1="720" y1="600" x2="760" y2="600" stroke="#2563EB" stroke-width="2"/>
+  <text x="770" y="604" font-size="11" fill="#475569">데이터 흐름 (주 경로)</text>
+  <line x1="720" y1="620" x2="760" y2="620" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="770" y="624" font-size="11" fill="#475569">제어 신호</text>
+  <line x1="720" y1="640" x2="760" y2="640" stroke="#059669" stroke-width="2"/>
+  <text x="770" y="644" font-size="11" fill="#475569">Write-Back / 피드백</text>
+  <rect x="720" y="654" width="20" height="14" fill="#FEF3C7" stroke="#D97706" stroke-width="1" rx="2"/>
+  <text x="750" y="666" font-size="11" fill="#475569">멀티플렉서 (MUX)</text>
+  <rect x="720" y="676" width="20" height="14" fill="#DBEAFE" stroke="#2563EB" stroke-width="1" rx="2"/>
+  <text x="750" y="688" font-size="11" fill="#475569">데이터패스 모듈</text>
+</svg>

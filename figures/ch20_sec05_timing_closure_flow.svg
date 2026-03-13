@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 580" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="580" fill="#F8FAFC" rx="8"/>
+
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">타이밍 클로저 실패 시 대응 플로우차트</text>
+  <text x="425" y="50" text-anchor="middle" font-size="12" fill="#64748B">WNS &lt; 0 일 때 단계별 해결 전략</text>
+
+  <!-- 시작: 합성 완료 -->
+  <rect x="325" y="70" width="200" height="45" rx="22" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="425" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="#2563EB">합성 + 구현 완료</text>
+
+  <line x1="425" y1="115" x2="425" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- 판단: WNS >= 0? -->
+  <polygon points="425,145 525,185 425,225 325,185" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="425" y="183" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">WNS ≥ 0?</text>
+
+  <!-- Yes: 완료 -->
+  <line x1="525" y1="185" x2="620" y2="185" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+  <text x="570" y="178" font-size="10" font-weight="600" fill="#059669">Yes</text>
+  <rect x="625" y="165" width="150" height="40" rx="20" fill="#F0FDF4" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="700" y="190" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">타이밍 클로저 달성!</text>
+
+  <!-- No: 분석 -->
+  <line x1="425" y1="225" x2="425" y2="255" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowR)"/>
+  <text x="440" y="243" font-size="10" font-weight="600" fill="#DC2626">No</text>
+
+  <!-- Step 1: report_timing 분석 -->
+  <rect x="275" y="260" width="300" height="50" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="425" y="282" text-anchor="middle" font-size="12" font-weight="700" fill="#2563EB">Step 1: report_timing 분석</text>
+  <text x="425" y="300" text-anchor="middle" font-size="10" fill="#1E293B">임계 경로(Critical Path) 식별</text>
+
+  <line x1="425" y1="310" x2="425" y2="335" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- 판단: WNS 크기 -->
+  <polygon points="425,340 535,375 425,410 315,375" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="425" y="372" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">|WNS| ≤ 1ns?</text>
+
+  <!-- Yes: 도구 최적화 -->
+  <line x1="535" y1="375" x2="620" y2="375" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+  <text x="575" y="368" font-size="10" font-weight="600" fill="#059669">Yes</text>
+
+  <rect x="625" y="340" width="200" height="70" rx="8" fill="white" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="725" y="360" text-anchor="middle" font-size="11" font-weight="700" fill="#059669">Step 2a: 도구 옵션 변경</text>
+  <text x="725" y="378" text-anchor="middle" font-size="9" fill="#1E293B">• 합성 전략 변경</text>
+  <text x="725" y="393" text-anchor="middle" font-size="9" fill="#1E293B">• phys_opt_design 추가</text>
+  <text x="725" y="408" text-anchor="middle" font-size="9" fill="#1E293B">• Retiming 활성화</text>
+
+  <!-- No: RTL 수정 -->
+  <line x1="425" y1="410" x2="425" y2="440" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowR)"/>
+  <text x="440" y="428" font-size="10" font-weight="600" fill="#DC2626">No (심각)</text>
+
+  <rect x="200" y="445" width="450" height="120" rx="8" fill="white" stroke="#DC2626" stroke-width="2" filter="url(#shadow)"/>
+  <text x="425" y="468" text-anchor="middle" font-size="12" font-weight="700" fill="#DC2626">Step 2b: RTL 수준 수동 최적화</text>
+
+  <!-- 하위 옵션들 -->
+  <rect x="215" y="480" width="200" height="30" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="315" y="500" text-anchor="middle" font-size="10" fill="#DC2626">임계 경로에 파이프라인 레지스터 삽입</text>
+
+  <rect x="215" y="515" width="200" height="30" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="315" y="535" text-anchor="middle" font-size="10" fill="#DC2626">조합 로직 분할 (Logic Balancing)</text>
+
+  <rect x="430" y="480" width="200" height="30" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="530" y="500" text-anchor="middle" font-size="10" fill="#DC2626">캐시 크기 축소 → 배선 혼잡 완화</text>
+
+  <rect x="430" y="515" width="200" height="30" rx="4" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="530" y="535" text-anchor="middle" font-size="10" fill="#DC2626">목표 주파수 하향 (50→40MHz)</text>
+
+  <!-- 되돌아가기 화살표 -->
+  <path d="M725,410 L725,430 L780,430 L780,100 L530,100" stroke="#059669" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowG)"/>
+  <text x="785" y="270" font-size="9" fill="#059669" transform="rotate(90, 785, 270)">재합성</text>
+
+  <path d="M200,555 L170,555 L170,100 L320,100" stroke="#DC2626" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowR)"/>
+  <text x="163" y="340" font-size="9" fill="#DC2626" transform="rotate(-90, 163, 340)">RTL 수정 후 재합성</text>
+</svg>

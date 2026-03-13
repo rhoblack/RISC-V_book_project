@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 520" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr2g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="520" fill="#FFFFFF" rx="8"/>
+  <text x="425" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2563EB">AHB-to-APB 브리지 FSM 상태 전이도</text>
+
+  <!-- IDLE state -->
+  <circle cx="150" cy="180" r="55" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="150" y="176" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">IDLE</text>
+  <text x="150" y="194" text-anchor="middle" font-size="10" fill="#1F2937">PSEL=0</text>
+  <text x="150" y="206" text-anchor="middle" font-size="10" fill="#1F2937">PENABLE=0</text>
+
+  <!-- SETUP state -->
+  <circle cx="425" cy="180" r="55" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="425" y="176" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">SETUP</text>
+  <text x="425" y="194" text-anchor="middle" font-size="10" fill="#1F2937">PSEL=1</text>
+  <text x="425" y="206" text-anchor="middle" font-size="10" fill="#1F2937">PENABLE=0</text>
+
+  <!-- ACCESS state -->
+  <circle cx="700" cy="180" r="55" fill="#2563EB" stroke="#1E40AF" stroke-width="2.5"/>
+  <text x="700" y="176" text-anchor="middle" font-size="14" font-weight="bold" fill="white">ACCESS</text>
+  <text x="700" y="194" text-anchor="middle" font-size="10" fill="white">PSEL=1</text>
+  <text x="700" y="206" text-anchor="middle" font-size="10" fill="white">PENABLE=1</text>
+
+  <!-- IDLE -> SETUP -->
+  <line x1="205" y1="170" x2="365" y2="170" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+  <text x="285" y="160" text-anchor="middle" font-size="11" fill="#1F2937">AHB 전송 감지</text>
+  <text x="285" y="146" text-anchor="middle" font-size="10" fill="#6B7280">(HTRANS=NONSEQ)</text>
+
+  <!-- SETUP -> ACCESS -->
+  <line x1="480" y1="170" x2="640" y2="170" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+  <text x="560" y="160" text-anchor="middle" font-size="11" fill="#1F2937">항상 (1사이클)</text>
+
+  <!-- ACCESS -> IDLE (PREADY & no more) -->
+  <path d="M 680,235 Q 425,380 170,235" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arr2g)"/>
+  <text x="425" y="330" text-anchor="middle" font-size="11" fill="#059669">PREADY=1 &amp; 추가 전송 없음</text>
+
+  <!-- ACCESS -> SETUP (PREADY & more) -->
+  <path d="M 660,225 Q 560,300 445,235" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arr2)"/>
+  <text x="580" y="290" text-anchor="middle" font-size="11" fill="#2563EB">PREADY=1 &amp;</text>
+  <text x="580" y="304" text-anchor="middle" font-size="11" fill="#2563EB">연속 전송</text>
+
+  <!-- ACCESS -> ACCESS (wait) -->
+  <path d="M 740,145 Q 780,100 740,140" fill="none" stroke="#DC2626" stroke-width="2"/>
+  <circle cx="755" cy="130" r="25" fill="none" stroke="#DC2626" stroke-width="2"/>
+  <text x="755" y="100" text-anchor="middle" font-size="10" fill="#DC2626">PREADY=0</text>
+  <text x="755" y="112" text-anchor="middle" font-size="10" fill="#DC2626">(대기)</text>
+
+  <!-- IDLE self loop -->
+  <circle cx="110" cy="130" r="25" fill="none" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="90" y="100" text-anchor="middle" font-size="10" fill="#6B7280">전송 없음</text>
+
+  <!-- Bridge block diagram below -->
+  <rect x="50" y="390" width="750" height="110" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="425" y="415" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">브리지 내부 레지스터</text>
+
+  <rect x="80" y="430" width="130" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="145" y="450" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB">주소 레지스터</text>
+  <text x="145" y="466" text-anchor="middle" font-size="10" fill="#1F2937">HADDR → PADDR</text>
+
+  <rect x="240" y="430" width="130" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="305" y="450" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB">쓰기 데이터 REG</text>
+  <text x="305" y="466" text-anchor="middle" font-size="10" fill="#1F2937">HWDATA → PWDATA</text>
+
+  <rect x="400" y="430" width="130" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="465" y="450" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB">제어 레지스터</text>
+  <text x="465" y="466" text-anchor="middle" font-size="10" fill="#1F2937">HWRITE → PWRITE</text>
+
+  <rect x="560" y="430" width="210" height="50" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="665" y="450" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB">FSM 제어 로직</text>
+  <text x="665" y="466" text-anchor="middle" font-size="10" fill="#1F2937">state → PSEL, PENABLE, HREADY</text>
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="a5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="a6" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="400" fill="#FFFFFF" rx="8"/>
+  <text x="380" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#1F2937">CSR 모듈 데이터패스 (단일 사이클 관점)</text>
+
+  <!-- 명령어 디코더에서 오는 신호들 -->
+  <rect x="20" y="60" width="120" height="100" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="80" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937">디코더</text>
+  <text x="30" y="100" font-size="9" fill="#6B7280" font-family="monospace">csr_addr[11:0]</text>
+  <text x="30" y="116" font-size="9" fill="#6B7280" font-family="monospace">csr_op[1:0]</text>
+  <text x="30" y="132" font-size="9" fill="#6B7280" font-family="monospace">csr_imm_sel</text>
+  <text x="30" y="148" font-size="9" fill="#6B7280" font-family="monospace">csr_w_en</text>
+
+  <!-- rs1/zimm MUX -->
+  <polygon points="180,90 180,160 220,140 220,110" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="195" y="130" text-anchor="middle" font-size="9" font-weight="bold" fill="#D97706">MUX</text>
+  <text x="160" y="100" text-anchor="end" font-size="9" fill="#1F2937">rs1_data</text>
+  <text x="160" y="152" text-anchor="end" font-size="9" fill="#1F2937">zimm</text>
+  <line x1="140" y1="100" x2="180" y2="108" stroke="#2563EB" stroke-width="1.2" marker-end="url(#a5)"/>
+  <line x1="140" y1="150" x2="180" y2="142" stroke="#2563EB" stroke-width="1.2" marker-end="url(#a5)"/>
+  <text x="200" y="80" text-anchor="middle" font-size="8" fill="#D97706">csr_imm_sel</text>
+
+  <!-- CSR 연산 유닛 -->
+  <rect x="260" y="85" width="140" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="330" y="112" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">CSR 연산 유닛</text>
+  <text x="330" y="130" text-anchor="middle" font-size="9" fill="#6B7280">W: src</text>
+  <text x="330" y="144" text-anchor="middle" font-size="9" fill="#6B7280">S: old | src</text>
+  <text x="330" y="158" text-anchor="middle" font-size="9" fill="#6B7280">C: old &amp; ~src</text>
+  <line x1="220" y1="125" x2="258" y2="125" stroke="#2563EB" stroke-width="1.5" marker-end="url(#a5)"/>
+  <text x="240" y="118" font-size="8" fill="#6B7280">src</text>
+
+  <!-- CSR 레지스터 파일 -->
+  <rect x="460" y="55" width="160" height="140" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="540" y="80" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">CSR 레지스터 파일</text>
+  <text x="475" y="100" font-size="9" fill="#6B7280">mstatus (0x300)</text>
+  <text x="475" y="116" font-size="9" fill="#6B7280">mie     (0x304)</text>
+  <text x="475" y="132" font-size="9" fill="#6B7280">mtvec   (0x305)</text>
+  <text x="475" y="148" font-size="9" fill="#6B7280">mscratch(0x340)</text>
+  <text x="475" y="164" font-size="9" fill="#6B7280">mepc    (0x341)</text>
+  <text x="475" y="180" font-size="9" fill="#6B7280">mcause  (0x342)</text>
+
+  <!-- 화살표: 연산 유닛 → CSR 레지스터 (쓰기) -->
+  <path d="M 400,135 L 430,135 L 430,125 L 458,125" stroke="#DC2626" stroke-width="1.5" fill="none" marker-end="url(#a6)"/>
+  <text x="432" y="118" font-size="8" fill="#DC2626">csr_wdata</text>
+
+  <!-- 화살표: CSR 레지스터 → 연산 유닛 (읽기) -->
+  <path d="M 460,100 L 430,100 L 430,110 L 400,110" stroke="#2563EB" stroke-width="1.5" fill="none" marker-end="url(#a5)"/>
+  <text x="432" y="96" font-size="8" fill="#2563EB">csr_rdata</text>
+
+  <!-- 읽기 값 → rd (레지스터 파일로) -->
+  <rect x="460" y="230" width="160" height="45" rx="6" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="540" y="258" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626">레지스터 파일 (rd)</text>
+  <line x1="540" y1="195" x2="540" y2="228" stroke="#2563EB" stroke-width="1.5" marker-end="url(#a5)"/>
+  <text x="548" y="218" font-size="8" fill="#2563EB">csr_rdata → WB MUX</text>
+
+  <!-- 주소 디코딩 화살표 -->
+  <line x1="140" y1="110" x2="258" y2="110" stroke="#6B7280" stroke-width="1" stroke-dasharray="4,3"/>
+  <path d="M 140,120 L 200,120 L 200,55 L 530,55 L 530,55" stroke="#6B7280" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="350" y="50" text-anchor="middle" font-size="8" fill="#6B7280">csr_addr[11:0] → 주소 디코딩</text>
+
+  <!-- 하단 설명 박스 -->
+  <rect x="20" y="300" width="720" height="85" rx="6" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="40" y="320" font-size="11" font-weight="bold" fill="#1F2937">데이터패스 핵심 포인트</text>
+  <text x="40" y="340" font-size="10" fill="#6B7280">1. MUX가 rs1_data 또는 zimm(5비트 제로확장)을 선택하여 CSR 연산 유닛에 공급</text>
+  <text x="40" y="356" font-size="10" fill="#6B7280">2. CSR 연산 유닛은 csr_op에 따라 Write(덮어쓰기) / Set(OR) / Clear(AND NOT)을 수행</text>
+  <text x="40" y="372" font-size="10" fill="#6B7280">3. CSR의 이전 값(csr_rdata)이 WB MUX를 통해 rd에 기록 — 읽기와 쓰기가 한 사이클 내에 원자적으로 완료</text>
+</svg>

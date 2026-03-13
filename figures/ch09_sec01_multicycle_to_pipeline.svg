@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="550" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1F2937">멀티사이클 FSM 상태도 vs 파이프라인 타이밍 다이어그램</text>
+
+  <!-- ========== 좌측: 멀티사이클 FSM 상태도 ========== -->
+  <rect x="10" y="50" width="520" height="560" rx="12" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="270" y="80" text-anchor="middle" font-size="15" font-weight="bold" fill="#2563EB">멀티사이클: FSM 순차 실행</text>
+  <text x="270" y="100" text-anchor="middle" font-size="12" fill="#6B7280">한 명령어가 모든 상태를 순서대로 통과</text>
+
+  <!-- FSM 상태 원 -->
+  <circle cx="270" cy="160" r="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="270" y="157" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">IF</text>
+  <text x="270" y="173" text-anchor="middle" font-size="9" fill="#6B7280">S0</text>
+
+  <circle cx="270" cy="250" r="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="270" y="247" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">ID</text>
+  <text x="270" y="263" text-anchor="middle" font-size="9" fill="#6B7280">S1</text>
+
+  <circle cx="270" cy="340" r="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="270" y="337" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">EX</text>
+  <text x="270" y="353" text-anchor="middle" font-size="9" fill="#6B7280">S2</text>
+
+  <circle cx="270" cy="430" r="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="270" y="427" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">MEM</text>
+  <text x="270" y="443" text-anchor="middle" font-size="9" fill="#6B7280">S3</text>
+
+  <circle cx="270" cy="520" r="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="270" y="517" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">WB</text>
+  <text x="270" y="533" text-anchor="middle" font-size="9" fill="#6B7280">S4</text>
+
+  <!-- FSM 전이 화살표 -->
+  <line x1="270" y1="195" x2="270" y2="212" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="270" y1="285" x2="270" y2="302" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="270" y1="375" x2="270" y2="392" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="270" y1="465" x2="270" y2="482" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 되돌아가는 화살표 (WB → IF) -->
+  <path d="M 235 520 Q 120 520 120 340 Q 120 160 235 160" fill="none" stroke="#6B7280" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-gray)"/>
+  <text x="95" y="340" text-anchor="middle" font-size="10" fill="#6B7280" transform="rotate(-90, 95, 340)">다음 명령어</text>
+
+  <!-- 사이클 표시 -->
+  <text x="330" y="205" font-size="10" fill="#DC2626">Cycle 1</text>
+  <text x="330" y="295" font-size="10" fill="#DC2626">Cycle 2</text>
+  <text x="330" y="385" font-size="10" fill="#DC2626">Cycle 3</text>
+  <text x="330" y="475" font-size="10" fill="#DC2626">Cycle 4</text>
+  <text x="330" y="555" font-size="10" fill="#DC2626">Cycle 5</text>
+
+  <!-- CPI 표시 -->
+  <rect x="380" y="560" width="140" height="36" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="450" y="583" text-anchor="middle" font-size="13" font-weight="bold" fill="#DC2626">CPI = 4~5</text>
+
+  <!-- ========== 중앙 전환 화살표 ========== -->
+  <rect x="530" y="280" width="40" height="80" rx="8" fill="#2563EB"/>
+  <text x="550" y="310" text-anchor="middle" font-size="20" fill="white">&#x27A1;</text>
+  <text x="550" y="340" text-anchor="middle" font-size="10" fill="white" font-weight="bold">핵심</text>
+  <text x="550" y="355" text-anchor="middle" font-size="10" fill="white" font-weight="bold">도약</text>
+
+  <!-- ========== 우측: 파이프라인 타이밍 다이어그램 ========== -->
+  <rect x="580" y="50" width="510" height="560" rx="12" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="835" y="80" text-anchor="middle" font-size="15" font-weight="bold" fill="#059669">파이프라인: 5개 명령어 동시 실행</text>
+  <text x="835" y="100" text-anchor="middle" font-size="12" fill="#6B7280">각 스테이지가 서로 다른 명령어를 동시에 처리</text>
+
+  <!-- 축 레이블 -->
+  <text x="615" y="130" font-size="11" fill="#6B7280" font-weight="bold">명령어 &#8595;</text>
+  <text x="700" y="130" font-size="11" fill="#6B7280" font-weight="bold">사이클 &#8594;</text>
+
+  <!-- 사이클 번호 -->
+  <text x="720" y="150" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">1</text>
+  <text x="790" y="150" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">2</text>
+  <text x="860" y="150" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">3</text>
+  <text x="930" y="150" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">4</text>
+  <text x="1000" y="150" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">5</text>
+  <text x="1060" y="150" text-anchor="middle" font-size="11" fill="#6B7280" font-weight="bold">6</text>
+
+  <!-- 명령어 라벨 -->
+  <text x="650" y="185" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">I1</text>
+  <text x="650" y="225" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">I2</text>
+  <text x="650" y="265" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">I3</text>
+  <text x="650" y="305" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">I4</text>
+  <text x="650" y="345" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">I5</text>
+
+  <!-- 파이프라인 타이밍 그리드 — I1 -->
+  <rect x="690" y="165" width="60" height="30" rx="4" fill="#2563EB" opacity="0.9"/>
+  <text x="720" y="185" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="760" y="165" width="60" height="30" rx="4" fill="#3B82F6" opacity="0.85"/>
+  <text x="790" y="185" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+  <rect x="830" y="165" width="60" height="30" rx="4" fill="#60A5FA" opacity="0.8"/>
+  <text x="860" y="185" text-anchor="middle" font-size="11" fill="white" font-weight="bold">EX</text>
+  <rect x="900" y="165" width="60" height="30" rx="4" fill="#93C5FD" opacity="0.8"/>
+  <text x="930" y="185" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="970" y="165" width="60" height="30" rx="4" fill="#DBEAFE" opacity="0.9"/>
+  <text x="1000" y="185" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- I2 -->
+  <rect x="760" y="205" width="60" height="30" rx="4" fill="#2563EB" opacity="0.9"/>
+  <text x="790" y="225" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="830" y="205" width="60" height="30" rx="4" fill="#3B82F6" opacity="0.85"/>
+  <text x="860" y="225" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+  <rect x="900" y="205" width="60" height="30" rx="4" fill="#60A5FA" opacity="0.8"/>
+  <text x="930" y="225" text-anchor="middle" font-size="11" fill="white" font-weight="bold">EX</text>
+  <rect x="970" y="205" width="60" height="30" rx="4" fill="#93C5FD" opacity="0.8"/>
+  <text x="1000" y="225" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="1030" y="205" width="60" height="30" rx="4" fill="#DBEAFE" opacity="0.9"/>
+  <text x="1060" y="225" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- I3 -->
+  <rect x="830" y="245" width="60" height="30" rx="4" fill="#2563EB" opacity="0.9"/>
+  <text x="860" y="265" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="900" y="245" width="60" height="30" rx="4" fill="#3B82F6" opacity="0.85"/>
+  <text x="930" y="265" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+  <rect x="970" y="245" width="60" height="30" rx="4" fill="#60A5FA" opacity="0.8"/>
+  <text x="1000" y="265" text-anchor="middle" font-size="11" fill="white" font-weight="bold">EX</text>
+  <rect x="1030" y="245" width="60" height="30" rx="4" fill="#93C5FD" opacity="0.8"/>
+  <text x="1060" y="265" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">MEM</text>
+
+  <!-- I4 -->
+  <rect x="900" y="285" width="60" height="30" rx="4" fill="#2563EB" opacity="0.9"/>
+  <text x="930" y="305" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="970" y="285" width="60" height="30" rx="4" fill="#3B82F6" opacity="0.85"/>
+  <text x="1000" y="305" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+  <rect x="1030" y="285" width="60" height="30" rx="4" fill="#60A5FA" opacity="0.8"/>
+  <text x="1060" y="305" text-anchor="middle" font-size="11" fill="white" font-weight="bold">EX</text>
+
+  <!-- I5 -->
+  <rect x="970" y="325" width="60" height="30" rx="4" fill="#2563EB" opacity="0.9"/>
+  <text x="1000" y="345" text-anchor="middle" font-size="11" fill="white" font-weight="bold">IF</text>
+  <rect x="1030" y="325" width="60" height="30" rx="4" fill="#3B82F6" opacity="0.85"/>
+  <text x="1060" y="345" text-anchor="middle" font-size="11" fill="white" font-weight="bold">ID</text>
+
+  <!-- 대각선 하이라이트: Cycle 5에서 5개 동시 -->
+  <rect x="968" y="163" width="64" height="192" rx="0" fill="none" stroke="#059669" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <text x="1000" y="380" text-anchor="middle" font-size="10" fill="#059669" font-weight="bold">Cycle 5:</text>
+  <text x="1000" y="395" text-anchor="middle" font-size="10" fill="#059669" font-weight="bold">5개 명령어</text>
+  <text x="1000" y="410" text-anchor="middle" font-size="10" fill="#059669" font-weight="bold">동시 실행!</text>
+
+  <!-- CPI 표시 -->
+  <rect x="750" y="560" width="170" height="36" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="835" y="583" text-anchor="middle" font-size="13" font-weight="bold" fill="#059669">이상적 CPI = 1</text>
+
+  <!-- 핵심 메시지 -->
+  <rect x="620" y="440" width="440" height="100" rx="8" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+  <text x="840" y="465" text-anchor="middle" font-size="12" font-weight="bold" fill="#D97706">핵심 통찰</text>
+  <text x="840" y="485" text-anchor="middle" font-size="11" fill="#1F2937">멀티사이클의 5개 FSM 상태를 동시에 실행하면</text>
+  <text x="840" y="503" text-anchor="middle" font-size="11" fill="#1F2937">파이프라인이 됩니다. 각 상태가 독립 스테이지로 변환되고,</text>
+  <text x="840" y="521" text-anchor="middle" font-size="11" fill="#1F2937">파이프라인 레지스터가 스테이지 간 데이터를 격리합니다.</text>
+</svg>

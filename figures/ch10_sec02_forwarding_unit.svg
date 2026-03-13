@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="550" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1F2937">포워딩 유닛 — EX-EX 포워딩 / MEM-EX 포워딩 경로</text>
+
+  <!-- 파이프라인 스테이지 배경 -->
+  <rect x="60" y="55" width="160" height="40" rx="6" fill="#3B82F6"/>
+  <text x="140" y="81" text-anchor="middle" font-size="14" fill="white" font-weight="bold">ID 스테이지</text>
+  <rect x="280" y="55" width="200" height="40" rx="6" fill="#60A5FA"/>
+  <text x="380" y="81" text-anchor="middle" font-size="14" fill="white" font-weight="bold">EX 스테이지</text>
+  <rect x="540" y="55" width="200" height="40" rx="6" fill="#93C5FD"/>
+  <text x="640" y="81" text-anchor="middle" font-size="14" fill="#1F2937" font-weight="bold">MEM 스테이지</text>
+  <rect x="800" y="55" width="200" height="40" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="0.5"/>
+  <text x="900" y="81" text-anchor="middle" font-size="14" fill="#2563EB" font-weight="bold">WB 스테이지</text>
+
+  <!-- 파이프라인 레지스터 -->
+  <rect x="235" y="100" width="20" height="420" rx="3" fill="#E5E7EB" stroke="#6B7280" stroke-width="1"/>
+  <text x="245" y="310" text-anchor="middle" font-size="9" fill="#6B7280" writing-mode="tb">ID/EX</text>
+  <rect x="495" y="100" width="20" height="420" rx="3" fill="#E5E7EB" stroke="#6B7280" stroke-width="1"/>
+  <text x="505" y="310" text-anchor="middle" font-size="9" fill="#6B7280" writing-mode="tb">EX/MEM</text>
+  <rect x="755" y="100" width="20" height="420" rx="3" fill="#E5E7EB" stroke="#6B7280" stroke-width="1"/>
+  <text x="765" y="310" text-anchor="middle" font-size="9" fill="#6B7280" writing-mode="tb">MEM/WB</text>
+
+  <!-- 레지스터 파일 -->
+  <rect x="80" y="130" width="130" height="90" rx="6" fill="white" stroke="#3B82F6" stroke-width="2"/>
+  <text x="145" y="155" text-anchor="middle" font-size="12" font-weight="bold" fill="#3B82F6">레지스터 파일</text>
+  <text x="145" y="175" text-anchor="middle" font-size="11" fill="#1F2937">rs1_data</text>
+  <text x="145" y="195" text-anchor="middle" font-size="11" fill="#1F2937">rs2_data</text>
+
+  <!-- ALU -->
+  <rect x="320" y="130" width="140" height="100" rx="6" fill="white" stroke="#60A5FA" stroke-width="2"/>
+  <text x="390" y="165" text-anchor="middle" font-size="14" font-weight="bold" fill="#60A5FA">ALU</text>
+  <text x="390" y="185" text-anchor="middle" font-size="11" fill="#1F2937">alu_a (op A)</text>
+  <text x="390" y="205" text-anchor="middle" font-size="11" fill="#1F2937">alu_b (op B)</text>
+
+  <!-- MUX A (포워딩 MUX) -->
+  <rect x="270" y="270" width="50" height="70" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="295" y="310" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">MUX</text>
+  <text x="295" y="325" text-anchor="middle" font-size="9" fill="#D97706">A</text>
+
+  <!-- MUX B (포워딩 MUX) -->
+  <rect x="270" y="370" width="50" height="70" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="295" y="410" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706">MUX</text>
+  <text x="295" y="425" text-anchor="middle" font-size="9" fill="#D97706">B</text>
+
+  <!-- rs1_data → MUX A -->
+  <line x1="210" y1="165" x2="255" y2="165" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="255" y1="165" x2="255" y2="290" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="255" y1="290" x2="270" y2="290" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="258" y="283" font-size="9" fill="#6B7280">00</text>
+
+  <!-- rs2_data → MUX B -->
+  <line x1="210" y1="195" x2="250" y2="195" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="250" y1="195" x2="250" y2="390" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="250" y1="390" x2="270" y2="390" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="258" y="383" font-size="9" fill="#6B7280">00</text>
+
+  <!-- MUX A → ALU -->
+  <line x1="320" y1="305" x2="330" y2="305" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="330" y1="305" x2="330" y2="155" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="330" y1="155" x2="320" y2="155" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- MUX B → ALU -->
+  <line x1="320" y1="405" x2="335" y2="405" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="335" y1="405" x2="335" y2="195" stroke="#1F2937" stroke-width="1.5"/>
+  <line x1="335" y1="195" x2="320" y2="195" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- EX-EX 포워딩 경로 (ALU result → MUX) -->
+  <line x1="460" y1="180" x2="530" y2="180" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="540" y="178" font-size="10" fill="#6B7280">alu_result</text>
+  <line x1="530" y1="180" x2="530" y2="300" stroke="#DC2626" stroke-width="2.5"/>
+  <line x1="530" y1="300" x2="320" y2="300" stroke="#DC2626" stroke-width="2.5" marker-end="url(#arr-red)"/>
+  <text x="420" y="293" font-size="10" fill="#DC2626" font-weight="bold">EX-EX 포워딩 (fwd_a=10)</text>
+
+  <line x1="530" y1="400" x2="320" y2="400" stroke="#DC2626" stroke-width="2.5" marker-end="url(#arr-red)"/>
+  <line x1="530" y1="300" x2="530" y2="400" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="420" y="415" font-size="10" fill="#DC2626" font-weight="bold">EX-EX 포워딩 (fwd_b=10)</text>
+
+  <!-- MEM-EX 포워딩 경로 -->
+  <line x1="775" y1="200" x2="810" y2="200" stroke="#059669" stroke-width="2.5"/>
+  <text x="820" y="198" font-size="10" fill="#6B7280">wb_data</text>
+  <line x1="810" y1="200" x2="810" y2="460" stroke="#059669" stroke-width="2.5"/>
+  <line x1="810" y1="460" x2="265" y2="460" stroke="#059669" stroke-width="2.5"/>
+
+  <line x1="265" y1="460" x2="265" y2="320" stroke="#059669" stroke-width="2.5"/>
+  <line x1="265" y1="320" x2="270" y2="320" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-green)"/>
+  <text x="145" y="455" font-size="10" fill="#059669" font-weight="bold">MEM-EX 포워딩 (fwd_a=01)</text>
+
+  <line x1="265" y1="430" x2="270" y2="430" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-green)"/>
+  <line x1="265" y1="430" x2="265" y2="460" stroke="#059669" stroke-width="2.5"/>
+  <text x="145" y="480" font-size="10" fill="#059669" font-weight="bold">MEM-EX 포워딩 (fwd_b=01)</text>
+
+  <!-- 포워딩 유닛 -->
+  <rect x="360" y="490" width="220" height="80" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="470" y="520" text-anchor="middle" font-size="14" font-weight="bold" fill="#D97706">포워딩 유닛</text>
+  <text x="470" y="540" text-anchor="middle" font-size="10" fill="#D97706">(Forwarding Unit)</text>
+  <text x="470" y="558" text-anchor="middle" font-size="10" fill="#1F2937">fwd_a[1:0], fwd_b[1:0] 출력</text>
+
+  <!-- 포워딩 유닛 입력 라벨 -->
+  <text x="300" y="505" font-size="9" fill="#6B7280">EX/MEM.rd, EX/MEM.reg_w_en</text>
+  <text x="300" y="560" font-size="9" fill="#6B7280">MEM/WB.rd, MEM/WB.reg_w_en</text>
+  <text x="590" y="520" font-size="9" fill="#6B7280">ID/EX.rs1</text>
+  <text x="590" y="540" font-size="9" fill="#6B7280">ID/EX.rs2</text>
+
+  <!-- 포워딩 유닛 → MUX 제어 -->
+  <line x1="400" y1="490" x2="400" y2="470" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="380" y="485" font-size="9" fill="#D97706">ctrl</text>
+
+  <!-- 범례 -->
+  <rect x="20" y="600" width="1060" height="85" rx="8" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+  <text x="40" y="625" font-size="12" font-weight="bold" fill="#D97706">포워딩 경로 범례</text>
+  <line x1="40" y1="645" x2="80" y2="645" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="90" y="650" font-size="11" fill="#1F2937">EX-EX 포워딩: EX/MEM 파이프라인 레지스터 → EX 스테이지 입력 (1사이클 전 결과)</text>
+  <line x1="40" y1="668" x2="80" y2="668" stroke="#059669" stroke-width="2.5"/>
+  <text x="90" y="673" font-size="11" fill="#1F2937">MEM-EX 포워딩: MEM/WB 파이프라인 레지스터 → EX 스테이지 입력 (2사이클 전 결과)</text>
+</svg>

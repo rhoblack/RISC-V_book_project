@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, 'Noto Sans KR', sans-serif">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="900" height="520" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="450" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E293B">M 확장 명령어 인코딩 형식 (R-Type)</text>
+
+  <!-- 비트 필드 헤더 -->
+  <g transform="translate(50, 60)">
+    <!-- 비트 번호 -->
+    <text x="0" y="15" font-size="11" fill="#64748B" font-family="monospace">31    25</text>
+    <text x="120" y="15" font-size="11" fill="#64748B" font-family="monospace">24  20</text>
+    <text x="210" y="15" font-size="11" fill="#64748B" font-family="monospace">19  15</text>
+    <text x="300" y="15" font-size="11" fill="#64748B" font-family="monospace">14  12</text>
+    <text x="390" y="15" font-size="11" fill="#64748B" font-family="monospace">11   7</text>
+    <text x="490" y="15" font-size="11" fill="#64748B" font-family="monospace">6    0</text>
+
+    <!-- 필드 박스 -->
+    <rect x="0" y="25" width="110" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="4"/>
+    <text x="55" y="50" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB" font-family="monospace">0000001</text>
+
+    <rect x="115" y="25" width="85" height="40" fill="#E0F2FE" stroke="#3B82F6" stroke-width="2" rx="4"/>
+    <text x="157" y="50" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB" font-family="monospace">rs2</text>
+
+    <rect x="205" y="25" width="85" height="40" fill="#E0F2FE" stroke="#3B82F6" stroke-width="2" rx="4"/>
+    <text x="247" y="50" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB" font-family="monospace">rs1</text>
+
+    <rect x="295" y="25" width="85" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="4"/>
+    <text x="337" y="50" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB" font-family="monospace">funct3</text>
+
+    <rect x="385" y="25" width="95" height="40" fill="#E0F2FE" stroke="#3B82F6" stroke-width="2" rx="4"/>
+    <text x="432" y="50" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB" font-family="monospace">rd</text>
+
+    <rect x="485" y="25" width="110" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="4"/>
+    <text x="540" y="50" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB" font-family="monospace">0110011</text>
+
+    <!-- 필드 이름 -->
+    <text x="55" y="82" text-anchor="middle" font-size="11" fill="#475569">funct7</text>
+    <text x="540" y="82" text-anchor="middle" font-size="11" fill="#475569">opcode (OP)</text>
+  </g>
+
+  <!-- 명령어 테이블 -->
+  <g transform="translate(50, 170)">
+    <!-- 헤더 -->
+    <rect x="0" y="0" width="800" height="35" fill="#2563EB" rx="4"/>
+    <text x="60" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white">명령어</text>
+    <text x="180" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white">funct7</text>
+    <text x="300" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white">funct3</text>
+    <text x="460" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white">동작</text>
+    <text x="700" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white">결과 범위</text>
+
+    <!-- MUL -->
+    <rect x="0" y="40" width="800" height="32" fill="#F1F5F9" rx="2"/>
+    <text x="60" y="60" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">MUL</text>
+    <text x="180" y="60" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="60" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">000</text>
+    <text x="460" y="60" text-anchor="middle" font-size="12" fill="#475569">rd = (rs1 x rs2)[31:0]</text>
+    <text x="700" y="60" text-anchor="middle" font-size="12" fill="#475569">하위 32비트</text>
+
+    <!-- MULH -->
+    <rect x="0" y="76" width="800" height="32" fill="white" rx="2"/>
+    <text x="60" y="96" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">MULH</text>
+    <text x="180" y="96" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="96" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">001</text>
+    <text x="460" y="96" text-anchor="middle" font-size="12" fill="#475569">rd = (rs1 x rs2)[63:32] (signed)</text>
+    <text x="700" y="96" text-anchor="middle" font-size="12" fill="#475569">상위 32비트</text>
+
+    <!-- MULHSU -->
+    <rect x="0" y="112" width="800" height="32" fill="#F1F5F9" rx="2"/>
+    <text x="60" y="132" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">MULHSU</text>
+    <text x="180" y="132" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="132" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">010</text>
+    <text x="460" y="132" text-anchor="middle" font-size="12" fill="#475569">rd = (rs1(s) x rs2(u))[63:32]</text>
+    <text x="700" y="132" text-anchor="middle" font-size="12" fill="#475569">상위 32비트</text>
+
+    <!-- MULHU -->
+    <rect x="0" y="148" width="800" height="32" fill="white" rx="2"/>
+    <text x="60" y="168" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">MULHU</text>
+    <text x="180" y="168" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="168" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">011</text>
+    <text x="460" y="168" text-anchor="middle" font-size="12" fill="#475569">rd = (rs1 x rs2)[63:32] (unsigned)</text>
+    <text x="700" y="168" text-anchor="middle" font-size="12" fill="#475569">상위 32비트</text>
+
+    <!-- DIV -->
+    <rect x="0" y="184" width="800" height="32" fill="#F1F5F9" rx="2"/>
+    <text x="60" y="204" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">DIV</text>
+    <text x="180" y="204" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="204" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">100</text>
+    <text x="460" y="204" text-anchor="middle" font-size="12" fill="#475569">rd = rs1 / rs2 (signed)</text>
+    <text x="700" y="204" text-anchor="middle" font-size="12" fill="#475569">몫</text>
+
+    <!-- DIVU -->
+    <rect x="0" y="220" width="800" height="32" fill="white" rx="2"/>
+    <text x="60" y="240" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">DIVU</text>
+    <text x="180" y="240" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="240" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">101</text>
+    <text x="460" y="240" text-anchor="middle" font-size="12" fill="#475569">rd = rs1 / rs2 (unsigned)</text>
+    <text x="700" y="240" text-anchor="middle" font-size="12" fill="#475569">몫</text>
+
+    <!-- REM -->
+    <rect x="0" y="256" width="800" height="32" fill="#F1F5F9" rx="2"/>
+    <text x="60" y="276" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">REM</text>
+    <text x="180" y="276" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="276" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">110</text>
+    <text x="460" y="276" text-anchor="middle" font-size="12" fill="#475569">rd = rs1 % rs2 (signed)</text>
+    <text x="700" y="276" text-anchor="middle" font-size="12" fill="#475569">나머지</text>
+
+    <!-- REMU -->
+    <rect x="0" y="292" width="800" height="32" fill="white" rx="2"/>
+    <text x="60" y="312" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B" font-family="monospace">REMU</text>
+    <text x="180" y="312" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">0000001</text>
+    <text x="300" y="312" text-anchor="middle" font-size="12" fill="#475569" font-family="monospace">111</text>
+    <text x="460" y="312" text-anchor="middle" font-size="12" fill="#475569">rd = rs1 % rs2 (unsigned)</text>
+    <text x="700" y="312" text-anchor="middle" font-size="12" fill="#475569">나머지</text>
+  </g>
+
+  <!-- 주석 -->
+  <text x="450" y="505" text-anchor="middle" font-size="12" fill="#64748B">모든 M 확장 명령어는 funct7 = 0000001, opcode = 0110011 (R-Type)을 공유하며 funct3로 구분된다.</text>
+</svg>

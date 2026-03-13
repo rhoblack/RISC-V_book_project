@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="860" height="480" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="430" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">제어 해저드 발생 원인: 분기 명령어와 PC 갱신 시점</text>
+  <text x="430" y="50" text-anchor="middle" font-size="12" fill="#64748B">BEQ 분기 성공 시, 다음 PC를 알 수 없어 잘못된 명령어가 파이프라인에 진입</text>
+
+  <!-- 사이클 라벨 -->
+  <text x="220" y="80" text-anchor="middle" font-size="12" font-weight="600" fill="#64748B">Cycle 1</text>
+  <text x="340" y="80" text-anchor="middle" font-size="12" font-weight="600" fill="#64748B">Cycle 2</text>
+  <text x="460" y="80" text-anchor="middle" font-size="12" font-weight="600" fill="#64748B">Cycle 3</text>
+  <text x="580" y="80" text-anchor="middle" font-size="12" font-weight="600" fill="#64748B">Cycle 4</text>
+  <text x="700" y="80" text-anchor="middle" font-size="12" font-weight="600" fill="#64748B">Cycle 5</text>
+
+  <!-- 명령어 라벨 -->
+  <text x="90" y="120" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">BEQ x1,x2,L1</text>
+  <text x="90" y="165" text-anchor="middle" font-size="13" font-weight="600" fill="#DC2626">ADD x3,x4,x5</text>
+  <text x="90" y="210" text-anchor="middle" font-size="13" font-weight="600" fill="#DC2626">SUB x6,x7,x8</text>
+  <text x="90" y="255" text-anchor="middle" font-size="13" font-weight="600" fill="#059669">L1: OR x9,x10,x11</text>
+
+  <!-- 그리드 선 -->
+  <line x1="160" y1="88" x2="160" y2="275" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="280" y1="88" x2="280" y2="275" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="400" y1="88" x2="400" y2="275" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="520" y1="88" x2="520" y2="275" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="640" y1="88" x2="640" y2="275" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="760" y1="88" x2="760" y2="275" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- BEQ 파이프라인 -->
+  <rect x="165" y="100" width="110" height="30" rx="4" fill="#2563EB" filter="url(#shadow)"/>
+  <text x="220" y="120" text-anchor="middle" font-size="12" font-weight="600" fill="white">IF</text>
+  <rect x="285" y="100" width="110" height="30" rx="4" fill="#2563EB" filter="url(#shadow)"/>
+  <text x="340" y="120" text-anchor="middle" font-size="12" font-weight="600" fill="white">ID</text>
+  <rect x="405" y="100" width="110" height="30" rx="4" fill="#2563EB" filter="url(#shadow)"/>
+  <text x="460" y="120" text-anchor="middle" font-size="12" font-weight="600" fill="white">EX ★판정</text>
+  <rect x="525" y="100" width="110" height="30" rx="4" fill="#2563EB" filter="url(#shadow)"/>
+  <text x="580" y="120" text-anchor="middle" font-size="12" font-weight="600" fill="white">MEM</text>
+  <rect x="645" y="100" width="110" height="30" rx="4" fill="#2563EB" filter="url(#shadow)"/>
+  <text x="700" y="120" text-anchor="middle" font-size="12" font-weight="600" fill="white">WB</text>
+
+  <!-- ADD (잘못 진입) -->
+  <rect x="285" y="145" width="110" height="30" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="2"/>
+  <text x="340" y="165" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">IF ✗</text>
+  <rect x="405" y="145" width="110" height="30" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="2"/>
+  <text x="460" y="165" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">ID ✗</text>
+
+  <!-- SUB (잘못 진입) -->
+  <rect x="405" y="190" width="110" height="30" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="2"/>
+  <text x="460" y="210" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">IF ✗</text>
+
+  <!-- L1 올바른 목적지 -->
+  <rect x="525" y="235" width="110" height="30" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+  <text x="580" y="255" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">IF ✓</text>
+
+  <!-- 주석: 분기 결과 확정 -->
+  <line x1="460" y1="135" x2="460" y2="285" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="460" y="300" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">분기 결과 확정 시점</text>
+
+  <!-- 문제 영역 표시 -->
+  <rect x="280" y="140" width="240" height="90" rx="6" fill="none" stroke="#DC2626" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="400" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">잘못 fetch된 명령어 (flush 필요)</text>
+
+  <!-- 하단 설명 박스 -->
+  <rect x="40" y="320" width="380" height="140" rx="8" fill="#DBEAFE" filter="url(#shadow)"/>
+  <text x="230" y="345" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">문제: 제어 해저드</text>
+  <text x="60" y="370" font-size="12" fill="#1E293B">1. BEQ가 IF에서 fetch된 직후, 다음 PC = PC+4 가정</text>
+  <text x="60" y="390" font-size="12" fill="#1E293B">2. 분기 결과는 EX 스테이지에서 확정 (3사이클 후)</text>
+  <text x="60" y="410" font-size="12" fill="#1E293B">3. 이미 2개의 잘못된 명령어가 파이프라인에 진입</text>
+  <text x="60" y="435" font-size="12" font-weight="600" fill="#DC2626">→ 2사이클 페널티 (penalty) 발생!</text>
+
+  <rect x="440" y="320" width="380" height="140" rx="8" fill="#D1FAE5" filter="url(#shadow)"/>
+  <text x="630" y="345" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">해결 방향</text>
+  <text x="460" y="370" font-size="12" fill="#1E293B">1. 분기 판정을 더 빠른 스테이지로 이동 (EX→ID)</text>
+  <text x="460" y="390" font-size="12" fill="#1E293B">2. 잘못 진입한 명령어를 flush (무효화)</text>
+  <text x="460" y="410" font-size="12" fill="#1E293B">3. 분기 예측으로 페널티 확률 감소</text>
+  <text x="460" y="435" font-size="12" font-weight="600" fill="#059669">→ 이 챕터에서 모두 다룹니다</text>
+</svg>

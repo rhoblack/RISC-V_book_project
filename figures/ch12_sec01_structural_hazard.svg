@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">구조적 해저드: 단일 메모리 vs 하버드 구조</text>
+
+  <!-- Von Neumann (Problem) -->
+  <rect x="20" y="50" width="370" height="170" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="205" y="75" text-anchor="middle" font-size="13" font-weight="bold" fill="#DC2626">폰 노이만 구조 (단일 메모리) — 충돌 발생</text>
+
+  <!-- Pipeline stages -->
+  <g font-size="11" text-anchor="middle">
+    <!-- Cycle labels -->
+    <text x="130" y="98" fill="#6B7280" font-size="10">Cycle 1</text>
+    <text x="190" y="98" fill="#6B7280" font-size="10">Cycle 2</text>
+    <text x="250" y="98" fill="#6B7280" font-size="10">Cycle 3</text>
+    <text x="310" y="98" fill="#6B7280" font-size="10">Cycle 4</text>
+    <text x="370" y="98" fill="#6B7280" font-size="10">Cycle 5</text>
+
+    <!-- Inst 1: LW -->
+    <text x="60" y="120" fill="#1F2937" font-size="10" font-weight="bold">LW</text>
+    <rect x="105" y="107" width="50" height="20" rx="3" fill="#DBEAFE" stroke="#2563EB"/>
+    <text x="130" y="121" fill="#2563EB" font-size="10">IF</text>
+    <rect x="165" y="107" width="50" height="20" rx="3" fill="#DBEAFE" stroke="#2563EB"/>
+    <text x="190" y="121" fill="#2563EB" font-size="10">ID</text>
+    <rect x="225" y="107" width="50" height="20" rx="3" fill="#DBEAFE" stroke="#2563EB"/>
+    <text x="250" y="121" fill="#2563EB" font-size="10">EX</text>
+    <rect x="285" y="107" width="50" height="20" rx="3" fill="#FCA5A5" stroke="#DC2626" stroke-width="2"/>
+    <text x="310" y="121" fill="#DC2626" font-size="10" font-weight="bold">MEM</text>
+    <rect x="345" y="107" width="50" height="20" rx="3" fill="#DBEAFE" stroke="#2563EB"/>
+    <text x="370" y="121" fill="#2563EB" font-size="10">WB</text>
+
+    <!-- Inst 4 -->
+    <text x="60" y="155" fill="#1F2937" font-size="10" font-weight="bold">Inst 4</text>
+    <rect x="285" y="142" width="50" height="20" rx="3" fill="#FCA5A5" stroke="#DC2626" stroke-width="2"/>
+    <text x="310" y="156" fill="#DC2626" font-size="10" font-weight="bold">IF</text>
+  </g>
+
+  <!-- Conflict arrow -->
+  <line x1="310" y1="128" x2="310" y2="140" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <text x="310" y="180" text-anchor="middle" font-size="11" fill="#DC2626" font-weight="bold">MEM과 IF가 동시에</text>
+  <text x="310" y="195" text-anchor="middle" font-size="11" fill="#DC2626" font-weight="bold">같은 메모리에 접근!</text>
+
+  <!-- Harvard (Solution) -->
+  <rect x="410" y="50" width="370" height="170" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="595" y="75" text-anchor="middle" font-size="13" font-weight="bold" fill="#059669">하버드 구조 (IMEM/DMEM 분리) — 충돌 해결</text>
+
+  <!-- IMEM block -->
+  <rect x="440" y="95" width="80" height="50" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="480" y="117" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">IMEM</text>
+  <text x="480" y="133" text-anchor="middle" font-size="10" fill="#2563EB">IF 전용</text>
+
+  <!-- DMEM block -->
+  <rect x="560" y="95" width="80" height="50" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="600" y="117" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">DMEM</text>
+  <text x="600" y="133" text-anchor="middle" font-size="10" fill="#2563EB">MEM 전용</text>
+
+  <!-- CPU -->
+  <rect x="690" y="95" width="60" height="50" rx="6" fill="#3B82F6" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="720" y="125" text-anchor="middle" font-size="12" font-weight="bold" fill="white">CPU</text>
+
+  <line x1="640" y1="110" x2="688" y2="110" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow1)"/>
+  <line x1="688" y1="130" x2="640" y2="130" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow1)"/>
+  <line x1="520" y1="120" x2="558" y2="120" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow1)"/>
+
+  <text x="595" y="170" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">동시 접근 가능 — 충돌 없음</text>
+
+  <!-- Bottom: Register File Conflict -->
+  <rect x="20" y="240" width="760" height="160" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="400" y="268" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">레지스터 파일: WB 쓰기 + ID 읽기 동시 발생</text>
+
+  <!-- Timing diagram -->
+  <g font-size="11">
+    <text x="60" y="300" fill="#1F2937" font-weight="bold">Inst i:</text>
+    <rect x="115" y="287" width="70" height="24" rx="3" fill="#3B82F6"/>
+    <text x="150" y="304" text-anchor="middle" fill="white" font-size="10" font-weight="bold">WB (쓰기)</text>
+
+    <text x="60" y="330" fill="#1F2937" font-weight="bold">Inst i+3:</text>
+    <rect x="115" y="317" width="70" height="24" rx="3" fill="#3B82F6"/>
+    <text x="150" y="334" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ID (읽기)</text>
+
+    <!-- Arrow showing conflict -->
+    <line x1="186" y1="299" x2="186" y2="317" stroke="#DC2626" stroke-width="2"/>
+    <text x="220" y="315" fill="#DC2626" font-size="10" font-weight="bold">같은 사이클!</text>
+
+    <!-- Solution -->
+    <text x="400" y="300" fill="#059669" font-size="12" font-weight="bold">해결: 전반부 쓰기 + 후반부 읽기</text>
+    <text x="400" y="320" fill="#1F2937" font-size="11">클록 상승 에지(posedge)에 WB 쓰기</text>
+    <text x="400" y="340" fill="#1F2937" font-size="11">클록 하강 에지 이후 ID 읽기 (조합 논리)</text>
+    <text x="400" y="360" fill="#059669" font-size="11" font-weight="bold">또는: WB→ID 포워딩 (12.2절에서 설계)</text>
+  </g>
+</svg>

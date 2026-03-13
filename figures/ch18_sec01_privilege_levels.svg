@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="720" height="420" fill="#FFFFFF" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="360" y="35" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">RISC-V 특권 수준 (Privilege Levels)</text>
+
+  <!-- M-mode (가장 높은 특권) -->
+  <rect x="60" y="60" width="600" height="90" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="80" y="88" font-size="14" font-weight="bold" fill="#2563EB">Level 3: Machine Mode (M-mode)</text>
+  <text x="80" y="110" font-size="12" fill="#1F2937">• 최고 특권 수준 — 모든 CSR 접근 가능</text>
+  <text x="80" y="128" font-size="12" fill="#1F2937">• 리셋 후 최초 실행 모드 • 하드웨어 직접 제어</text>
+  <text x="80" y="143" font-size="11" fill="#6B7280">우리 프로세서는 M-mode만 구현 (RV32I 최소 요구사항)</text>
+
+  <!-- S-mode -->
+  <rect x="120" y="170" width="480" height="70" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="140" y="198" font-size="14" font-weight="bold" fill="#9CA3AF">Level 1: Supervisor Mode (S-mode)</text>
+  <text x="140" y="218" font-size="12" fill="#9CA3AF">• OS 커널 실행 • 가상 메모리 관리 (이 교재에서는 미구현)</text>
+
+  <!-- U-mode -->
+  <rect x="180" y="260" width="360" height="70" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="200" y="288" font-size="14" font-weight="bold" fill="#9CA3AF">Level 0: User Mode (U-mode)</text>
+  <text x="200" y="308" font-size="12" fill="#9CA3AF">• 사용자 애플리케이션 실행 (이 교재에서는 미구현)</text>
+
+  <!-- 특권 수준 화살표 -->
+  <line x1="40" y1="340" x2="40" y2="70" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow1)"/>
+  <text x="28" y="210" font-size="11" fill="#2563EB" transform="rotate(-90, 28, 210)" text-anchor="middle">특권 수준 증가</text>
+
+  <!-- CSR 주소 공간 박스 -->
+  <rect x="60" y="350" width="600" height="55" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="80" y="372" font-size="13" font-weight="bold" fill="#D97706">CSR 주소 공간 (12비트, 최대 4096개)</text>
+  <text x="80" y="392" font-size="11" fill="#1F2937">0x000~0x0FF: User R/W | 0x300~0x3FF: Machine R/W | 0xF00~0xFFF: Machine Read-Only</text>
+</svg>

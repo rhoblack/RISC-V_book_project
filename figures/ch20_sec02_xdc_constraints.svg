@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 520" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="520" fill="#F8FAFC" rx="8"/>
+
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">XDC 제약 파일의 구성 요소</text>
+  <text x="425" y="50" text-anchor="middle" font-size="12" fill="#64748B">타이밍 제약, I/O 제약, 물리 제약의 역할과 관계</text>
+
+  <!-- 중앙 FPGA 칩 -->
+  <rect x="300" y="80" width="250" height="140" rx="12" fill="#DBEAFE" stroke="#2563EB" stroke-width="3" filter="url(#shadow)"/>
+  <text x="425" y="110" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">XC7A35T</text>
+  <text x="425" y="130" text-anchor="middle" font-size="12" fill="#1E293B">Basys 3 FPGA</text>
+  <text x="425" y="148" text-anchor="middle" font-size="10" fill="#64748B">100MHz 온보드 클록</text>
+  <text x="425" y="165" text-anchor="middle" font-size="10" fill="#64748B">LUT 20,800 / FF 41,600</text>
+  <text x="425" y="182" text-anchor="middle" font-size="10" fill="#64748B">BRAM 50 / DSP 90</text>
+
+  <!-- 핀: 왼쪽 입력 -->
+  <rect x="30" y="90" width="18" height="120" rx="3" fill="#3B82F6"/>
+  <text x="70" y="115" font-size="10" fill="#1E293B">CLK (W5)</text>
+  <text x="70" y="135" font-size="10" fill="#1E293B">RST (U18)</text>
+  <text x="70" y="155" font-size="10" fill="#1E293B">SW[15:0]</text>
+  <text x="70" y="175" font-size="10" fill="#1E293B">UART_RX (B18)</text>
+  <line x1="48" y1="150" x2="296" y2="150" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- 핀: 오른쪽 출력 -->
+  <rect x="802" y="90" width="18" height="120" rx="3" fill="#059669"/>
+  <text x="790" y="115" text-anchor="end" font-size="10" fill="#1E293B">LED[15:0]</text>
+  <text x="790" y="135" text-anchor="end" font-size="10" fill="#1E293B">7-SEG</text>
+  <text x="790" y="155" text-anchor="end" font-size="10" fill="#1E293B">UART_TX (A18)</text>
+  <line x1="554" y1="150" x2="798" y2="150" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- 타이밍 제약 박스 -->
+  <rect x="30" y="260" width="250" height="240" rx="8" fill="white" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="30" y="260" width="250" height="35" rx="8" fill="#2563EB"/>
+  <text x="155" y="283" text-anchor="middle" font-size="13" font-weight="700" fill="white">타이밍 제약 (Timing)</text>
+
+  <text x="45" y="315" font-size="11" font-weight="600" fill="#1E293B">create_clock</text>
+  <text x="45" y="333" font-size="10" fill="#64748B">  -period 20.000 [get_ports clk]</text>
+  <text x="45" y="353" font-size="10" fill="#64748B">  → 50MHz 목표 클록</text>
+
+  <text x="45" y="378" font-size="11" font-weight="600" fill="#1E293B">set_input_delay</text>
+  <text x="45" y="396" font-size="10" fill="#64748B">  -clock clk 2.0 [get_ports sw*]</text>
+
+  <text x="45" y="421" font-size="11" font-weight="600" fill="#1E293B">set_output_delay</text>
+  <text x="45" y="439" font-size="10" fill="#64748B">  -clock clk 2.0 [get_ports led*]</text>
+
+  <text x="45" y="464" font-size="11" font-weight="600" fill="#DC2626">set_false_path</text>
+  <text x="45" y="482" font-size="10" fill="#64748B">  -from [get_ports rst_n]</text>
+
+  <!-- I/O 제약 박스 -->
+  <rect x="300" y="260" width="250" height="240" rx="8" fill="white" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="300" y="260" width="250" height="35" rx="8" fill="#059669"/>
+  <text x="425" y="283" text-anchor="middle" font-size="13" font-weight="700" fill="white">I/O 제약 (Pin Mapping)</text>
+
+  <text x="315" y="315" font-size="11" font-weight="600" fill="#1E293B">set_property PACKAGE_PIN</text>
+  <text x="315" y="333" font-size="10" fill="#64748B">  W5 [get_ports clk]</text>
+  <text x="315" y="353" font-size="10" fill="#64748B">  U16 [get_ports led[0]]</text>
+  <text x="315" y="373" font-size="10" fill="#64748B">  V17 [get_ports sw[0]]</text>
+
+  <text x="315" y="400" font-size="11" font-weight="600" fill="#1E293B">set_property IOSTANDARD</text>
+  <text x="315" y="418" font-size="10" fill="#64748B">  LVCMOS33 [get_ports *]</text>
+
+  <text x="315" y="445" font-size="11" font-weight="600" fill="#1E293B">set_property PULLUP</text>
+  <text x="315" y="463" font-size="10" fill="#64748B">  true [get_ports rst_n]</text>
+
+  <!-- 물리 제약 박스 -->
+  <rect x="570" y="260" width="250" height="240" rx="8" fill="white" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="570" y="260" width="250" height="35" rx="8" fill="#D97706"/>
+  <text x="695" y="283" text-anchor="middle" font-size="13" font-weight="700" fill="white">물리 제약 (Physical)</text>
+
+  <text x="585" y="315" font-size="11" font-weight="600" fill="#1E293B">create_pblock</text>
+  <text x="585" y="333" font-size="10" fill="#64748B">  모듈을 특정 영역에 배치</text>
+
+  <text x="585" y="360" font-size="11" font-weight="600" fill="#1E293B">set_multicycle_path</text>
+  <text x="585" y="378" font-size="10" fill="#64748B">  멀티사이클 경로 지정</text>
+
+  <text x="585" y="405" font-size="11" font-weight="600" fill="#1E293B">set_max_delay</text>
+  <text x="585" y="423" font-size="10" fill="#64748B">  경로 최대 지연 제한</text>
+
+  <text x="585" y="450" font-size="11" font-weight="600" fill="#DC2626">set_clock_groups</text>
+  <text x="585" y="468" font-size="10" fill="#64748B">  비동기 클록 도메인 분리</text>
+</svg>

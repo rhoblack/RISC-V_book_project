@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 560" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="850" height="560" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="425" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">데이터 메모리 (DMEM) — 바이트 인에이블 구조</text>
+  <text x="425" y="52" text-anchor="middle" font-size="12" fill="#64748B">funct3 필드로 바이트/하프워드/워드 접근 제어, 리틀 엔디언 바이트 순서</text>
+
+  <!-- 메모리 워드 구조 (상단) -->
+  <text x="425" y="85" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">32비트 워드의 바이트 구조 (리틀 엔디언)</text>
+
+  <!-- 워드 바이트 분해 -->
+  <rect x="175" y="100" width="125" height="40" rx="0" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="237" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">Byte 3 [31:24]</text>
+
+  <rect x="300" y="100" width="125" height="40" rx="0" fill="#93C5FD" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="362" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="white">Byte 2 [23:16]</text>
+
+  <rect x="425" y="100" width="125" height="40" rx="0" fill="#3B82F6" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="487" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="white">Byte 1 [15:8]</text>
+
+  <rect x="550" y="100" width="125" height="40" rx="0" fill="#2563EB" stroke="#1D4ED8" stroke-width="1.5"/>
+  <text x="612" y="125" text-anchor="middle" font-size="11" font-weight="600" fill="white">Byte 0 [7:0]</text>
+
+  <!-- 주소 오프셋 -->
+  <text x="237" y="155" text-anchor="middle" font-size="9" fill="#64748B">addr + 3</text>
+  <text x="362" y="155" text-anchor="middle" font-size="9" fill="#64748B">addr + 2</text>
+  <text x="487" y="155" text-anchor="middle" font-size="9" fill="#64748B">addr + 1</text>
+  <text x="612" y="155" text-anchor="middle" font-size="9" fill="#64748B">addr + 0</text>
+  <text x="130" y="125" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">MSB</text>
+  <text x="720" y="125" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">LSB</text>
+
+  <!-- 바이트 인에이블 테이블 -->
+  <text x="425" y="195" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">funct3에 따른 바이트 인에이블 (we[3:0])</text>
+
+  <!-- 테이블 헤더 -->
+  <rect x="80" y="210" width="690" height="30" rx="0" fill="#2563EB"/>
+  <text x="140" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="white">명령어</text>
+  <text x="240" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="white">funct3</text>
+  <text x="360" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="white">we[3:0]</text>
+  <text x="480" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="white">접근 크기</text>
+  <text x="630" y="230" text-anchor="middle" font-size="11" font-weight="600" fill="white">바이트 인에이블 패턴</text>
+
+  <!-- SB: addr[1:0]=00 -->
+  <rect x="80" y="240" width="690" height="28" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="140" y="259" text-anchor="middle" font-size="10" fill="#1E293B">SB (addr[1:0]=00)</text>
+  <text x="240" y="259" text-anchor="middle" font-size="10" font-family="monospace" fill="#1E293B">3'b000</text>
+  <text x="360" y="259" text-anchor="middle" font-size="10" font-family="monospace" fill="#DC2626">4'b0001</text>
+  <text x="480" y="259" text-anchor="middle" font-size="10" fill="#1E293B">1 바이트</text>
+  <!-- 바이트 인에이블 시각 표현 -->
+  <rect x="570" y="245" width="30" height="18" rx="2" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <rect x="604" y="245" width="30" height="18" rx="2" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <rect x="638" y="245" width="30" height="18" rx="2" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <rect x="672" y="245" width="30" height="18" rx="2" fill="#2563EB" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="687" y="258" text-anchor="middle" font-size="9" font-weight="600" fill="white">B0</text>
+
+  <!-- SH: addr[1]=0 -->
+  <rect x="80" y="268" width="690" height="28" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="140" y="287" text-anchor="middle" font-size="10" fill="#1E293B">SH (addr[1]=0)</text>
+  <text x="240" y="287" text-anchor="middle" font-size="10" font-family="monospace" fill="#1E293B">3'b001</text>
+  <text x="360" y="287" text-anchor="middle" font-size="10" font-family="monospace" fill="#DC2626">4'b0011</text>
+  <text x="480" y="287" text-anchor="middle" font-size="10" fill="#1E293B">2 바이트</text>
+  <rect x="570" y="273" width="30" height="18" rx="2" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <rect x="604" y="273" width="30" height="18" rx="2" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <rect x="638" y="273" width="30" height="18" rx="2" fill="#3B82F6" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="653" y="286" text-anchor="middle" font-size="9" font-weight="600" fill="white">B1</text>
+  <rect x="672" y="273" width="30" height="18" rx="2" fill="#2563EB" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="687" y="286" text-anchor="middle" font-size="9" font-weight="600" fill="white">B0</text>
+
+  <!-- SW -->
+  <rect x="80" y="296" width="690" height="28" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="140" y="315" text-anchor="middle" font-size="10" fill="#1E293B">SW</text>
+  <text x="240" y="315" text-anchor="middle" font-size="10" font-family="monospace" fill="#1E293B">3'b010</text>
+  <text x="360" y="315" text-anchor="middle" font-size="10" font-family="monospace" fill="#DC2626">4'b1111</text>
+  <text x="480" y="315" text-anchor="middle" font-size="10" fill="#1E293B">4 바이트</text>
+  <rect x="570" y="301" width="30" height="18" rx="2" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="585" y="314" text-anchor="middle" font-size="9" font-weight="600" fill="#2563EB">B3</text>
+  <rect x="604" y="301" width="30" height="18" rx="2" fill="#93C5FD" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="619" y="314" text-anchor="middle" font-size="9" font-weight="600" fill="white">B2</text>
+  <rect x="638" y="301" width="30" height="18" rx="2" fill="#3B82F6" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="653" y="314" text-anchor="middle" font-size="9" font-weight="600" fill="white">B1</text>
+  <rect x="672" y="301" width="30" height="18" rx="2" fill="#2563EB" stroke="#1D4ED8" stroke-width="1"/>
+  <text x="687" y="314" text-anchor="middle" font-size="9" font-weight="600" fill="white">B0</text>
+
+  <!-- 로드 시 부호 확장 블록 (하단) -->
+  <text x="425" y="360" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">로드 시 데이터 확장 (부호 확장 vs 제로 확장)</text>
+
+  <!-- LB -->
+  <rect x="50" y="380" width="170" height="70" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="135" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">LB (funct3=000)</text>
+  <text x="135" y="418" text-anchor="middle" font-size="10" fill="#1E293B">부호 확장 (Sign-extend)</text>
+  <text x="135" y="435" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">{{24{byte[7]}}, byte}</text>
+
+  <!-- LBU -->
+  <rect x="240" y="380" width="170" height="70" rx="6" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="325" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">LBU (funct3=100)</text>
+  <text x="325" y="418" text-anchor="middle" font-size="10" fill="#1E293B">제로 확장 (Zero-extend)</text>
+  <text x="325" y="435" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">{24'b0, byte}</text>
+
+  <!-- LH -->
+  <rect x="430" y="380" width="170" height="70" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="515" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">LH (funct3=001)</text>
+  <text x="515" y="418" text-anchor="middle" font-size="10" fill="#1E293B">부호 확장 (Sign-extend)</text>
+  <text x="515" y="435" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">{{16{half[15]}}, half}</text>
+
+  <!-- LHU -->
+  <rect x="620" y="380" width="170" height="70" rx="6" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="705" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">LHU (funct3=101)</text>
+  <text x="705" y="418" text-anchor="middle" font-size="10" fill="#1E293B">제로 확장 (Zero-extend)</text>
+  <text x="705" y="435" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">{16'b0, half}</text>
+
+  <!-- LW -->
+  <rect x="280" y="470" width="290" height="50" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="425" y="492" text-anchor="middle" font-size="11" font-weight="600" fill="#92400E">LW (funct3=010) — 확장 없음, 32비트 전체 사용</text>
+  <text x="425" y="508" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">rd = mem[addr]  (그대로)</text>
+
+  <!-- 핵심 포인트 -->
+  <rect x="50" y="470" width="210" height="50" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="155" y="490" text-anchor="middle" font-size="10" font-weight="600" fill="#DC2626">핵심: funct3[2] 비트</text>
+  <text x="155" y="508" text-anchor="middle" font-size="9" fill="#DC2626">0 = 부호 확장 / 1 = 제로 확장</text>
+</svg>

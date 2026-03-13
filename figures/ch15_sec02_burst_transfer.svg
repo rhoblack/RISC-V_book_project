@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="460" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">그림 15.2: 4-Beat 버스트 전송 타이밍 다이어그램</text>
+
+  <!-- Signal labels -->
+  <text x="70" y="75" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">clk</text>
+  <text x="70" y="135" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">mem_req</text>
+  <text x="70" y="195" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">mem_addr</text>
+  <text x="70" y="255" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">mem_rdata</text>
+  <text x="70" y="315" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">mem_valid</text>
+  <text x="70" y="375" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">beat_cnt</text>
+  <text x="70" y="435" text-anchor="end" font-size="13" font-weight="bold" fill="#2563EB" font-family="monospace">state</text>
+
+  <!-- Clock signal - 10 cycles -->
+  <g stroke="#6B7280" stroke-width="1.5" fill="none">
+    <polyline points="90,85 90,60 130,60 130,85 170,85 170,60 210,60 210,85 250,85 250,60 290,60 290,85 330,85 330,60 370,60 370,85 410,85 410,60 450,60 450,85 490,85 490,60 530,60 530,85 570,85 570,60 610,60 610,85 650,85 650,60 690,60 690,85 730,85 730,60 770,60 770,85 810,85 810,60 850,60 850,85"/>
+  </g>
+
+  <!-- Cycle labels -->
+  <g font-size="10" fill="#6B7280" text-anchor="middle">
+    <text x="110" y="100">T0</text>
+    <text x="190" y="100">T1</text>
+    <text x="270" y="100">T2</text>
+    <text x="350" y="100">T3</text>
+    <text x="430" y="100">T4</text>
+    <text x="510" y="100">T5</text>
+    <text x="590" y="100">T6</text>
+    <text x="670" y="100">T7</text>
+    <text x="750" y="100">T8</text>
+    <text x="830" y="100">T9</text>
+  </g>
+
+  <!-- mem_req signal -->
+  <polyline points="90,145 130,145 130,120 610,120 610,145 850,145" fill="none" stroke="#2563EB" stroke-width="2"/>
+
+  <!-- mem_addr (bus) -->
+  <g fill="none" stroke="#2563EB" stroke-width="1.5">
+    <polyline points="90,205 130,195 130,180 610,180 610,195"/>
+    <polyline points="90,205 130,205 130,210 610,210 610,205 850,205"/>
+  </g>
+  <text x="370" y="200" text-anchor="middle" font-size="11" fill="#1F2937" font-family="monospace">base_addr</text>
+
+  <!-- mem_rdata (bus with values) -->
+  <g fill="none" stroke="#3B82F6" stroke-width="1.5">
+    <!-- Wait state -->
+    <polyline points="90,265 250,265"/>
+    <!-- Beat 0 -->
+    <polyline points="250,250 250,240 370,240 370,250"/>
+    <polyline points="250,265 250,275 370,275 370,265"/>
+    <!-- Beat 1 -->
+    <polyline points="370,250 370,240 490,240 490,250"/>
+    <polyline points="370,265 370,275 490,275 490,265"/>
+    <!-- Beat 2 -->
+    <polyline points="490,250 490,240 610,240 610,250"/>
+    <polyline points="490,265 490,275 610,275 610,265"/>
+    <!-- Beat 3 -->
+    <polyline points="610,250 610,240 730,240 730,250"/>
+    <polyline points="610,265 610,275 730,275 730,265"/>
+    <polyline points="730,265 850,265"/>
+  </g>
+  <rect x="255" y="243" width="110" height="28" rx="3" fill="#DBEAFE" fill-opacity="0.5"/>
+  <text x="310" y="262" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">D[0]</text>
+  <rect x="375" y="243" width="110" height="28" rx="3" fill="#DBEAFE" fill-opacity="0.5"/>
+  <text x="430" y="262" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">D[1]</text>
+  <rect x="495" y="243" width="110" height="28" rx="3" fill="#DBEAFE" fill-opacity="0.5"/>
+  <text x="550" y="262" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">D[2]</text>
+  <rect x="615" y="243" width="110" height="28" rx="3" fill="#DBEAFE" fill-opacity="0.5"/>
+  <text x="670" y="262" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">D[3]</text>
+
+  <!-- mem_valid signal -->
+  <polyline points="90,325 250,325 250,300 730,300 730,325 850,325" fill="none" stroke="#059669" stroke-width="2"/>
+
+  <!-- beat_cnt -->
+  <g font-size="11" fill="#1F2937" font-family="monospace" text-anchor="middle">
+    <text x="310" y="380">0</text>
+    <text x="430" y="380">1</text>
+    <text x="550" y="380">2</text>
+    <text x="670" y="380">3</text>
+  </g>
+  <g fill="none" stroke="#3B82F6" stroke-width="1.5">
+    <polyline points="90,385 250,385"/>
+    <line x1="250" y1="385" x2="250" y2="370"/>
+    <line x1="250" y1="370" x2="370" y2="370"/>
+    <line x1="370" y1="370" x2="370" y2="372"/>
+    <line x1="370" y1="372" x2="490" y2="372"/>
+    <line x1="490" y1="372" x2="490" y2="374"/>
+    <line x1="490" y1="374" x2="610" y2="374"/>
+    <line x1="610" y1="374" x2="610" y2="376"/>
+    <line x1="610" y1="376" x2="730" y2="376"/>
+    <polyline points="730,376 730,385 850,385"/>
+  </g>
+
+  <!-- state -->
+  <g font-size="10" fill="#1F2937" text-anchor="middle">
+    <rect x="92" y="420" width="36" height="22" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+    <text x="110" y="435">IDLE</text>
+    <rect x="132" y="420" width="116" height="22" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+    <text x="190" y="435">ALLOCATE (요청)</text>
+    <rect x="252" y="420" width="476" height="22" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+    <text x="490" y="435">FILL (캐시 라인 채움: 4 beat)</text>
+    <rect x="732" y="420" width="116" height="22" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+    <text x="790" y="435">IDLE</text>
+  </g>
+
+  <!-- Annotations -->
+  <g font-size="10" fill="#DC2626">
+    <text x="190" y="170">메모리 지연</text>
+    <line x1="130" y1="112" x2="250" y2="112" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="155" y="110" font-size="9">2 사이클 대기</text>
+  </g>
+
+  <!-- Legend -->
+  <rect x="90" y="460" width="770" height="30" rx="5" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="105" y="480" font-size="11" fill="#6B7280">4-Beat 버스트: base_addr에서 시작하여 4개 워드(128비트 = 캐시 라인 1개)를 연속 전송. 총 미스 페널티 = 대기(2) + 전송(4) = 6 사이클</text>
+</svg>

@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 620" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow3" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#DBEAFE"/>
+      <stop offset="100%" stop-color="#EFF6FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="780" height="620" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="390" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">RV32I 메모리 주소 공간 (32비트, 4GB)</text>
+
+  <!-- 주소 공간 맵 (왼쪽) -->
+  <text x="200" y="65" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">메모리 주소 맵</text>
+
+  <!-- 최상위: 예약 영역 -->
+  <rect x="80" y="80" width="240" height="40" rx="4" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
+  <text x="200" y="100" text-anchor="middle" font-size="11" fill="#64748B">예약 영역 (Reserved)</text>
+  <text x="50" y="105" text-anchor="end" font-size="10" font-family="monospace" fill="#64748B">0xFFFFFFFF</text>
+
+  <!-- MMIO -->
+  <rect x="80" y="120" width="240" height="60" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="200" y="148" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">MMIO 영역</text>
+  <text x="200" y="165" text-anchor="middle" font-size="10" fill="#DC2626">GPIO, UART, Timer</text>
+  <text x="50" y="135" text-anchor="end" font-size="10" font-family="monospace" fill="#64748B">0x80000000</text>
+
+  <!-- 데이터 메모리 (DMEM) -->
+  <rect x="80" y="180" width="240" height="100" rx="4" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="200" y="215" text-anchor="middle" font-size="13" font-weight="600" fill="#059669">데이터 메모리 (DMEM)</text>
+  <text x="200" y="235" text-anchor="middle" font-size="10" fill="#059669">.data, .bss, stack, heap</text>
+  <text x="200" y="255" text-anchor="middle" font-size="10" fill="#059669">읽기/쓰기 가능</text>
+  <text x="50" y="195" text-anchor="end" font-size="10" font-family="monospace" fill="#64748B">0x10000000</text>
+
+  <!-- 명령어 메모리 (IMEM) -->
+  <rect x="80" y="280" width="240" height="100" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="200" y="315" text-anchor="middle" font-size="13" font-weight="600" fill="#2563EB">명령어 메모리 (IMEM)</text>
+  <text x="200" y="335" text-anchor="middle" font-size="10" fill="#2563EB">.text (프로그램 코드)</text>
+  <text x="200" y="355" text-anchor="middle" font-size="10" fill="#2563EB">읽기 전용 (실행 시)</text>
+  <text x="50" y="295" text-anchor="end" font-size="10" font-family="monospace" fill="#64748B">0x00000000</text>
+
+  <!-- 하단 주소 -->
+  <text x="50" y="385" text-anchor="end" font-size="10" font-family="monospace" fill="#64748B">0x00000000</text>
+
+  <!-- 리틀 엔디언 설명 (오른쪽 상단) -->
+  <text x="580" y="65" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">리틀 엔디언 (Little-Endian)</text>
+
+  <!-- 4바이트 워드 예시 -->
+  <text x="580" y="90" text-anchor="middle" font-size="11" fill="#64748B">32비트 워드 0x12345678의 메모리 저장 순서</text>
+
+  <!-- 바이트 주소 표 -->
+  <rect x="440" y="100" width="280" height="30" rx="4" fill="#2563EB"/>
+  <text x="490" y="120" text-anchor="middle" font-size="10" font-weight="600" fill="white">주소</text>
+  <text x="555" y="120" text-anchor="middle" font-size="10" font-weight="600" fill="white">주소+1</text>
+  <text x="625" y="120" text-anchor="middle" font-size="10" font-weight="600" fill="white">주소+2</text>
+  <text x="695" y="120" text-anchor="middle" font-size="10" font-weight="600" fill="white">주소+3</text>
+
+  <rect x="440" y="130" width="70" height="35" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="475" y="152" text-anchor="middle" font-size="13" font-weight="700" font-family="monospace" fill="#2563EB">0x78</text>
+  <rect x="510" y="130" width="70" height="35" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="545" y="152" text-anchor="middle" font-size="13" font-weight="700" font-family="monospace" fill="#2563EB">0x56</text>
+  <rect x="580" y="130" width="70" height="35" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="615" y="152" text-anchor="middle" font-size="13" font-weight="700" font-family="monospace" fill="#2563EB">0x34</text>
+  <rect x="650" y="130" width="70" height="35" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="685" y="152" text-anchor="middle" font-size="13" font-weight="700" font-family="monospace" fill="#2563EB">0x12</text>
+
+  <text x="475" y="180" text-anchor="middle" font-size="10" fill="#DC2626">LSB</text>
+  <text x="685" y="180" text-anchor="middle" font-size="10" fill="#DC2626">MSB</text>
+
+  <!-- 정렬 요구사항 -->
+  <text x="580" y="215" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">정렬 요구사항 (Alignment)</text>
+
+  <!-- 정렬 표 -->
+  <rect x="430" y="230" width="300" height="30" rx="4" fill="#2563EB"/>
+  <text x="480" y="250" text-anchor="middle" font-size="10" font-weight="600" fill="white">접근 유형</text>
+  <text x="570" y="250" text-anchor="middle" font-size="10" font-weight="600" fill="white">크기</text>
+  <text x="670" y="250" text-anchor="middle" font-size="10" font-weight="600" fill="white">정렬 조건</text>
+
+  <rect x="430" y="260" width="300" height="28" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="480" y="278" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">LB/SB</text>
+  <text x="570" y="278" text-anchor="middle" font-size="11" fill="#1E293B">1바이트</text>
+  <text x="670" y="278" text-anchor="middle" font-size="11" fill="#059669">제한 없음</text>
+
+  <rect x="430" y="288" width="300" height="28" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="480" y="306" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">LH/SH</text>
+  <text x="570" y="306" text-anchor="middle" font-size="11" fill="#1E293B">2바이트</text>
+  <text x="670" y="306" text-anchor="middle" font-size="11" fill="#D97706">2바이트 정렬</text>
+
+  <rect x="430" y="316" width="300" height="28" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="480" y="334" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">LW/SW</text>
+  <text x="570" y="334" text-anchor="middle" font-size="11" fill="#1E293B">4바이트</text>
+  <text x="670" y="334" text-anchor="middle" font-size="11" fill="#DC2626">4바이트 정렬</text>
+
+  <rect x="430" y="344" width="300" height="28" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="480" y="362" text-anchor="middle" font-size="11" font-family="monospace" fill="#1E293B">명령어 fetch</text>
+  <text x="570" y="362" text-anchor="middle" font-size="11" fill="#1E293B">4바이트</text>
+  <text x="670" y="362" text-anchor="middle" font-size="11" fill="#DC2626">4바이트 정렬</text>
+
+  <!-- 바이트 주소 지정 예시 -->
+  <text x="580" y="405" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">바이트 주소 지정 (Byte Addressing)</text>
+
+  <!-- 메모리 셀 시각화 -->
+  <rect x="430" y="420" width="60" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
+  <text x="460" y="445" text-anchor="middle" font-size="10" font-family="monospace" fill="#2563EB">Byte 0</text>
+  <text x="460" y="472" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x00</text>
+
+  <rect x="490" y="420" width="60" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
+  <text x="520" y="445" text-anchor="middle" font-size="10" font-family="monospace" fill="#2563EB">Byte 1</text>
+  <text x="520" y="472" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x01</text>
+
+  <rect x="550" y="420" width="60" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
+  <text x="580" y="445" text-anchor="middle" font-size="10" font-family="monospace" fill="#2563EB">Byte 2</text>
+  <text x="580" y="472" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x02</text>
+
+  <rect x="610" y="420" width="60" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
+  <text x="640" y="445" text-anchor="middle" font-size="10" font-family="monospace" fill="#2563EB">Byte 3</text>
+  <text x="640" y="472" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x03</text>
+
+  <!-- 워드 범위 표시 -->
+  <line x1="430" y1="485" x2="670" y2="485" stroke="#2563EB" stroke-width="2"/>
+  <line x1="430" y1="480" x2="430" y2="490" stroke="#2563EB" stroke-width="2"/>
+  <line x1="670" y1="480" x2="670" y2="490" stroke="#2563EB" stroke-width="2"/>
+  <text x="550" y="500" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">1 Word (4 Bytes = 32 bits)</text>
+
+  <!-- 다음 워드 -->
+  <rect x="430" y="515" width="60" height="30" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1" rx="3"/>
+  <text x="460" y="535" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B82F6">Byte 4</text>
+  <text x="460" y="555" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x04</text>
+
+  <rect x="490" y="515" width="60" height="30" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1" rx="3"/>
+  <text x="520" y="535" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B82F6">Byte 5</text>
+  <text x="520" y="555" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x05</text>
+
+  <rect x="550" y="515" width="60" height="30" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1" rx="3"/>
+  <text x="580" y="535" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B82F6">Byte 6</text>
+  <text x="580" y="555" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x06</text>
+
+  <rect x="610" y="515" width="60" height="30" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1" rx="3"/>
+  <text x="640" y="535" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B82F6">Byte 7</text>
+  <text x="640" y="555" text-anchor="middle" font-size="9" font-family="monospace" fill="#64748B">0x07</text>
+
+  <!-- 하단 설명 -->
+  <rect x="50" y="575" width="680" height="35" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="390" y="597" text-anchor="middle" font-size="11" fill="#92400E">RV32I는 32비트 주소 버스를 사용하므로 최대 2^32 = 4GB의 주소 공간을 가짐. 실제 FPGA에서는 BRAM 크기에 제한.</text>
+</svg>

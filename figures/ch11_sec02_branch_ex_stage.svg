@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="520" fill="#F8FAFC" rx="8"/>
+
+  <text x="450" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">분기 판정 위치에 따른 페널티 비교</text>
+
+  <!-- 상단: MEM 스테이지 판정 (기본) -->
+  <rect x="30" y="55" width="840" height="190" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="50" y="80" font-size="14" font-weight="700" fill="#DC2626">방법 A: MEM 스테이지에서 분기 판정 (3사이클 페널티)</text>
+
+  <!-- 파이프라인 스테이지: MEM 판정 -->
+  <rect x="80" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="125" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
+  <rect x="180" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="225" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID</text>
+  <rect x="280" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="325" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX</text>
+  <rect x="380" y="95" width="90" height="32" rx="4" fill="#DC2626"/><text x="425" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM ★</text>
+  <rect x="480" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="525" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">WB</text>
+
+  <text x="55" y="116" text-anchor="middle" font-size="10" fill="#64748B">BEQ</text>
+
+  <!-- 잘못 fetch된 3개 -->
+  <rect x="180" y="135" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="225" y="153" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
+  <rect x="280" y="135" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="325" y="153" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
+  <rect x="380" y="135" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="425" y="153" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
+
+  <text x="55" y="152" font-size="10" fill="#DC2626">PC+4,+8,+12</text>
+
+  <rect x="600" y="95" width="250" height="70" rx="6" fill="#FEF2F2"/>
+  <text x="725" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">3개 명령어 flush 필요</text>
+  <text x="725" y="140" text-anchor="middle" font-size="12" fill="#DC2626">페널티: 3사이클</text>
+
+  <!-- 하단: EX 스테이지 판정 -->
+  <rect x="30" y="260" width="840" height="190" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="50" y="285" font-size="14" font-weight="700" fill="#059669">방법 B: EX 스테이지에서 분기 판정 (2사이클 페널티)</text>
+
+  <rect x="80" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="125" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
+  <rect x="180" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="225" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID</text>
+  <rect x="280" y="300" width="90" height="32" rx="4" fill="#059669"/><text x="325" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX ★</text>
+  <rect x="380" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="425" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM</text>
+  <rect x="480" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="525" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">WB</text>
+
+  <text x="55" y="321" text-anchor="middle" font-size="10" fill="#64748B">BEQ</text>
+
+  <!-- 잘못 fetch된 2개 -->
+  <rect x="180" y="340" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="225" y="358" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
+  <rect x="280" y="340" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="325" y="358" text-anchor="middle" font-size="10" fill="#DC2626">ID ✗</text>
+
+  <text x="55" y="357" font-size="10" fill="#DC2626">PC+4,+8</text>
+
+  <rect x="600" y="300" width="250" height="70" rx="6" fill="#ECFDF5"/>
+  <text x="725" y="323" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">2개 명령어 flush 필요</text>
+  <text x="725" y="345" text-anchor="middle" font-size="12" fill="#059669">페널티: 2사이클</text>
+
+  <!-- 하단 비교 요약 -->
+  <rect x="30" y="465" width="840" height="40" rx="6" fill="#DBEAFE"/>
+  <text x="450" y="490" text-anchor="middle" font-size="13" font-weight="600" fill="#2563EB">결론: 분기 판정을 앞 스테이지로 이동할수록 페널티 감소. EX 판정 시 2사이클, ID 판정 시 1사이클 (추가 복잡성 수반)</text>
+</svg>

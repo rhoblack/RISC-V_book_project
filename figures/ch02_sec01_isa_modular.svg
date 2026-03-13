@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="800" height="520" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="400" y="35" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">RISC-V 모듈형 ISA 구조</text>
+  <text x="400" y="55" text-anchor="middle" font-size="12" fill="#64748B">Base Integer ISA + Standard Extensions</text>
+
+  <!-- 기본 ISA 블록 (중앙 큰 블록) -->
+  <rect x="250" y="80" width="300" height="100" rx="10" fill="#2563EB" filter="url(#shadow)"/>
+  <text x="400" y="115" text-anchor="middle" font-size="20" font-weight="700" fill="white">RV32I</text>
+  <text x="400" y="138" text-anchor="middle" font-size="13" fill="#DBEAFE">기본 정수 명령어 세트 (Base Integer ISA)</text>
+  <text x="400" y="158" text-anchor="middle" font-size="11" fill="#93C5FD">47개 명령어 | 32개 레지스터 | 32비트</text>
+
+  <!-- "필수" 라벨 -->
+  <rect x="505" y="75" width="50" height="20" rx="10" fill="#DC2626"/>
+  <text x="530" y="89" text-anchor="middle" font-size="10" font-weight="600" fill="white">필수</text>
+
+  <!-- 확장 블록들 -->
+  <!-- M 확장 -->
+  <rect x="40" y="230" width="140" height="80" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="110" y="258" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">M</text>
+  <text x="110" y="278" text-anchor="middle" font-size="11" fill="#1E293B">곱셈/나눗셈</text>
+  <text x="110" y="295" text-anchor="middle" font-size="10" fill="#64748B">MUL, DIV, REM</text>
+
+  <!-- A 확장 -->
+  <rect x="200" y="230" width="140" height="80" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="270" y="258" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">A</text>
+  <text x="270" y="278" text-anchor="middle" font-size="11" fill="#1E293B">원자적 연산</text>
+  <text x="270" y="295" text-anchor="middle" font-size="10" fill="#64748B">LR, SC, AMO</text>
+
+  <!-- F 확장 -->
+  <rect x="360" y="230" width="140" height="80" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="430" y="258" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">F</text>
+  <text x="430" y="278" text-anchor="middle" font-size="11" fill="#1E293B">단정밀도 부동소수점</text>
+  <text x="430" y="295" text-anchor="middle" font-size="10" fill="#64748B">FADD.S, FMUL.S</text>
+
+  <!-- D 확장 -->
+  <rect x="520" y="230" width="140" height="80" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="590" y="258" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">D</text>
+  <text x="590" y="278" text-anchor="middle" font-size="11" fill="#1E293B">배정밀도 부동소수점</text>
+  <text x="590" y="295" text-anchor="middle" font-size="10" fill="#64748B">FADD.D, FMUL.D</text>
+
+  <!-- C 확장 -->
+  <rect x="680" y="230" width="100" height="80" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="730" y="258" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">C</text>
+  <text x="730" y="278" text-anchor="middle" font-size="11" fill="#1E293B">압축 명령어</text>
+  <text x="730" y="295" text-anchor="middle" font-size="10" fill="#64748B">16비트</text>
+
+  <!-- "선택" 라벨 -->
+  <rect x="40" y="225" width="50" height="20" rx="10" fill="#059669"/>
+  <text x="65" y="239" text-anchor="middle" font-size="10" font-weight="600" fill="white">선택</text>
+
+  <!-- 연결선 (기본 → 확장) -->
+  <line x1="400" y1="180" x2="110" y2="230" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="400" y1="180" x2="270" y2="230" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="400" y1="180" x2="430" y2="230" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="400" y1="180" x2="590" y2="230" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="400" y1="180" x2="730" y2="230" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- G = 범용 조합 -->
+  <rect x="160" y="360" width="480" height="70" rx="10" fill="#F0FDF4" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="400" y="388" text-anchor="middle" font-size="15" font-weight="700" fill="#059669">RV32G = RV32IMAFDZicsr_Zifencei</text>
+  <text x="400" y="410" text-anchor="middle" font-size="12" fill="#1E293B">범용(General-purpose) 조합 — 리눅스 실행에 필요한 표준 세트</text>
+
+  <!-- 화살표 -->
+  <line x1="400" y1="310" x2="400" y2="355" stroke="#059669" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- 이 책의 범위 표시 -->
+  <rect x="200" y="455" width="400" height="45" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+  <text x="400" y="475" text-anchor="middle" font-size="13" font-weight="600" fill="#92400E">이 책의 범위</text>
+  <text x="400" y="492" text-anchor="middle" font-size="12" fill="#92400E">RV32I (기본 정수) + Zicsr (CSR 접근) + M 확장 (선택)</text>
+
+  <!-- 비교: x86 vs ARM vs RISC-V -->
+  <rect x="20" y="360" width="120" height="70" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="80" y="382" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">x86 (CISC)</text>
+  <text x="80" y="398" text-anchor="middle" font-size="10" fill="#64748B">~1500+ 명령어</text>
+  <text x="80" y="413" text-anchor="middle" font-size="10" fill="#64748B">고정된 ISA</text>
+
+  <rect x="660" y="360" width="120" height="70" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="720" y="382" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">ARM (RISC)</text>
+  <text x="720" y="398" text-anchor="middle" font-size="10" fill="#64748B">~1000+ 명령어</text>
+  <text x="720" y="413" text-anchor="middle" font-size="10" fill="#64748B">라이선스 필요</text>
+</svg>

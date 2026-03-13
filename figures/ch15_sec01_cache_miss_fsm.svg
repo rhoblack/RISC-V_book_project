@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">그림 15.1: 캐시 미스 처리 FSM 상태 전이도</text>
+
+  <!-- IDLE state -->
+  <circle cx="150" cy="150" r="50" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="150" y="145" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">IDLE</text>
+  <text x="150" y="163" text-anchor="middle" font-size="10" fill="#1F2937">(대기)</text>
+
+  <!-- COMPARE_TAG state -->
+  <circle cx="400" cy="150" r="55" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="400" y="140" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">COMPARE</text>
+  <text x="400" y="158" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">_TAG</text>
+  <text x="400" y="176" text-anchor="middle" font-size="10" fill="#1F2937">(태그 비교)</text>
+
+  <!-- WRITEBACK state -->
+  <circle cx="650" cy="100" r="55" fill="#FEF3C7" stroke="#D97706" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="650" y="90" text-anchor="middle" font-size="13" font-weight="bold" fill="#D97706">WRITE</text>
+  <text x="650" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#D97706">_BACK</text>
+  <text x="650" y="126" text-anchor="middle" font-size="10" fill="#1F2937">(더티 라인 쓰기)</text>
+
+  <!-- ALLOCATE state -->
+  <circle cx="650" cy="280" r="55" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="650" y="270" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">ALLOCATE</text>
+  <text x="650" y="290" text-anchor="middle" font-size="10" fill="#1F2937">(메모리 읽기)</text>
+
+  <!-- FILL state -->
+  <circle cx="400" cy="380" r="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="400" y="370" text-anchor="middle" font-size="13" font-weight="bold" fill="#3B82F6">FILL</text>
+  <text x="400" y="390" text-anchor="middle" font-size="10" fill="#1F2937">(캐시 라인 채움)</text>
+
+  <!-- Transitions -->
+  <!-- IDLE -> COMPARE_TAG: cache request -->
+  <line x1="200" y1="150" x2="340" y2="150" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="270" y="140" text-anchor="middle" font-size="11" fill="#1F2937">요청 발생</text>
+
+  <!-- COMPARE_TAG -> IDLE: hit -->
+  <path d="M 355 120 Q 250 60 190 115" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="250" y="72" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">HIT</text>
+
+  <!-- COMPARE_TAG -> WRITEBACK: miss + dirty -->
+  <line x1="445" y1="125" x2="600" y2="105" stroke="#D97706" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="530" y="100" text-anchor="middle" font-size="11" fill="#D97706">MISS +</text>
+  <text x="530" y="115" text-anchor="middle" font-size="11" fill="#D97706">dirty</text>
+
+  <!-- COMPARE_TAG -> ALLOCATE: miss + clean -->
+  <path d="M 450 175 Q 550 230 610 255" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="550" y="210" text-anchor="middle" font-size="11" fill="#2563EB">MISS + clean</text>
+
+  <!-- WRITEBACK -> ALLOCATE -->
+  <line x1="650" y1="155" x2="650" y2="220" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="672" y="190" font-size="11" fill="#1F2937">wb_done</text>
+
+  <!-- ALLOCATE -> FILL: burst complete -->
+  <line x1="600" y1="305" x2="460" y2="365" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="545" y="350" text-anchor="middle" font-size="11" fill="#1F2937">burst_done</text>
+
+  <!-- FILL -> IDLE -->
+  <path d="M 350 365 Q 200 340 160 205" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="220" y="310" text-anchor="middle" font-size="11" fill="#1F2937">fill_done</text>
+
+  <!-- Self-loop on ALLOCATE for burst count -->
+  <path d="M 700 260 Q 760 250 750 290 Q 740 320 700 300" fill="none" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="770" y="280" font-size="10" fill="#3B82F6">beat++</text>
+
+  <!-- Legend -->
+  <rect x="30" y="440" width="840" height="70" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="50" y="462" font-size="12" font-weight="bold" fill="#1F2937">범례:</text>
+  <circle cx="130" cy="458" r="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="145" y="462" font-size="11" fill="#1F2937">일반 상태</text>
+  <circle cx="250" cy="458" r="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="265" y="462" font-size="11" fill="#1F2937">Write-Back 상태 (dirty 시에만 진입)</text>
+  <text x="50" y="490" font-size="11" fill="#6B7280">HIT 경로: IDLE -> COMPARE_TAG -> IDLE (1 사이클) | MISS 경로: 최소 4+N 사이클 (버스트 전송 포함)</text>
+</svg>

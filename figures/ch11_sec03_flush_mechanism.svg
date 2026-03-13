@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="500" fill="#F8FAFC" rx="8"/>
+  <text x="450" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">Flush 메커니즘: 파이프라인 레지스터 무효화</text>
+
+  <!-- 파이프라인 스테이지 블록 -->
+  <rect x="40" y="70" width="120" height="180" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="100" y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">IF</text>
+  <text x="100" y="115" text-anchor="middle" font-size="10" fill="#64748B">Instruction</text>
+  <text x="100" y="130" text-anchor="middle" font-size="10" fill="#64748B">Fetch</text>
+
+  <!-- IF/ID 파이프라인 레지스터 -->
+  <rect x="175" y="60" width="60" height="200" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="205" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#DC2626" transform="rotate(-90, 205, 155)">IF/ID Reg</text>
+  <text x="205" y="280" text-anchor="middle" font-size="10" font-weight="600" fill="#DC2626">FLUSH</text>
+
+  <rect x="250" y="70" width="120" height="180" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="310" y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">ID</text>
+  <text x="310" y="115" text-anchor="middle" font-size="10" fill="#64748B">Instruction</text>
+  <text x="310" y="130" text-anchor="middle" font-size="10" fill="#64748B">Decode</text>
+
+  <!-- ID/EX 파이프라인 레지스터 -->
+  <rect x="385" y="60" width="60" height="200" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="415" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#DC2626" transform="rotate(-90, 415, 155)">ID/EX Reg</text>
+  <text x="415" y="280" text-anchor="middle" font-size="10" font-weight="600" fill="#DC2626">FLUSH</text>
+
+  <rect x="460" y="70" width="120" height="180" rx="8" fill="#D1FAE5" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="520" y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#059669">EX</text>
+  <text x="520" y="115" text-anchor="middle" font-size="10" fill="#64748B">Execute</text>
+  <text x="520" y="130" text-anchor="middle" font-size="10" fill="#64748B">Branch Resolve</text>
+  <text x="520" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">★ 분기 판정</text>
+
+  <!-- EX/MEM -->
+  <rect x="595" y="60" width="60" height="200" rx="4" fill="#E5E7EB" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="625" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="#6B7280" transform="rotate(-90, 625, 155)">EX/MEM Reg</text>
+
+  <rect x="670" y="70" width="100" height="180" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.5"/>
+  <text x="720" y="155" text-anchor="middle" font-size="14" font-weight="600" fill="#6B7280">MEM</text>
+
+  <rect x="785" y="60" width="50" height="200" rx="4" fill="#E5E7EB" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="810" y="155" text-anchor="middle" font-size="10" font-weight="600" fill="#6B7280" transform="rotate(-90, 810, 155)">MEM/WB</text>
+
+  <!-- Flush 신호 화살표 -->
+  <path d="M520,255 L520,310 L205,310 L205,285" stroke="#DC2626" stroke-width="2.5" fill="none" marker-end="url(#arrowRed)"/>
+  <path d="M520,310 L415,310 L415,285" stroke="#DC2626" stroke-width="2.5" fill="none" marker-end="url(#arrowRed)"/>
+  <text x="360" y="330" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">branch_flush 신호</text>
+
+  <!-- PC 갱신 화살표 -->
+  <path d="M520,250 L520,370 L100,370 L100,255" stroke="#059669" stroke-width="2.5" fill="none" stroke-dasharray="6,3" marker-end="url(#arrowGreen)"/>
+  <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+    <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+  </marker>
+  <text x="310" y="390" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">branch_target → PC (분기 대상 주소)</text>
+
+  <!-- 하단 설명 -->
+  <rect x="40" y="410" width="400" height="75" rx="6" fill="#FEF2F2"/>
+  <text x="60" y="435" font-size="12" font-weight="600" fill="#DC2626">Flush 동작 (분기 성공 시)</text>
+  <text x="60" y="455" font-size="11" fill="#1E293B">1. IF/ID 레지스터 → 모든 제어 신호를 0으로 클리어</text>
+  <text x="60" y="475" font-size="11" fill="#1E293B">2. ID/EX 레지스터 → 모든 제어 신호를 0으로 클리어</text>
+
+  <rect x="460" y="410" width="400" height="75" rx="6" fill="#ECFDF5"/>
+  <text x="480" y="435" font-size="12" font-weight="600" fill="#059669">PC 갱신 동작</text>
+  <text x="480" y="455" font-size="11" fill="#1E293B">1. EX 스테이지에서 계산된 branch_target을 PC에 기록</text>
+  <text x="480" y="475" font-size="11" fill="#1E293B">2. 다음 사이클부터 올바른 분기 대상 명령어를 fetch</text>
+</svg>

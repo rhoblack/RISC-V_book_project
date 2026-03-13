@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .field-bg { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1.5; }
+      .field-bg-alt { fill: #EFF6FF; stroke: #2563EB; stroke-width: 1.5; }
+      .field-imm { fill: #E0E7FF; stroke: #4F46E5; stroke-width: 2; }
+      .field-rd { fill: #FEE2E2; stroke: #DC2626; stroke-width: 1.5; }
+      .field-opcode { fill: #F1F5F9; stroke: #475569; stroke-width: 1.5; }
+      .field-label { font-size: 13px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .field-name { font-size: 11px; fill: #2563EB; font-weight: 600; text-anchor: middle; }
+      .title { font-size: 16px; fill: #1E293B; font-weight: 700; }
+      .bit-range { font-size: 9px; fill: #9CA3AF; text-anchor: middle; font-family: 'JetBrains Mono', monospace; }
+    </style>
+  </defs>
+
+  <text x="400" y="25" text-anchor="middle" class="title">U 타입 명령어 인코딩 (U-Type Encoding)</text>
+
+  <text x="300" y="50" class="bit-range">31                                    12</text>
+  <text x="530" y="50" class="bit-range">11   7</text>
+  <text x="670" y="50" class="bit-range">6        0</text>
+
+  <!-- Fields -->
+  <rect x="80" y="60" width="380" height="50" rx="4" class="field-imm"/>
+  <rect x="460" y="60" width="130" height="50" rx="4" class="field-rd"/>
+  <rect x="590" y="60" width="190" height="50" rx="4" class="field-opcode"/>
+
+  <text x="270" y="90" class="field-label" style="fill:#4F46E5; font-size:15px;">imm[31:12]</text>
+  <text x="525" y="90" class="field-label" style="fill:#DC2626;">rd</text>
+  <text x="685" y="90" class="field-label" style="fill:#475569;">opcode</text>
+
+  <text x="270" y="130" class="field-name" style="font-size:12px;">20비트 (상위 즉치수)</text>
+  <text x="525" y="130" class="field-name">5비트</text>
+  <text x="685" y="130" class="field-name">7비트</text>
+
+  <!-- LUI and AUIPC -->
+  <text x="250" y="160" style="font-size:12px; fill:#2563EB; font-weight:600; text-anchor:end;">LUI:</text>
+  <text x="260" y="160" style="font-size:12px; fill:#1E293B;">rd = imm[31:12] &lt;&lt; 12    (opcode = 0110111)</text>
+
+  <text x="250" y="180" style="font-size:12px; fill:#2563EB; font-weight:600; text-anchor:end;">AUIPC:</text>
+  <text x="260" y="180" style="font-size:12px; fill:#1E293B;">rd = PC + (imm[31:12] &lt;&lt; 12)    (opcode = 0010111)</text>
+
+  <text x="400" y="200" text-anchor="middle" style="font-size:11px; fill:#6B7280;">rs1, rs2, funct3 없음 — 가장 단순한 인코딩 형식</text>
+</svg>

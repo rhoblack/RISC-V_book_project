@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 750" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow4" x="-1%" y="-1%" width="102%" height="102%">
+      <feDropShadow dx="1" dy="1" stdDeviation="1.5" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="850" height="750" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">RISC-V RV32I 명령어 형식 — 6가지 타입 비교</text>
+  <text x="425" y="50" text-anchor="middle" font-size="11" fill="#64748B">모든 명령어는 32비트 고정 길이 | 비트 [6:0]은 항상 opcode</text>
+
+  <!-- 비트 번호 눈금 (상단) -->
+  <text x="115" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">31</text>
+  <text x="195" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">25</text>
+  <text x="255" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">24  20</text>
+  <text x="335" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">19  15</text>
+  <text x="415" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">14  12</text>
+  <text x="495" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">11   7</text>
+  <text x="590" y="75" text-anchor="middle" font-size="9" font-family="monospace" fill="#94A3B8">6    0</text>
+
+  <!-- ===== R-Type ===== -->
+  <text x="45" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">R</text>
+
+  <rect x="70" y="85" width="120" height="32" rx="3" fill="#2563EB" filter="url(#shadow4)"/>
+  <text x="130" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="white">funct7</text>
+
+  <rect x="190" y="85" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="230" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs2</text>
+
+  <rect x="270" y="85" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="310" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs1</text>
+
+  <rect x="350" y="85" width="70" height="32" rx="3" fill="#60A5FA" filter="url(#shadow4)"/>
+  <text x="385" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="white">funct3</text>
+
+  <rect x="420" y="85" width="100" height="32" rx="3" fill="#93C5FD" filter="url(#shadow4)"/>
+  <text x="470" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">rd</text>
+
+  <rect x="520" y="85" width="140" height="32" rx="3" fill="#1D4ED8" filter="url(#shadow4)"/>
+  <text x="590" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="white">opcode</text>
+
+  <text x="710" y="105" font-size="10" fill="#64748B">ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU</text>
+
+  <!-- ===== I-Type ===== -->
+  <text x="45" y="155" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">I</text>
+
+  <rect x="70" y="135" width="200" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="170" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="#78350F">imm[11:0]</text>
+
+  <rect x="270" y="135" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="310" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs1</text>
+
+  <rect x="350" y="135" width="70" height="32" rx="3" fill="#60A5FA" filter="url(#shadow4)"/>
+  <text x="385" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="white">funct3</text>
+
+  <rect x="420" y="135" width="100" height="32" rx="3" fill="#93C5FD" filter="url(#shadow4)"/>
+  <text x="470" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">rd</text>
+
+  <rect x="520" y="135" width="140" height="32" rx="3" fill="#1D4ED8" filter="url(#shadow4)"/>
+  <text x="590" y="155" text-anchor="middle" font-size="11" font-weight="600" fill="white">opcode</text>
+
+  <text x="710" y="155" font-size="10" fill="#64748B">ADDI, LW, LB, LH, JALR, SLLI, SRLI, SRAI</text>
+
+  <!-- ===== S-Type ===== -->
+  <text x="45" y="205" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">S</text>
+
+  <rect x="70" y="185" width="120" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="130" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#78350F">imm[11:5]</text>
+
+  <rect x="190" y="185" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="230" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs2</text>
+
+  <rect x="270" y="185" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="310" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs1</text>
+
+  <rect x="350" y="185" width="70" height="32" rx="3" fill="#60A5FA" filter="url(#shadow4)"/>
+  <text x="385" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="white">funct3</text>
+
+  <rect x="420" y="185" width="100" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="470" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#78350F">imm[4:0]</text>
+
+  <rect x="520" y="185" width="140" height="32" rx="3" fill="#1D4ED8" filter="url(#shadow4)"/>
+  <text x="590" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="white">opcode</text>
+
+  <text x="710" y="205" font-size="10" fill="#64748B">SW, SH, SB</text>
+
+  <!-- ===== B-Type ===== -->
+  <text x="45" y="255" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">B</text>
+
+  <rect x="70" y="235" width="25" height="32" rx="3" fill="#F97316" filter="url(#shadow4)"/>
+  <text x="82" y="255" text-anchor="middle" font-size="8" font-weight="600" fill="white">[12]</text>
+
+  <rect x="95" y="235" width="95" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="142" y="255" text-anchor="middle" font-size="10" font-weight="600" fill="#78350F">imm[10:5]</text>
+
+  <rect x="190" y="235" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="230" y="255" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs2</text>
+
+  <rect x="270" y="235" width="80" height="32" rx="3" fill="#3B82F6" filter="url(#shadow4)"/>
+  <text x="310" y="255" text-anchor="middle" font-size="11" font-weight="600" fill="white">rs1</text>
+
+  <rect x="350" y="235" width="70" height="32" rx="3" fill="#60A5FA" filter="url(#shadow4)"/>
+  <text x="385" y="255" text-anchor="middle" font-size="11" font-weight="600" fill="white">funct3</text>
+
+  <rect x="420" y="235" width="75" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="457" y="255" text-anchor="middle" font-size="10" font-weight="600" fill="#78350F">imm[4:1]</text>
+
+  <rect x="495" y="235" width="25" height="32" rx="3" fill="#F97316" filter="url(#shadow4)"/>
+  <text x="507" y="255" text-anchor="middle" font-size="8" font-weight="600" fill="white">[11]</text>
+
+  <rect x="520" y="235" width="140" height="32" rx="3" fill="#1D4ED8" filter="url(#shadow4)"/>
+  <text x="590" y="255" text-anchor="middle" font-size="11" font-weight="600" fill="white">opcode</text>
+
+  <text x="710" y="255" font-size="10" fill="#64748B">BEQ, BNE, BLT, BGE, BLTU, BGEU</text>
+
+  <!-- ===== U-Type ===== -->
+  <text x="45" y="305" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">U</text>
+
+  <rect x="70" y="285" width="350" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="245" y="305" text-anchor="middle" font-size="11" font-weight="600" fill="#78350F">imm[31:12]</text>
+
+  <rect x="420" y="285" width="100" height="32" rx="3" fill="#93C5FD" filter="url(#shadow4)"/>
+  <text x="470" y="305" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">rd</text>
+
+  <rect x="520" y="285" width="140" height="32" rx="3" fill="#1D4ED8" filter="url(#shadow4)"/>
+  <text x="590" y="305" text-anchor="middle" font-size="11" font-weight="600" fill="white">opcode</text>
+
+  <text x="710" y="305" font-size="10" fill="#64748B">LUI, AUIPC</text>
+
+  <!-- ===== J-Type ===== -->
+  <text x="45" y="355" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">J</text>
+
+  <rect x="70" y="335" width="25" height="32" rx="3" fill="#F97316" filter="url(#shadow4)"/>
+  <text x="82" y="355" text-anchor="middle" font-size="8" font-weight="600" fill="white">[20]</text>
+
+  <rect x="95" y="335" width="155" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="172" y="355" text-anchor="middle" font-size="10" font-weight="600" fill="#78350F">imm[10:1]</text>
+
+  <rect x="250" y="335" width="35" height="32" rx="3" fill="#F97316" filter="url(#shadow4)"/>
+  <text x="267" y="355" text-anchor="middle" font-size="8" font-weight="600" fill="white">[11]</text>
+
+  <rect x="285" y="335" width="135" height="32" rx="3" fill="#FCD34D" filter="url(#shadow4)"/>
+  <text x="352" y="355" text-anchor="middle" font-size="10" font-weight="600" fill="#78350F">imm[19:12]</text>
+
+  <rect x="420" y="335" width="100" height="32" rx="3" fill="#93C5FD" filter="url(#shadow4)"/>
+  <text x="470" y="355" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">rd</text>
+
+  <rect x="520" y="335" width="140" height="32" rx="3" fill="#1D4ED8" filter="url(#shadow4)"/>
+  <text x="590" y="355" text-anchor="middle" font-size="11" font-weight="600" fill="white">opcode</text>
+
+  <text x="710" y="355" font-size="10" fill="#64748B">JAL</text>
+
+  <!-- 범례 -->
+  <rect x="50" y="395" width="750" height="90" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1.5" filter="url(#shadow4)"/>
+  <text x="425" y="418" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">필드 색상 범례</text>
+
+  <rect x="80" y="430" width="20" height="14" rx="2" fill="#1D4ED8"/>
+  <text x="108" y="442" font-size="11" fill="#1E293B">opcode (명령어 종류)</text>
+
+  <rect x="260" y="430" width="20" height="14" rx="2" fill="#3B82F6"/>
+  <text x="288" y="442" font-size="11" fill="#1E293B">rs1, rs2 (소스 레지스터)</text>
+
+  <rect x="470" y="430" width="20" height="14" rx="2" fill="#93C5FD"/>
+  <text x="498" y="442" font-size="11" fill="#1E293B">rd (목적 레지스터)</text>
+
+  <rect x="80" y="455" width="20" height="14" rx="2" fill="#FCD34D"/>
+  <text x="108" y="467" font-size="11" fill="#1E293B">imm (즉치수)</text>
+
+  <rect x="260" y="455" width="20" height="14" rx="2" fill="#60A5FA"/>
+  <text x="288" y="467" font-size="11" fill="#1E293B">funct3 (기능 코드)</text>
+
+  <rect x="470" y="455" width="20" height="14" rx="2" fill="#2563EB"/>
+  <text x="498" y="467" font-size="11" fill="#1E293B">funct7 (확장 기능 코드)</text>
+
+  <rect x="650" y="430" width="20" height="14" rx="2" fill="#F97316"/>
+  <text x="678" y="442" font-size="11" fill="#1E293B">재배열 비트</text>
+
+  <!-- 핵심 포인트 -->
+  <rect x="50" y="505" width="750" height="230" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="425" y="530" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">설계 철학: 왜 이런 구조인가?</text>
+
+  <text x="75" y="558" font-size="12" fill="#1E293B">1. opcode는 항상 [6:0]에 위치 — 디코더가 명령어 타입을 가장 먼저 판별할 수 있음</text>
+  <text x="75" y="582" font-size="12" fill="#1E293B">2. rs1은 항상 [19:15], rs2는 항상 [24:20]에 위치 — 레지스터 파일 읽기를 디코딩과 병렬 수행 가능</text>
+  <text x="75" y="606" font-size="12" fill="#1E293B">3. rd는 항상 [11:7]에 위치 — 쓰기 대상 레지스터 결정이 일관됨</text>
+  <text x="75" y="630" font-size="12" fill="#1E293B">4. 즉치수(immediate)의 부호 비트는 항상 비트 [31] — 부호 확장 로직이 단순해짐</text>
+  <text x="75" y="654" font-size="12" fill="#1E293B">5. B/J 타입의 비트 재배열은 하드웨어 MUX를 줄이기 위한 의도적 설계</text>
+
+  <rect x="75" y="672" width="700" height="45" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="425" y="692" text-anchor="middle" font-size="12" font-weight="600" fill="#92400E">핵심 기억: 6가지 타입의 공통점을 먼저 파악하면, 차이점은 즉치수 배치뿐이다.</text>
+  <text x="425" y="708" text-anchor="middle" font-size="11" fill="#92400E">opcode, rs1, rs2, rd, funct3의 위치는 타입에 관계없이 일정하다!</text>
+</svg>

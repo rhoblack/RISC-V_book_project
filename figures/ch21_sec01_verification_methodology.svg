@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">FPGA 검증 방법론 — 단계별 검증 전략</text>
+
+  <!-- Phase 1: Simulation -->
+  <rect x="30" y="60" width="170" height="160" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="115" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">Phase 1</text>
+  <text x="115" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#1F2937">RTL 시뮬레이션</text>
+  <text x="115" y="130" text-anchor="middle" font-size="10" fill="#6B7280">단위 테스트벤치</text>
+  <text x="115" y="148" text-anchor="middle" font-size="10" fill="#6B7280">통합 시뮬레이션</text>
+  <text x="115" y="166" text-anchor="middle" font-size="10" fill="#6B7280">기능 검증 100%</text>
+  <text x="115" y="190" text-anchor="middle" font-size="10" fill="#059669">VCS / Vivado Sim</text>
+  <text x="115" y="208" text-anchor="middle" font-size="10" fill="#059669">파형: Verdi / Vivado</text>
+
+  <!-- Arrow 1->2 -->
+  <line x1="200" y1="140" x2="240" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow1)"/>
+
+  <!-- Phase 2: Post-Synthesis Sim -->
+  <rect x="245" y="60" width="170" height="160" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="330" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">Phase 2</text>
+  <text x="330" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#1F2937">합성 후 시뮬레이션</text>
+  <text x="330" y="130" text-anchor="middle" font-size="10" fill="#6B7280">타이밍 시뮬레이션</text>
+  <text x="330" y="148" text-anchor="middle" font-size="10" fill="#6B7280">SDF 어노테이션</text>
+  <text x="330" y="166" text-anchor="middle" font-size="10" fill="#6B7280">글리치/레이스 검출</text>
+  <text x="330" y="190" text-anchor="middle" font-size="10" fill="#059669">Vivado Timing Sim</text>
+  <text x="330" y="208" text-anchor="middle" font-size="10" fill="#059669">WNS/TNS 확인</text>
+
+  <!-- Arrow 2->3 -->
+  <line x1="415" y1="140" x2="455" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow1)"/>
+
+  <!-- Phase 3: FPGA Prototype -->
+  <rect x="460" y="60" width="170" height="160" rx="10" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="545" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">Phase 3</text>
+  <text x="545" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#1F2937">FPGA 프로토타이핑</text>
+  <text x="545" y="130" text-anchor="middle" font-size="10" fill="#6B7280">ILA 실시간 관찰</text>
+  <text x="545" y="148" text-anchor="middle" font-size="10" fill="#6B7280">UART 디버그 출력</text>
+  <text x="545" y="166" text-anchor="middle" font-size="10" fill="#6B7280">LED/SW 기본 확인</text>
+  <text x="545" y="190" text-anchor="middle" font-size="10" fill="#059669">Vivado ILA</text>
+  <text x="545" y="208" text-anchor="middle" font-size="10" fill="#059669">UART 모니터</text>
+
+  <!-- Arrow 3->4 -->
+  <line x1="630" y1="140" x2="670" y2="140" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow1)"/>
+
+  <!-- Phase 4: System Validation -->
+  <rect x="675" y="60" width="110" height="160" rx="10" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+  <text x="730" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">Phase 4</text>
+  <text x="730" y="105" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937">시스템 검증</text>
+  <text x="730" y="130" text-anchor="middle" font-size="10" fill="#6B7280">riscv-tests</text>
+  <text x="730" y="148" text-anchor="middle" font-size="10" fill="#6B7280">C 프로그램</text>
+  <text x="730" y="166" text-anchor="middle" font-size="10" fill="#6B7280">성능 측정</text>
+  <text x="730" y="190" text-anchor="middle" font-size="10" fill="#059669">IPC 카운터</text>
+
+  <!-- Gap table: Simulation vs Hardware -->
+  <rect x="30" y="260" width="355" height="220" rx="10" fill="#FFFFFF" stroke="#2563EB" stroke-width="1.5"/>
+  <rect x="30" y="260" width="355" height="35" rx="10" fill="#2563EB"/>
+  <rect x="30" y="260" width="355" height="35" rx="0" ry="0" fill="#2563EB"/>
+  <rect x="30" y="260" width="355" height="35" rx="10" fill="#2563EB"/>
+  <text x="207" y="283" text-anchor="middle" font-size="13" font-weight="bold" fill="#FFFFFF">시뮬레이션 vs 하드웨어 차이점</text>
+
+  <text x="45" y="315" font-size="11" font-weight="bold" fill="#1F2937">항목</text>
+  <text x="185" y="315" font-size="11" font-weight="bold" fill="#1F2937">시뮬레이션</text>
+  <text x="310" y="315" font-size="11" font-weight="bold" fill="#1F2937">FPGA</text>
+
+  <line x1="40" y1="322" x2="375" y2="322" stroke="#E5E7EB" stroke-width="1"/>
+
+  <text x="45" y="340" font-size="10" fill="#6B7280">타이밍</text>
+  <text x="185" y="340" font-size="10" fill="#6B7280">이상적(0 지연)</text>
+  <text x="310" y="340" font-size="10" fill="#6B7280">실제 전파 지연</text>
+
+  <text x="45" y="360" font-size="10" fill="#6B7280">리셋</text>
+  <text x="185" y="360" font-size="10" fill="#6B7280">initial 블록</text>
+  <text x="310" y="360" font-size="10" fill="#6B7280">물리 리셋 회로</text>
+
+  <text x="45" y="380" font-size="10" fill="#6B7280">메모리 초기화</text>
+  <text x="185" y="380" font-size="10" fill="#6B7280">$readmemh</text>
+  <text x="310" y="380" font-size="10" fill="#6B7280">BRAM COE/비트스트림</text>
+
+  <text x="45" y="400" font-size="10" fill="#6B7280">관찰 가능 신호</text>
+  <text x="185" y="400" font-size="10" fill="#6B7280">모든 내부 신호</text>
+  <text x="310" y="400" font-size="10" fill="#6B7280">ILA 프로브만</text>
+
+  <text x="45" y="420" font-size="10" fill="#6B7280">클럭</text>
+  <text x="185" y="420" font-size="10" fill="#6B7280">이상적 클럭</text>
+  <text x="310" y="420" font-size="10" fill="#6B7280">PLL/MMCM 생성</text>
+
+  <text x="45" y="440" font-size="10" fill="#6B7280">미초기화 레지스터</text>
+  <text x="185" y="440" font-size="10" fill="#6B7280">X(unknown)</text>
+  <text x="310" y="440" font-size="10" fill="#6B7280">임의 값(0 또는 1)</text>
+
+  <text x="45" y="460" font-size="10" fill="#6B7280">메타안정성</text>
+  <text x="185" y="460" font-size="10" fill="#6B7280">없음</text>
+  <text x="310" y="460" font-size="10" fill="#6B7280">비동기 입력 시 발생</text>
+
+  <!-- Troubleshooting -->
+  <rect x="415" y="260" width="370" height="220" rx="10" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="600" y="290" text-anchor="middle" font-size="13" font-weight="bold" fill="#DC2626">흔한 FPGA 불일치 원인 Top 5</text>
+  <text x="435" y="320" font-size="11" fill="#1F2937">1. 리셋 미처리 — 모든 FF에 동기 리셋 필수</text>
+  <text x="435" y="345" font-size="11" fill="#1F2937">2. 래치 추론 — incomplete case/if 문</text>
+  <text x="435" y="370" font-size="11" fill="#1F2937">3. 클럭 도메인 교차 — 동기화기 누락</text>
+  <text x="435" y="395" font-size="11" fill="#1F2937">4. BRAM 추론 실패 — 비동기 읽기 사용</text>
+  <text x="435" y="420" font-size="11" fill="#1F2937">5. 타이밍 위반 — 긴 조합 논리 경로</text>
+  <text x="435" y="455" font-size="10" fill="#6B7280">각 항목의 디버깅 방법은 21.2~21.3절에서 상세히 다룹니다.</text>
+</svg>

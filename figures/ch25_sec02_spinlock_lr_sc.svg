@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="a1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="a2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="a3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="800" height="560" fill="#FAFBFF" rx="12"/>
+  <text x="400" y="35" text-anchor="middle" font-size="18" font-weight="700" fill="#1F2937">LR/SC 기반 스핀락(Spinlock) 동작 흐름</text>
+
+  <!-- 타임라인 헤더 -->
+  <text x="90" y="75" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">Core 0</text>
+  <text x="400" y="75" text-anchor="middle" font-size="14" font-weight="600" fill="#6B7280">공유 메모리 (lock)</text>
+  <text x="700" y="75" text-anchor="middle" font-size="14" font-weight="600" fill="#DC2626">Core 1</text>
+
+  <!-- 시간축 -->
+  <line x1="90" y1="90" x2="90" y2="520" stroke="#2563EB" stroke-width="2"/>
+  <line x1="400" y1="90" x2="400" y2="520" stroke="#9CA3AF" stroke-width="1" stroke-dasharray="5,3"/>
+  <line x1="700" y1="90" x2="700" y2="520" stroke="#DC2626" stroke-width="2"/>
+
+  <!-- 시간 레이블 -->
+  <text x="30" y="95" font-size="11" fill="#6B7280">t</text>
+
+  <!-- Step 1: Core 0 LR -->
+  <rect x="20" y="100" width="140" height="40" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="118" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB" font-family="monospace">LR.W t0, (a0)</text>
+  <text x="90" y="133" text-anchor="middle" font-size="10" fill="#6B7280">t0 = 0 (잠금 해제)</text>
+  <line x1="160" y1="120" x2="370" y2="120" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a1)"/>
+  <rect x="340" y="105" width="120" height="30" rx="4" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="400" y="124" text-anchor="middle" font-size="11" fill="#2563EB">lock = 0</text>
+
+  <!-- 예약 표시 -->
+  <rect x="350" y="140" width="100" height="22" rx="4" fill="#ECFDF5" stroke="#059669" stroke-width="1"/>
+  <text x="400" y="155" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">예약(Reservation) 설정</text>
+
+  <!-- Step 2: Core 0 BNEZ 체크 -->
+  <rect x="20" y="175" width="140" height="30" rx="6" fill="#F9FAFB" stroke="#9CA3AF" stroke-width="1"/>
+  <text x="90" y="195" text-anchor="middle" font-size="11" fill="#374151" font-family="monospace">BNEZ t0, retry</text>
+  <text x="200" y="195" font-size="10" fill="#059669">→ t0=0, 통과!</text>
+
+  <!-- Step 3: Core 0 SC -->
+  <rect x="20" y="220" width="140" height="40" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="90" y="238" text-anchor="middle" font-size="11" font-weight="600" fill="#059669" font-family="monospace">SC.W t1, t2, (a0)</text>
+  <text x="90" y="253" text-anchor="middle" font-size="10" fill="#6B7280">t2=1 (잠금) 쓰기 시도</text>
+  <line x1="160" y1="240" x2="370" y2="240" stroke="#059669" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+  <rect x="340" y="225" width="120" height="30" rx="4" fill="#ECFDF5" stroke="#059669" stroke-width="1"/>
+  <text x="400" y="244" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">lock = 1 (성공!)</text>
+
+  <text x="90" y="285" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">t1 = 0 (SC 성공)</text>
+  <text x="90" y="300" text-anchor="middle" font-size="10" fill="#059669">→ 임계 영역 진입</text>
+
+  <!-- Step 4: Core 1 LR 시도 -->
+  <rect x="630" y="310" width="140" height="40" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="700" y="328" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626" font-family="monospace">LR.W t0, (a0)</text>
+  <text x="700" y="343" text-anchor="middle" font-size="10" fill="#6B7280">t0 = 1 (잠금 상태)</text>
+  <line x1="630" y1="330" x2="430" y2="330" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+  <rect x="340" y="315" width="120" height="30" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="400" y="334" text-anchor="middle" font-size="11" fill="#DC2626">lock = 1</text>
+
+  <!-- Step 5: Core 1 BNEZ → retry -->
+  <rect x="630" y="365" width="140" height="30" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="700" y="385" text-anchor="middle" font-size="11" fill="#DC2626" font-family="monospace">BNEZ t0, retry</text>
+  <text x="570" y="385" font-size="10" fill="#DC2626">← t0=1, 스핀!</text>
+
+  <!-- 스핀 표시 -->
+  <path d="M 710 395 Q 750 430 710 450" fill="none" stroke="#DC2626" stroke-width="2" marker-end="url(#a2)"/>
+  <text x="760" y="430" font-size="11" font-weight="600" fill="#DC2626">재시도</text>
+  <text x="760" y="445" font-size="10" fill="#6B7280">(Spin)</text>
+
+  <!-- Step 6: Core 0 unlock -->
+  <rect x="20" y="420" width="140" height="40" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="438" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB" font-family="monospace">SW zero, 0(a0)</text>
+  <text x="90" y="453" text-anchor="middle" font-size="10" fill="#6B7280">잠금 해제</text>
+  <line x1="160" y1="440" x2="370" y2="440" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a1)"/>
+  <rect x="340" y="425" width="120" height="30" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="400" y="444" text-anchor="middle" font-size="11" fill="#2563EB">lock = 0</text>
+
+  <!-- Step 7: Core 1 성공 -->
+  <rect x="630" y="470" width="140" height="40" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="700" y="488" text-anchor="middle" font-size="11" font-weight="600" fill="#059669" font-family="monospace">LR → SC 성공!</text>
+  <text x="700" y="503" text-anchor="middle" font-size="10" fill="#059669">Core 1 임계 영역 진입</text>
+
+  <!-- 범례 -->
+  <rect x="50" y="525" width="700" height="28" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="80" y="544" font-size="11" fill="#6B7280">범례:</text>
+  <rect x="130" y="533" width="12" height="12" rx="2" fill="#ECFDF5" stroke="#059669"/>
+  <text x="148" y="544" font-size="11" fill="#374151">성공</text>
+  <rect x="200" y="533" width="12" height="12" rx="2" fill="#FEF2F2" stroke="#DC2626"/>
+  <text x="218" y="544" font-size="11" fill="#374151">실패/대기</text>
+  <rect x="290" y="533" width="12" height="12" rx="2" fill="#DBEAFE" stroke="#2563EB"/>
+  <text x="308" y="544" font-size="11" fill="#374151">메모리 접근</text>
+  <text x="440" y="544" font-size="11" fill="#6B7280">LR.W = Load-Reserved, SC.W = Store-Conditional</text>
+</svg>
