@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 11 — 제어 해저드와 분기 처리</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 11</span>
+  <h1>제어 해저드와 분기 처리</h1>
+  <p class="chapter-intro">
+    Ch10에서 데이터 해저드를 완전히 해결하였습니다. 포워딩 유닛과 해저드 감지 유닛 덕분에
+    RAW 의존성과 Load-Use 스톨을 하드웨어가 자동으로 처리합니다.
+    이제 마지막 해저드 — <strong>제어 해저드(control hazard)</strong>를 다룰 차례입니다.
+    분기(branch) 명령어와 점프(jump) 명령어는 PC가 어디로 이동해야 하는지를
+    명령어 실행 도중에야 알 수 있기 때문에, 파이프라인이 잘못된 경로의 명령어를
+    미리 가져오는 상황이 발생합니다. 이 챕터에서는 그 문제를 정의하고,
+    EX 스테이지에서 분기를 판정하는 메커니즘과 플러시(flush) 제어 신호를 설계하며,
+    Ch09에서 예약해 둔 <code>if_id_flush</code> 포트를 드디어 완전히 연결합니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: 제어 해저드 발생 원인을 PC 갱신 시점과 연결하여 설명하고, 분기 판정 단계별 페널티를 비교할 수 있다. (이해)</li>
+    <li><strong>LO-2</strong>: 분기 판정을 EX로 이동했을 때의 2사이클 페널티 감소를 타이밍 다이어그램으로 분석할 수 있다. (분석)</li>
+    <li><strong>LO-3</strong>: if_id_flush / id_ex_flush로 플러시 메커니즘을 구현하고, Flush &gt; Stall 우선순위 규칙을 적용할 수 있다. (적용)</li>
+    <li><strong>LO-4</strong>: Predict-Not-Taken CPI 영향을 계산하고, 분기 taken 비율별 성능을 분석할 수 있다. (분석)</li>
+    <li><strong>LO-5</strong>: JAL과 JALR의 처리 단계 차이를 설명하고, JALR의 EX 단계 의존성을 도출할 수 있다. (이해/분석)</li>
+    <li><strong>LO-6</strong>: 1~10 합산 루프(BNE 포함)를 파이프라인에서 실행하고 x2=55 결과를 시뮬레이션으로 검증할 수 있다. (적용/평가)</li>
+  </ul>
+</nav>
+
+<section id="chapter-intro-narrative">
+  <p>
+    Ch09에서 분기 명령어를 제외했던 이유를 기억하십니까? "아직 분기를 처리할 수 없으니 NOP으로 채워 두겠다"고 했습니다.
+    Ch10에서는 데이터 해저드를 해결했지만, 분기는 여전히 미완성이었습니다.
+    이제 그 숙제를 마무리할 시간입니다.
+  </p>
+  <p>
+    교차로 신호등을 생각해 보십시오. 차가 교차로에 진입한 순간, 신호등이 빨간불로 바뀔지 초록불을 유지할지
+    아직 모르는 상태에서 이미 직진 차선에 들어온 상황입니다. 파이프라인도 마찬가지입니다.
+    BEQ 명령어가 IF → ID → EX를 진행하는 동안, 다음 명령어 2개가 이미 파이프라인에
+    들어와 있습니다. EX에서 "분기 실행"으로 판정이 나면, 그 2개의 명령어는 전부 잘못된 경로의 것입니다.
+    이것이 <strong>제어 해저드(control hazard, 제어 위험)</strong>입니다.
+  </p>
+</section>
+
+<!-- ========== 11.1 제어 해저드의 발생 원인 ========== -->
+<section id="sec-11-1">
+  <h2>11.1 제어 해저드의 발생 원인</h2>
+
+  <p>
+    Ch10에서 데이터 해저드를 해결했습니다. 이제 마지막 해저드 — <strong>제어 해저드(control hazard)</strong>입니다.
+    데이터 해저드가 "값이 아직 준비되지 않은 문제"라면,
+    제어 해저드는 <strong>"PC가 어디로 가야 하는지 모르는 문제"</strong>입니다.
+  </p>
+
+  <h3>파이프라인은 미래를 모른다</h3>
+  <p>
+    5단 파이프라인은 매 사이클마다 새 명령어를 IF 스테이지에서 인출합니다.
+    <code>BEQ x1, x0, label</code> 명령어가 IF 스테이지를 통과할 때,
+    파이프라인은 다음 PC가 <code>PC+4</code>인지 <code>label</code>인지 전혀 알지 못합니다.
+    그래서 일단 <code>PC+4</code>의 명령어를 가져옵니다. 그리고 그 다음 사이클에도
+    또 <code>PC+4+4</code>의 명령어를 가져옵니다.
+  </p>
+  <p>
+    BEQ가 드디어 EX 스테이지에 도달하면, 포워딩된 rs1과 rs2를 비교하여
+    "분기 실행(taken)" 혹은 "분기 미실행(not-taken)"을 결정합니다.
+    만약 "taken"이라면, 이미 IF/ID에 들어와 있던 명령어 2개는
+    <strong>틀린 경로(wrong-path)의 명령어</strong>입니다. 이들을 즉시 제거해야 합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch11_sec01_control_hazard_origin.svg" alt="제어 해저드 발생 원인 타이밍 다이어그램">
+    <figcaption>그림 11.1: BEQ 명령어 실행 시 제어 해저드 발생. BEQ가 EX(C4)에서 판정을 완료하기 전에 wrong-path 명령어 2개가 IF(C3)와 ID(C4)에 진입합니다. 판정 후 flush하여 NOP으로 대체합니다.</figcaption>
+  </figure>
+
+  <h3>분기 판정 단계별 페널티 비교</h3>
+  <p>
+    분기 결과를 어느 스테이지에서 판정하느냐에 따라 파이프라인에 삽입해야 하는
+    <strong>버블(bubble, 거품)</strong>의 수가 달라집니다.
+    버블이란 NOP 명령어처럼 아무 효과 없이 파이프라인을 통과하는 빈 슬롯을 의미합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>판정 단계</th>
+        <th>버블 수</th>
+        <th>장점</th>
+        <th>단점</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>WB (5단계)</td>
+        <td>4사이클</td>
+        <td>구현 단순</td>
+        <td>CPI 페널티 최대</td>
+      </tr>
+      <tr>
+        <td>MEM (4단계)</td>
+        <td>3사이클</td>
+        <td>Ch09의 접근법</td>
+        <td>여전히 높은 페널티</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700; color:#2563EB;">EX (3단계) ← 우리의 선택</td>
+        <td style="font-weight:700; color:#2563EB;">2사이클</td>
+        <td style="font-weight:700; color:#2563EB;">포워딩과 자연스럽게 통합</td>
+        <td>branch_unit 추가 필요</td>
+      </tr>
+      <tr>
+        <td>ID (2단계)</td>
+        <td>1사이클</td>
+        <td>페널티 최소</td>
+        <td>포워딩 의존성 처리 복잡</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 왜 EX 단계를 선택하는가?</strong>
+    <p>
+      이 교재에서는 <strong>EX 단계 판정</strong>을 선택합니다.
+      ID 단계 판정이 1사이클 더 빠르지만, 그 경우 직전 명령어가 load 명령어이면
+      포워딩 경로가 없어서 추가 스톨이 필요합니다.
+      EX 단계에서는 이미 구축한 포워딩 유닛이 rs1, rs2 값을 공급하므로,
+      별도의 추가 스톨 없이 branch_unit을 포워딩 경로에 직접 연결할 수 있습니다.
+    </p>
+  </aside>
+
+  <h3>제어 해저드가 데이터 해저드와 다른 점</h3>
+  <p>
+    데이터 해저드는 포워딩으로 페널티를 완전히 제거하거나(RAW),
+    1사이클 스톨로 최소화(Load-Use)할 수 있었습니다.
+    반면 제어 해저드는 분기 결과를 알기 전에는 어떤 명령어가 올바른지 알 방법이 없으므로,
+    분기가 taken이면 <strong>반드시 버블이 발생합니다.</strong>
+    하드웨어가 할 수 있는 최선은 (1) 판정 단계를 앞당기거나 (2) 예측 전략으로 페널티 확률을 낮추는 것입니다.
+    11.4절과 11.5절에서 이 전략들을 다룹니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트 — 분기 예측 방법론 (빈출 5위)</strong>
+    <p>
+      "분기 예측을 어떻게 구현하겠습니까?" 질문에 대한 핵심 답변 구조:
+      ① 판정 단계 최소화 (EX &gt; MEM), ② 정적 예측 (PNT — Predict-Not-Taken),
+      ③ 동적 예측 (BHT — Branch History Table, 2-bit 포화 카운터),
+      ④ BTB — Branch Target Buffer (타겟 주소 캐시).
+      면접에서는 BHT 2-bit 상태 전이도를 화이트보드에 그릴 수 있어야 합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      BEQ 명령어가 EX 스테이지에 있을 때, IF 스테이지와 ID 스테이지에는 어떤 명령어가 있습니까?
+      그림 11.1을 보지 말고 먼저 생각해 보십시오.
+      (답: BEQ가 C4=EX이면, C4=IF에는 BEQ+8 주소의 명령어, C4=ID에는 BEQ+4 주소의 명령어가 있습니다.)
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 11.2 분기 결과를 EX 스테이지에서 처리 ========== -->
+<section id="sec-11-2">
+  <h2>11.2 분기 결과를 EX 스테이지에서 처리</h2>
+
+  <p>
+    Ch09에서는 branch_taken을 MEM 스테이지에서 판정했습니다(3사이클 페널티).
+    이제 EX 스테이지로 이동하여 페널티를 2사이클로 줄입니다.
+    이를 위해 새로운 서브모듈 <strong>branch_unit</strong>을 설계합니다.
+  </p>
+
+  <h3>왜 zero 신호만으로는 부족한가?</h3>
+  <p>
+    Ch08과 Ch09의 단일 사이클 / 기본 파이프라인에서는 BEQ만 처리하면 충분했습니다.
+    ALU의 <code>zero</code> 출력(두 오퍼랜드가 같으면 1)으로 BEQ 조건을 판별했습니다.
+    그러나 RV32I에는 6가지 분기 명령어가 있습니다:
+    BEQ(같으면), BNE(다르면), BLT(부호 있는 작으면), BGE(부호 있는 크거나 같으면),
+    BLTU(부호 없는 작으면), BGEU(부호 없는 크거나 같으면).
+    <code>zero</code> 신호 하나로는 이 6가지를 모두 처리할 수 없습니다.
+  </p>
+
+  <h3>branch_unit 모듈 설계</h3>
+  <p>
+    <strong>branch_unit</strong>은 포워딩된 rs1, rs2 값을 직접 받아 <code>funct3</code> 코드에 따라
+    6가지 조건 중 하나를 평가합니다. 분기 명령어임을 나타내는 <code>branch</code> 신호가 1일 때만
+    <code>branch_taken</code>을 출력합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">module branch_unit (
+   input  logic [31:0] rs1_data,   // 포워딩된 rs1
+   input  logic [31:0] rs2_data,   // 포워딩된 rs2
+   input  logic [2:0]  funct3,     // 분기 조건 코드
+   input  logic        branch,     // 분기 명령어 여부
+   output logic        branch_taken
+);
+   logic cond;
+   always_comb begin
+      case (funct3)
+         3&#39;b000: cond = (rs1_data == rs2_data);                  // BEQ
+         3&#39;b001: cond = (rs1_data != rs2_data);                  // BNE
+         3&#39;b100: cond = ($signed(rs1_data) &lt; $signed(rs2_data)); // BLT
+         3&#39;b101: cond = ($signed(rs1_data) &gt;= $signed(rs2_data));// BGE
+         3&#39;b110: cond = (rs1_data &lt; rs2_data);                   // BLTU
+         3&#39;b111: cond = (rs1_data &gt;= rs2_data);                  // BGEU
+         default: cond = 1&#39;b0;
+      endcase
+   end
+   assign branch_taken = branch &amp;&amp; cond;
+endmodule</code></pre>
+
+  <p>
+    이 모듈의 핵심은 <strong>포워딩된 값을 직접 사용한다</strong>는 점입니다.
+    <code>alu_src_a</code>(포워딩 MUX A 출력)와 <code>fwd_b_data</code>(포워딩 MUX B 출력)를
+    branch_unit의 입력으로 연결합니다.
+    따라서 직전 명령어가 ADD이든 LW이든(단, load는 Ch10의 스톨이 처리하므로 안전),
+    branch_unit은 항상 올바른 최신 값으로 조건을 평가합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch11_sec02_branch_ex_stage.svg" alt="EX 스테이지 분기 판정 데이터패스">
+    <figcaption>그림 11.2: EX 스테이지 분기 판정 데이터패스. branch_unit이 포워딩 MUX 출력을 직접 받아 branch_taken_ex를 생성합니다. pc_next MUX는 4가지 소스 중 하나를 선택합니다.</figcaption>
+  </figure>
+
+  <h3>EX 판정의 2사이클 페널티</h3>
+  <p>
+    BEQ가 C4(EX)에 있을 때, 파이프라인에는 이미 C3(EX보다 1사이클 이전)에 wrong-path 명령어 하나가
+    ID에 들어와 있고, C4에는 또 다른 wrong-path 명령어가 IF에 들어옵니다.
+    branch_taken_ex가 1이 되는 순간(C4 조합 논리), 이 두 개의 wrong-path 명령어를
+    NOP으로 대체(flush)해야 합니다.
+    결국 C5 이후부터 올바른 경로의 명령어가 IF 스테이지에서 시작되므로,
+    <strong>2사이클의 버블이 불가피합니다.</strong>
+  </p>
+
+  <h3>분기 타겟 주소 계산</h3>
+  <p>
+    분기 타겟은 <code>id_ex_pc + id_ex_imm</code>입니다.
+    imm_gen이 B-type 즉치수를 이미 sign-extended 32비트로 추출하여 ID/EX 레지스터
+    <code>id_ex_imm</code>에 저장했으므로, EX 스테이지에서는 단순 덧셈만 하면 됩니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문 — imm_B가 바로 더해지는 이유는?</strong>
+    <p>
+      Q: "B-type 즉치수는 왜 따로 계산하지 않고 바로 <code>id_ex_pc + id_ex_imm</code>으로 더하나요?"
+    </p>
+    <p>
+      A: <code>imm_gen</code>이 이미 B-type 명령어임을 인식하고, 비트 재배열
+      {instr[31], instr[7], instr[30:25], instr[11:8], 1'b0}을 수행한 후
+      sign-extended 32비트로 출력합니다. 그 값이 <code>id_ex_imm</code>에 저장되어 있으므로,
+      EX 스테이지에서는 단순히 <code>id_ex_pc + id_ex_imm</code>만 계산하면 됩니다.
+      분기 타겟의 하위 1비트는 이미 0으로 고정되어 있어 항상 2바이트 정렬이 보장됩니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 11.3 Flush 메커니즘 설계 ========== -->
+<section id="sec-11-3">
+  <h2>11.3 Flush 메커니즘 설계</h2>
+
+  <p>
+    컨베이어벨트에 잘못된 재료가 올라왔습니다. 이미 다음 공정으로 넘어가기 직전입니다.
+    가장 빠른 해결책은 그 재료를 꺼내어 "빈 받침대"로 교체하는 것입니다.
+    파이프라인에서는 wrong-path 명령어를 <strong>NOP(32'h0000_0013, addi x0,x0,0)</strong>으로
+    교체하는 작업이 이에 해당합니다. 이것이 <strong>플러시(flush)</strong>입니다.
+  </p>
+
+  <h3>Flush vs Stall 개념 비교</h3>
+  <p>
+    Ch10에서 Load-Use 스톨을 구현할 때 <code>id_ex_flush</code>를 사용했습니다.
+    그 신호는 "버블을 삽입하라"는 의미였고, 이번에도 같은 신호 이름을 확장합니다.
+    두 개념의 차이를 명확히 정리하겠습니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>구분</th>
+        <th>Flush (플러시)</th>
+        <th>Stall (스톨)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>동작</td>
+        <td>파이프라인 레지스터를 NOP으로 덮어씀</td>
+        <td>파이프라인 레지스터를 현재 값 그대로 유지</td>
+      </tr>
+      <tr>
+        <td>PC 동작</td>
+        <td>새 타겟으로 즉시 갱신 (pc_en=1)</td>
+        <td>현재 PC 홀드 (pc_en=0)</td>
+      </tr>
+      <tr>
+        <td>사용 상황</td>
+        <td>분기 taken, JAL, JALR</td>
+        <td>Load-Use 해저드</td>
+      </tr>
+      <tr>
+        <td>기존 Ch10 구현</td>
+        <td>id_ex_flush=stall (NOP 역할)</td>
+        <td>pc_en=0, if_id_en=0</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>if_id_flush 구현</h3>
+  <p>
+    Ch09에서 <code>if_id_flush=0</code>으로 고정해 두었던 포트를 이제 연결합니다.
+    분기 taken, JAL, JALR 중 하나라도 발생하면 IF/ID 레지스터를 NOP으로 교체합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// IF/ID 파이프라인 레지스터 — flush 우선순위 적용
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n || if_id_flush) begin
+      // 리셋 또는 플러시 → NOP 삽입
+      if_id_instr    &lt;= 32&#39;h0000_0013;  // NOP
+      if_id_pc       &lt;= 32&#39;b0;
+      if_id_pc_plus4 &lt;= 32&#39;b0;
+   end
+   else if (if_id_en) begin             // 스톨 시 홀드
+      if_id_instr    &lt;= instr;
+      if_id_pc       &lt;= pc;
+      if_id_pc_plus4 &lt;= pc_plus4;
+   end
+end</code></pre>
+
+  <h3>id_ex_flush 확장</h3>
+  <p>
+    Ch10에서 <code>id_ex_flush</code>는 Load-Use 스톨 시에만 활성화되었습니다.
+    Ch11에서는 분기 taken과 JALR(EX 처리) 상황도 포함합니다.
+    load_use_stall은 hazard_detection_unit의 출력이고, 나머지는 제어 해저드 신호입니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// 플러시/스톨 통합 제어
+assign if_id_flush = branch_taken_ex | jal_id | jalr_taken_ex;
+assign id_ex_flush = load_use_stall | branch_taken_ex | jalr_taken_ex;
+
+// pc_en: 스톨이지만 flush 발생 시 flush 우선 (PC 갱신 허용)
+assign pc_en = if_id_flush ? 1&#39;b1 : hdu_pc_en;</code></pre>
+
+  <figure>
+    <img src="../../figures/ch11_sec03_flush_mechanism.svg" alt="Flush 메커니즘 동작 다이어그램">
+    <figcaption>그림 11.3: 분기 taken 시 IF/ID와 ID/EX 플러시 동작. C4에서 branch_taken_ex=1이 되면, 동일 클록 에지에서 if_id_flush와 id_ex_flush가 활성화됩니다. C5 이후 두 레지스터는 NOP 내용을 갖고, PC는 분기 타겟으로 변경됩니다.</figcaption>
+  </figure>
+
+  <h3>Flush vs Stall 우선순위 규칙</h3>
+  <p>
+    Load-Use 스톨 도중 분기 taken이 발생하는 극단적인 상황을 생각해 보겠습니다.
+    이 경우 어떤 신호가 우선해야 할까요?
+  </p>
+
+  <figure>
+    <img src="../../figures/ch11_sec03_flush_stall_priority.svg" alt="Flush vs Stall 우선순위 테이블">
+    <figcaption>그림 11.4: Flush vs Stall 우선순위 결정 테이블. 규칙: Flush &gt; Stall.</figcaption>
+  </figure>
+
+  <h3>세 신호 최종 정리</h3>
+  <p>
+    11.3절에서 다룬 세 가지 핵심 제어 신호를 최종 정리합니다.
+  </p>
+  <table>
+    <thead>
+      <tr><th>신호</th><th>활성화 조건</th><th>역할</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>if_id_flush</code></td>
+        <td>branch_taken_ex | jal_id | jalr_taken_ex</td>
+        <td>IF/ID 레지스터를 NOP으로 교체</td>
+      </tr>
+      <tr>
+        <td><code>id_ex_flush</code></td>
+        <td>load_use_stall | branch_taken_ex | jalr_taken_ex</td>
+        <td>ID/EX 레지스터를 NOP으로 교체 (버블 삽입)</td>
+      </tr>
+      <tr>
+        <td><code>pc_en</code></td>
+        <td>if_id_flush ? 1 : hdu_pc_en</td>
+        <td>flush 시 PC 강제 갱신 (스톨 오버라이드)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — Flush &gt; Stall 우선순위 규칙</strong>
+    <p>
+      스톨 도중 flush가 발생하면, <strong>flush가 반드시 우선합니다.</strong>
+      이유는 간단합니다. 스톨은 "현재 명령어를 잠시 멈춰라"는 신호이고,
+      flush는 "이미 들어온 명령어는 틀렸으니 버려라"는 신호입니다.
+      틀린 명령어를 유지하면서 스톨하는 것은 의미가 없습니다.
+      이 규칙은 Ch09에서 확정한 "flush &gt; en" 패턴의 자연스러운 연장입니다.
+      새로운 규칙이 아닙니다.
+    </p>
+    <p>
+      구현: <code>pc_en = if_id_flush ? 1'b1 : hdu_pc_en</code>
+      flush 발생 시 pc_en을 1로 강제하여 PC가 새 타겟으로 갱신되도록 합니다.
+    </p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — 실패 정상화</strong>
+    <p>
+      flush 타이밍을 1사이클 틀리는 것은 매우 흔한 실수입니다.
+      시뮬레이션에서 "분기는 taken인데 wrong-path 명령어가 레지스터 파일을 오염시킨다"면
+      flush가 1사이클 늦게 활성화된 것입니다.
+      디버깅 첫 단계는 파형에서 <code>branch_taken_ex</code>가 활성화된 클록 에지와
+      <code>if_id_flush</code>, <code>id_ex_flush</code>가 활성화된 에지가
+      <strong>완전히 동일한 사이클</strong>인지 확인하는 것입니다.
+      이 두 신호는 조합 논리로 연결되어 있으므로 동일 클록에 동시에 나타나야 합니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 11.4 정적 분기 예측: Predict-Not-Taken ========== -->
+<section id="sec-11-4">
+  <h2>11.4 정적 분기 예측: Predict-Not-Taken</h2>
+
+  <p>
+    11.3절까지 구현한 내용을 정리하면, 분기 taken 시 반드시 2사이클 페널티가 발생합니다.
+    그런데 이 메커니즘 자체가 이미 하나의 <strong>분기 예측(branch prediction)</strong> 전략을 구현하고 있습니다.
+    바로 <strong>Predict-Not-Taken(미분기 예측)</strong>입니다.
+  </p>
+
+  <h3>Predict-Not-Taken 전략이란?</h3>
+  <p>
+    Predict-Not-Taken이란 "분기 명령어를 만났을 때, 항상 분기가 실행되지 않을 것이라고 예측한다"는 전략입니다.
+    다시 말해, 파이프라인은 항상 <code>PC+4</code>를 다음 명령어로 가져옵니다.
+    분기 결과가 EX에서 나왔을 때:
+  </p>
+  <ul>
+    <li><strong>예측 성공 (not-taken)</strong>: 이미 가져온 명령어들이 올바름. 페널티 없음.</li>
+    <li><strong>예측 실패 (taken)</strong>: 이미 가져온 명령어들이 틀림. 2사이클 flush 후 올바른 경로 재개.</li>
+  </ul>
+
+  <figure>
+    <img src="../../figures/ch11_sec04_predict_not_taken.svg" alt="Predict-Not-Taken 타이밍 다이어그램">
+    <figcaption>그림 11.5: Predict-Not-Taken 전략. 위: not-taken 시 페널티 0사이클. 아래: taken 시 2사이클 페널티.</figcaption>
+  </figure>
+
+  <h3>CPI 영향 계산</h3>
+  <p>
+    분기 명령어 비율과 taken 비율을 알면 CPI에 미치는 영향을 정량적으로 계산할 수 있습니다.
+  </p>
+  <p>
+    <strong>CPI = 1 + (분기 비율 × taken 비율 × 페널티 사이클)</strong>
+  </p>
+  <p>
+    예를 들어, 전체 명령어 중 분기 명령어가 20%이고, 분기의 60%가 taken이라면:
+  </p>
+  <p>
+    <strong>CPI = 1 + 0.20 × 0.60 × 2 = 1.24</strong>
+  </p>
+  <p>
+    이는 포워딩만 구현했을 때의 이상적 CPI 1.0보다 24% 높지만,
+    분기 판정을 MEM(3사이클 페널티)에서 할 때의 CPI 1.36보다 훨씬 낮습니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문 — 루프는 성능 손해가 크지 않나요?</strong>
+    <p>
+      Q: "Predict-Not-Taken을 사용하면 루프에서 매 반복마다 taken이 발생하므로
+      항상 2사이클 페널티가 생기지 않나요?"
+    </p>
+    <p>
+      A: 맞습니다. 루프 본체의 BNE는 루프 마지막 반복을 제외하고는 항상 taken입니다.
+      예를 들어 루프 10회 반복이라면 9회 페널티, 1회 페널티 없음입니다.
+      루프가 짧고 빈번하다면 Predict-Not-Taken의 단점이 두드러집니다.
+      이것을 개선하는 방법이 11.5절의 동적 분기 예측입니다.
+      단, 루프 바디가 길수록 (루프 바디 명령어 수 대비 페널티 비율이 작을수록) 영향이 줄어듭니다.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — Predict-Not-Taken은 이미 구현되어 있다</strong>
+    <p>
+      놀랍게도, 11.3절에서 설계한 flush 메커니즘이 이미 Predict-Not-Taken을 구현합니다.
+      분기가 not-taken이면 아무것도 하지 않고 (PC+4 명령어 그대로 진행),
+      분기가 taken일 때만 flush합니다. 이것이 정확히 Predict-Not-Taken입니다.
+      추가 하드웨어 없이 전략이 내장되어 있습니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 11.5 동적 분기 예측 (선택 구현) ========== -->
+<section id="sec-11-5">
+  <h2>11.5 동적 분기 예측 <em>(선택 구현)</em></h2>
+
+  <aside class="tip">
+    <strong>💡 선택 구현 안내</strong>
+    <p>
+      이 절은 <strong>선택 구현</strong>입니다. 구현 없이 개념만 이해해도 이후 챕터를 진행하는 데 전혀 지장이 없습니다.
+      하드웨어 구현에 익숙하고 성능에 관심 있는 독자에게 권장합니다.
+    </p>
+  </aside>
+
+  <p>
+    Predict-Not-Taken은 루프처럼 taken 비율이 높은 경우 효율이 낮습니다.
+    <strong>동적 분기 예측(dynamic branch prediction)</strong>은 과거의 분기 이력을 기록하여
+    다음 분기 결과를 예측합니다. 루프처럼 패턴이 반복되는 경우 예측률을 크게 높일 수 있습니다.
+  </p>
+
+  <h3>2-bit 포화 카운터</h3>
+  <p>
+    가장 널리 쓰이는 동적 예측 방식은 <strong>2-bit 포화 카운터(2-bit saturating counter)</strong>입니다.
+    각 분기 명령어마다 2비트 상태를 유지하며, taken 시 증가, not-taken 시 감소합니다.
+    상태는 00(강한 미분기), 01(약한 미분기), 10(약한 분기), 11(강한 분기) 4가지입니다.
+  </p>
+  <p>
+    1-bit 카운터는 TNTNT 패턴에서 매번 오예측이 발생하지만,
+    2-bit 카운터는 2회 연속 오예측이 있어야 상태가 반전됩니다.
+    이 "관성"이 루프처럼 규칙적인 패턴에서 큰 도움이 됩니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch11_sec05_bht_2bit.svg" alt="2-bit 포화 카운터 상태 전이도">
+    <figcaption>그림 11.6: 2-bit 포화 카운터 상태 전이도. taken(T) 시 왼쪽으로, not-taken(NT) 시 오른쪽으로 이동합니다. 11, 10은 Taken 예측, 01, 00은 Not-Taken 예측입니다.</figcaption>
+  </figure>
+
+  <h3>BHT — Branch History Table</h3>
+  <p>
+    <strong>BHT(Branch History Table, 분기 이력 테이블)</strong>은 2-bit 포화 카운터 배열입니다.
+    PC의 하위 비트로 인덱싱하여 해당 분기의 최근 이력을 조회합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// BHT 예측기 — 256 엔트리, 2-bit 포화 카운터
+module bht_predictor (
+   input  logic        clk,
+   input  logic        rst_n,
+   // 예측 인터페이스 (IF 스테이지)
+   input  logic [7:0]  pred_idx,      // PC[9:2]로 인덱싱
+   output logic        pred_taken,    // 예측 결과 (1=taken)
+   // 업데이트 인터페이스 (EX 스테이지)
+   input  logic [7:0]  upd_idx,
+   input  logic        upd_taken,
+   input  logic        upd_valid
+);
+   logic [1:0] counter [255:0];       // 256 엔트리 × 2-bit
+
+   // 예측: 상위 비트가 1이면 taken 예측
+   assign pred_taken = counter[pred_idx][1];
+
+   // 업데이트: EX에서 실제 결과로 카운터 갱신
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         for (int i = 0; i &lt; 256; i++)
+            counter[i] &lt;= 2&#39;b01; // 초기값: 약한 미분기
+      end
+      else if (upd_valid) begin
+         if (upd_taken &amp;&amp; counter[upd_idx] != 2&#39;b11)
+            counter[upd_idx] &lt;= counter[upd_idx] + 1;  // 증가 (포화)
+         else if (!upd_taken &amp;&amp; counter[upd_idx] != 2&#39;b00)
+            counter[upd_idx] &lt;= counter[upd_idx] - 1;  // 감소 (포화)
+      end
+   end
+endmodule</code></pre>
+
+  <h3>성능 비교: PNT vs BHT</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>전략</th>
+        <th>루프 10회 (BNE 9회 taken)</th>
+        <th>페널티 총합</th>
+        <th>구현 복잡도</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Predict-Not-Taken</td>
+        <td>9회 오예측 × 2사이클</td>
+        <td>18사이클</td>
+        <td>추가 하드웨어 불필요</td>
+      </tr>
+      <tr>
+        <td>BHT 2-bit</td>
+        <td>첫 반복 + 루프 탈출 시 2회 오예측</td>
+        <td>4사이클</td>
+        <td>256×2-bit 레지스터 추가</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — BHT만으로도 충분하다</strong>
+    <p>
+      BTB(Branch Target Buffer)없이 BHT만 구현해도 루프 패턴에서 예측률 95% 이상 달성이 가능합니다.
+      분기 타겟은 여전히 EX에서 계산하므로, 예측 실패 시에만 2사이클 페널티가 발생합니다.
+      루프 10회 기준으로 첫 반복(초기 상태=약한 미분기)과 루프 탈출 시 총 2회 오예측이 일어나므로
+      4사이클 페널티에 그칩니다. 루프 바디가 길수록 BHT 효과가 더 커집니다.
+      Basys 3 FPGA에서 BHT 256 엔트리는 LUT 약 256개, 전체 FPGA 자원의 약 0.5%에 불과합니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 11.6 JAL/JALR 처리 ========== -->
+<section id="sec-11-6">
+  <h2>11.6 JAL/JALR 처리</h2>
+
+  <p>
+    분기 명령어 외에도 <strong>JAL</strong>과 <strong>JALR</strong>이 PC를 변경합니다.
+    두 명령어 모두 링크 레지스터(rd)에 PC+4를 저장하고 새 주소로 점프하지만,
+    타겟 주소를 계산하는 방법과 파이프라인에서 처리하는 단계가 다릅니다.
+  </p>
+  <p>
+    비유하자면: JAL은 "지도를 보지 않아도 목적지가 정해진 절대적 경로 변경"입니다.
+    즉치수와 PC만 있으면 ID 단계에서 바로 타겟을 계산할 수 있습니다.
+    JALR은 "rs1 레지스터의 값을 읽어야만 목적지를 알 수 있는 조건적 경로 변경"입니다.
+    rs1 값은 EX 단계에서야 포워딩을 통해 확정되므로, EX에서 처리해야 합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch11_sec06_jal_jalr_timing.svg" alt="JAL vs JALR 처리 타이밍 비교">
+    <figcaption>그림 11.7: JAL (위)은 ID 단계에서 타겟 계산, 1사이클 버블. JALR (아래)은 EX 단계에서 타겟 계산, 2사이클 버블.</figcaption>
+  </figure>
+
+  <h3>JAL 처리 — ID 단계에서 즉시 결정</h3>
+  <p>
+    JAL(Jump And Link)은 opcode <code>7'b1101111</code>, J-type 즉치수를 사용합니다.
+    J-type 즉치수 추출은 비트 재배열이 필요합니다:
+  </p>
+  <pre><code class="language-systemverilog">// J-type 즉치수: {instr[31], instr[19:12], instr[20], instr[30:21], 1'b0}
+assign imm_J = {{12{if_id_instr[31]}},
+                if_id_instr[19:12],
+                if_id_instr[20],
+                if_id_instr[30:21],
+                1&#39;b0};
+
+assign jal_id     = (if_id_instr[6:0] == 7&#39;b1101111);
+assign jal_target = if_id_pc + imm_J;</code></pre>
+
+  <p>
+    JAL이 감지되면 <code>if_id_flush</code>만 활성화됩니다.
+    JAL 자체는 계속 파이프라인을 진행하여 WB 스테이지에서 rd에 PC+4를 저장합니다.
+    <code>id_ex_wb_sel = 2'b10</code>으로 설정하면 <code>wb_data = pc_plus4</code>가 선택됩니다.
+  </p>
+  <p>
+    버블은 IF 스테이지에 있던 wrong-path 명령어 1개뿐입니다.
+    ID 스테이지에 있는 것은 JAL 자신이므로 flush하면 안 됩니다.
+    따라서 <strong>if_id_flush만, id_ex_flush 없음</strong>이 JAL의 규칙입니다.
+  </p>
+
+  <h3>JALR 처리 — EX 단계에서 rs1 읽기 후 결정</h3>
+  <p>
+    JALR(Jump And Link Register)은 opcode <code>7'b1100111</code>, I-type 즉치수를 사용합니다.
+    타겟 주소는 <code>(rs1 + imm_I) &amp; ~1</code>입니다. 하위 1비트를 0으로 강제하는 것은
+    RISC-V 스펙의 요구 사항입니다.
+  </p>
+
+  <pre><code class="language-systemverilog">assign jalr_taken_ex = id_ex_jalr;   // JALR은 항상 taken
+assign jalr_target   = (alu_src_a + id_ex_imm) &amp; ~32&#39;h1;
+// alu_src_a: 포워딩 MUX 출력 (rs1의 최신 값)</code></pre>
+
+  <p>
+    여기서 <code>id_ex_jalr</code>은 디코더가 JALR opcode(<code>7'b1100111</code>)를 감지하여
+    생성한 제어 신호가 ID/EX 파이프라인 레지스터를 통해 EX 스테이지로 전달된 신호입니다.
+    즉, 디코더 → 제어 신호 → ID/EX 레지스터 → EX 스테이지의 경로를 따릅니다.
+  </p>
+  <p>
+    JALR은 EX 단계에서 처리되므로 분기와 마찬가지로 2사이클 버블이 발생합니다.
+    <code>if_id_flush</code>와 <code>id_ex_flush</code> 모두 활성화됩니다.
+  </p>
+
+  <h3>Load-JALR 해저드</h3>
+  <p>
+    새로운 해저드처럼 보이지만, 이 경우도 <strong>기존 hazard_detection_unit이 자동으로 처리합니다.</strong>
+    추가 하드웨어 없이 Ch10의 설계 그대로 동작합니다.
+  </p>
+  <p>
+    <code>LW x1, 0(x0)</code> 다음에 <code>JALR x0, 0(x1)</code>이 오면,
+    JALR의 rs1(=x1)이 LW의 결과에 의존합니다.
+    Ch10에서 설계한 <code>hazard_detection_unit</code>은 <code>if_id_rs1</code>도 확인하므로,
+    JALR이 ID 스테이지에 있을 때 LW가 ID/EX에 있으면 자동으로 1사이클 스톨이 삽입됩니다.
+    스톨 후 MEM-EX 포워딩으로 값이 전달되고, JALR은 EX 단계에서 정확한 rs1 값을 사용합니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문 — JAL의 링크 주소(PC+4)는 어떻게 저장되나요?</strong>
+    <p>
+      Q: "JAL이 if_id_flush를 발생시키는데, JAL 자신의 WB는 어떻게 되나요?"
+    </p>
+    <p>
+      A: JAL 명령어 자체는 플러시되지 않습니다. if_id_flush는 IF/ID 레지스터에 새로 래치되는 값을 NOP으로 교체하는 것입니다.
+      JAL은 이미 ID 스테이지를 통과하는 중이므로 영향을 받지 않습니다.
+      JAL은 계속 EX → MEM → WB를 진행하고, WB에서 <code>wb_sel=2'b10</code>이므로
+      <code>wb_data = pc_plus4</code>가 rd에 저장됩니다. 링크 주소가 올바르게 저장됩니다.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — JALR 하위 비트 &amp;~1 처리</strong>
+    <p>
+      RISC-V 스펙은 JALR 타겟의 하위 비트를 0으로 강제합니다
+      (<code>jalr_target = (rs1 + imm) &amp; ~1</code>).
+      교육 환경에서는 모든 명령어가 4바이트 정렬되어 있으므로 이 연산의 실질적 효과는 없지만,
+      구현 완결성을 위해 포함합니다. 실제 RISC-V 구현에서는 잘못 정렬된 점프 타겟에 대한
+      정렬 예외(alignment exception) 처리까지 필요합니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 11.7 제어 해저드 테스트벤치 ========== -->
+<section id="sec-11-7">
+  <h2>11.7 제어 해저드 테스트벤치</h2>
+
+  <p>
+    ★★★ 대성취의 순간입니다. Ch09에서 분기 명령어를 제외했던 이유를 기억하십니까?
+    "아직 제어 해저드를 처리하지 못하기 때문"이었습니다.
+    드디어 모든 준비가 갖춰졌습니다. 분기 명령어가 포함된 루프 프로그램을
+    파이프라인 프로세서에서 실행해 봅시다.
+  </p>
+
+  <h3>루프 마일스톤 프로그램</h3>
+  <p>
+    1부터 10까지의 합(55)을 BNE 루프로 계산하는 프로그램입니다.
+    이 프로그램은 데이터 해저드(포워딩), 제어 해저드(flush)가 모두 발생합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// 루프 합산 프로그램 어셈블리
+//   0x00: addi x1, x0, 1      # i = 1
+//   0x04: addi x2, x0, 0      # sum = 0
+//   0x08: addi x3, x0, 11     # limit = 11
+// loop (0x0C):
+//   0x0C: add  x2, x2, x1     # sum += i (RAW: x1 의존성 → 포워딩)
+//   0x10: addi x1, x1, 1      # i++
+//   0x14: bne  x1, x3, loop   # if i != 11, goto 0x0C (taken 9회)
+//   0x18: nop
+// 결과: x2 = 1+2+...+10 = 55 = 0x37</code></pre>
+
+  <p>
+    루프 본체의 BNE는 <code>x1 != x3(=11)</code>이면 taken입니다.
+    i=1,2,...,10일 때 taken(9회), i=11일 때 not-taken(1회, 루프 종료).
+    taken마다 2사이클 버블이 발생하므로 루프 전체 오버헤드는 최대 18사이클입니다.
+    loop 바디가 3명령어이므로 10회 반복에 필요한 최소 사이클은 30사이클,
+    파이프라인 페널티 포함 ~48사이클이면 완료됩니다.
+  </p>
+
+  <h3>테스트벤치 코드 (발췌)</h3>
+
+  <pre><code class="language-systemverilog">// 명령어 메모리 초기화 (루프 합산 프로그램)
+initial begin
+   dut.u_imem.mem[0]  = 32&#39;h00100093; // addi x1, x0, 1
+   dut.u_imem.mem[1]  = 32&#39;h00000113; // addi x2, x0, 0
+   dut.u_imem.mem[2]  = 32&#39;h00B00193; // addi x3, x0, 11
+   // loop: PC = 0x0C
+   dut.u_imem.mem[3]  = 32&#39;h00110133; // add  x2, x2, x1  (rd=x2, rs1=x2, rs2=x1)
+   dut.u_imem.mem[4]  = 32&#39;h00108093; // addi x1, x1, 1
+   dut.u_imem.mem[5]  = 32&#39;hFE309CE3; // bne  x1, x3, -8  (offset: 0x14→0x0C)
+   for (int i = 6; i &lt; 256; i++)
+      dut.u_imem.mem[i] = 32&#39;h00000013; // nop
+end
+
+// 결과 검증
+if (dut.u_rf.regs[2] === 32&#39;h00000037)
+   $display("[PASS] x2 = 55 — 루프 합산 정확");
+else
+   $display("[FAIL] x2 = %0d (기대: 55)", dut.u_rf.regs[2]);</code></pre>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — 3단계 디버깅 가이드</strong>
+    <p>
+      처음 시뮬레이션에서 [FAIL]이 나오는 것은 매우 흔한 일입니다.
+      flush 신호의 타이밍 문제가 대부분이며, 아래 3단계 가이드로 해결할 수 있습니다.
+    </p>
+    <p>루프 결과가 틀렸을 때 체크리스트:</p>
+    <ol>
+      <li>
+        <strong>branch_taken_ex 활성화 확인</strong>:
+        BNE의 x1 ≠ x3 조건이 성립하는 사이클에서 <code>branch_taken_ex=1</code>인지 파형에서 확인합니다.
+        0이라면 funct3 or branch 신호가 ID/EX로 올바르게 전달되지 않은 것입니다.
+      </li>
+      <li>
+        <strong>Flush 신호 동기 확인</strong>:
+        <code>branch_taken_ex</code>가 1이 되는 그 클록 사이클에 <code>if_id_flush=1</code>과
+        <code>id_ex_flush=1</code>이 동시에 활성화되어야 합니다.
+        1사이클 늦으면 wrong-path 명령어가 레지스터 파일을 오염시킵니다.
+      </li>
+      <li>
+        <strong>PC 갱신 확인</strong>:
+        flush가 발생한 다음 클록 사이클(posedge)에 PC가 <code>branch_target = id_ex_pc + id_ex_imm</code>으로
+        변경되어야 합니다. 그 값이 루프 시작 주소(0x0C)인지 확인합니다.
+      </li>
+    </ol>
+  </aside>
+
+</section>
+
+<!-- ========== 11.8 본 챕터 요약 및 다음 단계 ========== -->
+<section id="sec-11-8">
+  <h2>11.8 본 챕터 요약 및 다음 단계</h2>
+
+  <h3>핵심 정리</h3>
+  <ul>
+    <li>
+      <strong>제어 해저드</strong>: 분기/점프 명령어로 인해 PC가 어디로 가야 하는지 모르는 상황.
+      파이프라인은 결과를 알기 전에 이미 wrong-path 명령어를 가져옵니다.
+    </li>
+    <li>
+      <strong>EX 단계 판정</strong>: branch_unit을 EX에 배치하여 2사이클 페널티를 달성합니다.
+      포워딩 유닛과 자연스럽게 통합됩니다.
+    </li>
+    <li>
+      <strong>Flush 메커니즘</strong>: if_id_flush와 id_ex_flush로 wrong-path 명령어를 NOP으로 교체합니다.
+      규칙: Flush &gt; Stall — flush 발생 시 PC는 새 타겟으로 즉시 갱신합니다.
+    </li>
+    <li>
+      <strong>Predict-Not-Taken</strong>: 추가 하드웨어 없이 flush 메커니즘에 내장됩니다.
+      분기 not-taken 시 페널티 0, taken 시 2사이클.
+    </li>
+    <li>
+      <strong>JAL vs JALR</strong>: JAL은 ID 단계 처리(1사이클 버블, if_id_flush만),
+      JALR은 EX 단계 처리(2사이클 버블, if_id_flush+id_ex_flush).
+    </li>
+    <li>
+      <strong>루프 마일스톤</strong>: BNE 포함 1~10 합산 루프 실행, x2=55 검증.
+      9회 flush, 1회 no-flush. 파이프라인 완성도 ★★★.
+    </li>
+  </ul>
+
+  <h3>자가 점검 질문</h3>
+  <ol>
+    <li>BEQ가 EX 단계에서 not-taken으로 판정되면 파이프라인에서 무슨 일이 일어납니까?</li>
+    <li>if_id_flush와 id_ex_flush가 동시에 활성화되는 상황을 두 가지 이상 나열하십시오.</li>
+    <li>Load-JALR 시퀀스에서 하드웨어가 자동으로 처리하는 과정을 스테이지 별로 설명하십시오.</li>
+    <li>BHT 2-bit 포화 카운터에서 TNTNT 패턴이 들어올 때 상태 전이 순서를 쓰십시오.</li>
+    <li>JAL의 rd 레지스터에 PC+4가 저장되는 파이프라인 단계는 어디입니까? 이유는?</li>
+  </ol>
+
+  <h3>다음 단계 — Ch12: 구조적 해저드와 파이프라인 완성</h3>
+  <p>
+    이제 5단 파이프라인의 두 해저드 — 데이터 해저드(Ch10)와 제어 해저드(Ch11) — 를 모두 해결했습니다.
+    Ch12에서는 마지막 해저드인 <strong>구조적 해저드(structural hazard)</strong>를 다룹니다.
+    Harvard 구조(명령어/데이터 메모리 분리)를 사용한 우리 설계에서는 사실 구조적 해저드가 거의 없습니다.
+    Ch12에서는 이를 확인하고, 단일 사이클 · 멀티사이클 · 파이프라인 세 가지 설계의
+    성능을 직접 비교하여 파이프라인 설계 여정을 마무리합니다.
+  </p>
+  <p>
+    "이미 아는 패턴"들의 조합 — 포워딩, 스톨, 플러시 — 으로 완전한 파이프라인이 만들어졌습니다.
+    Ch12의 성능 비교를 통해 여러분이 직접 만든 파이프라인이 단일 사이클보다
+    얼마나 빠른지 숫자로 확인하게 될 것입니다.
+  </p>
+</section>
+
+<!-- ========== 연습문제 ========== -->
+<section id="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li>
+      <strong>[기본]</strong> 다음 명령어 시퀀스에서 몇 사이클의 버블이 삽입되는지 계산하십시오.
+      <code>ADD x1, x2, x3 / BEQ x1, x0, label / ADDI x4, x0, 1 / label: ADDI x5, x0, 2</code>
+      BEQ는 taken입니다.
+    </li>
+    <li>
+      <strong>[응용]</strong> JALR 명령어가 <code>LW x1, 4(x0)</code>의 바로 다음에 오고,
+      JALR의 rs1=x1이라면 몇 사이클 스톨이 발생합니까? hazard_detection_unit의 조건식을 쓰십시오.
+    </li>
+    <li>
+      <strong>[분석]</strong> 루프 100회를 PNT와 BHT(2-bit) 전략으로 각각 실행할 때,
+      전체 페널티 사이클을 계산하십시오. 단, BHT 초기 상태는 "약한 미분기(01)"입니다.
+    </li>
+    <li>
+      <strong>[설계]</strong> if_id_flush와 id_ex_flush 신호를 추가한 후,
+      스톨(Load-Use)과 flush(BNE taken)가 같은 사이클에 동시 발생하는 시나리오를 테스트벤치로 작성하고
+      올바른 동작을 검증하십시오.
+    </li>
+    <li>
+      <strong>[도전]</strong> BHT 예측기(11.5절)를 rv32i_pipeline_branch에 통합하십시오.
+      예측 성공 시 flush 없이 진행하고, 예측 실패 시에만 flush가 발생하도록 pc_next MUX를 수정합니다.
+      루프 10회 반복 프로그램에서 페널티 사이클 수를 PNT와 비교하십시오.
+    </li>
+  </ol>
+</section>
+
+<!-- ========== 전체 소스 코드 섹션 ========== -->
+<section id="full-source">
+  <h2>전체 소스 코드</h2>
+  <p>
+    아래 코드는 이 챕터에서 다룬 모든 설계 파일의 전체 내용입니다.
+    지금 당장 모든 내용을 완전히 이해하지 않아도 괜찮습니다.
+    챕터를 진행하면서 각 부분을 다시 확인하는 참고 자료로 활용하십시오.
+    중요한 것은 개념을 이해하는 것이며, 코드는 그 개념을 표현하는 수단입니다.
+  </p>
+
+  <h3>ch11_branch_unit.sv — branch_unit 모듈</h3>
+  <div class="code-block">
+    <pre><code class="language-systemverilog">// ============================================================================
+// branch_unit.sv
+// Chapter 11 -- 제어 해저드와 분기 처리
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// 6가지 분기 조건 평가 (BEQ/BNE/BLT/BGE/BLTU/BGEU)
+// EX 스테이지에서 포워딩된 rs1, rs2 값으로 직접 비교
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module branch_unit (
+   input  logic [31:0] rs1_data,      // 포워딩된 rs1 값
+   input  logic [31:0] rs2_data,      // 포워딩된 rs2 값
+   input  logic [2:0]  funct3,        // 분기 조건 코드 (BEQ=000, BNE=001, ...)
+   input  logic        branch,        // 분기 명령어 여부 (1 = branch 명령어)
+   output logic        branch_taken   // 분기 실행 여부 (1 = 분기 taken)
+);
+
+   logic cond; // 분기 조건 평가 결과
+
+   always_comb begin
+      case (funct3)
+         3&#39;b000: cond = (rs1_data == rs2_data);                       // BEQ
+         3&#39;b001: cond = (rs1_data != rs2_data);                       // BNE
+         3&#39;b100: cond = ($signed(rs1_data) &lt; $signed(rs2_data));      // BLT
+         3&#39;b101: cond = ($signed(rs1_data) &gt;= $signed(rs2_data));     // BGE
+         3&#39;b110: cond = (rs1_data &lt; rs2_data);                        // BLTU
+         3&#39;b111: cond = (rs1_data &gt;= rs2_data);                       // BGEU
+         default: cond = 1&#39;b0;
+      endcase
+   end
+
+   assign branch_taken = branch &amp;&amp; cond;
+
+endmodule</code></pre>
+  </div>
+
+  <h3>ch11_pipeline_with_branch.sv — 최종 파이프라인 (핵심 발췌)</h3>
+  <div class="code-block">
+    <pre><code class="language-systemverilog">// ============================================================================
+// rv32i_pipeline_branch
+// Ch10 rv32i_pipeline_forwarding 에 제어 해저드 처리 추가
+// ============================================================================
+
+// --- 제어 해저드 신호 선언 (Ch11 신규) ---
+logic        branch_taken_ex;  // EX 분기 판정 결과
+logic        jal_id;           // ID 단계 JAL 감지
+logic        jalr_taken_ex;    // EX 단계 JALR 감지
+logic        if_id_flush;      // IF/ID 플러시
+logic        id_ex_flush;      // ID/EX 플러시 (load-use + branch + jalr)
+
+// --- JAL J-type 즉치수 추출 ---
+assign imm_J = {{12{if_id_instr[31]}},
+                if_id_instr[19:12],
+                if_id_instr[20],
+                if_id_instr[30:21],
+                1&#39;b0};
+
+assign jal_id       = (if_id_instr[6:0] == 7&#39;b1101111);
+assign jal_target   = if_id_pc + imm_J;
+assign branch_target = id_ex_pc + id_ex_imm;
+assign jalr_taken_ex = id_ex_jalr;
+assign jalr_target   = (alu_src_a + id_ex_imm) &amp; ~32&#39;h1;
+
+// --- pc_next 4-way MUX ---
+always_comb begin
+   priority if (branch_taken_ex)  pc_next = branch_target;
+   else if (jalr_taken_ex)        pc_next = jalr_target;
+   else if (jal_id)               pc_next = jal_target;
+   else                           pc_next = pc_plus4;
+end
+
+// --- Flush/Stall 통합 제어 ---
+assign if_id_flush = branch_taken_ex | jal_id | jalr_taken_ex;
+assign id_ex_flush = load_use_stall  | branch_taken_ex | jalr_taken_ex;
+assign pc_en       = if_id_flush ? 1&#39;b1 : hdu_pc_en;  // Flush &gt; Stall
+
+// --- branch_unit 인스턴스 ---
+branch_unit u_branch (
+   .rs1_data    (alu_src_a),
+   .rs2_data    (fwd_b_data),
+   .funct3      (id_ex_funct3),
+   .branch      (id_ex_branch),
+   .branch_taken(branch_taken_ex)
+);</code></pre>
+  </div>
+
+  <h3>ch11_control_hazard_tb.sv — 테스트벤치 (루프 마일스톤)</h3>
+  <div class="code-block">
+    <pre><code class="language-systemverilog">// 루프 합산 프로그램 명령어 초기화
+initial begin
+   dut.u_imem.mem[0]  = 32&#39;h00100093; // addi x1, x0, 1
+   dut.u_imem.mem[1]  = 32&#39;h00000113; // addi x2, x0, 0
+   dut.u_imem.mem[2]  = 32&#39;h00B00193; // addi x3, x0, 11
+   dut.u_imem.mem[3]  = 32&#39;h00110133; // add  x2, x2, x1   (loop:)
+   dut.u_imem.mem[4]  = 32&#39;h00108093; // addi x1, x1, 1
+   dut.u_imem.mem[5]  = 32&#39;hFE309CE3; // bne  x1, x3, -8  (offset: 0x14→0x0C)
+   for (int i = 6; i &lt; 256; i++)
+      dut.u_imem.mem[i] = 32&#39;h00000013;
+end
+
+// 검증
+if (dut.u_rf.regs[2] === 32&#39;h00000037)
+   $display("[PASS] x2 = 55 -- 루프 합산 정확");
+else
+   $display("[FAIL] x2 = %0d (기대: 55)", dut.u_rf.regs[2]);</code></pre>
+  </div>
+
+</section>
+
+<!-- ========== Highlight.js 스크립트 ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  // language-systemverilog -> language-verilog 변환 (Highlight.js 호환)
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="900" height="520" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, 'Noto Sans KR', monospace">
+
+  <!-- 배경 -->
+  <rect width="900" height="520" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="450" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E3A5F">명령어 디코딩 흐름: 32비트 → 제어 신호</text>
+
+  <!-- ===== 32비트 명령어 비트 필드 ===== -->
+  <g transform="translate(30, 65)">
+    <text x="0" y="-6" font-size="13" font-weight="bold" fill="#374151">32비트 명령어 (instr)</text>
+
+    <!-- funct7 [31:25] — 7비트 -->
+    <rect x="0" y="0" width="182" height="48" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="4"/>
+    <text x="91" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D4ED8">funct7</text>
+    <text x="91" y="38" text-anchor="middle" font-size="11" fill="#374151">[31:25] — 7비트</text>
+
+    <!-- rs2 [24:20] — 5비트 -->
+    <rect x="186" y="0" width="130" height="48" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="4"/>
+    <text x="251" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#92400E">rs2</text>
+    <text x="251" y="38" text-anchor="middle" font-size="11" fill="#374151">[24:20] — 5비트</text>
+
+    <!-- rs1 [19:15] — 5비트 -->
+    <rect x="320" y="0" width="130" height="48" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="4"/>
+    <text x="385" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#92400E">rs1</text>
+    <text x="385" y="38" text-anchor="middle" font-size="11" fill="#374151">[19:15] — 5비트</text>
+
+    <!-- funct3 [14:12] — 3비트 -->
+    <rect x="454" y="0" width="78" height="48" fill="#D1FAE5" stroke="#059669" stroke-width="2" rx="4"/>
+    <text x="493" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#065F46">funct3</text>
+    <text x="493" y="38" text-anchor="middle" font-size="11" fill="#374151">[14:12]</text>
+
+    <!-- rd [11:7] — 5비트 -->
+    <rect x="536" y="0" width="130" height="48" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="4"/>
+    <text x="601" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#92400E">rd</text>
+    <text x="601" y="38" text-anchor="middle" font-size="11" fill="#374151">[11:7] — 5비트</text>
+
+    <!-- opcode [6:0] — 7비트 -->
+    <rect x="670" y="0" width="182" height="48" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2.5" rx="4"/>
+    <text x="761" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#5B21B6">opcode</text>
+    <text x="761" y="38" text-anchor="middle" font-size="11" fill="#374151">[6:0] — 7비트</text>
+  </g>
+
+  <!-- ===== 디코더 박스 ===== -->
+  <rect x="300" y="185" width="300" height="90" fill="#2563EB" stroke="#1D4ED8" stroke-width="2" rx="10"/>
+  <text x="450" y="220" text-anchor="middle" font-size="16" font-weight="bold" fill="white">instruction_decoder</text>
+  <text x="450" y="242" text-anchor="middle" font-size="12" fill="#BFDBFE">opcode / funct3 / funct7 해석</text>
+  <text x="450" y="262" text-anchor="middle" font-size="12" fill="#BFDBFE">37개 RV32I 명령어 분류</text>
+
+  <!-- opcode → 디코더 화살표 (굵은 보라) -->
+  <line x1="761" y1="113" x2="761" y2="155" stroke="#7C3AED" stroke-width="3" marker-end="url(#arrow-purple)"/>
+  <line x1="761" y1="155" x2="540" y2="185" stroke="#7C3AED" stroke-width="3" marker-end="url(#arrow-purple)"/>
+  <text x="680" y="172" font-size="11" fill="#5B21B6" font-weight="bold">opcode[6:0]</text>
+
+  <!-- funct3 → 디코더 화살표 (초록) -->
+  <line x1="493" y1="113" x2="450" y2="185" stroke="#059669" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <text x="452" y="158" font-size="11" fill="#065F46" font-weight="bold">funct3[2:0]</text>
+
+  <!-- funct7 → 디코더 화살표 (파랑) -->
+  <line x1="91" y1="113" x2="91" y2="155" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <line x1="91" y1="155" x2="300" y2="185" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <text x="130" y="170" font-size="11" fill="#1D4ED8" font-weight="bold">funct7[5]</text>
+
+  <!-- ===== 제어 신호 출력 ===== -->
+  <!-- 제목 -->
+  <text x="450" y="322" text-anchor="middle" font-size="13" font-weight="bold" fill="#374151">제어 신호 출력 (9개)</text>
+
+  <!-- 화살표 (디코더 → 출력) -->
+  <line x1="450" y1="275" x2="450" y2="335" stroke="#6B7280" stroke-width="2" marker-end="url(#arrow-gray)"/>
+
+  <!-- 제어 신호 박스들 (3열 배치) -->
+  <!-- 행 1 -->
+  <rect x="30"  y="340" width="120" height="44" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="6"/>
+  <text x="90"  y="358" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D4ED8">alu_sel</text>
+  <text x="90"  y="376" text-anchor="middle" font-size="10" fill="#374151">ALU 연산 선택 (4b)</text>
+
+  <rect x="170" y="340" width="120" height="44" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="6"/>
+  <text x="230" y="358" text-anchor="middle" font-size="12" font-weight="bold" fill="#1D4ED8">imm_sel</text>
+  <text x="230" y="376" text-anchor="middle" font-size="10" fill="#374151">즉치수 타입 (3b)</text>
+
+  <rect x="310" y="340" width="120" height="44" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" rx="6"/>
+  <text x="370" y="358" text-anchor="middle" font-size="12" font-weight="bold" fill="#065F46">reg_w_en</text>
+  <text x="370" y="376" text-anchor="middle" font-size="10" fill="#374151">RF 쓰기 인에이블</text>
+
+  <rect x="450" y="340" width="120" height="44" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="6"/>
+  <text x="510" y="358" text-anchor="middle" font-size="12" font-weight="bold" fill="#991B1B">mem_rw</text>
+  <text x="510" y="376" text-anchor="middle" font-size="10" fill="#374151">메모리 R/W (2b)</text>
+
+  <rect x="590" y="340" width="120" height="44" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="6"/>
+  <text x="650" y="358" text-anchor="middle" font-size="12" font-weight="bold" fill="#5B21B6">pc_sel</text>
+  <text x="650" y="376" text-anchor="middle" font-size="10" fill="#374151">다음 PC 선택 (2b)</text>
+
+  <rect x="730" y="340" width="120" height="44" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" rx="6"/>
+  <text x="790" y="358" text-anchor="middle" font-size="12" font-weight="bold" fill="#92400E">wb_sel</text>
+  <text x="790" y="376" text-anchor="middle" font-size="10" fill="#374151">Write-Back 소스 (2b)</text>
+
+  <!-- 행 2 -->
+  <rect x="170" y="400" width="120" height="44" fill="#FCE7F3" stroke="#EC4899" stroke-width="1.5" rx="6"/>
+  <text x="230" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#9D174D">a_sel</text>
+  <text x="230" y="436" text-anchor="middle" font-size="10" fill="#374151">ALU-A 입력 (1b)</text>
+
+  <rect x="310" y="400" width="120" height="44" fill="#FCE7F3" stroke="#EC4899" stroke-width="1.5" rx="6"/>
+  <text x="370" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#9D174D">b_sel</text>
+  <text x="370" y="436" text-anchor="middle" font-size="10" fill="#374151">ALU-B 입력 (1b)</text>
+
+  <rect x="450" y="400" width="120" height="44" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.5" rx="6"/>
+  <text x="510" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#15803D">br_un</text>
+  <text x="510" y="436" text-anchor="middle" font-size="10" fill="#374151">무부호 분기 (1b)</text>
+
+  <!-- ===== 범례 ===== -->
+  <g transform="translate(30, 468)">
+    <rect x="0" y="0" width="14" height="14" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="2"/>
+    <text x="20" y="12" font-size="11" fill="#374151">opcode — 명령어 유형 1차 분류</text>
+
+    <rect x="200" y="0" width="14" height="14" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" rx="2"/>
+    <text x="220" y="12" font-size="11" fill="#374151">funct3 — 세부 연산 구분</text>
+
+    <rect x="390" y="0" width="14" height="14" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+    <text x="410" y="12" font-size="11" fill="#374151">funct7[5] — ADD/SUB, SRL/SRA 구분</text>
+
+    <rect x="650" y="0" width="14" height="14" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" rx="2"/>
+    <text x="670" y="12" font-size="11" fill="#374151">rs1/rs2/rd — 데이터패스 경유</text>
+  </g>
+
+  <!-- 화살표 마커 정의 -->
+  <defs>
+    <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#7C3AED"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#059669"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#6B7280"/>
+    </marker>
+  </defs>
+
+</svg>

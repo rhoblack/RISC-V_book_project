@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="900" height="500" font-family="Pretendard, sans-serif">
+
+  <!-- 배경 -->
+  <rect width="900" height="500" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="450" y="35" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">핵심 CSR 레지스터 맵 (이 교재 구현 범위)</text>
+  <text x="450" y="55" text-anchor="middle" font-size="12" fill="#64748B">RISC-V Privileged Architecture v1.12 · M-mode 7개 CSR</text>
+
+  <!-- ===== 그룹 A: 상태/제어 (파란 배경) ===== -->
+  <rect x="30" y="70" width="260" height="175" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="160" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#1D4ED8">그룹 A — 상태/제어</text>
+
+  <!-- mstatus -->
+  <rect x="45" y="98" width="230" height="62" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="55" y="115" font-size="11" font-weight="700" fill="#1E293B">mstatus</text>
+  <text x="200" y="115" text-anchor="middle" font-size="10" fill="#64748B">0x300</text>
+  <rect x="45" y="120" width="46" height="18" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.5"/>
+  <text x="68" y="133" text-anchor="middle" font-size="9" fill="#475569">WPRI</text>
+  <rect x="91" y="120" width="30" height="18" fill="#BFDBFE" stroke="#3B82F6" stroke-width="0.5"/>
+  <text x="106" y="133" text-anchor="middle" font-size="9" fill="#1D4ED8">MPP</text>
+  <text x="106" y="145" text-anchor="middle" font-size="8" fill="#64748B">[12:11]</text>
+  <rect x="121" y="120" width="30" height="18" fill="#BBF7D0" stroke="#10B981" stroke-width="0.5"/>
+  <text x="136" y="133" text-anchor="middle" font-size="9" fill="#065F46">MPIE</text>
+  <text x="136" y="145" text-anchor="middle" font-size="8" fill="#64748B">[7]</text>
+  <rect x="151" y="120" width="30" height="18" fill="#FEF9C3" stroke="#EAB308" stroke-width="0.5"/>
+  <text x="166" y="133" text-anchor="middle" font-size="9" fill="#854D0E">MIE</text>
+  <text x="166" y="145" text-anchor="middle" font-size="8" fill="#64748B">[3]</text>
+  <rect x="181" y="120" width="94" height="18" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.5"/>
+  <text x="228" y="133" text-anchor="middle" font-size="9" fill="#475569">WPRI (나머지)</text>
+  <text x="160" y="155" text-anchor="middle" font-size="9" fill="#64748B">전역 인터럽트 활성화 · 트랩 상태 보존</text>
+
+  <!-- mscratch -->
+  <rect x="45" y="170" width="230" height="62" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="55" y="187" font-size="11" font-weight="700" fill="#1E293B">mscratch</text>
+  <text x="200" y="187" text-anchor="middle" font-size="10" fill="#64748B">0x340</text>
+  <rect x="45" y="192" width="230" height="18" fill="#BFDBFE" stroke="#3B82F6" stroke-width="0.5"/>
+  <text x="160" y="205" text-anchor="middle" font-size="9" fill="#1D4ED8">[31:0] 범용 임시 저장 — 소프트웨어 전용</text>
+  <text x="160" y="224" text-anchor="middle" font-size="9" fill="#64748B">트랩 핸들러 진입 시 레지스터 스왑용</text>
+
+  <!-- ===== 그룹 B: 예외 처리 (주황 배경) ===== -->
+  <rect x="320" y="70" width="260" height="265" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+  <text x="450" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#B45309">그룹 B — 예외 처리</text>
+
+  <!-- mtvec -->
+  <rect x="335" y="98" width="230" height="62" rx="4" fill="white" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="345" y="115" font-size="11" font-weight="700" fill="#1E293B">mtvec</text>
+  <text x="490" y="115" text-anchor="middle" font-size="10" fill="#64748B">0x305</text>
+  <rect x="335" y="120" width="172" height="18" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+  <text x="421" y="133" text-anchor="middle" font-size="9" fill="#B45309">Base[31:2] — 핸들러 기저 주소</text>
+  <rect x="507" y="120" width="58" height="18" fill="#FDE68A" stroke="#F59E0B" stroke-width="0.5"/>
+  <text x="536" y="133" text-anchor="middle" font-size="9" fill="#92400E">Mode[1:0]</text>
+  <text x="450" y="155" text-anchor="middle" font-size="9" fill="#64748B">Mode=0: Direct · Mode=1: Vectored</text>
+
+  <!-- mepc -->
+  <rect x="335" y="170" width="230" height="62" rx="4" fill="white" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="345" y="187" font-size="11" font-weight="700" fill="#1E293B">mepc</text>
+  <text x="490" y="187" text-anchor="middle" font-size="10" fill="#64748B">0x341</text>
+  <rect x="335" y="192" width="201" height="18" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+  <text x="435" y="205" text-anchor="middle" font-size="9" fill="#B45309">[31:1] 예외 발생 시점의 PC</text>
+  <rect x="536" y="192" width="29" height="18" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.5"/>
+  <text x="550" y="205" text-anchor="middle" font-size="9" fill="#475569">[0]=0</text>
+  <text x="450" y="224" text-anchor="middle" font-size="9" fill="#64748B">MRET 실행 시 이 주소로 복귀</text>
+
+  <!-- mcause -->
+  <rect x="335" y="242" width="230" height="80" rx="4" fill="white" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="345" y="259" font-size="11" font-weight="700" fill="#1E293B">mcause</text>
+  <text x="490" y="259" text-anchor="middle" font-size="10" fill="#64748B">0x342</text>
+  <rect x="335" y="264" width="29" height="18" fill="#FECACA" stroke="#EF4444" stroke-width="0.5"/>
+  <text x="349" y="277" text-anchor="middle" font-size="9" fill="#991B1B">INT</text>
+  <text x="349" y="289" text-anchor="middle" font-size="8" fill="#64748B">[31]</text>
+  <rect x="364" y="264" width="201" height="18" fill="#FEF3C7" stroke="#F59E0B" stroke-width="0.5"/>
+  <text x="464" y="277" text-anchor="middle" font-size="9" fill="#B45309">Exception Code [30:0]</text>
+  <text x="450" y="303" text-anchor="middle" font-size="9" fill="#64748B">INT=1: 인터럽트 · INT=0: 예외(동기)</text>
+  <text x="450" y="315" text-anchor="middle" font-size="9" fill="#64748B">Code 11: M-mode 외부 인터럽트</text>
+
+  <!-- ===== 그룹 C: 인터럽트 (초록 배경) ===== -->
+  <rect x="610" y="70" width="260" height="265" rx="8" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
+  <text x="740" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#065F46">그룹 C — 인터럽트 제어</text>
+
+  <!-- mie -->
+  <rect x="625" y="98" width="230" height="62" rx="4" fill="white" stroke="#10B981" stroke-width="1.5"/>
+  <text x="635" y="115" font-size="11" font-weight="700" fill="#1E293B">mie</text>
+  <text x="780" y="115" text-anchor="middle" font-size="10" fill="#64748B">0x304</text>
+  <rect x="625" y="120" width="52" height="18" fill="#BBF7D0" stroke="#10B981" stroke-width="0.5"/>
+  <text x="651" y="133" text-anchor="middle" font-size="9" fill="#065F46">MEIE[11]</text>
+  <rect x="677" y="120" width="52" height="18" fill="#BBF7D0" stroke="#10B981" stroke-width="0.5"/>
+  <text x="703" y="133" text-anchor="middle" font-size="9" fill="#065F46">MTIE[7]</text>
+  <rect x="729" y="120" width="52" height="18" fill="#BBF7D0" stroke="#10B981" stroke-width="0.5"/>
+  <text x="755" y="133" text-anchor="middle" font-size="9" fill="#065F46">MSIE[3]</text>
+  <rect x="781" y="120" width="74" height="18" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.5"/>
+  <text x="818" y="133" text-anchor="middle" font-size="9" fill="#475569">나머지=0</text>
+  <text x="740" y="155" text-anchor="middle" font-size="9" fill="#64748B">인터럽트 소스별 개별 활성화 마스크</text>
+
+  <!-- mip -->
+  <rect x="625" y="170" width="230" height="62" rx="4" fill="white" stroke="#10B981" stroke-width="1.5"/>
+  <text x="635" y="187" font-size="11" font-weight="700" fill="#1E293B">mip</text>
+  <text x="780" y="187" text-anchor="middle" font-size="10" fill="#64748B">0x344</text>
+  <rect x="625" y="192" width="52" height="18" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+  <text x="651" y="205" text-anchor="middle" font-size="9" fill="#991B1B">MEIP[11]</text>
+  <rect x="677" y="192" width="52" height="18" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+  <text x="703" y="205" text-anchor="middle" font-size="9" fill="#991B1B">MTIP[7]</text>
+  <rect x="729" y="192" width="52" height="18" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.5"/>
+  <text x="755" y="205" text-anchor="middle" font-size="9" fill="#991B1B">MSIP[3]</text>
+  <rect x="781" y="192" width="74" height="18" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.5"/>
+  <text x="818" y="205" text-anchor="middle" font-size="9" fill="#475569">나머지=0</text>
+  <text x="740" y="224" text-anchor="middle" font-size="9" fill="#64748B">읽기 전용 — 하드웨어 인터럽트 직결</text>
+  <!-- 읽기 전용 배지 -->
+  <rect x="758" y="173" width="56" height="14" rx="3" fill="#FEE2E2" stroke="#EF4444" stroke-width="1"/>
+  <text x="786" y="183" text-anchor="middle" font-size="8" fill="#991B1B">읽기 전용</text>
+
+  <!-- 인터럽트 펜딩 수식 -->
+  <rect x="625" y="242" width="230" height="80" rx="4" fill="white" stroke="#10B981" stroke-width="1.5"/>
+  <text x="635" y="260" font-size="10" font-weight="700" fill="#1E293B">인터럽트 펜딩 조건</text>
+  <text x="635" y="278" font-size="10" fill="#2563EB" font-family="monospace">irq_pending =</text>
+  <text x="635" y="294" font-size="10" fill="#2563EB" font-family="monospace">  mstatus.MIE</text>
+  <text x="635" y="310" font-size="10" fill="#2563EB" font-family="monospace">  &amp; (mie &amp; mip) != 0</text>
+
+  <!-- ===== 하단: 주소 요약 표 ===== -->
+  <rect x="30" y="355" width="840" height="130" rx="8" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="450" y="375" text-anchor="middle" font-size="12" font-weight="700" fill="#1E293B">CSR 주소 요약 (12비트 주소 [11:10]=접근 레벨)</text>
+
+  <!-- 표 헤더 -->
+  <rect x="40" y="382" width="820" height="20" fill="#E2E8F0" rx="2"/>
+  <text x="120" y="396" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">CSR 이름</text>
+  <text x="270" y="396" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">주소</text>
+  <text x="390" y="396" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">접근</text>
+  <text x="590" y="396" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">설명</text>
+  <text x="810" y="396" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">그룹</text>
+
+  <line x1="40" y1="402" x2="860" y2="402" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="120" y="416" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">mstatus</text>
+  <text x="270" y="416" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">0x300</text>
+  <text x="390" y="416" text-anchor="middle" font-size="10" fill="#10B981">읽기/쓰기</text>
+  <text x="590" y="416" text-anchor="middle" font-size="10" fill="#1E293B">전역 인터럽트 활성화(MIE), 트랩 이전 상태 보존</text>
+  <text x="810" y="416" text-anchor="middle" font-size="10" fill="#1D4ED8">A</text>
+
+  <line x1="40" y1="420" x2="860" y2="420" stroke="#F1F5F9" stroke-width="1"/>
+  <text x="120" y="434" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">mie / mip</text>
+  <text x="270" y="434" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">0x304 / 0x344</text>
+  <text x="390" y="434" text-anchor="middle" font-size="10" fill="#1E293B">mie=RW / mip=RO</text>
+  <text x="590" y="434" text-anchor="middle" font-size="10" fill="#1E293B">인터럽트 소스 활성화 마스크 / 펜딩 상태</text>
+  <text x="810" y="434" text-anchor="middle" font-size="10" fill="#065F46">C</text>
+
+  <line x1="40" y1="438" x2="860" y2="438" stroke="#F1F5F9" stroke-width="1"/>
+  <text x="120" y="452" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">mtvec / mepc / mcause</text>
+  <text x="270" y="452" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">0x305 / 0x341 / 0x342</text>
+  <text x="390" y="452" text-anchor="middle" font-size="10" fill="#10B981">읽기/쓰기</text>
+  <text x="590" y="452" text-anchor="middle" font-size="10" fill="#1E293B">핸들러 주소 / 복귀 PC / 트랩 원인 코드</text>
+  <text x="810" y="452" text-anchor="middle" font-size="10" fill="#B45309">B</text>
+
+  <line x1="40" y1="456" x2="860" y2="456" stroke="#F1F5F9" stroke-width="1"/>
+  <text x="120" y="470" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">mscratch</text>
+  <text x="270" y="470" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">0x340</text>
+  <text x="390" y="470" text-anchor="middle" font-size="10" fill="#10B981">읽기/쓰기</text>
+  <text x="590" y="470" text-anchor="middle" font-size="10" fill="#1E293B">소프트웨어 임시 저장 (핸들러 레지스터 스왑)</text>
+  <text x="810" y="470" text-anchor="middle" font-size="10" fill="#1D4ED8">A</text>
+
+</svg>

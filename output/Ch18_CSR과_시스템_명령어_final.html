@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 18: CSR과 시스템 명령어</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 18</span>
+  <h1>CSR과 시스템 명령어</h1>
+  <p class="chapter-intro">
+    Chapter 17에서 만든 타이머가 <code>timer_irq</code> 신호를 출력합니다.
+    그런데 이 신호가 도착했을 때 CPU는 어떻게 반응해야 할까요?
+    현재 실행 중인 작업을 중단하고, 인터럽트를 처리한 뒤, 다시 원래 작업을 재개해야 합니다.
+    이 모든 과정을 조율하는 '제어판'이 바로 CSR(Control and Status Register, 제어 및 상태 레지스터)입니다.
+    이 챕터에서는 7개의 핵심 CSR 레지스터를 SystemVerilog로 구현하고,
+    Chapter 19의 예외·인터럽트 처리와 연결할 인터페이스를 설계합니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>Machine Mode(기계 모드) 특권 수준의 역할을 설명할 수 있다. [L2]</li>
+    <li>CSR 주소 공간(12비트, 4096개)과 접근 권한 규칙을 설명할 수 있다. [L2]</li>
+    <li>7개 핵심 CSR(mstatus, mtvec, mepc, mcause, mie, mip, mscratch)의 비트 필드 구조와 각 필드의 기능을 기술할 수 있다. [L2]</li>
+    <li>SystemVerilog로 <code>csr_unit</code> 모듈을 구현할 수 있다. [L3]</li>
+    <li>CSRRW/CSRRS/CSRRC 및 즉치 변형 명령어 6종의 원자적 읽기-수정-쓰기 동작을 구현할 수 있다. [L3]</li>
+    <li>mstatus.MIE 비트와 mie/mip 레지스터의 관계를 분석하여 인터럽트 마스킹 로직을 설계할 수 있다. [L4]</li>
+    <li>Chapter 19 트랩 처리와 연결되는 CSR 인터페이스(trap_en, mret_en 등)를 설계할 수 있다. [L4]</li>
+  </ul>
+</nav>
+
+<!-- ========== 18.1절 ========== -->
+<section id="sec-18-1">
+  <h2>18.1 특권 수준과 CSR: 프로세서의 제어판</h2>
+
+  <p>
+    이 챕터에서 처음으로 '특권 수준(Privilege Level)'과 'CSR'이라는 개념을 만납니다.
+    이 개념들은 하드웨어와 소프트웨어의 경계에 위치해 있어서 처음에는 추상적으로 느껴질 수 있습니다.
+    그것은 정상입니다. 이 챕터를 끝까지 읽고 18.4절 실습을 마치면, 처음의 낯섦이 "아, 이거였구나"로 바뀔 것입니다.
+  </p>
+
+  <p>
+    Ch09~Ch12에서 여러분이 만든 5단 파이프라인 프로세서는 x0~x31이라는 32개의 범용 레지스터(General-Purpose Register)를 가지고 있습니다.
+    이 레지스터들은 덧셈, 뺄셈, 메모리 접근 등 연산의 피연산자와 결과를 저장하는 데 사용됩니다.
+    그러나 "현재 인터럽트가 허용되어 있는가?", "예외가 발생하면 어느 주소로 점프해야 하는가?",
+    "방금 어떤 원인으로 예외가 발생했는가?" 같은 <strong>프로세서 제어 정보</strong>는
+    일반 레지스터에 저장하기 적합하지 않습니다.
+    소프트웨어가 실수로 덮어쓸 위험이 있고, 보안상 일반 사용자 코드에 노출해서는 안 되기 때문입니다.
+  </p>
+
+  <p>
+    이 문제를 해결하기 위해 RISC-V는 <strong>CSR(Control and Status Register, 제어 및 상태 레지스터)</strong>이라는
+    별도의 레지스터 공간을 정의합니다.
+    CSR은 일반 레지스터(x0~x31)와 완전히 분리된 12비트 주소 공간에 존재하며,
+    <code>CSRRW</code>, <code>CSRRS</code>, <code>CSRRC</code> 등 전용 명령어로만 접근할 수 있습니다.
+    일반적인 <code>lw</code>/<code>sw</code> 메모리 명령어나 <code>add</code> 같은 연산 명령어로는 절대 접근할 수 없습니다.
+    이 챕터를 마치면, 어떤 예외가 발생했는지(mcause), 어디서 발생했는지(mepc),
+    핸들러는 어디 있는지(mtvec)를 하드웨어가 자동으로 기록하는 프로세서를 갖게 됩니다.
+  </p>
+
+  <h3>자동차 계기판과 정비사 제어판: 특권 수준의 직관</h3>
+
+  <div class="analogy">
+    <strong>비유:</strong>
+    자동차를 운전할 때 운전자는 속도계, 연료계, 경고등만 볼 수 있습니다.
+    엔진 ECU의 파라미터를 직접 수정하거나 ABS 캘리브레이션 값을 바꾸는 일은 할 수 없습니다.
+    반면, 정비사는 OBD 포트를 통해 모든 진단 데이터에 접근하고 설정을 변경할 수 있습니다.
+    RISC-V의 특권 수준도 이와 같습니다.
+    일반 사용자 코드(U-mode)는 제한된 자원만 사용할 수 있고,
+    운영체제와 펌웨어(M-mode)는 모든 CSR에 접근할 수 있습니다.
+    <br><br>
+    <strong>한계:</strong> 계기판은 읽기 전용이지만, CSR은 소프트웨어가 읽고 쓸 수 있습니다.
+    계기판 비유는 CSR의 "존재 이유"를 설명하는 데에만 사용하십시오.
+  </div>
+
+  <h3>RISC-V 특권 수준 3종</h3>
+
+  <p>
+    RISC-V 스펙은 세 가지 특권 수준(Privilege Level)을 정의합니다.
+  </p>
+
+  <ul>
+    <li><strong>M-mode (Machine Mode, 기계 모드)</strong>: 가장 높은 권한. 모든 CSR에 접근 가능. 하드웨어 리셋 직후 프로세서는 항상 M-mode에서 시작합니다.</li>
+    <li><strong>S-mode (Supervisor Mode, 감독자 모드)</strong>: 운영체제 커널이 사용. Linux 등 OS 지원 시 구현. 이 교재에서는 구현하지 않습니다.</li>
+    <li><strong>U-mode (User Mode, 사용자 모드)</strong>: 일반 응용 프로그램이 사용. 제한된 CSR 접근.</li>
+  </ul>
+
+  <p>
+    <strong>이 교재에서는 M-mode만 구현합니다.</strong>
+    임베디드 시스템과 FPGA 기반 베어메탈(bare-metal) 환경에서는 M-mode 하나로
+    예외·인터럽트 처리를 완성할 수 있습니다.
+    Linux 커널, FreeRTOS 등 모든 RISC-V 기반 운영체제는 결국 M-mode CSR을 통해 하드웨어와 대화합니다.
+    여러분이 지금 만드는 것은 소프트웨어 생태계 전체를 가능하게 하는 기반입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch18_sec01_privilege_levels.svg" alt="RISC-V 특권 수준 계층 구조">
+    <figcaption>그림 18.1: RISC-V 특권 수준 계층 구조. 이 교재에서는 M-mode(파란색)만 구현한다. S-mode(회색)는 Linux 지원 시 필요하다.</figcaption>
+  </figure>
+
+  <h3>CSR 주소 공간과 접근 권한</h3>
+
+  <p>
+    CSR은 12비트 주소 공간을 사용합니다. 따라서 최대 2<sup>12</sup> = 4096개의 CSR을 정의할 수 있습니다.
+    이 12비트 주소는 단순한 번호가 아니라, 상위 비트에 접근 권한 정보가 인코딩되어 있습니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>비트</th>
+        <th>필드</th>
+        <th>의미</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[11:10]</td>
+        <td>접근 권한</td>
+        <td>11 = 읽기 전용(Read-Only), 그 외 = 읽기/쓰기</td>
+      </tr>
+      <tr>
+        <td>[9:8]</td>
+        <td>최소 접근 권한</td>
+        <td>00 = U-mode, 01 = S-mode, 10 = S-mode(HS), 11 = M-mode</td>
+      </tr>
+      <tr>
+        <td>[7:0]</td>
+        <td>레지스터 번호</td>
+        <td>해당 권한 수준 내의 고유 번호</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    예를 들어, <code>mstatus</code>의 주소는 <code>0x300</code> = <code>0b0011_0000_0000</code>입니다.
+    상위 2비트 <code>11</code>은 M-mode 전용임을 나타냅니다.
+    <code>0x3xx</code> 대역이 모두 M-mode 읽기/쓰기 CSR입니다.
+    반면, <code>0xC00</code> = <code>0b1100_0000_0000</code>처럼 상위 2비트가 <code>11</code>이고
+    다음 2비트도 <code>11</code>이면 M-mode 읽기 전용 CSR(cycle, time, instret 등)입니다.
+    읽기 전용 CSR에 쓰기를 시도하면 불법 명령어(Illegal Instruction) 예외가 발생합니다 — 이 처리는 Ch19에서 구현합니다.
+  </p>
+
+  <p>
+    CSR 명령어는 I-타입 인코딩을 사용하며 <code>opcode = 1110011</code>(SYSTEM)으로 식별합니다.
+    명령어[31:20] 필드(12비트)가 CSR 주소를 직접 인코딩합니다.
+    즉, 디코더는 이 12비트를 꺼내 CSR 주소로 바로 사용할 수 있습니다.
+  </p>
+
+  <p>
+    Ch17에서 구현한 타이머의 <code>timer_irq</code> 출력 신호,
+    기억하시나요? 바로 이 신호가 <code>mip.MTIP</code>(비트 7)에 직결됩니다.
+    여러분이 지난 챕터에서 만든 타이머의 인터럽트 신호가 이 챕터에서 구현할 레지스터로 들어옵니다.
+    과거 작업이 살아남아 연결되는 순간입니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      CSR 주소 예시: <code>0x300</code>(mstatus)에서 상위 2비트(<code>[11:10]</code>)는 <code>11</code>이 아니라 <code>00</code>입니다.
+      <code>0x300</code> = <code>0b0011_0000_0000</code>이므로 <code>[11:10] = 00</code>(읽기/쓰기 가능)이고
+      <code>[9:8] = 11</code>(M-mode 전용)입니다.
+      <code>0xF11</code>(mvendorid)처럼 <code>[11:10] = 11</code>이 읽기 전용임에 주의하십시오.
+      CSR 주소 디코딩 시 [11:10]과 [9:8]을 혼동하지 마십시오.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> CSR과 MMIO(메모리 맵 입출력)는 어떻게 다른가요?</p>
+    <p>
+      <strong>A:</strong> CSR은 프로세서 코어 내부의 특수 레지스터로, <code>CSRRW</code> 등 전용 명령어로만 접근합니다.
+      Ch16~Ch17에서 구현한 MMIO는 AHB 버스를 통해 메모리 주소 공간의 일부로 외부 주변 장치에 접근하는 방식입니다.
+      CSR은 버스 트랜잭션 없이 1사이클에 접근 완료, MMIO는 버스 중재와 대기 상태가 필요합니다.
+      비유하자면, CSR은 조종사 앞의 계기판(직결), MMIO는 무선 통신으로 외부 장비를 제어하는 것(간접)입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      CSR 주소 <code>0x344</code>(mip)의 비트 필드를 분석해 보십시오.
+      <code>0x344</code> = <code>0b0011_0100_0100</code>에서 [11:10]은 무엇인가요?
+      [9:8]은 무엇이며, 이 값이 의미하는 접근 권한은?
+      또한, <code>CSRRW</code> 명령어에서 CSR 주소는 명령어의 어느 비트 필드에 위치하나요?
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 18.2절 ========== -->
+<section id="sec-18-2">
+  <h2>18.2 핵심 CSR 구현: 7개 레지스터</h2>
+
+  <p>
+    <strong>이 절에서는 7개 CSR만 구현합니다: mstatus, mtvec, mepc, mcause, mie, mip, mscratch.</strong>
+    RISC-V 스펙에는 수백 개의 CSR이 정의되어 있지만, M-mode 임베디드 시스템에서
+    예외·인터럽트를 처리하는 데는 이 7개로 충분합니다.
+    나머지는 모두 "나중에 필요할 때 추가"할 수 있습니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      mstatus는 RISC-V 스펙에서 가장 복잡한 레지스터 중 하나입니다.
+      이 책에서는 RV32I 베어메탈 실행에 필요한 MIE, MPIE, MPP 세 가지 필드만 구현합니다.
+      나머지 비트는 '예약(reserved)'으로 0을 유지합니다.
+      mstatus의 모든 비트를 외울 필요는 없습니다. 실무에서도 필요한 비트만 찾아서 씁니다.
+    </p>
+  </aside>
+
+  <p>
+    7개 CSR을 역할별로 세 그룹으로 묶으면 훨씬 쉽게 기억할 수 있습니다.
+    이 절이 챕터에서 가장 정보 밀도가 높은 부분입니다.
+    당장 모두 이해되지 않아도 괜찮습니다.
+    18.4절 실습을 마친 후 다시 돌아오면 비트 하나하나가 왜 필요한지 보일 것입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch18_sec02_csr_map.svg" alt="핵심 CSR 레지스터 맵 및 비트 필드">
+    <figcaption>그림 18.2: 핵심 7개 CSR 레지스터 맵. 각 CSR의 주소, 비트 필드 구조, 역할 그룹을 보여준다.</figcaption>
+  </figure>
+
+  <h3>그룹 A — 상태·제어 (1개): mstatus</h3>
+
+  <p>
+    <code>mstatus</code>(Machine Status Register, 기계 상태 레지스터)는 주소 <code>0x300</code>에 위치합니다.
+    프로세서 전체의 동작 상태를 제어하는 레지스터입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong>
+    도시 전체의 교통 통제 센터를 상상하십시오.
+    mstatus는 그 통제 센터 전체입니다.
+    그 중 MIE 비트는 "도시 진입 허가 스위치"입니다. 이 스위치가 꺼지면(MIE=0), 어떤 차량(인터럽트)도 도시 안으로 들어올 수 없습니다.
+    MPIE는 스위치를 끄기 직전의 상태를 적어둔 메모지, MPP는 어떤 종류의 도로에서 진입했는지 기록입니다.
+    <br><br>
+    <strong>한계:</strong> 이 비유는 MIE 비트의 전역 제어 역할을 설명하기 위한 것이며, mstatus의 다른 필드(MPIE, MPP)는 별도로 다룹니다.
+  </div>
+
+  <p>구현할 비트 필드:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>비트</th>
+        <th>이름</th>
+        <th>기능</th>
+        <th>초기값</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[3]</td>
+        <td>MIE (Machine Interrupt Enable)</td>
+        <td>전역 인터럽트 활성화. 0이면 모든 인터럽트 차단, 1이면 허용</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>[7]</td>
+        <td>MPIE (Machine Previous Interrupt Enable)</td>
+        <td>트랩 진입 직전 MIE 값 저장. mret 시 MIE로 복원</td>
+        <td>0</td>
+      </tr>
+      <tr>
+        <td>[12:11]</td>
+        <td>MPP (Machine Previous Privilege)</td>
+        <td>트랩 진입 직전 특권 수준. M-mode only 구현 시 항상 2'b11</td>
+        <td>0</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    나머지 비트는 WPRI(Write Preserved, Read Ignored — 예약 비트)로 항상 0을 유지합니다.
+    따라서 mstatus 쓰기 시 반드시 마스크를 적용해야 합니다:
+    <code>MSTATUS_MASK = 32'h0000_1888</code> (비트 3, 7, 12, 11만 허용).
+    마스크 없이 전체 비트를 저장하면 RISC-V 스펙 위반입니다.
+  </p>
+
+  <p>
+    <strong>트랩 진입 시</strong> (<code>trap_en = 1</code>): MPIE ← MIE, MIE ← 0, MPP ← 2'b11 (M-mode 전용)
+    <br>
+    <strong>mret 실행 시</strong> (<code>mret_en = 1</code>): MIE ← MPIE, MPIE ← 1, MPP ← 2'b11 (M-mode 유지 — U-mode 미구현 시 최소 지원 권한 수준)
+    <br>
+    mret의 완전한 동작(PC ← mepc)은 Ch19에서 구현합니다.
+  </p>
+
+  <h3>그룹 B — 예외 처리 루틴 (3개): mtvec, mepc, mcause</h3>
+
+  <p>
+    이 세 CSR은 하나의 시나리오로 묶어 이해하십시오:
+    <strong>"예외 발생 → mtvec 조회(어디로?) → mepc 저장(어디서 왔나?) → mcause 기록(왜?)"</strong>
+  </p>
+
+  <h4>mtvec (Machine Trap-Vector Base-Address Register)</h4>
+
+  <p>
+    <code>mtvec</code>는 주소 <code>0x305</code>에 위치하며, 예외 핸들러의 기저 주소를 저장합니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong>
+    119 신고 전화를 생각하십시오. 어떤 응급 상황이 발생해도 119라는 단일 번호로 연결됩니다 — 이것이 Direct 모드(MODE=0)입니다.
+    만약 119-1은 화재, 119-2는 구급, 119-3은 구조처럼 원인별로 다른 내선 번호로 연결된다면 — 이것이 Vectored 모드(MODE=1)입니다.
+  </div>
+
+  <p><em>비유의 한계: 실제 119는 경우에 따라 다른 부서로 자동 연결해 주지만, mtvec의 핸들러 주소는 소프트웨어가 부팅 초기에 설정해야 합니다. 또한 발생 원인(cause 코드)도 하드웨어가 자동으로 결정하므로 소프트웨어가 "어떤 핸들러로 갈지" 선택할 수 없습니다.</em></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>비트</th>
+        <th>이름</th>
+        <th>기능</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[31:2]</td>
+        <td>BASE</td>
+        <td>핸들러 기저 주소 (4바이트 정렬)</td>
+      </tr>
+      <tr>
+        <td>[1:0]</td>
+        <td>MODE</td>
+        <td>0 = Direct(모든 예외 → BASE), 1 = Vectored(원인별 → BASE + 4×cause)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Vectored 모드에서 실제 핸들러 주소 계산(<code>BASE + 4×cause_code</code>)은
+    Ch19 트랩 처리 로직에서 수행합니다. <code>csr_unit</code>은 <code>mtvec</code> 레지스터 값만 출력합니다.
+    MODE 필드에서 <code>2'b10</code>과 <code>2'b11</code>은 구현 미지원(WARL — 입력값을 무시하고 허용값만 읽힘)으로
+    <code>2'b00</code>(Direct)으로 강제 처리합니다.
+  </p>
+
+  <h4>mepc (Machine Exception Program Counter)</h4>
+
+  <p>
+    <code>mepc</code>는 주소 <code>0x341</code>에 위치합니다. 예외/인터럽트 발생 시점의 PC 값을 자동으로 저장합니다.
+    mret 명령어 실행 시 PC ← mepc로 복귀합니다.
+    RV32I에서 명령어는 4바이트 정렬이므로 하위 1비트는 항상 0입니다 (WARL).
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      mtvec.Base = <code>0x8000_0000</code>이고 Mode = 0(직접 모드)이라면,
+      소프트웨어 예외, 타이머 인터럽트, 외부 인터럽트가 발생했을 때 각각 어느 주소로 점프하나요?
+      Mode = 1(Vectored)이고 타이머 인터럽트(cause = 7)가 발생하면 점프 주소는?
+    </p>
+  </aside>
+
+  <h4>mcause (Machine Cause Register)</h4>
+
+  <p>
+    <code>mcause</code>는 주소 <code>0x342</code>에 위치합니다. 트랩의 원인을 인코딩합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>비트</th>
+        <th>이름</th>
+        <th>의미</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[31]</td>
+        <td>Interrupt</td>
+        <td>1 = 인터럽트, 0 = 동기 예외(Exception)</td>
+      </tr>
+      <tr>
+        <td>[30:0]</td>
+        <td>Exception Code</td>
+        <td>원인 코드 (아래 표 참조)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>주요 mcause 코드 (인터럽트와 예외 코드 번호가 겹치므로 반드시 Interrupt 비트로 구분합니다):</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>구분</th>
+        <th>코드</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="3">인터럽트 (bit[31]=1)</td>
+        <td>3</td>
+        <td>Machine Software Interrupt</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Machine Timer Interrupt (timer_irq → mip.MTIP)</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>Machine External Interrupt (ext_irq → mip.MEIP)</td>
+      </tr>
+      <tr>
+        <td rowspan="5">예외 (bit[31]=0)</td>
+        <td>0</td>
+        <td>Instruction Address Misaligned</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Illegal Instruction</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Load Address Misaligned</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>Store/AMO Address Misaligned</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>Environment Call from M-mode (ecall)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>그룹 C — 인터럽트 제어 (2개) + 임시 저장 (1개): mie, mip, mscratch</h3>
+
+  <div class="analogy">
+    <strong>비유:</strong>
+    우편함으로 생각해 보십시오.
+    <strong>mie</strong>는 "수신 허용 목록"입니다 — 어떤 종류의 우편물을 받을지 설정합니다.
+    <strong>mip</strong>는 "현재 우편함에 도착해 있는 우편물 목록"입니다 — 실제로 받은 요청 상태입니다.
+    <strong>mstatus.MIE</strong>는 "우편함 잠금장치"입니다 — 잠기면 배달원이 집 앞에 와도 문을 열 수 없습니다.
+    <br><br>
+    처리 조건: mstatus.MIE=1(잠금 해제) AND mie[x]=1(해당 우편 수신 허용) AND mip[x]=1(실제 우편 도착)
+  </div>
+
+  <h4>mie (Machine Interrupt Enable Register)</h4>
+
+  <p>
+    <code>mie</code>는 주소 <code>0x304</code>에 위치합니다. 개별 인터럽트 활성화 마스크입니다.
+    소프트웨어가 어떤 인터럽트를 받을지 제어합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>비트</th>
+        <th>이름</th>
+        <th>기능</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[3]</td>
+        <td>MSIE (Machine Software IE)</td>
+        <td>소프트웨어 인터럽트 활성화</td>
+      </tr>
+      <tr>
+        <td>[7]</td>
+        <td>MTIE (Machine Timer IE)</td>
+        <td>타이머 인터럽트 활성화 (Ch17 timer_irq용)</td>
+      </tr>
+      <tr>
+        <td>[11]</td>
+        <td>MEIE (Machine External IE)</td>
+        <td>외부 인터럽트 활성화</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>mip (Machine Interrupt Pending Register)</h4>
+
+  <p>
+    <code>mip</code>는 주소 <code>0x344</code>에 위치합니다.
+    현재 계류 중인(pending) 인터럽트 상태를 나타냅니다.
+    <strong>하드웨어 입력에서 직접 합성되므로 소프트웨어로 직접 쓸 수 없습니다.</strong>
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>비트</th>
+        <th>이름</th>
+        <th>소스</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[3]</td>
+        <td>MSIP (Machine Software IP)</td>
+        <td>sw_irq 입력 신호</td>
+      </tr>
+      <tr>
+        <td>[7]</td>
+        <td>MTIP (Machine Timer IP)</td>
+        <td>timer_irq 입력 신호 (Ch17에서 생성)</td>
+      </tr>
+      <tr>
+        <td>[11]</td>
+        <td>MEIP (Machine External IP)</td>
+        <td>ext_irq 입력 신호</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    mip는 레지스터로 저장하지 않고 하드웨어 입력에서 직접 조합 논리로 합성합니다:
+  </p>
+
+  <pre><code class="language-systemverilog">// mip: 하드웨어 직결 (소프트웨어 직접 쓰기 불가)
+// ext_irq → MEIP[11], timer_irq → MTIP[7], sw_irq → MSIP[3]
+assign mip_wire = {20'h0, ext_irq, 3'h0, timer_irq, 3'h0, sw_irq, 3'h0};
+//                         [11]              [7]               [3]
+
+// 인터럽트 펜딩 조건: mstatus.MIE=1 AND (mie AND mip) ≠ 0
+assign irq_pending = mstatus_reg[3] &amp; |(mie_reg &amp; mip_wire);</code></pre>
+
+  <aside class="tip">
+<strong>💡 mip_wire 비트 레이아웃</strong><br>
+<code>assign mip_wire = {20'h0, ext_irq, 3'h0, timer_irq, 3'h0, sw_irq, 3'h0};</code><br>
+비트 분해: [31:12]=0 | [11]=MEIP(ext_irq) | [10:8]=0 | [7]=MTIP(timer_irq) | [6:4]=0 | [3]=MSIP(sw_irq) | [2:0]=0<br>
+합계 비트 수: 20+1+3+1+3+1+3 = 32비트 ✓
+  </aside>
+
+  <aside class="tip">
+<strong>💡 실무 팁: RORL (Read-Only Register Logic)</strong><br>
+RORL은 RISC-V 스펙의 공식 용어는 아니지만, 실무에서 "소프트웨어 쓰기가 무시되는 읽기 전용 레지스터"를 지칭하는 약어입니다.
+<code>mip</code>의 MTIP/MEIP 비트가 대표적 예입니다. 이 비트들은 하드웨어(타이머/PLIC)가 직접 구동하므로 소프트웨어가 <code>CSRRW</code>로 값을 써도 효과가 없습니다.
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      <code>mip.MTIP</code>는 소프트웨어로 직접 클리어할 수 없습니다.
+      타이머 인터럽트를 끄려면 Ch17 타이머의 <code>mtimecmp</code> 레지스터를
+      현재 <code>mtime</code>보다 큰 값으로 변경해야 합니다 — 그러면 비교 조건이 거짓이 되어
+      <code>timer_irq</code>가 0으로 내려가고 <code>mip.MTIP</code>가 자동으로 클리어됩니다.
+    </p>
+  </aside>
+
+  <h4>mscratch (Machine Scratch Register)</h4>
+
+  <p>
+    <code>mscratch</code>는 주소 <code>0x340</code>에 위치합니다.
+    용도 제한이 없는 32비트 범용 임시 저장 레지스터입니다.
+    관례적으로 트랩 핸들러 진입 직후 일반 레지스터 값을 보존하기 위해 사용합니다.
+    예를 들어, 핸들러가 <code>t0</code>를 사용해야 한다면 먼저 <code>mscratch</code>에
+    <code>t0</code>를 저장하고, 핸들러 종료 시 복원합니다.
+    이것이 RISC-V ABI 표준 패턴입니다.
+  </p>
+
+  <h3>csr_unit 모듈 구현</h3>
+
+  <p>
+    7개 CSR을 하나의 <code>csr_unit</code> 모듈로 구현합니다.
+    모듈 구조는 세 가지 블록으로 나뉩니다:
+    ① 읽기 MUX (always_comb, csr_addr 기반 csr_rdata 선택),
+    ② 쓰기 데이터 계산 (always_comb, csr_op 기반 csr_next 계산),
+    ③ 레지스터 갱신 (always_ff, 우선순위: trap_en &gt; mret_en &gt; csr_we).
+  </p>
+
+  <pre><code class="language-systemverilog">// ============================================================
+// csr_unit.sv — CSR 읽기/쓰기 모듈 (핵심 발췌)
+// RISC-V Privileged Architecture v1.12 기반
+// 구현 CSR: mstatus(0x300), mie(0x304), mtvec(0x305),
+//           mscratch(0x340), mepc(0x341), mcause(0x342), mip(0x344)
+// ============================================================
+
+module csr_unit #(parameter HART_ID = 0)(
+   input  logic        clk, rst_n,
+
+   // CSR 명령어 인터페이스
+   input  logic [11:0] csr_addr,     // CSR 주소 (명령어[31:20])
+   input  logic        csr_we,       // CSR 쓰기 활성화
+   input  logic [2:0]  csr_op,       // 명령어 종류
+   input  logic [31:0] csr_wdata,    // 쓰기 데이터 (디코더가 계산)
+
+   // CSR 읽기 출력
+   output logic [31:0] csr_rdata,    // 읽기 데이터 → rd에 기록
+
+   // 인터럽트 외부 입력
+   input  logic        timer_irq,    // Ch17 타이머 → mip.MTIP
+   input  logic        ext_irq,      // 외부 인터럽트 → mip.MEIP
+   input  logic        sw_irq,       // 소프트웨어 인터럽트 → mip.MSIP
+
+   // Ch19 연결용 트랩 인터페이스 (현재는 0 고정)
+   input  logic        trap_en,      // 트랩 발생 신호
+   input  logic [31:0] trap_pc,      // 트랩 발생 시 PC → mepc
+   input  logic [31:0] trap_cause,   // 트랩 원인 코드 → mcause
+   input  logic        mret_en,      // mret 명령어 감지
+
+   // Ch19 연결용 출력
+   output logic [31:0] mtvec_out,    // 트랩 벡터 기저 주소
+   output logic [31:0] mepc_out,     // mret 복귀 주소
+   output logic        irq_pending   // 처리 가능한 인터럽트 존재
+);
+
+   // CSR 주소 상수
+   localparam CSR_MSTATUS  = 12'h300;
+   localparam CSR_MIE      = 12'h304;
+   localparam CSR_MTVEC    = 12'h305;
+   localparam CSR_MSCRATCH = 12'h340;
+   localparam CSR_MEPC     = 12'h341;
+   localparam CSR_MCAUSE   = 12'h342;
+   localparam CSR_MIP      = 12'h344;
+
+   // CSR 명령어 funct3 상수
+   localparam CSR_RW  = 3'b001;  // CSRRW
+   localparam CSR_RS  = 3'b010;  // CSRRS
+   localparam CSR_RC  = 3'b011;  // CSRRC
+   localparam CSR_RWI = 3'b101;  // CSRRWI
+   localparam CSR_RSI = 3'b110;  // CSRRSI
+   localparam CSR_RCI = 3'b111;  // CSRRCI
+
+   // mstatus WPRI 마스크: 비트 3(MIE), 7(MPIE), 12:11(MPP)만 허용
+   localparam MSTATUS_MASK = 32'h0000_1888;
+
+   // CSR 레지스터 선언 (mip는 조합 논리로 합성)
+   logic [31:0] mstatus_reg;
+   logic [31:0] mie_reg;
+   logic [31:0] mtvec_reg;
+   logic [31:0] mscratch_reg;
+   logic [31:0] mepc_reg;
+   logic [31:0] mcause_reg;
+   logic [31:0] mip_wire;   // 레지스터 아님 — 직결 합성
+
+   // mip: 하드웨어 입력 직결 (소프트웨어 쓰기 불가)
+   assign mip_wire = {20'h0, ext_irq, 3'h0, timer_irq, 3'h0, sw_irq, 3'h0};
+
+   // 인터럽트 처리 조건: mstatus.MIE=1 AND (mie AND mip) ≠ 0
+   assign irq_pending = mstatus_reg[3] &amp; |(mie_reg &amp; mip_wire);
+
+endmodule</code></pre>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      "mip와 mie의 차이를 설명하라."
+    </p>
+    <p>
+      <strong>답변 핵심:</strong>
+      mip(Machine Interrupt Pending)는 지금 인터럽트 요청이 와 있는지 나타내는 하드웨어 상태 레지스터입니다.
+      소프트웨어가 직접 제어할 수 없으며, 외부 신호(타이머, 외부 인터럽트 등)에 의해 자동으로 설정됩니다.
+      mie(Machine Interrupt Enable)는 어떤 인터럽트를 받을지 소프트웨어가 설정하는 마스크 레지스터입니다.
+      실제 인터럽트 처리 조건: <code>mstatus.MIE=1</code> AND <code>mie.MTIE=1</code> AND <code>mip.MTIP=1</code>, 세 조건 모두 충족해야 합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      mstatus.MIE=0일 때 타이머 인터럽트가 도착하면 어떻게 될까요?
+      irq_pending은 몇 인가요? mip.MTIP는 어떻게 되나요?
+      이후 MIE가 1이 되면 즉시 어떤 일이 일어나나요?
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 18.3절 ========== -->
+<section id="sec-18-3">
+  <h2>18.3 CSR 명령어 구현: 원자적 읽기-수정-쓰기</h2>
+
+  <p>
+    CSR 명령어의 핵심은 <strong>원자성(Atomicity)</strong>입니다.
+    CSR을 읽고 수정하는 두 동작이 하나의 분리 불가능한 연산으로 묶입니다.
+    이 특성 덕분에 인터럽트 핸들러에서 mstatus 비트를 안전하게 변경할 수 있습니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong>
+    ATM에서 돈을 인출하는 상황을 생각하십시오.
+    인출 금액을 입력하면 현재 잔액을 확인하고(읽기), 동시에 새 잔액으로 갱신합니다(쓰기).
+    이 두 동작 사이에 다른 트랜잭션이 끼어들 수 없습니다 — 이것이 원자성입니다.
+    CSRRW는 "CSR의 이전 값을 rd에 저장하면서 새 값을 동시에 씁니다".
+    CSRRS는 "이전 잔액을 영수증에 출력하면서, 지정한 비트들만 추가로 설정합니다".
+    CSRRC는 "이전 잔액을 영수증에 출력하면서, 지정한 비트들만 클리어합니다".
+    <br><br>
+    <strong>한계:</strong> 실제 ATM과 달리 CSRRW는 쓰기 실패가 없으며,
+    파이프라인 구현 시 읽기(ID)와 쓰기(WB) 사이의 해저드가 발생할 수 있습니다 — 이는 Ch19에서 해결합니다.
+  </div>
+
+  <h3>6개 CSR 명령어</h3>
+
+  <p>
+    RISC-V Zicsr 확장은 6개의 CSR 명령어를 정의합니다. 모두 <code>opcode = 1110011</code>(SYSTEM)을 공유합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch18_sec03_csr_instruction.svg" alt="CSR 명령어 인코딩 및 원자적 읽기-수정-쓰기 동작">
+    <figcaption>그림 18.3: CSR 명령어 인코딩. 상단은 비트 필드 구조, 하단은 6개 명령어 동작 요약.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어</th>
+        <th>funct3</th>
+        <th>rd에 저장</th>
+        <th>CSR 쓰기 조건</th>
+        <th>CSR에 쓰는 값</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CSRRW</td>
+        <td>001</td>
+        <td>이전 CSR 값</td>
+        <td>항상</td>
+        <td>rs1</td>
+      </tr>
+      <tr>
+        <td>CSRRS</td>
+        <td>010</td>
+        <td>이전 CSR 값</td>
+        <td>rs1 ≠ x0</td>
+        <td>CSR | rs1</td>
+      </tr>
+      <tr>
+        <td>CSRRC</td>
+        <td>011</td>
+        <td>이전 CSR 값</td>
+        <td>rs1 ≠ x0</td>
+        <td>CSR &amp; ~rs1</td>
+      </tr>
+      <tr>
+        <td>CSRRWI</td>
+        <td>101</td>
+        <td>이전 CSR 값</td>
+        <td>항상</td>
+        <td>uimm[4:0] (영확장)</td>
+      </tr>
+      <tr>
+        <td>CSRRSI</td>
+        <td>110</td>
+        <td>이전 CSR 값</td>
+        <td>uimm ≠ 0</td>
+        <td>CSR | uimm</td>
+      </tr>
+      <tr>
+        <td>CSRRCI</td>
+        <td>111</td>
+        <td>이전 CSR 값</td>
+        <td>uimm ≠ 0</td>
+        <td>CSR &amp; ~uimm</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>중요한 쓰기 조건:</strong>
+    CSRRW/CSRRWI는 <code>rd = x0</code>이어도 CSR에 쓰기가 발생합니다.
+    반면 CSRRS/CSRRC에서 <code>rs1 = x0</code>이면 CSR 값을 변경하지 않습니다 — 순수 읽기 효과만 발생합니다.
+    이 비대칭성을 반드시 기억하십시오.
+  </p>
+
+  <p>
+    실용적인 관용구: <code>CSRRS rd, csr, x0</code>은 CSR을 변경하지 않고 현재 값만 <code>rd</code>에 읽어오는 표준 패턴입니다.
+    <code>CSRRC x0, mstatus, t1</code>은 <code>mstatus</code>에서 <code>t1</code>이 1인 비트들을 클리어하되, 이전 값은 버립니다.
+  </p>
+
+  <h3>CSR 다음 값 계산 로직</h3>
+
+  <pre><code class="language-systemverilog">// csr_next: CSR에 기록될 다음 값 계산 (조합 논리)
+// csr_wdata는 디코더가 계산하여 전달 (rs1_data 또는 {27'b0, uimm[4:0]})
+always_comb begin
+   csr_next = csr_rdata;  // 기본값: 변경 없음
+   case (csr_op)
+      CSR_RW,  CSR_RWI: csr_next = csr_wdata;           // 덮어쓰기
+      CSR_RS,  CSR_RSI: csr_next = csr_rdata | csr_wdata;  // 비트 세트
+      CSR_RC,  CSR_RCI: csr_next = csr_rdata &amp; ~csr_wdata; // 비트 클리어
+      default:           csr_next = csr_rdata;
+   endcase
+end
+
+// CSR 레지스터 갱신 (순차 논리, 우선순위: trap_en > mret_en > csr_we)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n) begin
+      mstatus_reg  &lt;= 32'h0;
+      mie_reg      &lt;= 32'h0;
+      mtvec_reg    &lt;= 32'h0;
+      mscratch_reg &lt;= 32'h0;
+      mepc_reg     &lt;= 32'h0;
+      mcause_reg   &lt;= 32'h0;
+   end else if (trap_en) begin
+      // 트랩 진입: MPIE←MIE, MIE←0, MPP←11(M-mode), mepc←PC, mcause←원인
+      mstatus_reg &lt;= (mstatus_reg &amp; ~MSTATUS_MASK)
+                   | ((mstatus_reg &amp; 32'h8) &lt;&lt; 4) // MIE→MPIE 자리 이동
+                   | 32'h1800;                      // MPP=11(M-mode)
+      mepc_reg    &lt;= {trap_pc[31:1], 1'b0};        // 하위 1비트 0 보장
+      mcause_reg  &lt;= trap_cause;
+   end else if (mret_en) begin
+      // mret: MIE←MPIE, MPIE←1, MPP←11(M-mode 유지 — U-mode 미구현)
+      mstatus_reg &lt;= (mstatus_reg &amp; ~MSTATUS_MASK)
+                   | ((mstatus_reg &amp; 32'h80) &gt;&gt; 4) // MPIE→MIE 자리 이동
+                   | 32'h80;                         // MPIE←1
+   end else if (csr_we) begin
+      // 일반 CSR 명령어 (CSRRW/CSRRS/CSRRC/즉치형)
+      case (csr_addr)
+         CSR_MSTATUS:  mstatus_reg  &lt;= csr_next &amp; MSTATUS_MASK;  // WPRI 마스크 적용
+         CSR_MIE:      mie_reg      &lt;= csr_next;
+         CSR_MTVEC:    mtvec_reg    &lt;= {csr_next[31:2], csr_next[1:0]}; // MODE 저장
+         CSR_MSCRATCH: mscratch_reg &lt;= csr_next;
+         CSR_MEPC:     mepc_reg     &lt;= {csr_next[31:1], 1'b0};   // WARL: 하위 1비트 0
+         CSR_MCAUSE:   mcause_reg   &lt;= csr_next;
+         // CSR_MIP: 소프트웨어 쓰기 무시 (RORL — hw 직결)
+         default: ;
+      endcase
+   end
+end</code></pre>
+
+  <aside class="tip">
+    <strong>💡 비트 이동 연산의 의미: &lt;&lt; 4와 &gt;&gt; 4</strong>
+    <p>
+      트랩 진입 시 <code>(mstatus_reg &amp; 32'h8) &lt;&lt; 4</code>가 하는 일:
+      MIE는 mstatus의 비트 3 위치에 있고, MPIE는 비트 7 위치에 있습니다.
+      두 비트의 차이가 4이므로, MIE 값을 4비트 왼쪽으로 이동하면 MPIE 위치로 정확히 옮겨집니다.
+      즉, MIE(bit3) 값 하나를 MPIE(bit7) 자리에 복사하는 연산입니다.
+      마찬가지로 mret 시 <code>(mstatus_reg &amp; 32'h80) &gt;&gt; 4</code>는 MPIE(bit7) 값을 MIE(bit3) 위치로 복원합니다.
+    </p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      <code>CSRRS x0, mstatus, t0</code> 패턴을 주목하십시오.
+      <code>rd = x0</code>이므로 읽기 결과는 버려집니다.
+      <code>rs1 = t0</code>이므로 <code>t0 ≠ x0</code>이면 쓰기가 발생합니다.
+      결과적으로 "mstatus |= t0"의 쓰기 효과만 남습니다.
+      반대로 <code>CSRRS t0, mstatus, x0</code>은 <code>rs1 = x0</code>이므로 쓰기 없이 읽기만 합니다.
+      학생들이 rd=x0과 rs1=x0의 의미를 자주 혼동하므로 나란히 비교하여 설명하십시오.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> CSRRW와 <code>sw</code>(store word)의 차이는 무엇인가요?</p>
+    <p>
+      <strong>A:</strong> <code>sw</code>는 AHB 버스를 통해 메모리 주소 공간에 데이터를 씁니다. CSR 레지스터를 변경하지 않습니다.
+      <code>CSRRW</code>는 프로세서 코어 내부의 CSR 전용 레지스터에 접근하며, 버스 트랜잭션 없이 1사이클에 완료됩니다.
+      또한 이전 CSR 값을 원자적으로 <code>rd</code>에 반환합니다 — <code>sw</code>는 읽기 반환이 없습니다.
+    </p>
+  </aside>
+
+  <h3>파이프라인에서의 CSR 해저드 (예고)</h3>
+
+  <p>
+    파이프라인 프로세서에서 CSR 명령어는 ID 스테이지에서 <code>csr_rdata</code>를 읽고,
+    WB 스테이지에서 <code>csr_we</code>를 활성화합니다.
+    이 3단계 차이로 인해 연속된 CSR 명령어에서 해저드가 발생할 수 있습니다.
+    이 챕터에서는 CSR 독립 모듈로만 동작을 검증합니다.
+    파이프라인 통합과 CSR 해저드 해결은 Ch19에서 다룹니다.
+    <strong>"CSR 해저드가 있다는 것만 기억하고, 해결은 Ch19에서"</strong>라고 정리하십시오.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      CSRRW의 원자적 읽기-수정-쓰기는 처음에 직관적이지 않습니다.
+      "읽으면서 동시에 쓴다"는 개념이 파이프라인에서 어떻게 구현되는지 의문이 생기는 것은 당연합니다.
+      이 챕터에서는 독립 모듈(<code>csr_unit</code>)에서 1클럭 완료 방식으로 단순하게 구현합니다.
+      파이프라인 해저드 처리는 Ch19에서 정식으로 다룹니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      <code>CSRRS rd, csr, x0</code> 명령어에서 <code>rs1 = x0</code>(값 = 0)이면 CSR에 어떤 변화가 생기나요?
+      이 패턴을 어떤 용도로 활용할 수 있나요?
+      <code>CSRRS x0, mstatus, t0</code>와 <code>CSRRS t1, mstatus, x0</code>의 차이를 설명해 보십시오.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 18.4절 ========== -->
+<section id="sec-18-4">
+  <h2>18.4 CSR 동작 확인 미니 실습</h2>
+
+  <p>
+    Ch09에서 파이프라인 레지스터의 파형을 처음 확인했을 때의 성취감, 기억하시나요?
+    이번에는 CSR 레지스터가 올바르게 읽히고 쓰이는지 시뮬레이션으로 확인합니다.
+    하드웨어가 처음으로 자신의 상태를 기억하고 인터럽트 조건을 판단하는 순간을 파형으로 목격하게 됩니다.
+  </p>
+
+  <p>
+    이 실습은 세 단계로 구성되어 있습니다. 각 단계는 이전 단계보다 조금 더 복잡하지만,
+    모두 이 챕터에서 배운 내용만으로 완료할 수 있습니다.
+    파이프라인 해저드나 예외 처리 흐름은 다루지 않습니다. CSR 레지스터가 올바르게 읽히고 쓰이는지만 확인합니다.
+    복잡한 통합은 Ch19에서 다룹니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      시뮬레이션에서 <code>[PASS]</code>가 출력되면 다음 단계로 넘어가십시오.
+      <code>[FAIL]</code>이 출력되면 출력된 예상값과 실제값을 비교하여 어느 CSR이 문제인지 확인하십시오.
+      가장 흔한 원인 두 가지: ① <code>rst_n</code> 해제 전에 CSR 쓰기 시도 (리셋 후 5클럭 대기 확인),
+      ② mstatus 쓰기 시 WPRI 마스크(<code>0x1888</code>)가 적용되어 기대값이 달라지는 경우.
+    </p>
+  </aside>
+
+  <h3>단계 1 — CSR 쓰기와 읽기 확인</h3>
+
+  <p>가장 단순한 단계입니다. mtvec에 핸들러 주소를 설정하고 읽어서 확인합니다.</p>
+
+  <pre><code class="language-systemverilog">// 단계 1: mtvec에 핸들러 주소 설정 (CSRRW)
+// 기대 결과: mtvec = 0x8000_0000
+csr_write(CSR_MTVEC, CSR_OP_RW, 32'h8000_0000);
+csr_read(CSR_MTVEC, rd);
+// [PASS] mtvec = 0x80000000</code></pre>
+
+  <h3>단계 2 — 비트 마스크 조작 (CSRRS/CSRRC)</h3>
+
+  <p>
+    mie와 mstatus의 특정 비트를 설정합니다. 아직 타이머 신호가 없으므로 irq_pending은 0이어야 합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// 단계 2: 비트 마스크 조작
+// mie.MTIE (비트 7) 세트: CSRRS mie, t0 (t0 = 0x80)
+csr_write(CSR_MIE, CSR_OP_RS, 32'h80);     // mie |= 0x80 → MTIE 활성화
+
+// mstatus.MIE (비트 3) 세트: CSRRS mstatus, t0 (t0 = 0x8)
+csr_write(CSR_MSTATUS, CSR_OP_RS, 32'h8);  // mstatus |= 0x8 → MIE 활성화
+
+// timer_irq=0이므로 mip.MTIP=0 → irq_pending = 0 확인
+// [PASS] timer_irq=0이면 irq_pending=0</code></pre>
+
+  <h3>단계 3 — 인터럽트 마스킹 확인</h3>
+
+  <p>
+    timer_irq를 1로 설정하여 mip.MTIP가 1이 되고, 모든 조건(MIE=1, MTIE=1, MTIP=1)이 충족될 때
+    irq_pending이 1이 되는지 확인합니다. 그 후 MIE를 클리어하여 마스킹 효과를 검증합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// 단계 3: 인터럽트 마스킹 확인
+// timer_irq = 1 → mip.MTIP = 1 (하드웨어 직결)
+// mstatus.MIE=1, mie.MTIE=1, mip.MTIP=1 → irq_pending = 1
+// [PASS] irq_pending=1 확인
+
+// mstatus.MIE (비트 3) 클리어: CSRRC mstatus, t0 (t0 = 0x8)
+csr_write(CSR_MSTATUS, CSR_OP_RC, 32'h8);  // mstatus &amp;= ~0x8 → MIE 비활성화
+// → irq_pending = 0 (MIE=0이면 모든 인터럽트 차단)
+// [PASS] 인터럽트 마스킹 확인</code></pre>
+
+  <h3>시뮬레이션 코드</h3>
+
+  <pre><code class="language-systemverilog">// ch18_csr_tb.sv — CSR 유닛 테스트벤치
+`timescale 1ns/1ps
+module csr_tb;
+   logic        clk, rst_n;
+   logic [11:0] csr_addr;
+   logic        csr_we;
+   logic [2:0]  csr_op;
+   logic [31:0] csr_wdata, csr_rdata;
+   logic        timer_irq, ext_irq, sw_irq;
+   logic        trap_en, mret_en;
+   logic [31:0] trap_pc, trap_cause;
+   logic [31:0] mtvec_out, mepc_out;
+   logic        irq_pending;
+
+   localparam CSR_MSTATUS  = 12'h300;
+   localparam CSR_MIE      = 12'h304;
+   localparam CSR_MTVEC    = 12'h305;
+   localparam CSR_OP_RW    = 3'b001;
+   localparam CSR_OP_RS    = 3'b010;
+   localparam CSR_OP_RC    = 3'b011;
+
+   initial clk = 0;
+   always #5 clk = ~clk;  // 100 MHz
+
+   csr_unit u_csr(
+      .clk(clk), .rst_n(rst_n),
+      .csr_addr(csr_addr), .csr_we(csr_we),
+      .csr_op(csr_op), .csr_wdata(csr_wdata), .csr_rdata(csr_rdata),
+      .timer_irq(timer_irq), .ext_irq(ext_irq), .sw_irq(sw_irq),
+      .trap_en(1'b0), .trap_pc(32'h0), .trap_cause(32'h0), .mret_en(1'b0),
+      .mtvec_out(mtvec_out), .mepc_out(mepc_out), .irq_pending(irq_pending)
+   );
+
+   // CSR 쓰기 태스크
+   task csr_write(input [11:0] addr, input [2:0] op, input [31:0] data);
+      @(posedge clk);
+      csr_addr &lt;= addr; csr_op &lt;= op; csr_wdata &lt;= data; csr_we &lt;= 1'b1;
+      @(posedge clk);
+      csr_we &lt;= 1'b0;
+   endtask
+
+   // CSR 읽기 태스크
+   task csr_read(input [11:0] addr, output [31:0] data);
+      @(posedge clk);
+      csr_addr &lt;= addr; csr_we &lt;= 1'b0;
+      @(posedge clk);
+      data = csr_rdata;
+   endtask
+
+   logic [31:0] rd;
+   integer pass_cnt, fail_cnt;
+
+   initial begin
+      $display("=== Chapter 18 CSR 유닛 테스트 ===");
+      pass_cnt = 0; fail_cnt = 0;
+      rst_n = 0; timer_irq = 0; ext_irq = 0; sw_irq = 0;
+      csr_addr = 0; csr_we = 0; csr_op = 0; csr_wdata = 0;
+      repeat(5) @(posedge clk);
+      rst_n = 1;
+
+      // 단계 1: CSR 쓰기/읽기
+      $display("\n--- 단계 1: CSR 쓰기/읽기 ---");
+      csr_write(CSR_MTVEC, CSR_OP_RW, 32'h8000_0000);
+      csr_read(CSR_MTVEC, rd);
+      if (rd == 32'h8000_0000) begin
+         $display("[PASS] mtvec = 0x%08h", rd); pass_cnt++;
+      end else begin
+         $display("[FAIL] mtvec = 0x%08h (예상: 0x80000000)", rd); fail_cnt++;
+      end
+
+      // 단계 2: 비트 마스크 조작
+      $display("\n--- 단계 2: 비트 마스크 조작 ---");
+      csr_write(CSR_MIE,      CSR_OP_RS, 32'h80); // mie.MTIE 세트
+      csr_write(CSR_MSTATUS,  CSR_OP_RS, 32'h8);  // mstatus.MIE 세트
+      @(posedge clk);
+      if (!irq_pending) begin
+         $display("[PASS] timer_irq=0 → irq_pending=0"); pass_cnt++;
+      end else begin
+         $display("[FAIL] 예상치 못한 irq_pending=1"); fail_cnt++;
+      end
+
+      // 단계 3: 인터럽트 마스킹
+      $display("\n--- 단계 3: 인터럽트 마스킹 ---");
+      timer_irq = 1;
+      @(posedge clk); @(posedge clk);
+      if (irq_pending) begin
+         $display("[PASS] irq_pending=1 확인 (MIE=%b, MTIE=%b, MTIP=%b)",
+            u_csr.mstatus_reg[3], u_csr.mie_reg[7], u_csr.mip_wire[7]);
+         pass_cnt++;
+      end else begin
+         $display("[FAIL] irq_pending=0 (MIE=%b, MTIE=%b, MTIP=%b)",
+            u_csr.mstatus_reg[3], u_csr.mie_reg[7], u_csr.mip_wire[7]);
+         fail_cnt++;
+      end
+
+      csr_write(CSR_MSTATUS, CSR_OP_RC, 32'h8); // mstatus.MIE 클리어
+      @(posedge clk);
+      if (!irq_pending) begin
+         $display("[PASS] MIE=0 → 인터럽트 마스킹 확인"); pass_cnt++;
+      end else begin
+         $display("[FAIL] 마스킹 실패 (irq_pending=1 유지)"); fail_cnt++;
+      end
+
+      $display("\n=== 완료: 통과 %0d건, 실패 %0d건 ===", pass_cnt, fail_cnt);
+      $finish;
+   end
+
+   // 타임아웃 보호
+   initial begin #100_000; $display("[TIMEOUT]"); $finish; end
+endmodule</code></pre>
+
+  <h3>시뮬레이션 실행 명령어</h3>
+
+  <pre><code class="language-bash"># Vivado Simulator (xsim)
+xvlog --sv ch18_csr_unit.sv ch18_csr_tb.sv
+xelab csr_tb -debug typical
+xsim csr_tb -runall
+
+# VCS
+vcs -sverilog ch18_csr_unit.sv ch18_csr_tb.sv -o sim_csr
+./sim_csr</code></pre>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      시뮬레이션에서 <code>mie.MTIE=1</code>, <code>mip.MTIP=1</code>인데 <code>irq_pending=0</code>이라면
+      어떤 조건이 빠진 것인가요? <code>irq_pending</code> 조합 논리(<code>mstatus_reg[3] &amp; |(mie_reg &amp; mip_wire)</code>)를
+      보고 누락된 조건을 찾아보십시오.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      이 테스트벤치에서 <code>trap_en = 0</code>으로 고정합니다.
+      mstatus의 트랩 진입/복귀 동작(MPIE, MPP 업데이트)은
+      Ch19에서 <code>trap_en = 1</code>로 설정하여 확인합니다.
+      지금은 CSR 읽기/쓰기와 인터럽트 마스킹만 검증합니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 18.5절 ========== -->
+<section id="sec-18-5">
+  <h2>18.5 요약 및 다음 단계</h2>
+
+  <p>
+    이 챕터는 하드웨어와 소프트웨어의 경계에 있는 내용을 다루었습니다.
+    처음 접하면 추상적으로 느껴지는 것이 정상입니다.
+    CSR은 한 번 읽어서 완전히 파악하는 내용이 아닙니다.
+    Ch19에서 실제 예외 처리 흐름을 구현하면서 이 챕터로 다시 돌아오면,
+    각 비트가 왜 그 자리에 있는지 자연스럽게 이해됩니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      Ch17에서 만든 <code>timer_irq</code> 신호는 <code>mip</code>의 어느 비트와 연결되어야 하나요?
+      이 신호가 1이 되었을 때 프로세서가 실제로 인터럽트를 받으려면 추가로 어떤 조건이 충족되어야 하나요?
+      그 조건들이 이 챕터에서 어떻게 구현되었는지 코드에서 찾아보십시오.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 챕터 요약 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>CSR = 프로세서의 제어판</strong>: 12비트 주소 공간(4096개), CSRRW/CSRRS/CSRRC 전용 명령어로만 접근. 일반 lw/sw/add 명령어로 접근 불가.</li>
+    <li><strong>특권 수준</strong>: RISC-V는 M/S/U-mode 3종 정의. 이 교재는 M-mode만 구현. 리셋 후 항상 M-mode 진입.</li>
+    <li><strong>CSR 주소 권한 인코딩</strong>: [11:10]=11이면 읽기 전용, [9:8]=11이면 M-mode 전용.</li>
+    <li><strong>7개 핵심 CSR 역할</strong>:
+      <ul>
+        <li>mstatus(0x300): 전역 인터럽트 제어(MIE), 트랩 진입/복귀 상태(MPIE, MPP)</li>
+        <li>mtvec(0x305): 예외 핸들러 기저 주소 (Direct/Vectored 모드)</li>
+        <li>mepc(0x341): 예외 발생 시점 PC 저장 → mret 복귀 주소</li>
+        <li>mcause(0x342): 트랩 원인 (bit[31]=인터럽트/예외 구분)</li>
+        <li>mie(0x304): 개별 인터럽트 활성화 마스크 (MSIE/MTIE/MEIE)</li>
+        <li>mip(0x344): 현재 계류 인터럽트 상태 (하드웨어 직결, 소프트웨어 쓰기 불가)</li>
+        <li>mscratch(0x340): 트랩 핸들러 임시 저장 레지스터</li>
+      </ul>
+    </li>
+    <li><strong>인터럽트 발생 조건</strong>: mstatus.MIE=1 AND (mie &amp; mip) ≠ 0. 세 단계 조건 모두 충족 필요.</li>
+    <li><strong>CSR 원자성</strong>: CSRRW는 이전 값 읽기 + 새 값 쓰기가 1사이클 내 완료. 파이프라인 해저드는 Ch19에서 해결.</li>
+    <li><strong>Ch19 예고</strong>: csr_unit은 완성됐습니다. Ch19에서는 trap_en 신호가 활성화되어 실제 예외/인터럽트가 처리되는 전체 흐름을 구현합니다. Ch17의 timer_irq → mip.MTIP → irq_pending → 파이프라인 플러시 → 핸들러 실행의 연결이 완성됩니다.</li>
+  </ul>
+</section>
+
+<!-- ========== 자가 점검 체크리스트 ========== -->
+<section id="sec-checklist">
+  <h2>자가 점검 체크리스트</h2>
+  <p>이 챕터를 마친 후 다음 질문에 답해 보십시오:</p>
+  <ul>
+    <li>☐ mstatus.MIE=0일 때 타이머 인터럽트가 오면 어떻게 되는가? (처리되는가, 대기하는가?)</li>
+    <li>☐ mtvec에 <code>0x8000_0004</code>를 쓰면 Mode는 무엇인가? (Base = 0x8000_0001, Mode = 2'b00인가, 2'b01인가?)</li>
+    <li>☐ <code>CSRRS x0, mie, t1</code>에서 <code>rd = x0</code>라면 어떤 효과가 있는가?</li>
+    <li>☐ mip.MTIP를 소프트웨어로 직접 클리어할 수 없는 이유는 무엇인가?</li>
+    <li>☐ trap_en 신호가 활성화되면 mstatus에서 어떤 비트가 변경되는가?</li>
+  </ul>
+
+  <p>
+    이 챕터를 처음 읽으면서 CSR 비트 하나하나가 모두 이해되지 않았을 수 있습니다.
+    지금은 '이런 레지스터들이 있고 대략 이런 역할을 한다'는 감각만으로 충분합니다.
+    Ch19에서 실제 예외가 발생하고 mtvec이 가리키는 핸들러로 점프하는 순간, 이 챕터의 모든 것이 살아 움직일 것입니다.
+  </p>
+</section>
+
+<!-- ========== 연습문제 ========== -->
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li>
+      <strong>[기억 L1]</strong>
+      다음 빈칸을 채우시오.
+      <ul>
+        <li>RISC-V의 CSR 주소 공간은 총 ____비트이며, 최대 ____개의 CSR을 정의할 수 있다.</li>
+        <li>mstatus 레지스터에서 전역 인터럽트 활성화 비트(MIE)는 비트 ____에 위치한다.</li>
+      </ul>
+    </li>
+
+    <li>
+      <strong>[이해 L2]</strong>
+      mtvec 레지스터의 MODE 필드가 0(Direct)일 때와 1(Vectored)일 때,
+      타이머 인터럽트(cause=7)가 발생했을 때 각각 핸들러 주소를 계산하시오.
+      mtvec.Base = <code>0x8000_0000</code> 기준.
+    </li>
+
+    <li>
+      <strong>[적용 L3]</strong>
+      <code>t0 = 32'h8000_0000</code>, <code>mie = 32'h0000_0000</code>인 상태에서
+      다음 명령어를 순서대로 실행한 후 mie의 최종 값을 구하시오:
+      <ol>
+        <li><code>CSRRW x0, mie, t0</code></li>
+        <li><code>CSRRS x0, mie, t0</code> (t0 = 0x80으로 변경 후)</li>
+        <li><code>CSRRC x0, mie, t0</code> (t0 = 0x08)</li>
+      </ol>
+    </li>
+
+    <li>
+      <strong>[분석 L4]</strong>
+      다음 조건에서 인터럽트가 실제로 서비스되는지 분석하시오:
+      mstatus.MIE = 1, mie = <code>32'h0000_0080</code>(MTIE만 세트),
+      mip = <code>32'h0000_0880</code>(MEIP와 MTIP 동시 계류).
+      어떤 인터럽트가 처리되며 다른 인터럽트가 무시되는 이유를 mie &amp; mip 관계식으로 설명하시오.
+      두 인터럽트를 모두 처리하려면 mie를 어떻게 수정해야 하는가?
+    </li>
+
+    <li>
+      <strong>[종합 L5]</strong>
+      csr_unit.sv에 성능 카운터 CSR 2개를 추가하시오:
+      <code>mcycle</code>(0xB00, 클럭마다 자동 증가),
+      <code>minstret</code>(0xB02, 명령어 완료마다 증가).
+      다음 세 가지 설계 결정에 대한 근거와 SystemVerilog 선언부를 작성하시오:
+      (1) mcycle의 자동 증가와 CSRRW 초기화 간의 우선순위를 어떻게 결정하는가?
+      (2) minstret 증가 시점은 언제이며 파이프라인의 어느 신호를 사용해야 하는가?
+      (3) 읽기 MUX에 두 카운터를 추가하는 코드를 작성하시오.
+    <p class="hint"><strong>힌트:</strong> mcycle은 클럭마다 자동으로 1씩 증가하므로 <code>always_ff</code> 블록에서 <code>csr_we</code>와 무관하게 항상 실행됩니다. 단, 소프트웨어가 카운터를 리셋할 수 있도록 <code>csr_we && csr_addr == CSR_MCYCLE</code> 조건의 쓰기 경로도 필요합니다.</p>
+    </li>
+
+    <li>
+      <strong>[평가 L6]</strong>
+      5단 파이프라인에서 다음 명령어 시퀀스를 실행할 때 발생하는 CSR 해저드를 분석하고,
+      포워딩과 파이프라인 스톨 각각의 해결 방안을 비교 평가하시오:
+      <pre><code class="language-systemverilog">CSRRW t0, mstatus, t1   // mstatus = t1, t0 = 이전 mstatus
+CSRRS x0, mstatus, t0   // mstatus |= t0 (이전 값 의존)</code></pre>
+      (a) 해저드가 발생하는 이유를 파이프라인 다이어그램으로 설명하시오.
+      (b) 포워딩 방안과 NOP 삽입 방안의 장단점을 비교하시오.
+      (c) RISC-V 스펙이 CSR 명령어를 "즉시 가시적(immediately visible)"으로 규정한다면,
+      소프트웨어 NOP 삽입도 허용되는가? 교재 수준에서의 설계 선택을 정당화하시오.
+    </li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    csr_unit은 완성됐습니다. 이제 파이프라인 프로세서에 연결할 차례입니다.
+    Chapter 19에서는 <code>trap_en</code> 신호가 활성화되어 실제 예외/인터럽트가 처리되는 전체 흐름을 구현합니다.
+    Ch17에서 만든 타이머 인터럽트가 파이프라인을 플러시하고,
+    mtvec이 가리키는 핸들러로 PC가 점프하고,
+    핸들러 종료 시 mepc를 통해 원래 위치로 복귀하는 순간을 직접 시뮬레이션으로 확인합니다.
+    이 챕터에서 배운 CSR 비트 하나하나가 Ch19에서 살아 움직일 것입니다.
+  </p>
+</section>
+
+<p class="achievement">
+✅ Chapter 18 완료! CSR 유닛이 완성되었습니다. mstatus, mtvec, mepc, mcause, mie, mip, mscratch — 7개 레지스터가 모두 구현되어 있고, CSRRW/CSRRS/CSRRC 명령어로 원자적으로 접근할 수 있습니다. Chapter 19에서는 이 CSR들이 실제 예외/인터럽트를 처리하는 순간 살아 움직이는 것을 보게 됩니다.
+</p>
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>
+    지금 당장 전부 이해하지 않아도 됩니다.
+    각 절 학습 후 참조용으로 활용하세요.
+    이 코드는 Chapter 19에서 파이프라인에 통합할 때 그대로 재사용합니다.
+  </p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch18_csr_unit.sv</h3>
+    <pre><code class="language-systemverilog">// ============================================================
+// ch18_csr_unit.sv — CSR 유닛 (Control and Status Register Unit)
+// RISC-V Privileged Architecture v1.12 M-mode 구현
+// 구현 CSR 7개: mstatus, mie, mtvec, mscratch, mepc, mcause, mip
+// Ch19에서 파이프라인에 통합 예정
+// ============================================================
+
+module csr_unit #(parameter HART_ID = 0)(
+   input  logic        clk, rst_n,
+
+   // CSR 명령어 인터페이스 (파이프라인 ID/WB 스테이지에서 구동)
+   input  logic [11:0] csr_addr,     // CSR 주소 (명령어[31:20])
+   input  logic        csr_we,       // CSR 쓰기 활성화
+   input  logic [2:0]  csr_op,       // funct3: CSR_RW/RS/RC/RWI/RSI/RCI
+   input  logic [31:0] csr_wdata,    // 쓰기 데이터 (디코더 계산: rs1 또는 uimm)
+
+   // CSR 읽기 출력
+   output logic [31:0] csr_rdata,    // CSR 읽기 데이터 → rd 기록
+
+   // 인터럽트 외부 입력 (하드웨어 직결 → mip 합성)
+   input  logic        timer_irq,    // Ch17 타이머 → mip.MTIP[7]
+   input  logic        ext_irq,      // 외부 인터럽트 → mip.MEIP[11]
+   input  logic        sw_irq,       // 소프트웨어 인터럽트 → mip.MSIP[3]
+
+   // 트랩 인터페이스 (Ch19에서 구동, 현재 테스트벤치에서 0 고정)
+   input  logic        trap_en,      // 트랩 발생 (예외/인터럽트 처리 진입)
+   input  logic [31:0] trap_pc,      // mepc에 저장할 PC 값
+   input  logic [31:0] trap_cause,   // mcause에 저장할 원인 코드
+   input  logic        mret_en,      // mret 명령어 감지 → mstatus 복원
+
+   // Ch19 연결용 출력
+   output logic [31:0] mtvec_out,    // 트랩 벡터 기저 주소 (MODE 포함)
+   output logic [31:0] mepc_out,     // mret 복귀 주소
+   output logic        irq_pending   // 처리 가능한 인터럽트 존재 → 파이프라인 플러시 트리거
+);
+
+   // --------------------------------------------------------
+   // CSR 주소 상수 (RISC-V Privileged Architecture v1.12)
+   // --------------------------------------------------------
+   localparam CSR_MSTATUS  = 12'h300;  // 기계 상태 레지스터
+   localparam CSR_MIE      = 12'h304;  // 기계 인터럽트 활성화
+   localparam CSR_MTVEC    = 12'h305;  // 기계 트랩 벡터 기저 주소
+   localparam CSR_MSCRATCH = 12'h340;  // 기계 스크래치 (핸들러 임시 저장)
+   localparam CSR_MEPC     = 12'h341;  // 기계 예외 PC
+   localparam CSR_MCAUSE   = 12'h342;  // 기계 트랩 원인
+   localparam CSR_MIP      = 12'h344;  // 기계 인터럽트 계류 (읽기 전용)
+
+   // CSR 명령어 funct3 상수
+   localparam CSR_RW  = 3'b001;  // CSRRW
+   localparam CSR_RS  = 3'b010;  // CSRRS
+   localparam CSR_RC  = 3'b011;  // CSRRC
+   localparam CSR_RWI = 3'b101;  // CSRRWI
+   localparam CSR_RSI = 3'b110;  // CSRRSI
+   localparam CSR_RCI = 3'b111;  // CSRRCI
+
+   // mstatus WPRI 마스크: 구현 비트만 허용
+   // 비트 3(MIE) + 7(MPIE) + 12:11(MPP) = 0x0000_1888
+   localparam MSTATUS_MASK = 32'h0000_1888;
+
+   // --------------------------------------------------------
+   // CSR 레지스터 선언
+   // --------------------------------------------------------
+   logic [31:0] mstatus_reg;   // [3]=MIE, [7]=MPIE, [12:11]=MPP
+   logic [31:0] mie_reg;       // [3]=MSIE, [7]=MTIE, [11]=MEIE
+   logic [31:0] mtvec_reg;     // [31:2]=BASE, [1:0]=MODE
+   logic [31:0] mscratch_reg;  // [31:0] 범용 임시 저장
+   logic [31:0] mepc_reg;      // [31:1]=PC값, [0]=0(WARL)
+   logic [31:0] mcause_reg;    // [31]=Interrupt, [30:0]=코드
+
+   // mip: 레지스터 없음 — 하드웨어 입력 직결 합성 (RORL)
+   // 소프트웨어 직접 쓰기 시도는 무시됨
+   logic [31:0] mip_wire;
+
+   // --------------------------------------------------------
+   // mip 합성: 하드웨어 입력 직결
+   // ext_irq → MEIP[11], timer_irq → MTIP[7], sw_irq → MSIP[3]
+   // --------------------------------------------------------
+   assign mip_wire = {20'h0, ext_irq, 3'h0, timer_irq, 3'h0, sw_irq, 3'h0};
+
+   // 인터럽트 처리 가능 조건: mstatus.MIE=1 AND (mie AND mip) ≠ 0
+   assign irq_pending = mstatus_reg[3] &amp; |(mie_reg &amp; mip_wire);
+
+   // --------------------------------------------------------
+   // CSR 읽기 MUX (조합 논리)
+   // --------------------------------------------------------
+   always_comb begin
+      csr_rdata = 32'h0;
+      case (csr_addr)
+         CSR_MSTATUS:  csr_rdata = mstatus_reg &amp; MSTATUS_MASK; // WPRI 비트 0 반환
+         CSR_MIE:      csr_rdata = mie_reg;
+         CSR_MTVEC:    csr_rdata = mtvec_reg;
+         CSR_MSCRATCH: csr_rdata = mscratch_reg;
+         CSR_MEPC:     csr_rdata = mepc_reg;
+         CSR_MCAUSE:   csr_rdata = mcause_reg;
+         CSR_MIP:      csr_rdata = mip_wire;    // 하드웨어 직결 반환
+         default:      csr_rdata = 32'h0;        // 미구현 CSR: 0 반환
+      endcase
+   end
+
+   // --------------------------------------------------------
+   // CSR 다음 값 계산 (조합 논리)
+   // csr_wdata: 디코더가 rs1_data 또는 {27'b0, uimm[4:0]} 선택하여 전달
+   // --------------------------------------------------------
+   logic [31:0] csr_next;
+   always_comb begin
+      csr_next = csr_rdata;  // 기본값: 변경 없음
+      case (csr_op)
+         CSR_RW,  CSR_RWI: csr_next = csr_wdata;           // 덮어쓰기
+         CSR_RS,  CSR_RSI: csr_next = csr_rdata | csr_wdata;  // 비트 세트
+         CSR_RC,  CSR_RCI: csr_next = csr_rdata &amp; ~csr_wdata; // 비트 클리어
+         default:           csr_next = csr_rdata;
+      endcase
+   end
+
+   // --------------------------------------------------------
+   // CSR 레지스터 갱신 (순차 논리)
+   // 우선순위: rst_n(최우선) > trap_en > mret_en > csr_we
+   // --------------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         // 리셋: 모든 CSR 0으로 초기화
+         mstatus_reg  &lt;= 32'h0;
+         mie_reg      &lt;= 32'h0;
+         mtvec_reg    &lt;= 32'h0;
+         mscratch_reg &lt;= 32'h0;
+         mepc_reg     &lt;= 32'h0;
+         mcause_reg   &lt;= 32'h0;
+
+      end else if (trap_en) begin
+         // 트랩 진입 (예외/인터럽트 처리 시작)
+         // MPIE ← MIE (이전 MIE 값 보존)
+         // MIE  ← 0   (트랩 처리 중 추가 인터럽트 차단)
+         // MPP  ← 2'b11 (M-mode only — 항상 M-mode)
+         mstatus_reg &lt;= (mstatus_reg &amp; ~MSTATUS_MASK)
+                      | ((mstatus_reg &amp; 32'h8) &lt;&lt; 4)  // MIE(bit3) → MPIE(bit7) 자리 이동
+                      | 32'h1800;                        // MPP[12:11] = 11(M-mode)
+         mepc_reg    &lt;= {trap_pc[31:1], 1'b0};          // 하위 1비트 0 보장 (WARL)
+         mcause_reg  &lt;= trap_cause;                      // {interrupt[31], code[30:0]}
+
+      end else if (mret_en) begin
+         // mret 실행 (예외 핸들러 복귀)
+         // MIE  ← MPIE (이전 MIE 복원)
+         // MPIE ← 1    (스펙 요구사항)
+         // MPP  ← 2'b11 (M-mode 유지 — U-mode 미구현 시 최소 지원 권한 수준)
+         // PC   ← mepc  (Ch19에서 처리)
+         mstatus_reg &lt;= (mstatus_reg &amp; ~MSTATUS_MASK)
+                      | ((mstatus_reg &amp; 32'h80) &gt;&gt; 4) // MPIE(bit7) → MIE(bit3) 자리 이동
+                      | 32'h80;                          // MPIE ← 1
+
+      end else if (csr_we) begin
+         // 일반 CSR 명령어 (CSRRW/CSRRS/CSRRC/CSRRWI/CSRRSI/CSRRCI)
+         case (csr_addr)
+            CSR_MSTATUS:  mstatus_reg  &lt;= csr_next &amp; MSTATUS_MASK; // WPRI 마스크 적용
+            CSR_MIE:      mie_reg      &lt;= csr_next;
+            CSR_MTVEC:    mtvec_reg    &lt;= {csr_next[31:2], csr_next[1:0]};
+                                         // MODE[1:0]: WARL — 2,3은 ch19에서 필터링
+            CSR_MSCRATCH: mscratch_reg &lt;= csr_next;
+            CSR_MEPC:     mepc_reg     &lt;= {csr_next[31:1], 1'b0}; // WARL: 하위 1비트 0
+            CSR_MCAUSE:   mcause_reg   &lt;= csr_next;
+            // CSR_MIP: 소프트웨어 쓰기 무시 (RORL — 하드웨어 직결)
+            default: ;   // 미구현 CSR 쓰기 무시
+         endcase
+      end
+   end
+
+   // --------------------------------------------------------
+   // Ch19 연결용 출력
+   // --------------------------------------------------------
+   assign mtvec_out = mtvec_reg;  // Vectored 주소 계산은 Ch19에서 수행
+   assign mepc_out  = mepc_reg;
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>ch18_csr_tb.sv</h3>
+    <pre><code class="language-systemverilog">// ============================================================
+// ch18_csr_tb.sv — CSR 유닛 테스트벤치
+// 3단계 점진적 검증:
+//   단계 1: CSR 쓰기/읽기 기본 확인
+//   단계 2: CSRRS/CSRRC 비트 마스크 조작
+//   단계 3: 인터럽트 마스킹 (mstatus.MIE + mie.MTIE + mip.MTIP)
+// trap_en=0 고정: 트랩 진입/복귀 동작은 Ch19에서 확인
+// ============================================================
+`timescale 1ns/1ps
+module csr_tb;
+   logic        clk, rst_n;
+   logic [11:0] csr_addr;
+   logic        csr_we;
+   logic [2:0]  csr_op;
+   logic [31:0] csr_wdata, csr_rdata;
+   logic        timer_irq, ext_irq, sw_irq;
+   logic        trap_en, mret_en;
+   logic [31:0] trap_pc, trap_cause;
+   logic [31:0] mtvec_out, mepc_out;
+   logic        irq_pending;
+
+   // CSR 주소 상수
+   localparam CSR_MSTATUS  = 12'h300;
+   localparam CSR_MIE      = 12'h304;
+   localparam CSR_MTVEC    = 12'h305;
+   localparam CSR_MSCRATCH = 12'h340;
+   localparam CSR_MEPC     = 12'h341;
+   localparam CSR_MCAUSE   = 12'h342;
+   localparam CSR_MIP      = 12'h344;
+
+   // CSR 명령어 상수
+   localparam CSR_OP_RW = 3'b001;
+   localparam CSR_OP_RS = 3'b010;
+   localparam CSR_OP_RC = 3'b011;
+
+   // 100 MHz 클럭
+   initial clk = 0;
+   always #5 clk = ~clk;
+
+   // DUT 인스턴스
+   csr_unit u_csr(
+      .clk(clk), .rst_n(rst_n),
+      .csr_addr(csr_addr), .csr_we(csr_we),
+      .csr_op(csr_op), .csr_wdata(csr_wdata), .csr_rdata(csr_rdata),
+      .timer_irq(timer_irq), .ext_irq(ext_irq), .sw_irq(sw_irq),
+      .trap_en(1'b0), .trap_pc(32'h0), .trap_cause(32'h0), .mret_en(1'b0),
+      .mtvec_out(mtvec_out), .mepc_out(mepc_out), .irq_pending(irq_pending)
+   );
+
+   // CSR 쓰기 태스크 (CSRRW/CSRRS/CSRRC)
+   task csr_write(input [11:0] addr, input [2:0] op, input [31:0] data);
+      @(posedge clk);
+      csr_addr &lt;= addr; csr_op &lt;= op; csr_wdata &lt;= data; csr_we &lt;= 1'b1;
+      @(posedge clk);
+      csr_we &lt;= 1'b0;
+   endtask
+
+   // CSR 읽기 태스크
+   task csr_read(input [11:0] addr, output [31:0] data);
+      @(posedge clk);
+      csr_addr &lt;= addr; csr_we &lt;= 1'b0;
+      @(posedge clk);
+      data = csr_rdata;
+   endtask
+
+   // 합격/실패 카운터
+   logic [31:0] rd;
+   integer pass_cnt, fail_cnt;
+
+   initial begin
+      $display("=== Chapter 18 CSR 유닛 테스트 ===");
+      pass_cnt = 0; fail_cnt = 0;
+
+      // 초기화
+      rst_n = 0; timer_irq = 0; ext_irq = 0; sw_irq = 0;
+      csr_addr = 0; csr_we = 0; csr_op = 0; csr_wdata = 0;
+      trap_en = 0; mret_en = 0; trap_pc = 0; trap_cause = 0;
+      repeat(5) @(posedge clk);
+      rst_n = 1;  // 리셋 해제
+
+      // -------------------------------------------------------
+      // 단계 1: CSR 쓰기/읽기 기본 확인
+      // -------------------------------------------------------
+      $display("\n--- 단계 1: CSR 쓰기/읽기 ---");
+
+      // mtvec에 핸들러 주소 설정
+      csr_write(CSR_MTVEC, CSR_OP_RW, 32'h8000_0000);
+      csr_read(CSR_MTVEC, rd);
+      if (rd == 32'h8000_0000) begin
+         $display("[PASS] mtvec = 0x%08h", rd); pass_cnt++;
+      end else begin
+         $display("[FAIL] mtvec = 0x%08h (예상: 0x80000000)", rd); fail_cnt++;
+      end
+
+      // mscratch에 임시 값 저장
+      csr_write(CSR_MSCRATCH, CSR_OP_RW, 32'hDEAD_BEEF);
+      csr_read(CSR_MSCRATCH, rd);
+      if (rd == 32'hDEAD_BEEF) begin
+         $display("[PASS] mscratch = 0x%08h", rd); pass_cnt++;
+      end else begin
+         $display("[FAIL] mscratch = 0x%08h (예상: 0xDEADBEEF)", rd); fail_cnt++;
+      end
+
+      // -------------------------------------------------------
+      // 단계 2: CSRRS/CSRRC 비트 마스크 조작
+      // -------------------------------------------------------
+      $display("\n--- 단계 2: 비트 마스크 조작 ---");
+
+      // mie.MTIE (비트 7) 세트: CSRRS
+      csr_write(CSR_MIE, CSR_OP_RS, 32'h80);
+      csr_read(CSR_MIE, rd);
+      if (rd[7]) begin
+         $display("[PASS] mie.MTIE(bit7) = 1"); pass_cnt++;
+      end else begin
+         $display("[FAIL] mie.MTIE 세트 실패, mie = 0x%08h", rd); fail_cnt++;
+      end
+
+      // mstatus.MIE (비트 3) 세트: CSRRS
+      csr_write(CSR_MSTATUS, CSR_OP_RS, 32'h8);
+      @(posedge clk);
+      // timer_irq=0이므로 irq_pending은 0이어야 함
+      if (!irq_pending) begin
+         $display("[PASS] timer_irq=0 → irq_pending=0"); pass_cnt++;
+      end else begin
+         $display("[FAIL] 예상치 못한 irq_pending=1"); fail_cnt++;
+      end
+
+      // -------------------------------------------------------
+      // 단계 3: 인터럽트 마스킹 확인
+      // -------------------------------------------------------
+      $display("\n--- 단계 3: 인터럽트 마스킹 ---");
+
+      // timer_irq = 1 → mip.MTIP = 1 (조합 논리 직결, 즉시 반영)
+      timer_irq = 1;
+      @(posedge clk); @(posedge clk);
+      if (irq_pending) begin
+         $display("[PASS] irq_pending=1 확인 (MIE=%b, MTIE=%b, MTIP=%b)",
+            u_csr.mstatus_reg[3], u_csr.mie_reg[7], u_csr.mip_wire[7]);
+         pass_cnt++;
+      end else begin
+         $display("[FAIL] irq_pending=0 (MIE=%b, MTIE=%b, MTIP=%b)",
+            u_csr.mstatus_reg[3], u_csr.mie_reg[7], u_csr.mip_wire[7]);
+         fail_cnt++;
+      end
+
+      // mstatus.MIE 클리어 → 인터럽트 차단 확인
+      csr_write(CSR_MSTATUS, CSR_OP_RC, 32'h8);
+      @(posedge clk);
+      if (!irq_pending) begin
+         $display("[PASS] MIE=0 → 인터럽트 마스킹 확인"); pass_cnt++;
+      end else begin
+         $display("[FAIL] 마스킹 실패 (irq_pending 여전히 1)"); fail_cnt++;
+      end
+
+      // 최종 결과
+      $display("\n=== 완료: 통과 %0d건, 실패 %0d건 ===", pass_cnt, fail_cnt);
+      if (fail_cnt == 0)
+         $display("[전체 통과] Ch19 통합 준비 완료");
+      else
+         $display("[주의] 실패 항목 확인 후 수정 필요");
+      $finish;
+   end
+
+   // 타임아웃 보호 (100 µs)
+   initial begin
+      #100_000;
+      $display("[TIMEOUT] 시뮬레이션 강제 종료");
+      $finish;
+   end
+endmodule</code></pre>
+  </div>
+</section>
+
+<!-- ========== Highlight.js ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  document.querySelectorAll('code.language-systemverilog').forEach(el => {
+    el.classList.remove('language-systemverilog');
+    el.classList.add('language-verilog');
+  });
+  hljs.highlightAll();
+</script>
+</body>
+</html>

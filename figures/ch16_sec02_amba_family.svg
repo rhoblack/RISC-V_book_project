@@ -1,101 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 520" font-family="Pretendard, -apple-system, sans-serif">
-  <defs>
-    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
-      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
-    </filter>
-    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
-    </marker>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 420" width="700" height="420" font-family="Pretendard, sans-serif">
+  <!-- 배경 -->
+  <rect width="700" height="420" fill="#F8FAFC" rx="12"/>
 
-  <rect width="850" height="520" fill="#F8FAFC" rx="8"/>
-  <text x="425" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">AMBA 버스 패밀리 비교</text>
-  <text x="425" y="52" text-anchor="middle" font-size="12" fill="#64748B">AHB = 고속도로 | APB = 이면도로 | AXI = 고속철도</text>
+  <!-- 제목 -->
+  <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">AMBA 버스 패밀리 — 복잡도 vs 성능</text>
 
-  <!-- AXI 블록 -->
-  <rect x="30" y="80" width="250" height="180" rx="8" fill="#F3E8FF" stroke="#7C3AED" stroke-width="2" filter="url(#shadow)"/>
-  <text x="155" y="105" text-anchor="middle" font-size="15" font-weight="700" fill="#7C3AED">AXI (AMBA 4/5)</text>
-  <rect x="45" y="115" width="220" height="18" rx="3" fill="#EDE9FE"/>
-  <text x="155" y="129" text-anchor="middle" font-size="10" fill="#5B21B6">고성능 SoC 인터커넥트</text>
-  <text x="50" y="155" font-size="10" fill="#1E293B">- 분리된 읽기/쓰기 채널 (5채널)</text>
-  <text x="50" y="173" font-size="10" fill="#1E293B">- 아웃오브오더 완료 지원</text>
-  <text x="50" y="191" font-size="10" fill="#1E293B">- 버스트 전송 최적화</text>
-  <text x="50" y="209" font-size="10" fill="#1E293B">- 다중 마스터 지원</text>
-  <text x="50" y="232" font-size="10" font-weight="600" fill="#7C3AED">→ 복잡, Basys 3에 과도</text>
-  <text x="50" y="250" font-size="10" fill="#64748B">적용: A-class 프로세서, GPU</text>
+  <!-- 그래프 영역 배경 -->
+  <rect x="80" y="50" width="560" height="320" fill="white" rx="8" stroke="#E2E8F0" stroke-width="1.5"/>
 
-  <!-- AHB 블록 (강조) -->
-  <rect x="300" y="80" width="250" height="180" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="3" filter="url(#shadow)"/>
-  <rect x="490" y="72" width="65" height="20" rx="10" fill="#2563EB"/>
-  <text x="522" y="86" text-anchor="middle" font-size="9" font-weight="600" fill="white">이 챕터!</text>
-  <text x="425" y="105" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">AHB-Lite (AMBA 3)</text>
-  <rect x="315" y="115" width="220" height="18" rx="3" fill="#BFDBFE"/>
-  <text x="425" y="129" text-anchor="middle" font-size="10" fill="#1E40AF">고성능 단일 마스터 버스</text>
-  <text x="320" y="155" font-size="10" fill="#1E293B">- 파이프라인 주소/데이터 전송</text>
-  <text x="320" y="173" font-size="10" fill="#1E293B">- 단일 클럭 에지 동작</text>
-  <text x="320" y="191" font-size="10" fill="#1E293B">- 버스트 전송 지원</text>
-  <text x="320" y="209" font-size="10" fill="#1E293B">- HREADY 기반 웨이트 스테이트</text>
-  <text x="320" y="232" font-size="10" font-weight="600" fill="#2563EB">→ 성능/복잡도 균형, FPGA 적합</text>
-  <text x="320" y="250" font-size="10" fill="#64748B">적용: M-class 프로세서, SRAM</text>
+  <!-- 그리드 선 -->
+  <line x1="80" y1="157" x2="640" y2="157" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="80" y1="263" x2="640" y2="263" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="267" y1="50" x2="267" y2="370" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="453" y1="50" x2="453" y2="370" stroke="#F1F5F9" stroke-width="1"/>
 
-  <!-- APB 블록 -->
-  <rect x="570" y="80" width="250" height="180" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
-  <text x="695" y="105" text-anchor="middle" font-size="15" font-weight="700" fill="#059669">APB (AMBA 2/4)</text>
-  <rect x="585" y="115" width="220" height="18" rx="3" fill="#D1FAE5"/>
-  <text x="695" y="129" text-anchor="middle" font-size="10" fill="#065F46">저전력 주변 장치 버스</text>
-  <text x="590" y="155" font-size="10" fill="#1E293B">- 2사이클 비파이프라인 전송</text>
-  <text x="590" y="173" font-size="10" fill="#1E293B">- 단순한 상태 머신</text>
-  <text x="590" y="191" font-size="10" fill="#1E293B">- 버스트 미지원</text>
-  <text x="590" y="209" font-size="10" fill="#1E293B">- PREADY 기반 웨이트</text>
-  <text x="590" y="232" font-size="10" font-weight="600" fill="#059669">→ 최소 면적, 저속 장치용</text>
-  <text x="590" y="250" font-size="10" fill="#64748B">적용: UART, GPIO, Timer</text>
+  <!-- X축 -->
+  <line x1="80" y1="370" x2="648" y2="370" stroke="#475569" stroke-width="2"/>
+  <polygon points="645,365 645,375 655,370" fill="#475569"/>
+  <text x="350" y="400" text-anchor="middle" font-size="13" fill="#475569">복잡도 (낮음 → 높음)</text>
 
-  <!-- 비교표 -->
-  <rect x="30" y="290" width="790" height="210" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1.5"/>
-  <text x="425" y="315" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">주요 특성 비교</text>
+  <!-- Y축 -->
+  <line x1="80" y1="370" x2="80" y2="42" stroke="#475569" stroke-width="2"/>
+  <polygon points="75,45 85,45 80,35" fill="#475569"/>
+  <text x="22" y="210" text-anchor="middle" font-size="13" fill="#475569" transform="rotate(-90, 22, 210)">성능 (낮음 → 높음)</text>
 
-  <!-- 표 헤더 -->
-  <rect x="30" y="325" width="790" height="25" fill="#F1F5F9"/>
-  <text x="140" y="342" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">특성</text>
-  <text x="345" y="342" text-anchor="middle" font-size="11" font-weight="600" fill="#7C3AED">AXI</text>
-  <text x="530" y="342" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">AHB-Lite</text>
-  <text x="715" y="342" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">APB</text>
+  <!-- APB 버블 -->
+  <circle cx="175" cy="310" r="52" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" opacity="0.85"/>
+  <text x="175" y="302" text-anchor="middle" font-size="15" font-weight="bold" fill="#1E40AF">APB</text>
+  <text x="175" y="320" text-anchor="middle" font-size="11" fill="#1E40AF">Advanced</text>
+  <text x="175" y="334" text-anchor="middle" font-size="11" fill="#1E40AF">Peripheral Bus</text>
+  <!-- APB 태그 -->
+  <rect x="118" y="248" width="114" height="22" fill="#EFF6FF" rx="4" stroke="#93C5FD" stroke-width="1"/>
+  <text x="175" y="263" text-anchor="middle" font-size="11" fill="#1D4ED8">Ch17 — APB &amp; UART</text>
 
-  <line x1="30" y1="350" x2="820" y2="350" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- AHB 버블 (강조) -->
+  <circle cx="360" cy="200" r="62" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="3" opacity="0.9"/>
+  <circle cx="360" cy="200" r="66" fill="none" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>
+  <text x="360" y="188" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">AHB-Lite</text>
+  <text x="360" y="208" text-anchor="middle" font-size="11" fill="#1E3A5F">Advanced High-perf</text>
+  <text x="360" y="222" text-anchor="middle" font-size="11" fill="#1E3A5F">Bus (Lite)</text>
+  <!-- AHB 태그 -->
+  <rect x="286" y="124" width="148" height="24" fill="#1D4ED8" rx="4"/>
+  <text x="360" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Ch16 ← 지금 여기!</text>
 
-  <text x="50" y="370" font-size="10" fill="#1E293B">대역폭</text>
-  <text x="345" y="370" text-anchor="middle" font-size="10" fill="#1E293B">최고 (다채널)</text>
-  <text x="530" y="370" text-anchor="middle" font-size="10" fill="#1E293B">높음 (파이프라인)</text>
-  <text x="715" y="370" text-anchor="middle" font-size="10" fill="#1E293B">낮음 (2사이클)</text>
+  <!-- AXI 버블 -->
+  <circle cx="555" cy="100" r="60" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2.5" opacity="0.85"/>
+  <text x="555" y="88" text-anchor="middle" font-size="15" font-weight="bold" fill="#5B21B6">AXI4</text>
+  <text x="555" y="106" text-anchor="middle" font-size="11" fill="#5B21B6">Advanced</text>
+  <text x="555" y="120" text-anchor="middle" font-size="11" fill="#5B21B6">eXtensible Interface</text>
+  <!-- AXI 태그 -->
+  <rect x="490" y="53" width="130" height="22" fill="#F5F3FF" rx="4" stroke="#C4B5FD" stroke-width="1"/>
+  <text x="555" y="68" text-anchor="middle" font-size="11" fill="#7C3AED">Ch20 (선택 심화)</text>
 
-  <line x1="50" y1="378" x2="800" y2="378" stroke="#F1F5F9" stroke-width="1"/>
+  <!-- 진행 방향 화살표 -->
+  <path d="M225 290 Q285 245 302 210" stroke="#94A3B8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <polygon points="299,212 308,206 307,215" fill="#94A3B8"/>
+  <path d="M418 173 Q470 140 498 122" stroke="#94A3B8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <polygon points="496,124 505,118 504,127" fill="#94A3B8"/>
 
-  <text x="50" y="395" font-size="10" fill="#1E293B">설계 복잡도</text>
-  <text x="345" y="395" text-anchor="middle" font-size="10" fill="#1E293B">매우 높음</text>
-  <text x="530" y="395" text-anchor="middle" font-size="10" fill="#1E293B">중간</text>
-  <text x="715" y="395" text-anchor="middle" font-size="10" fill="#1E293B">낮음</text>
-
-  <line x1="50" y1="403" x2="800" y2="403" stroke="#F1F5F9" stroke-width="1"/>
-
-  <text x="50" y="420" font-size="10" fill="#1E293B">FPGA 리소스</text>
-  <text x="345" y="420" text-anchor="middle" font-size="10" fill="#1E293B">대규모</text>
-  <text x="530" y="420" text-anchor="middle" font-size="10" fill="#1E293B">적정</text>
-  <text x="715" y="420" text-anchor="middle" font-size="10" fill="#1E293B">최소</text>
-
-  <line x1="50" y1="428" x2="800" y2="428" stroke="#F1F5F9" stroke-width="1"/>
-
-  <text x="50" y="445" font-size="10" fill="#1E293B">버스트 전송</text>
-  <text x="345" y="445" text-anchor="middle" font-size="10" fill="#1E293B">지원 (OOO)</text>
-  <text x="530" y="445" text-anchor="middle" font-size="10" fill="#1E293B">지원 (순차)</text>
-  <text x="715" y="445" text-anchor="middle" font-size="10" fill="#1E293B">미지원</text>
-
-  <line x1="50" y1="453" x2="800" y2="453" stroke="#F1F5F9" stroke-width="1"/>
-
-  <text x="50" y="470" font-size="10" fill="#1E293B">우리 교재 적용</text>
-  <text x="345" y="470" text-anchor="middle" font-size="10" fill="#64748B">미사용</text>
-  <text x="530" y="470" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">CPU ↔ SRAM (Ch16)</text>
-  <text x="715" y="470" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">UART/GPIO (Ch17)</text>
-
-  <!-- 계층 화살표 -->
-  <text x="425" y="497" text-anchor="middle" font-size="11" font-weight="600" fill="#64748B">고성능 ←───── 대역폭 ─────→ 저전력 / 단순</text>
+  <!-- 범례 -->
+  <rect x="88" y="58" width="12" height="12" fill="#DBEAFE" rx="2" stroke="#2563EB"/>
+  <text x="106" y="69" font-size="11" fill="#475569">버블 크기 ∝ 설계 복잡도</text>
 </svg>

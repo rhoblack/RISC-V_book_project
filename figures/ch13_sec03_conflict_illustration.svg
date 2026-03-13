@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 440" font-family="Pretendard, sans-serif">
+  <rect width="820" height="440" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">충돌 미스 (Conflict Miss) 시각화</text>
+  <text x="410" y="52" text-anchor="middle" font-size="12" fill="#EF4444" font-weight="600">A(0x0000_0000)와 B(0x0001_0000)가 캐시 엔트리 #0을 두고 경쟁</text>
+
+  <defs>
+    <marker id="arCF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#2563EB"/>
+    </marker>
+    <marker id="arCFr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#EF4444"/>
+    </marker>
+  </defs>
+
+  <!-- 캐시 엔트리 #0 박스 (중앙) -->
+  <rect x="310" y="75" width="200" height="60" fill="white" rx="8" stroke="#1D4ED8" stroke-width="3"/>
+  <text x="410" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="#1D4ED8">캐시 엔트리 #0</text>
+  <text x="410" y="115" text-anchor="middle" font-size="11" fill="#374151">Index = 0b000_0000 = 0</text>
+  <text x="410" y="130" text-anchor="middle" font-size="10" fill="#6B7280">한 번에 하나만 저장 가능!</text>
+
+  <!-- 주소 A -->
+  <rect x="30" y="75" width="200" height="60" fill="#DBEAFE" rx="8" stroke="#2563EB" stroke-width="2"/>
+  <text x="130" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="#1D4ED8">주소 A</text>
+  <text x="130" y="113" text-anchor="middle" font-size="11" fill="#2563EB" font-family="monospace">0x0000_0000</text>
+  <text x="130" y="128" text-anchor="middle" font-size="10" fill="#374151">Tag=0x00000, Index=0</text>
+
+  <!-- 주소 B -->
+  <rect x="590" y="75" width="200" height="60" fill="#FEE2E2" rx="8" stroke="#EF4444" stroke-width="2"/>
+  <text x="690" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="#991B1B">주소 B</text>
+  <text x="690" y="113" text-anchor="middle" font-size="11" fill="#EF4444" font-family="monospace">0x0001_0000</text>
+  <text x="690" y="128" text-anchor="middle" font-size="10" fill="#374151">Tag=0x00010, Index=0</text>
+
+  <!-- 타임라인 -->
+  <line x1="60" y1="185" x2="760" y2="185" stroke="#E5E7EB" stroke-width="2"/>
+  <text x="30" y="180" font-size="11" fill="#6B7280">시간 →</text>
+
+  <!-- 접근 1: A (MISS) -->
+  <rect x="60" y="190" width="140" height="60" fill="#DBEAFE" rx="6" stroke="#2563EB" stroke-width="2"/>
+  <text x="130" y="213" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8">①접근 A</text>
+  <text x="130" y="230" text-anchor="middle" font-size="10" fill="#2563EB">0x0000_0000</text>
+  <text x="130" y="244" text-anchor="middle" font-size="11" fill="#EF4444" font-weight="700">MISS (Cold)</text>
+
+  <!-- 캐시 상태 1 -->
+  <rect x="60" y="265" width="140" height="40" fill="#DBEAFE" rx="4" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="130" y="282" text-anchor="middle" font-size="10" fill="#1D4ED8">캐시[0]: Tag=0x00000</text>
+  <text x="130" y="297" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="700">A 로드됨</text>
+  <line x1="130" y1="250" x2="130" y2="263" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+  <!-- 접근 2: B (MISS + Evict A) -->
+  <rect x="220" y="190" width="140" height="60" fill="#FEE2E2" rx="6" stroke="#EF4444" stroke-width="2"/>
+  <text x="290" y="213" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B">②접근 B</text>
+  <text x="290" y="230" text-anchor="middle" font-size="10" fill="#EF4444">0x0001_0000</text>
+  <text x="290" y="244" text-anchor="middle" font-size="11" fill="#EF4444" font-weight="700">MISS + Evict A</text>
+
+  <rect x="220" y="265" width="140" height="40" fill="#FEE2E2" rx="4" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="290" y="282" text-anchor="middle" font-size="10" fill="#991B1B">캐시[0]: Tag=0x00010</text>
+  <text x="290" y="297" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">A 축출, B 로드됨</text>
+  <line x1="290" y1="250" x2="290" y2="263" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+  <!-- 접근 3: A (MISS + Evict B) -->
+  <rect x="380" y="190" width="140" height="60" fill="#DBEAFE" rx="6" stroke="#2563EB" stroke-width="2"/>
+  <text x="450" y="213" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8">③접근 A</text>
+  <text x="450" y="230" text-anchor="middle" font-size="10" fill="#2563EB">0x0000_0000</text>
+  <text x="450" y="244" text-anchor="middle" font-size="11" fill="#EF4444" font-weight="700">MISS + Evict B</text>
+
+  <rect x="380" y="265" width="140" height="40" fill="#DBEAFE" rx="4" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="450" y="282" text-anchor="middle" font-size="10" fill="#1D4ED8">캐시[0]: Tag=0x00000</text>
+  <text x="450" y="297" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="700">B 축출, A 로드됨</text>
+  <line x1="450" y1="250" x2="450" y2="263" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+  <!-- 접근 4: B (MISS + Evict A) -->
+  <rect x="540" y="190" width="140" height="60" fill="#FEE2E2" rx="6" stroke="#EF4444" stroke-width="2"/>
+  <text x="610" y="213" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B">④접근 B</text>
+  <text x="610" y="230" text-anchor="middle" font-size="10" fill="#EF4444">0x0001_0000</text>
+  <text x="610" y="244" text-anchor="middle" font-size="11" fill="#EF4444" font-weight="700">MISS + Evict A</text>
+
+  <rect x="540" y="265" width="140" height="40" fill="#FEE2E2" rx="4" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="610" y="282" text-anchor="middle" font-size="10" fill="#991B1B">캐시[0]: Tag=0x00010</text>
+  <text x="610" y="297" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">A 축출, B 로드됨</text>
+  <line x1="610" y1="250" x2="610" y2="263" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+  <!-- 결과 박스 -->
+  <rect x="30" y="325" width="760" height="90" fill="#FEF3C7" rx="10" stroke="#F59E0B" stroke-width="2"/>
+  <text x="410" y="348" text-anchor="middle" font-size="14" font-weight="700" fill="#92400E">결론: 히트율 0% — 캐시가 4KB인데도 완전한 미스!</text>
+  <text x="410" y="370" text-anchor="middle" font-size="12" fill="#374151">두 주소의 차이 = 0x0001_0000 - 0x0000_0000 = 0x10000 = 65,536바이트</text>
+  <text x="410" y="388" text-anchor="middle" font-size="12" fill="#374151">= 캐시 크기(4KB)의 16배 → 16번 충돌 주소 존재 (0x0000, 0x1000, 0x2000 ... 0xF000)</text>
+  <text x="410" y="406" text-anchor="middle" font-size="12" fill="#EF4444" font-weight="600">해결책: 2-Way 집합 연관 캐시(Ch14) → 같은 Index에 2개 저장 가능!</text>
+</svg>

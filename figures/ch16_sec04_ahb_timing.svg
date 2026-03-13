@@ -1,123 +1,120 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, -apple-system, sans-serif">
-  <defs>
-    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
-      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
-    </filter>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" width="860" height="480" font-family="Pretendard, monospace, sans-serif">
+  <!-- 배경 -->
+  <rect width="860" height="480" fill="#0F172A" rx="12"/>
 
-  <rect width="900" height="520" fill="#F8FAFC" rx="8"/>
-  <text x="450" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">AHB 파이프라인 전송 타이밍 (웨이트 스테이트 포함)</text>
+  <!-- 제목 -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#E2E8F0">AHB-Lite 타이밍 다이어그램 — Single Read with 1-Cycle Wait State</text>
 
-  <!-- 클럭 -->
-  <text x="25" y="70" font-size="11" font-weight="600" fill="#64748B">HCLK</text>
-  <!-- 사이클 표시 -->
-  <text x="170" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T1</text>
-  <text x="280" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T2</text>
-  <text x="390" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T3</text>
-  <text x="500" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T4</text>
-  <text x="610" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T5</text>
-  <text x="720" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T6</text>
-  <text x="830" y="55" text-anchor="middle" font-size="9" fill="#94A3B8">T7</text>
+  <!-- 사이클 배경 구역 -->
+  <!-- T1 주소 페이즈 -->
+  <rect x="160" y="40" width="120" height="390" fill="#1E3A5F" rx="0" opacity="0.5"/>
+  <!-- T2 데이터 페이즈 (Wait) -->
+  <rect x="280" y="40" width="120" height="390" fill="#3B1A1A" rx="0" opacity="0.5"/>
+  <!-- T3 데이터 페이즈 (완료) -->
+  <rect x="400" y="40" width="120" height="390" fill="#14532D" rx="0" opacity="0.4"/>
+  <!-- T4, T5 IDLE -->
+  <rect x="520" y="40" width="240" height="390" fill="#1E293B" rx="0" opacity="0.4"/>
 
-  <!-- 클럭 파형 -->
-  <polyline points="110,80 110,60 170,60 170,80 230,80 230,60 280,60 280,80 340,80 340,60 390,60 390,80 450,80 450,60 500,60 500,80 560,80 560,60 610,60 610,80 670,80 670,60 720,60 720,80 780,80 780,60 830,60 830,80 870,80" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+  <!-- 사이클 레이블 -->
+  <text x="220" y="58" text-anchor="middle" font-size="12" fill="#93C5FD">T1</text>
+  <text x="340" y="58" text-anchor="middle" font-size="12" fill="#FCA5A5">T2 (Wait)</text>
+  <text x="460" y="58" text-anchor="middle" font-size="12" fill="#86EFAC">T3</text>
+  <text x="580" y="58" text-anchor="middle" font-size="12" fill="#94A3B8">T4</text>
+  <text x="700" y="58" text-anchor="middle" font-size="12" fill="#94A3B8">T5</text>
 
-  <!-- 수직 점선 (클럭 상승 에지) -->
-  <line x1="110" y1="55" x2="110" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
-  <line x1="230" y1="55" x2="230" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
-  <line x1="340" y1="55" x2="340" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
-  <line x1="450" y1="55" x2="450" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
-  <line x1="560" y1="55" x2="560" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
-  <line x1="670" y1="55" x2="670" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
-  <line x1="780" y1="55" x2="780" y2="500" stroke="#E5E7EB" stroke-width="0.8" stroke-dasharray="3,3"/>
+  <!-- 구역 레이블 -->
+  <text x="220" y="445" text-anchor="middle" font-size="11" fill="#93C5FD">주소 페이즈</text>
+  <text x="340" y="445" text-anchor="middle" font-size="11" fill="#FCA5A5">Wait State</text>
+  <text x="460" y="445" text-anchor="middle" font-size="11" fill="#86EFAC">데이터 페이즈</text>
+  <text x="630" y="445" text-anchor="middle" font-size="11" fill="#94A3B8">다음 전송 또는 IDLE</text>
 
-  <!-- HTRANS -->
-  <text x="25" y="120" font-size="11" font-weight="600" fill="#2563EB">HTRANS</text>
-  <rect x="110" y="100" width="120" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="170" y="119" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">NONSEQ</text>
-  <rect x="230" y="100" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="285" y="119" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">NONSEQ</text>
-  <rect x="340" y="100" width="220" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="450" y="119" text-anchor="middle" font-size="10" fill="#94A3B8">IDLE (유지)</text>
-  <rect x="560" y="100" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="615" y="119" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">NONSEQ</text>
+  <!-- 수직 점선 구분선 -->
+  <line x1="160" y1="40" x2="160" y2="440" stroke="#475569" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="280" y1="40" x2="280" y2="440" stroke="#475569" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="400" y1="40" x2="400" y2="440" stroke="#475569" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="520" y1="40" x2="520" y2="440" stroke="#475569" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="640" y1="40" x2="640" y2="440" stroke="#475569" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="760" y1="40" x2="760" y2="440" stroke="#475569" stroke-width="1" stroke-dasharray="4,3"/>
 
-  <!-- HADDR -->
-  <text x="25" y="168" font-size="11" font-weight="600" fill="#2563EB">HADDR</text>
-  <rect x="110" y="148" width="120" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="170" y="167" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">Addr A</text>
-  <rect x="230" y="148" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="285" y="167" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">Addr B</text>
-  <rect x="340" y="148" width="220" height="28" fill="#FEF9C3" stroke="#D97706" stroke-width="1.5" rx="3" stroke-dasharray="4,2"/>
-  <text x="450" y="167" text-anchor="middle" font-size="10" font-weight="600" fill="#D97706">Addr B (유지!)</text>
-  <rect x="560" y="148" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="615" y="167" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">Addr C</text>
+  <!-- 신호 레이블 -->
+  <text x="80" y="88" text-anchor="middle" font-size="12" font-weight="bold" fill="#E2E8F0">HCLK</text>
+  <text x="80" y="143" text-anchor="middle" font-size="12" font-weight="bold" fill="#E2E8F0">HADDR</text>
+  <text x="80" y="198" text-anchor="middle" font-size="12" font-weight="bold" fill="#E2E8F0">HTRANS</text>
+  <text x="80" y="253" text-anchor="middle" font-size="12" font-weight="bold" fill="#E2E8F0">HWRITE</text>
+  <text x="80" y="308" text-anchor="middle" font-size="12" font-weight="bold" fill="#E2E8F0">HWDATA</text>
+  <text x="80" y="363" text-anchor="middle" font-size="12" font-weight="bold" fill="#10B981">HRDATA</text>
+  <text x="80" y="418" text-anchor="middle" font-size="12" font-weight="bold" fill="#F59E0B">HREADY</text>
 
-  <!-- HWRITE -->
-  <text x="25" y="216" font-size="11" font-weight="600" fill="#2563EB">HWRITE</text>
-  <rect x="110" y="196" width="120" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="170" y="215" text-anchor="middle" font-size="10" fill="#1E293B">WRITE</text>
-  <rect x="230" y="196" width="110" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="3"/>
-  <text x="285" y="215" text-anchor="middle" font-size="10" fill="#1E293B">READ</text>
-  <rect x="340" y="196" width="220" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="450" y="215" text-anchor="middle" font-size="10" fill="#94A3B8">유지</text>
-  <rect x="560" y="196" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="615" y="215" text-anchor="middle" font-size="10" fill="#1E293B">WRITE</text>
+  <!-- === HCLK === -->
+  <!-- 반복 클록 파형 -->
+  <polyline points="160,100 160,70 220,70 220,100 280,100 280,70 340,70 340,100 400,100 400,70 460,70 460,100 520,100 520,70 580,70 580,100 640,100 640,70 700,70 700,100 760,100 760,70 820,70 820,100" fill="none" stroke="#60A5FA" stroke-width="2"/>
 
-  <!-- HWDATA (1사이클 뒤) -->
-  <text x="25" y="264" font-size="11" font-weight="600" fill="#2563EB">HWDATA</text>
-  <rect x="110" y="244" width="120" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="170" y="263" text-anchor="middle" font-size="10" fill="#94A3B8">---</text>
-  <rect x="230" y="244" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="285" y="263" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">Data A</text>
-  <rect x="340" y="244" width="220" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="450" y="263" text-anchor="middle" font-size="10" fill="#94A3B8">---</text>
-  <rect x="560" y="244" width="110" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="615" y="263" text-anchor="middle" font-size="10" fill="#94A3B8">---</text>
-  <rect x="670" y="244" width="110" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="3"/>
-  <text x="725" y="263" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">Data C</text>
+  <!-- === HADDR === -->
+  <!-- T1: 유효 주소 0x0001_0004 -->
+  <rect x="160" y="125" width="120" height="30" fill="#1D4ED8" rx="0"/>
+  <text x="220" y="145" text-anchor="middle" font-size="10" fill="white">0x0001_0004</text>
+  <!-- T2: 유지 (HREADY=0) -->
+  <rect x="280" y="125" width="120" height="30" fill="#1E40AF" rx="0"/>
+  <text x="340" y="145" text-anchor="middle" font-size="10" fill="#93C5FD">← 유지 →</text>
+  <!-- T3~T5: IDLE (0 또는 다음 주소) -->
+  <line x1="400" y1="125" x2="400" y2="155" stroke="#475569" stroke-width="1.5"/>
+  <rect x="400" y="125" width="360" height="30" fill="#1E293B" rx="0"/>
+  <text x="580" y="145" text-anchor="middle" font-size="10" fill="#64748B">0x0000_0000 (IDLE)</text>
 
-  <!-- HRDATA -->
-  <text x="25" y="312" font-size="11" font-weight="600" fill="#059669">HRDATA</text>
-  <rect x="110" y="292" width="120" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="170" y="311" text-anchor="middle" font-size="10" fill="#94A3B8">---</text>
-  <rect x="230" y="292" width="110" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="285" y="311" text-anchor="middle" font-size="10" fill="#94A3B8">---</text>
-  <rect x="340" y="292" width="220" height="28" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="3"/>
-  <text x="450" y="311" text-anchor="middle" font-size="10" fill="#94A3B8">---</text>
-  <rect x="560" y="292" width="110" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="3"/>
-  <text x="615" y="311" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">Data B</text>
+  <!-- === HTRANS === -->
+  <!-- T1: NONSEQ (2'b10) -->
+  <rect x="160" y="180" width="120" height="30" fill="#7C3AED" rx="0"/>
+  <text x="220" y="200" text-anchor="middle" font-size="11" font-weight="bold" fill="white">NONSEQ</text>
+  <!-- T2: 유지 (HREADY=0) -->
+  <rect x="280" y="180" width="120" height="30" fill="#6D28D9" rx="0"/>
+  <text x="340" y="200" text-anchor="middle" font-size="10" fill="#C4B5FD">← 유지 →</text>
+  <!-- T3~T5: IDLE -->
+  <line x1="400" y1="180" x2="400" y2="210" stroke="#475569" stroke-width="1.5"/>
+  <rect x="400" y="180" width="360" height="30" fill="#1E293B" rx="0"/>
+  <text x="580" y="200" text-anchor="middle" font-size="11" fill="#64748B">IDLE</text>
 
-  <!-- HREADY -->
-  <text x="25" y="360" font-size="11" font-weight="600" fill="#059669">HREADY</text>
-  <rect x="110" y="340" width="120" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="3"/>
-  <text x="170" y="359" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">HIGH</text>
-  <rect x="230" y="340" width="110" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="3"/>
-  <text x="285" y="359" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">HIGH</text>
-  <rect x="340" y="340" width="110" height="28" fill="#FEF2F2" stroke="#DC2626" stroke-width="2" rx="3"/>
-  <text x="395" y="359" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">LOW</text>
-  <rect x="450" y="340" width="110" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="3"/>
-  <text x="505" y="359" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">HIGH</text>
-  <rect x="560" y="340" width="110" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="3"/>
-  <text x="615" y="359" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">HIGH</text>
+  <!-- === HWRITE === -->
+  <!-- T1~T2: LOW (Read) -->
+  <line x1="160" y1="268" x2="400" y2="268" stroke="#94A3B8" stroke-width="2.5"/>
+  <text x="270" y="262" text-anchor="middle" font-size="10" fill="#94A3B8">0 (Read)</text>
+  <!-- T3~T5: LOW -->
+  <line x1="400" y1="268" x2="760" y2="268" stroke="#475569" stroke-width="2.5"/>
 
-  <!-- HRESP -->
-  <text x="25" y="408" font-size="11" font-weight="600" fill="#059669">HRESP</text>
-  <rect x="110" y="388" width="760" height="28" fill="#ECFDF5" stroke="#059669" stroke-width="1" rx="3"/>
-  <text x="490" y="407" text-anchor="middle" font-size="10" fill="#059669">OKAY (0)</text>
+  <!-- === HWDATA === -->
+  <!-- Read이므로 Don't Care -->
+  <text x="460" y="310" text-anchor="middle" font-size="11" fill="#475569">— (Don't Care: Read 전송) —</text>
+  <line x1="160" y1="318" x2="760" y2="318" stroke="#374151" stroke-width="1.5" stroke-dasharray="3,3"/>
 
-  <!-- 주석 영역 -->
-  <rect x="110" y="430" width="760" height="80" rx="6" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1"/>
+  <!-- === HRDATA === -->
+  <!-- T1~T2: 무효 (Slave 처리 중) -->
+  <rect x="160" y="345" width="240" height="30" fill="#1E293B" rx="0"/>
+  <text x="280" y="365" text-anchor="middle" font-size="10" fill="#64748B">X (유효하지 않음)</text>
+  <!-- T3: 유효 데이터 -->
+  <rect x="400" y="345" width="120" height="30" fill="#065F46" rx="0"/>
+  <text x="460" y="365" text-anchor="middle" font-size="10" font-weight="bold" fill="#A7F3D0">0xDEAD_BEEF</text>
+  <!-- T4~T5: 유지 또는 무효 -->
+  <rect x="520" y="345" width="240" height="30" fill="#1E293B" rx="0"/>
+  <text x="640" y="365" text-anchor="middle" font-size="10" fill="#64748B">X</text>
 
-  <!-- 어드레스 페이즈 / 데이터 페이즈 표시 -->
-  <text x="170" y="452" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">T1: A주소 (Addr Phase)</text>
-  <text x="170" y="468" text-anchor="middle" font-size="10" fill="#1E293B">A 주소 전송</text>
+  <!-- === HREADY === -->
+  <!-- T1: HIGH (주소 수신 준비) -->
+  <line x1="160" y1="398" x2="280" y2="398" stroke="#F59E0B" stroke-width="2.5"/>
+  <!-- T2: LOW (Wait State) -->
+  <line x1="280" y1="398" x2="280" y2="428" stroke="#F59E0B" stroke-width="2.5"/>
+  <line x1="280" y1="428" x2="400" y2="428" stroke="#EF4444" stroke-width="2.5"/>
+  <!-- T3: HIGH (데이터 유효) -->
+  <line x1="400" y1="428" x2="400" y2="398" stroke="#F59E0B" stroke-width="2.5"/>
+  <line x1="400" y1="398" x2="760" y2="398" stroke="#F59E0B" stroke-width="2.5"/>
+  <!-- HREADY=LOW 텍스트 -->
+  <text x="340" y="438" text-anchor="middle" font-size="10" fill="#EF4444">HREADY=0</text>
+  <text x="460" y="392" text-anchor="middle" font-size="10" fill="#F59E0B">1</text>
+  <text x="220" y="392" text-anchor="middle" font-size="10" fill="#F59E0B">1</text>
 
-  <text x="395" y="452" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">T3~T4: 웨이트 스테이트</text>
-  <text x="395" y="468" text-anchor="middle" font-size="10" fill="#1E293B">HREADY=LOW → Master 유지</text>
+  <!-- 마스터 의무 표시 -->
+  <rect x="285" y="65" width="110" height="18" fill="#7F1D1D" rx="3" opacity="0.8"/>
+  <text x="340" y="78" text-anchor="middle" font-size="10" fill="#FCA5A5">마스터: 신호 동결 의무</text>
 
-  <text x="615" y="452" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">T5: B 데이터 리턴</text>
-  <text x="615" y="468" text-anchor="middle" font-size="10" fill="#1E293B">HREADY=HIGH → 전송 완료</text>
-
-  <text x="450" y="498" text-anchor="middle" font-size="11" font-weight="600" fill="#D97706">핵심: 주소 페이즈(Address Phase)와 데이터 페이즈(Data Phase)가 1사이클 중첩 → 파이프라인 전송</text>
+  <!-- 1사이클 지연 화살표 (HWDATA 1사이클 지연 설명) -->
+  <text x="220" y="470" text-anchor="middle" font-size="10" fill="#94A3B8">① 주소 페이즈</text>
+  <text x="460" y="470" text-anchor="middle" font-size="10" fill="#94A3B8">② 데이터 페이즈 (HREADY=1 시 캡처)</text>
 </svg>

@@ -1,75 +1,108 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, -apple-system, sans-serif">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="820" height="480" viewBox="0 0 820 480" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="820" height="480" fill="#F8FAFC" rx="8"/>
+  <text x="410" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">EX 스테이지 분기 판정 — 데이터패스 블록 다이어그램</text>
+  <text x="410" y="44" text-anchor="middle" font-size="11" fill="#64748B">branch_unit이 EX에서 조건 평가, pc_next MUX가 4-way 선택</text>
   <defs>
-    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
-      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
-    </filter>
-    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
     </marker>
-    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
     </marker>
-    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#16A34A"/>
     </marker>
   </defs>
 
-  <rect width="900" height="520" fill="#F8FAFC" rx="8"/>
+  <!-- PC -->
+  <rect x="20" y="200" width="80" height="50" fill="#1E40AF" rx="6"/>
+  <text x="60" y="228" text-anchor="middle" font-size="13" font-weight="700" fill="white">PC</text>
 
-  <text x="450" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">분기 판정 위치에 따른 페널티 비교</text>
+  <!-- IF/ID -->
+  <rect x="140" y="170" width="90" height="110" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" rx="6"/>
+  <text x="185" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">IF/ID</text>
+  <text x="185" y="212" text-anchor="middle" font-size="9" fill="#334155">instr</text>
+  <text x="185" y="226" text-anchor="middle" font-size="9" fill="#334155">pc</text>
+  <text x="185" y="240" text-anchor="middle" font-size="9" fill="#334155">pc_plus4</text>
+  <text x="185" y="257" text-anchor="middle" font-size="8" fill="#DC2626">← if_id_flush</text>
+  <text x="185" y="271" text-anchor="middle" font-size="8" fill="#DC2626">→ NOP 삽입</text>
 
-  <!-- 상단: MEM 스테이지 판정 (기본) -->
-  <rect x="30" y="55" width="840" height="190" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="50" y="80" font-size="14" font-weight="700" fill="#DC2626">방법 A: MEM 스테이지에서 분기 판정 (3사이클 페널티)</text>
+  <!-- ID/EX -->
+  <rect x="270" y="155" width="100" height="130" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" rx="6"/>
+  <text x="320" y="178" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">ID/EX</text>
+  <text x="320" y="196" text-anchor="middle" font-size="9" fill="#334155">rs1_data, rs2_data</text>
+  <text x="320" y="210" text-anchor="middle" font-size="9" fill="#334155">imm, pc, pc_plus4</text>
+  <text x="320" y="224" text-anchor="middle" font-size="9" fill="#334155">funct3, branch</text>
+  <text x="320" y="238" text-anchor="middle" font-size="9" fill="#334155">jalr, rd</text>
+  <text x="320" y="255" text-anchor="middle" font-size="8" fill="#DC2626">← id_ex_flush</text>
+  <text x="320" y="270" text-anchor="middle" font-size="8" fill="#DC2626">→ NOP 삽입</text>
 
-  <!-- 파이프라인 스테이지: MEM 판정 -->
-  <rect x="80" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="125" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
-  <rect x="180" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="225" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID</text>
-  <rect x="280" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="325" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX</text>
-  <rect x="380" y="95" width="90" height="32" rx="4" fill="#DC2626"/><text x="425" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM ★</text>
-  <rect x="480" y="95" width="90" height="32" rx="4" fill="#2563EB"/><text x="525" y="116" text-anchor="middle" font-size="11" font-weight="600" fill="white">WB</text>
+  <!-- branch_unit -->
+  <rect x="410" y="170" width="120" height="90" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="6"/>
+  <text x="470" y="194" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">branch_unit</text>
+  <text x="470" y="212" text-anchor="middle" font-size="9" fill="#78350F">rs1, rs2 비교</text>
+  <text x="470" y="226" text-anchor="middle" font-size="9" fill="#78350F">funct3 조건 판별</text>
+  <text x="470" y="242" text-anchor="middle" font-size="9" fill="#78350F">branch_taken_ex 출력</text>
 
-  <text x="55" y="116" text-anchor="middle" font-size="10" fill="#64748B">BEQ</text>
+  <!-- EX/MEM -->
+  <rect x="560" y="180" width="90" height="80" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" rx="6"/>
+  <text x="605" y="204" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">EX/MEM</text>
+  <text x="605" y="222" text-anchor="middle" font-size="9" fill="#334155">alu_result</text>
+  <text x="605" y="236" text-anchor="middle" font-size="9" fill="#334155">rd, 제어신호</text>
+  <text x="605" y="250" text-anchor="middle" font-size="9" fill="#334155">pc_plus4</text>
 
-  <!-- 잘못 fetch된 3개 -->
-  <rect x="180" y="135" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
-  <text x="225" y="153" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
-  <rect x="280" y="135" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
-  <text x="325" y="153" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
-  <rect x="380" y="135" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
-  <text x="425" y="153" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
+  <!-- PC MUX (4-way) -->
+  <rect x="110" y="70" width="130" height="90" fill="#E0F2FE" stroke="#0284C7" stroke-width="2" rx="6"/>
+  <text x="175" y="92" text-anchor="middle" font-size="11" font-weight="700" fill="#0C4A6E">pc_next MUX</text>
+  <text x="175" y="108" text-anchor="middle" font-size="9" fill="#0C4A6E">00: PC+4</text>
+  <text x="175" y="122" text-anchor="middle" font-size="9" fill="#0C4A6E">01: branch_target</text>
+  <text x="175" y="136" text-anchor="middle" font-size="9" fill="#0C4A6E">10: jal_target</text>
+  <text x="175" y="150" text-anchor="middle" font-size="9" fill="#0C4A6E">11: jalr_target</text>
 
-  <text x="55" y="152" font-size="10" fill="#DC2626">PC+4,+8,+12</text>
+  <!-- Connections -->
+  <line x1="100" y1="225" x2="140" y2="225" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="230" y1="225" x2="270" y2="225" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="370" y1="225" x2="410" y2="220" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="530" y1="220" x2="560" y2="220" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr)"/>
 
-  <rect x="600" y="95" width="250" height="70" rx="6" fill="#FEF2F2"/>
-  <text x="725" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">3개 명령어 flush 필요</text>
-  <text x="725" y="140" text-anchor="middle" font-size="12" fill="#DC2626">페널티: 3사이클</text>
+  <!-- branch_taken_ex -> PC MUX -->
+  <line x1="470" y1="170" x2="470" y2="130" stroke="#DC2626" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr-red)"/>
+  <line x1="470" y1="130" x2="240" y2="130" stroke="#DC2626" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arr-red)"/>
+  <text x="355" y="120" text-anchor="middle" font-size="9" fill="#DC2626">branch_taken_ex</text>
 
-  <!-- 하단: EX 스테이지 판정 -->
-  <rect x="30" y="260" width="840" height="190" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
-  <text x="50" y="285" font-size="14" font-weight="700" fill="#059669">방법 B: EX 스테이지에서 분기 판정 (2사이클 페널티)</text>
+  <!-- jal_id -> PC MUX -->
+  <text x="185" y="62" text-anchor="middle" font-size="9" fill="#7C3AED">jal_id (IF/ID opcode=JAL?)</text>
+  <line x1="185" y1="66" x2="185" y2="70" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#arr)"/>
 
-  <rect x="80" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="125" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
-  <rect x="180" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="225" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID</text>
-  <rect x="280" y="300" width="90" height="32" rx="4" fill="#059669"/><text x="325" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX ★</text>
-  <rect x="380" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="425" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM</text>
-  <rect x="480" y="300" width="90" height="32" rx="4" fill="#2563EB"/><text x="525" y="321" text-anchor="middle" font-size="11" font-weight="600" fill="white">WB</text>
+  <!-- PC MUX -> PC -->
+  <line x1="110" y1="115" x2="60" y2="115" stroke="#16A34A" stroke-width="2" marker-end="url(#arr-green)"/>
+  <line x1="60" y1="115" x2="60" y2="200" stroke="#16A34A" stroke-width="2" marker-end="url(#arr-green)"/>
+  <text x="82" y="155" text-anchor="middle" font-size="9" fill="#16A34A">pc_next</text>
 
-  <text x="55" y="321" text-anchor="middle" font-size="10" fill="#64748B">BEQ</text>
+  <!-- if_id_flush label -->
+  <text x="185" y="310" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">if_id_flush =</text>
+  <text x="185" y="325" text-anchor="middle" font-size="9" fill="#DC2626">branch_taken_ex | jal_id | jalr_taken_ex</text>
+  <rect x="100" y="297" width="170" height="38" fill="none" stroke="#DC2626" stroke-width="1.5" rx="4" stroke-dasharray="4,2"/>
 
-  <!-- 잘못 fetch된 2개 -->
-  <rect x="180" y="340" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
-  <text x="225" y="358" text-anchor="middle" font-size="10" fill="#DC2626">IF ✗</text>
-  <rect x="280" y="340" width="90" height="26" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
-  <text x="325" y="358" text-anchor="middle" font-size="10" fill="#DC2626">ID ✗</text>
+  <!-- id_ex_flush label -->
+  <text x="320" y="340" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">id_ex_flush =</text>
+  <text x="320" y="355" text-anchor="middle" font-size="9" fill="#DC2626">load_use | branch_taken_ex | jalr_taken_ex</text>
+  <rect x="230" y="327" width="185" height="38" fill="none" stroke="#DC2626" stroke-width="1.5" rx="4" stroke-dasharray="4,2"/>
 
-  <text x="55" y="357" font-size="10" fill="#DC2626">PC+4,+8</text>
+  <!-- if_id_flush arrow -->
+  <line x1="185" y1="297" x2="185" y2="280" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-red)"/>
 
-  <rect x="600" y="300" width="250" height="70" rx="6" fill="#ECFDF5"/>
-  <text x="725" y="323" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">2개 명령어 flush 필요</text>
-  <text x="725" y="345" text-anchor="middle" font-size="12" fill="#059669">페널티: 2사이클</text>
+  <!-- id_ex_flush arrow -->
+  <line x1="320" y1="327" x2="320" y2="285" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-red)"/>
 
-  <!-- 하단 비교 요약 -->
-  <rect x="30" y="465" width="840" height="40" rx="6" fill="#DBEAFE"/>
-  <text x="450" y="490" text-anchor="middle" font-size="13" font-weight="600" fill="#2563EB">결론: 분기 판정을 앞 스테이지로 이동할수록 페널티 감소. EX 판정 시 2사이클, ID 판정 시 1사이클 (추가 복잡성 수반)</text>
+  <!-- Branch target calc -->
+  <rect x="410" y="300" width="160" height="55" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5" rx="4"/>
+  <text x="490" y="320" text-anchor="middle" font-size="10" font-weight="700" fill="#15803D">분기 타겟 계산</text>
+  <text x="490" y="336" text-anchor="middle" font-size="9" fill="#15803D">branch: id_ex_pc + id_ex_imm</text>
+  <text x="490" y="350" text-anchor="middle" font-size="9" fill="#15803D">jalr: (rs1 + imm) &amp; ~1</text>
+
+  <!-- JALR taken_ex label -->
+  <text x="605" y="290" text-anchor="middle" font-size="9" fill="#7C3AED">jalr_taken_ex =</text>
+  <text x="605" y="304" text-anchor="middle" font-size="9" fill="#7C3AED">id_ex_jalr</text>
 </svg>

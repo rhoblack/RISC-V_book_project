@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 02 — RISC-V ISA 기초: 레지스터, 메모리, 명령어 형식</title>
   <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
 
@@ -261,7 +263,7 @@ module register_file (
    logic [31:0] rf [31:0];       // 32x32 레지스터 배열
    // x0은 항상 0 — 쓰기 시 무시됨
    always_ff @(posedge clk)
-      if (we3 && wa3 != 5'b0) rf[wa3] &lt;= wd3;
+      if (we3 &amp;&amp; wa3 != 5'b0) rf[wa3] &lt;= wd3;
    // 비동기 읽기 (FPGA에서 분산 RAM 추론)
    assign rd1 = (ra1 != 5'b0) ? rf[ra1] : 32'b0;
    assign rd2 = (ra2 != 5'b0) ? rf[ra2] : 32'b0;
@@ -1189,6 +1191,7 @@ endmodule</code></pre>
 <!-- ========== 2.6절 끝 ========== -->
 
 
+
 <!-- ========== 챕터 마무리 ========== -->
 <section class="chapter-summary">
   <h2>핵심 정리</h2>
@@ -1353,5 +1356,59 @@ endmodule</code></pre>
   </p>
 </section>
 
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 이 챕터의 핵심 코드 정리</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+<p>Chapter 02는 RISC-V 아키텍처의 이론을 다루는 챕터로, 독립적인 설계 파일 대신 이후 챕터에서 구현할 모듈들의 인터페이스 정의를 미리 살펴봅니다. 실제 구현은 Chapter 04~05에서 수행합니다.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">개념</span>RV32I 레지스터 파일 인터페이스 (미리보기)</h3>
+    <pre><code class="language-verilog">// RV32I 레지스터 파일 인터페이스 (Chapter 04에서 구현 예정)
+// 32개 × 32비트 범용 레지스터 (x0~x31)
+// x0은 하드와이어드 0 (쓰기 무시, 읽기 항상 0)
+
+module register_file (
+   input  logic        clk,       // 시스템 클록
+   input  logic        rst_n,     // 비동기 리셋
+
+   // 읽기 포트 2개 (비동기 읽기)
+   input  logic [4:0]  rs1_addr,  // inst[19:15] — rs1 주소
+   output logic [31:0] rs1_data,  // rs1 데이터 출력
+   input  logic [4:0]  rs2_addr,  // inst[24:20] — rs2 주소
+   output logic [31:0] rs2_data,  // rs2 데이터 출력
+
+   // 쓰기 포트 1개 (동기 쓰기)
+   input  logic [4:0]  rd_addr,   // inst[11:7] — rd 주소
+   input  logic [31:0] rd_data,   // 기록할 데이터
+   input  logic        reg_wr_en  // 쓰기 인에이블
+);
+   // ... 구현은 Chapter 04에서
+endmodule</code></pre>
+  </div>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>Chapter 02의 내용은 구현보다 이해가 핵심입니다. 레지스터 이름 규칙(x0~x31, ABI 이름), 메모리 모델, 명령어 형식을 완전히 이해한 후 Chapter 03의 명령어 분석으로 넘어가십시오.</p>
+  </aside>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
 </body>
 </html>

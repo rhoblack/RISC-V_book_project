@@ -1,92 +1,91 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 550" font-family="Pretendard, -apple-system, sans-serif">
-  <defs>
-    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
-      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
-    </filter>
-    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
-    </marker>
-    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
-    </marker>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 500" width="820" height="500" font-family="Pretendard, sans-serif">
+  <!-- 배경 -->
+  <rect width="820" height="500" fill="#F8FAFC" rx="12"/>
 
-  <rect width="850" height="550" fill="#F8FAFC" rx="8"/>
-  <text x="425" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">AHB-Lite 인터커넥트 구조</text>
-  <text x="425" y="48" text-anchor="middle" font-size="12" fill="#64748B">단일 마스터: 디코더 + 슬레이브 MUX</text>
+  <!-- 제목 -->
+  <text x="410" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">AHB 인터커넥트 구조</text>
 
-  <!-- AHB Master -->
-  <rect x="320" y="70" width="210" height="70" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#shadow)"/>
-  <text x="425" y="97" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">AHB Master</text>
-  <text x="425" y="115" text-anchor="middle" font-size="10" fill="#64748B">CPU / 캐시-버스 브리지</text>
+  <!-- ===== Master (캐시-버스 브리지) ===== -->
+  <rect x="30" y="80" width="160" height="120" fill="#DBEAFE" rx="10" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="110" y="108" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E3A5F">AHB Master</text>
+  <text x="110" y="126" text-anchor="middle" font-size="11" fill="#1E40AF">캐시-버스 브리지</text>
+  <text x="110" y="144" text-anchor="middle" font-size="10" fill="#374151">ahb_master_bridge</text>
+  <line x1="30" y1="158" x2="190" y2="158" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="110" y="174" text-anchor="middle" font-size="10" fill="#64748B">from rv32i_pipeline</text>
+  <text x="110" y="188" text-anchor="middle" font-size="10" fill="#64748B">cache_req/ack/addr</text>
 
-  <!-- 주소 버스 (하향) -->
-  <line x1="370" y1="140" x2="370" y2="190" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrowB)"/>
-  <text x="355" y="170" text-anchor="end" font-size="9" fill="#2563EB">HADDR</text>
-  <text x="355" y="182" text-anchor="end" font-size="9" fill="#2563EB">HTRANS</text>
+  <!-- ===== AHB Bus 버스 선 ===== -->
+  <!-- 수평 버스 -->
+  <rect x="220" y="125" width="300" height="50" fill="#1D4ED8" rx="6"/>
+  <text x="370" y="147" text-anchor="middle" font-size="13" font-weight="bold" fill="white">AHB-Lite 공유 버스</text>
+  <text x="370" y="163" text-anchor="middle" font-size="10" fill="#BFDBFE">HADDR / HTRANS / HWRITE / HWDATA / HRDATA / HREADY</text>
 
-  <!-- 쓰기 데이터 버스 -->
-  <line x1="480" y1="140" x2="480" y2="190" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrowB)"/>
-  <text x="495" y="170" font-size="9" fill="#2563EB">HWDATA</text>
-  <text x="495" y="182" font-size="9" fill="#2563EB">HWRITE</text>
+  <!-- Master → Bus -->
+  <line x1="190" y1="140" x2="220" y2="140" stroke="#2563EB" stroke-width="3"/>
+  <polygon points="218,135 218,145 225,140" fill="#2563EB"/>
 
-  <!-- 주소 디코더 -->
-  <rect x="280" y="190" width="180" height="60" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
-  <text x="370" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#D97706">주소 디코더</text>
-  <text x="370" y="235" text-anchor="middle" font-size="9" fill="#1E293B">HADDR[31:28] → HSELx</text>
+  <!-- ===== HSEL 디코더 ===== -->
+  <rect x="340" y="210" width="160" height="80" fill="#E0E7FF" rx="8" stroke="#4F46E5" stroke-width="2"/>
+  <text x="420" y="237" text-anchor="middle" font-size="13" font-weight="bold" fill="#3730A3">HSEL 디코더</text>
+  <text x="420" y="257" text-anchor="middle" font-size="10" fill="#4338CA">0x0000_xxxx → HSEL_imem</text>
+  <text x="420" y="272" text-anchor="middle" font-size="10" fill="#4338CA">0x0001_xxxx → HSEL_dmem</text>
+  <text x="420" y="286" text-anchor="middle" font-size="10" fill="#4338CA">0xFFFF_xxxx → HSEL_apb</text>
 
-  <!-- HSEL 신호들 -->
-  <line x1="300" y1="250" x2="300" y2="330" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrowB)"/>
-  <text x="295" y="280" text-anchor="end" font-size="9" font-weight="600" fill="#D97706">HSEL0</text>
+  <!-- Bus → 디코더 -->
+  <line x1="420" y1="175" x2="420" y2="210" stroke="#4F46E5" stroke-width="2"/>
+  <polygon points="415,207 425,207 420,210" fill="#4F46E5"/>
 
-  <line x1="370" y1="250" x2="370" y2="330" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrowB)"/>
-  <text x="365" y="280" text-anchor="end" font-size="9" font-weight="600" fill="#D97706">HSEL1</text>
+  <!-- ===== Slave 0: IMEM SRAM ===== -->
+  <rect x="30" y="340" width="170" height="100" fill="#DCFCE7" rx="10" stroke="#16A34A" stroke-width="2"/>
+  <text x="115" y="367" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">Slave 0</text>
+  <text x="115" y="385" text-anchor="middle" font-size="11" fill="#15803D">IMEM SRAM</text>
+  <text x="115" y="403" text-anchor="middle" font-size="10" fill="#374151">ahb_sram_slave</text>
+  <line x1="30" y1="415" x2="200" y2="415" stroke="#BBF7D0" stroke-width="1"/>
+  <text x="115" y="430" text-anchor="middle" font-size="10" fill="#64748B">0x0000_0000~0xFFFF</text>
 
-  <line x1="440" y1="250" x2="440" y2="330" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrowB)"/>
-  <text x="435" y="280" text-anchor="end" font-size="9" font-weight="600" fill="#D97706">HSEL2</text>
+  <!-- ===== Slave 1: DMEM SRAM ===== -->
+  <rect x="230" y="340" width="170" height="100" fill="#DCFCE7" rx="10" stroke="#16A34A" stroke-width="2"/>
+  <text x="315" y="367" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">Slave 1</text>
+  <text x="315" y="385" text-anchor="middle" font-size="11" fill="#15803D">DMEM SRAM</text>
+  <text x="315" y="403" text-anchor="middle" font-size="10" fill="#374151">ahb_sram_slave</text>
+  <line x1="230" y1="415" x2="400" y2="415" stroke="#BBF7D0" stroke-width="1"/>
+  <text x="315" y="430" text-anchor="middle" font-size="10" fill="#64748B">0x0001_0000~0xFFFF</text>
 
-  <!-- 공유 버스 -->
-  <rect x="100" y="290" width="650" height="16" rx="3" fill="#2563EB" opacity="0.15"/>
-  <line x1="100" y1="298" x2="750" y2="298" stroke="#2563EB" stroke-width="2"/>
-  <text x="75" y="302" text-anchor="end" font-size="9" fill="#2563EB">공유 버스</text>
+  <!-- ===== Slave 2: APB Bridge (점선, 예약) ===== -->
+  <rect x="560" y="340" width="210" height="100" fill="#F9FAFB" rx="10" stroke="#94A3B8" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="665" y="367" text-anchor="middle" font-size="13" font-weight="bold" fill="#6B7280">APB Bridge</text>
+  <text x="665" y="385" text-anchor="middle" font-size="11" fill="#9CA3AF">Ch17 예약</text>
+  <text x="665" y="403" text-anchor="middle" font-size="10" fill="#9CA3AF">0xFFFF_0000~FFFF</text>
+  <text x="665" y="425" text-anchor="middle" font-size="11" fill="#94A3B8">→ UART, GPIO 등</text>
 
-  <!-- 슬레이브들 -->
-  <!-- Slave 0: SRAM -->
-  <rect x="70" y="330" width="170" height="100" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
-  <text x="155" y="355" text-anchor="middle" font-size="13" font-weight="700" fill="#059669">Slave 0</text>
-  <text x="155" y="375" text-anchor="middle" font-size="11" fill="#1E293B">SRAM (16KB)</text>
-  <text x="155" y="395" text-anchor="middle" font-size="9" fill="#64748B">0x0000_0000</text>
-  <text x="155" y="410" text-anchor="middle" font-size="9" fill="#64748B">~ 0x0000_3FFF</text>
+  <!-- 디코더 → Slave들 -->
+  <!-- 디코더 → IMEM -->
+  <path d="M360 290 Q260 290 260 315 Q260 340 160 340" fill="none" stroke="#16A34A" stroke-width="2"/>
+  <polygon points="157,335 157,345 163,340" fill="#16A34A"/>
+  <text x="255" y="308" font-size="10" fill="#15803D">HSEL_imem</text>
 
-  <!-- Slave 1: APB Bridge -->
-  <rect x="270" y="330" width="170" height="100" rx="8" fill="#F3E8FF" stroke="#7C3AED" stroke-width="2" filter="url(#shadow)"/>
-  <text x="355" y="355" text-anchor="middle" font-size="13" font-weight="700" fill="#7C3AED">Slave 1</text>
-  <text x="355" y="375" text-anchor="middle" font-size="11" fill="#1E293B">APB Bridge</text>
-  <text x="355" y="395" text-anchor="middle" font-size="9" fill="#64748B">0x4000_0000</text>
-  <text x="355" y="410" text-anchor="middle" font-size="9" fill="#64748B">~ 0x4FFF_FFFF</text>
+  <!-- 디코더 → DMEM -->
+  <path d="M420 290 Q380 290 380 315 Q380 340 315 340" fill="none" stroke="#16A34A" stroke-width="2"/>
+  <polygon points="312,335 312,345 318,340" fill="#16A34A"/>
+  <text x="388" y="320" font-size="10" fill="#15803D">HSEL_dmem</text>
 
-  <!-- Slave 2: Default -->
-  <rect x="470" y="330" width="170" height="100" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2" filter="url(#shadow)"/>
-  <text x="555" y="355" text-anchor="middle" font-size="13" font-weight="700" fill="#DC2626">Default Slave</text>
-  <text x="555" y="375" text-anchor="middle" font-size="11" fill="#1E293B">ERROR 응답</text>
-  <text x="555" y="395" text-anchor="middle" font-size="9" fill="#64748B">미매핑 주소 →</text>
-  <text x="555" y="410" text-anchor="middle" font-size="9" fill="#DC2626">HRESP = ERROR</text>
+  <!-- 디코더 → APB Bridge -->
+  <path d="M500 250 Q665 250 665 340" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="660,337 670,337 665,342" fill="#94A3B8"/>
+  <text x="590" y="244" font-size="10" fill="#9CA3AF">HSEL_apb (Ch17)</text>
 
-  <!-- 슬레이브 MUX -->
-  <rect x="100" y="460" width="600" height="50" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
-  <text x="400" y="485" text-anchor="middle" font-size="13" font-weight="700" fill="#2563EB">슬레이브 MUX (HRDATA / HREADY / HRESP 선택)</text>
-  <text x="400" y="502" text-anchor="middle" font-size="9" fill="#64748B">디코더 출력(HSELx)으로 활성 슬레이브의 응답을 선택</text>
+  <!-- HRDATA MUX 설명 박스 -->
+  <rect x="550" y="160" width="230" height="75" fill="#FFF7ED" rx="6" stroke="#FB923C" stroke-width="1.5"/>
+  <text x="665" y="183" text-anchor="middle" font-size="12" font-weight="bold" fill="#C2410C">HRDATA MUX (인터커넥트)</text>
+  <text x="560" y="203" font-size="10" fill="#7C2D12">• HSEL_d = HSEL 1사이클 지연 래치</text>
+  <text x="560" y="218" font-size="10" fill="#7C2D12">• HREADY_out = 선택 Slave의 HREADY</text>
+  <text x="560" y="233" font-size="10" fill="#7C2D12">• HRESP = 선택 Slave의 HRESP</text>
 
-  <!-- 슬레이브 → MUX -->
-  <line x1="155" y1="430" x2="155" y2="460" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
-  <line x1="355" y1="430" x2="355" y2="460" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
-  <line x1="555" y1="430" x2="555" y2="460" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
+  <!-- 버스 → MUX -->
+  <line x1="520" y1="155" x2="560" y2="185" stroke="#FB923C" stroke-width="1.5" stroke-dasharray="3,2"/>
 
-  <!-- MUX → Master (응답) -->
-  <line x1="700" y1="485" x2="780" y2="485" stroke="#059669" stroke-width="2"/>
-  <line x1="780" y1="485" x2="780" y2="105" stroke="#059669" stroke-width="2"/>
-  <line x1="780" y1="105" x2="530" y2="105" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
-  <text x="790" y="300" font-size="9" font-weight="600" fill="#059669">HRDATA</text>
-  <text x="790" y="315" font-size="9" font-weight="600" fill="#059669">HREADY</text>
-  <text x="790" y="330" font-size="9" font-weight="600" fill="#059669">HRESP</text>
+  <!-- 주소 맵 요약 -->
+  <rect x="30" y="455" width="500" height="35" fill="#F1F5F9" rx="6" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="280" y="472" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">주소 맵</text>
+  <text x="280" y="485" text-anchor="middle" font-size="10" fill="#64748B">0x0000_0000~FFFF: IMEM  |  0x0001_0000~FFFF: DMEM  |  0xFFFF_0000~FFFF: APB</text>
 </svg>

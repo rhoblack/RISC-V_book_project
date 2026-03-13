@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 400" font-family="Pretendard, sans-serif">
+  <rect width="820" height="400" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">시나리오 2: Sequential Access 파형 (히트율 87.5%)</text>
+  <text x="410" y="48" text-anchor="middle" font-size="11" fill="#374151">0x0000_0000 MISS 후 같은 블록 내 0x0000_0004~0x0000_001C 접근 → 7연속 HIT</text>
+
+  <!-- 클록 사이클 레이블 -->
+  <text x="160" y="75" text-anchor="middle" font-size="10" fill="#6B7280">신호</text>
+  <text x="246" y="75" text-anchor="middle" font-size="10" fill="#374151">C1</text>
+  <text x="306" y="75" text-anchor="middle" font-size="10" fill="#374151">C2</text>
+  <text x="366" y="75" text-anchor="middle" font-size="10" fill="#374151">C3</text>
+  <text x="426" y="75" text-anchor="middle" font-size="10" fill="#374151">C4</text>
+  <text x="486" y="75" text-anchor="middle" font-size="10" fill="#374151">C5</text>
+  <text x="546" y="75" text-anchor="middle" font-size="10" fill="#374151">C6</text>
+  <text x="606" y="75" text-anchor="middle" font-size="10" fill="#374151">C7</text>
+  <text x="666" y="75" text-anchor="middle" font-size="10" fill="#374151">C8</text>
+  <text x="726" y="75" text-anchor="middle" font-size="10" fill="#374151">C9</text>
+  <text x="780" y="75" text-anchor="middle" font-size="10" fill="#374151">C10</text>
+
+  <!-- cpu_addr 신호 -->
+  <text x="100" y="108" text-anchor="middle" font-size="11" fill="#374151">cpu_addr</text>
+  <rect x="216" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="245" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8">0x0000</text>
+  <!-- MISS 구간(C2~C5): 주소 유지 -->
+  <rect x="276" y="90" width="238" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="395" y="108" text-anchor="middle" font-size="9" fill="#EF4444">0x0000 (MISS 대기 중)</text>
+  <rect x="516" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="545" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8">0x0004</text>
+  <rect x="576" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="605" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8">0x0008</text>
+  <rect x="636" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="665" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8">0x000C</text>
+  <rect x="696" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="725" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8">0x0010</text>
+  <text x="765" y="108" text-anchor="middle" font-size="11" fill="#9CA3AF">...</text>
+
+  <!-- cache_hit 신호 -->
+  <text x="100" y="155" text-anchor="middle" font-size="11" fill="#374151">cache_hit</text>
+  <!-- C1: MISS(0) -->
+  <rect x="216" y="138" width="58" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="245" y="156" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">MISS</text>
+  <!-- C2~C5: 스톨 중 (MISS) -->
+  <rect x="276" y="138" width="238" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="395" y="156" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">MISS (블록 채움 중)</text>
+  <!-- C6~C10: HIT -->
+  <rect x="516" y="138" width="58" height="28" fill="#D1FAE5" rx="3" stroke="#10B981" stroke-width="1.5"/>
+  <text x="545" y="156" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">HIT</text>
+  <rect x="576" y="138" width="58" height="28" fill="#D1FAE5" rx="3" stroke="#10B981" stroke-width="1.5"/>
+  <text x="605" y="156" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">HIT</text>
+  <rect x="636" y="138" width="58" height="28" fill="#D1FAE5" rx="3" stroke="#10B981" stroke-width="1.5"/>
+  <text x="665" y="156" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">HIT</text>
+  <rect x="696" y="138" width="58" height="28" fill="#D1FAE5" rx="3" stroke="#10B981" stroke-width="1.5"/>
+  <text x="725" y="156" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">HIT</text>
+  <text x="765" y="156" text-anchor="middle" font-size="11" fill="#10B981">...</text>
+
+  <!-- icache_stall 신호 -->
+  <text x="100" y="205" text-anchor="middle" font-size="11" fill="#374151">icache_stall</text>
+  <!-- C1: 처음 요청 시 - 판정 전 순간 HIGH (단순화) -->
+  <!-- C2~C5: stall=1 -->
+  <rect x="216" y="188" width="298" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="365" y="206" text-anchor="middle" font-size="10" fill="#92400E" font-weight="700">stall = 1  (5사이클)</text>
+  <!-- C6~: stall=0 -->
+  <rect x="516" y="188" width="298" height="28" fill="#D1FAE5" rx="3" stroke="#10B981" stroke-width="1.5"/>
+  <text x="665" y="206" text-anchor="middle" font-size="10" fill="#065F46" font-weight="700">stall = 0</text>
+
+  <!-- mem_req 신호 -->
+  <text x="100" y="252" text-anchor="middle" font-size="11" fill="#374151">mem_req</text>
+  <rect x="216" y="235" width="58" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="245" y="253" text-anchor="middle" font-size="10" fill="#92400E" font-weight="700">1</text>
+  <rect x="276" y="235" width="238" height="28" fill="white" rx="3" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="395" y="253" text-anchor="middle" font-size="10" fill="#9CA3AF">0 (채움 중)</text>
+  <rect x="516" y="235" width="298" height="28" fill="white" rx="3" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="665" y="253" text-anchor="middle" font-size="10" fill="#9CA3AF">0</text>
+
+  <!-- FSM 상태 -->
+  <text x="100" y="298" text-anchor="middle" font-size="11" fill="#374151">FSM 상태</text>
+  <rect x="216" y="280" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="245" y="298" text-anchor="middle" font-size="10" fill="#1D4ED8">IDLE</text>
+  <rect x="276" y="280" width="58" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="305" y="298" text-anchor="middle" font-size="10" fill="#EF4444">MISS</text>
+  <rect x="336" y="280" width="178" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="425" y="298" text-anchor="middle" font-size="10" fill="#92400E">FILL (C3~C5)</text>
+  <rect x="516" y="280" width="58" height="28" fill="#D1FAE5" rx="3" stroke="#10B981" stroke-width="1.5"/>
+  <text x="545" y="298" text-anchor="middle" font-size="10" fill="#065F46">DONE</text>
+  <rect x="576" y="280" width="238" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="695" y="298" text-anchor="middle" font-size="10" fill="#1D4ED8">IDLE (HIT 처리)</text>
+
+  <!-- 히트율 계산 -->
+  <rect x="30" y="328" width="760" height="52" fill="white" rx="8" stroke="#DBEAFE" stroke-width="2"/>
+  <text x="410" y="350" text-anchor="middle" font-size="13" font-weight="700" fill="#1E3A5F">시나리오 2 히트율 계산</text>
+  <text x="410" y="370" text-anchor="middle" font-size="12" fill="#374151">총 8회 접근(0x0000~0x001C, 4바이트 간격) 중 1회 MISS + 7회 HIT → 히트율 = 7/8 = 87.5%</text>
+</svg>

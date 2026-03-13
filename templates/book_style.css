@@ -259,6 +259,45 @@ aside.metacognition {
   font-size: 1.1rem;
 }
 
+/* --- Highlight.js 통합 --- */
+/* hljs 배경을 투명하게 처리 (pre 스타일 유지) */
+.hljs { background: transparent !important; padding: 0 !important; }
+
+/* --- 전체 소스 코드 섹션 --- */
+.full-source-section {
+  margin-top: 3rem;
+}
+
+.full-source-section > h2 {
+  color: var(--color-primary);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.source-file {
+  margin: 1.5rem 0;
+}
+
+.source-file > h3 {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.3rem;
+  font-family: var(--font-mono);
+  font-weight: normal;
+}
+
+.file-badge {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
 /* --- 인쇄 스타일 --- */
 @media print {
   body {

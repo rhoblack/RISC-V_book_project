@@ -1,0 +1,15 @@
+# 백업 폴더
+backup/
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# 에디터
+.vscode/
+*.swp
+*~
+
+# 임시 파일
+*.tmp
+*.bak

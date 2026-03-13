@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 500" font-family="Pretendard, sans-serif">
+  <rect width="820" height="500" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">직접 매핑 캐시 구조 (Direct-Mapped Cache)</text>
+  <text x="410" y="52" text-anchor="middle" font-size="12" fill="#374151">4KB / 128 엔트리 / 32바이트 블록</text>
+
+  <!-- 캐시 테이블 헤더 -->
+  <rect x="60" y="65" width="50" height="32" fill="#1D4ED8" rx="0"/>
+  <text x="85" y="85" text-anchor="middle" font-size="11" font-weight="700" fill="white">Index</text>
+  <rect x="110" y="65" width="40" height="32" fill="#1D4ED8"/>
+  <text x="130" y="85" text-anchor="middle" font-size="11" font-weight="700" fill="white">V</text>
+  <rect x="150" y="65" width="130" height="32" fill="#1D4ED8"/>
+  <text x="215" y="85" text-anchor="middle" font-size="11" font-weight="700" fill="white">Tag [31:12] (20비트)</text>
+  <rect x="280" y="65" width="490" height="32" fill="#1D4ED8" rx="0"/>
+  <text x="525" y="85" text-anchor="middle" font-size="11" font-weight="700" fill="white">Data [255:0] (8워드 × 32비트 = 256비트)</text>
+
+  <!-- 캐시 행 0 -->
+  <rect x="60" y="97" width="50" height="30" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="85" y="116" text-anchor="middle" font-size="11" fill="#1D4ED8" font-weight="700">0</text>
+  <rect x="110" y="97" width="40" height="30" fill="#D1FAE5" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="130" y="116" text-anchor="middle" font-size="11" fill="#065F46" font-weight="700">1</text>
+  <rect x="150" y="97" width="130" height="30" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="215" y="116" text-anchor="middle" font-size="11" fill="#1D4ED8">0x00000</text>
+  <rect x="280" y="97" width="490" height="30" fill="#DBEAFE" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="525" y="116" text-anchor="middle" font-size="11" fill="#1D4ED8">W0: 0x0000_0013 | W1 | W2 | W3 | W4 | W5 | W6 | W7</text>
+
+  <!-- 캐시 행 1 -->
+  <rect x="60" y="127" width="50" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="85" y="146" text-anchor="middle" font-size="11" fill="#374151">1</text>
+  <rect x="110" y="127" width="40" height="30" fill="#D1FAE5" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="130" y="146" text-anchor="middle" font-size="11" fill="#065F46" font-weight="700">1</text>
+  <rect x="150" y="127" width="130" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="215" y="146" text-anchor="middle" font-size="11" fill="#374151">0x00000</text>
+  <rect x="280" y="127" width="490" height="30" fill="#F8FAFC" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="525" y="146" text-anchor="middle" font-size="11" fill="#374151">W0: ... | W1 | W2 | ... | W7</text>
+
+  <!-- 캐시 행 2 -->
+  <rect x="60" y="157" width="50" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="85" y="176" text-anchor="middle" font-size="11" fill="#374151">2</text>
+  <rect x="110" y="157" width="40" height="30" fill="#FEE2E2" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="130" y="176" text-anchor="middle" font-size="11" fill="#991B1B" font-weight="700">0</text>
+  <rect x="150" y="157" width="130" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="215" y="176" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="280" y="157" width="490" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="525" y="176" text-anchor="middle" font-size="11" fill="#9CA3AF">(invalid — 아직 로드 안 됨)</text>
+
+  <!-- 점 표시 -->
+  <text x="85" y="205" text-anchor="middle" font-size="16" fill="#9CA3AF">...</text>
+  <text x="525" y="205" text-anchor="middle" font-size="12" fill="#9CA3AF">( 3 ~ 126 행 )</text>
+
+  <!-- 캐시 행 127 -->
+  <rect x="60" y="220" width="50" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="85" y="239" text-anchor="middle" font-size="11" fill="#374151">127</text>
+  <rect x="110" y="220" width="40" height="30" fill="#FEE2E2" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="130" y="239" text-anchor="middle" font-size="11" fill="#991B1B" font-weight="700">0</text>
+  <rect x="150" y="220" width="130" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="215" y="239" text-anchor="middle" font-size="11" fill="#9CA3AF">—</text>
+  <rect x="280" y="220" width="490" height="30" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="525" y="239" text-anchor="middle" font-size="11" fill="#9CA3AF">(invalid)</text>
+
+  <!-- 히트 판정 로직 박스 -->
+  <rect x="60" y="270" width="740" height="100" fill="white" rx="10" stroke="#2563EB" stroke-width="2"/>
+  <text x="410" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#1E3A5F">히트 판정 로직 (Hit Detection)</text>
+  <text x="410" y="315" text-anchor="middle" font-size="12" fill="#374151" font-family="monospace, Pretendard">assign cache_hit = valid[addr_index] &amp;&amp; (tag_mem[addr_index] == addr_tag);</text>
+  <line x1="80" y1="325" x2="780" y2="325" stroke="#DBEAFE" stroke-width="1"/>
+  <text x="200" y="348" text-anchor="middle" font-size="11" fill="#374151">valid[idx] = 1</text>
+  <text x="200" y="362" text-anchor="middle" font-size="11" fill="#374151">: 해당 칸이 유효한 데이터를 포함</text>
+  <text x="550" y="348" text-anchor="middle" font-size="11" fill="#374151">tag_mem[idx] == addr_tag</text>
+  <text x="550" y="362" text-anchor="middle" font-size="11" fill="#374151">: 원하는 블록이 이 칸에 있음</text>
+
+  <!-- 범례 -->
+  <rect x="60" y="388" width="740" height="90" fill="#DBEAFE" rx="8"/>
+  <text x="410" y="408" text-anchor="middle" font-size="12" font-weight="700" fill="#1E3A5F">범례 / 특징</text>
+  <rect x="90" y="420" width="14" height="14" fill="#D1FAE5" stroke="#10B981" stroke-width="1"/>
+  <text x="112" y="432" font-size="11" fill="#374151">V=1 (유효)</text>
+  <rect x="220" y="420" width="14" height="14" fill="#FEE2E2" stroke="#EF4444" stroke-width="1"/>
+  <text x="242" y="432" font-size="11" fill="#374151">V=0 (무효, 리셋 후 초기 상태)</text>
+  <text x="500" y="432" font-size="11" fill="#374151">직접 매핑: 각 주소 → 정확히 하나의 칸에만 저장</text>
+  <text x="410" y="460" text-anchor="middle" font-size="11" fill="#374151">총 크기: 128행 × (1+20+256)비트 = 128 × 277비트 ≈ 4.4KB (Tag+Valid 포함)</text>
+</svg>

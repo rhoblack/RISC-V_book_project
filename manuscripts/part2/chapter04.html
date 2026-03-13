@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 04 — 데이터패스 기초: ALU와 레지스터 파일</title>
   <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
 
@@ -219,14 +221,14 @@ module alu (
       case (alu_ctrl)
          ALU_ADD:  result = a + b;
          ALU_SUB:  result = a - b;
-         ALU_AND:  result = a & b;
+         ALU_AND:  result = a &amp; b;
          ALU_OR:   result = a | b;
          ALU_XOR:  result = a ^ b;
-         ALU_SLL:  result = a << b[4:0];      // 하위 5비트만 시프트 양으로 사용
-         ALU_SRL:  result = a >> b[4:0];      // 논리 우측 시프트 (0으로 채움)
-         ALU_SRA:  result = $signed(a) >>> b[4:0]; // 산술 우측 시프트 (부호 비트로 채움)
-         ALU_SLT:  result = {31'b0, $signed(a) < $signed(b)};  // 부호 있는 비교
-         ALU_SLTU: result = {31'b0, a < b};   // 부호 없는 비교
+         ALU_SLL:  result = a &lt;&lt; b[4:0];      // 하위 5비트만 시프트 양으로 사용
+         ALU_SRL:  result = a &gt;&gt; b[4:0];      // 논리 우측 시프트 (0으로 채움)
+         ALU_SRA:  result = $signed(a) &gt;&gt;&gt; b[4:0]; // 산술 우측 시프트 (부호 비트로 채움)
+         ALU_SLT:  result = {31'b0, $signed(a) &lt; $signed(b)};  // 부호 있는 비교
+         ALU_SLTU: result = {31'b0, a &lt; b};   // 부호 없는 비교
          default:  result = 32'b0;
       endcase
    end
@@ -448,8 +450,8 @@ module register_file (
    // 동기 쓰기 — x0(wa3=0)에는 쓰지 않음
    // x0는 하드와이어드 0이므로, 쓰기 시도 자체를 무시
    always_ff @(posedge clk)
-      if (we3 && (wa3 != 5'b0))
-         rf[wa3] <= wd3;
+      if (we3 &amp;&amp; (wa3 != 5'b0))
+         rf[wa3] &lt;= wd3;
 
    // 비동기 읽기 — x0는 항상 0 반환
    // assign 문 사용으로 조합 논리 경로 확보 (클럭 에지 불필요)
@@ -768,7 +770,7 @@ module alu_tb;
       assert (zero == 1'b1) else $fatal(1, "FAIL: zero flag not set for SUB 10-10");
 
       // ---- 논리 연산 ----
-      // AND: 0xFF00 & 0x0FF0 = 0x0F00
+      // AND: 0xFF00 &amp; 0x0FF0 = 0x0F00
       a = 32'h0000_FF00; b = 32'h0000_0FF0; alu_ctrl = 4'b0010;
       check(32'h0000_0F00, "AND");
 
@@ -781,24 +783,24 @@ module alu_tb;
       check(32'h0000_00FF, "XOR");
 
       // ---- 시프트 연산 ----
-      // SLL: 1 << 3 = 8
+      // SLL: 1 &lt;&lt; 3 = 8
       a = 32'd1; b = 32'd3; alu_ctrl = 4'b0101;
       check(32'd8, "SLL");
 
-      // SRL: 0x80000000 >> 1 = 0x40000000 (논리: 0으로 채움)
+      // SRL: 0x80000000 &gt;&gt; 1 = 0x40000000 (논리: 0으로 채움)
       a = 32'h8000_0000; b = 32'd1; alu_ctrl = 4'b0110;
       check(32'h4000_0000, "SRL");
 
-      // SRA: 0x80000000 >>> 1 = 0xC0000000 (산술: 부호 비트 복제)
+      // SRA: 0x80000000 &gt;&gt;&gt; 1 = 0xC0000000 (산술: 부호 비트 복제)
       a = 32'h8000_0000; b = 32'd1; alu_ctrl = 4'b0111;
       check(32'hC000_0000, "SRA");
 
       // ---- 비교 연산 ----
-      // SLT: -1 < 0 → 1 (부호 있는 비교: 0xFFFFFFFF = -1)
+      // SLT: -1 &lt; 0 → 1 (부호 있는 비교: 0xFFFFFFFF = -1)
       a = 32'hFFFF_FFFF; b = 32'd0; alu_ctrl = 4'b1000;
       check(32'd1, "SLT");
 
-      // SLTU: 0xFFFFFFFF > 0 → 0 (부호 없는 비교: 0xFFFFFFFF는 매우 큰 양수)
+      // SLTU: 0xFFFFFFFF &gt; 0 → 0 (부호 없는 비교: 0xFFFFFFFF는 매우 큰 양수)
       a = 32'hFFFF_FFFF; b = 32'd0; alu_ctrl = 4'b1001;
       check(32'd0, "SLTU");
 
@@ -913,9 +915,9 @@ endmodule
   </p>
 
   <h4>VCS(Synopsys VCS) 사용 시</h4>
-  <pre><code class="language-systemverilog">// 컴파일 및 시뮬레이션 (bash 명령어)
-// vcs -sverilog -timescale=1ns/1ps alu.sv alu_tb.sv -o alu_sim
-// ./alu_sim
+  <pre><code class="language-bash"># 컴파일 및 시뮬레이션 (bash 명령어)
+vcs -sverilog -timescale=1ns/1ps alu.sv alu_tb.sv -o alu_sim
+./alu_sim
 </code></pre>
 
   <h4>Vivado 시뮬레이터 사용 시</h4>
@@ -1123,6 +1125,7 @@ endmodule
 <!-- ========== 4.6절 끝 ========== -->
 
 
+
 <!-- ========== 챕터 마무리 ========== -->
 <section class="chapter-summary">
   <h2>핵심 정리</h2>
@@ -1182,5 +1185,291 @@ endmodule
   </p>
 </section>
 
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch04_alu.sv</h3>
+    <pre><code class="language-verilog">// =============================================================================
+// 모듈명: alu
+// 설  명: RV32I ALU — 10가지 연산 (산술, 논리, 시프트, 비교)
+// 파  일: ch04_alu.sv
+// 표  준: IEEE 1800-2017 (SystemVerilog)
+// =============================================================================
+// ALU 제어 코드 (alu_ctrl[3:0]):
+//   4'b0000 : ADD   4'b0001 : SUB   4'b0010 : AND
+//   4'b0011 : OR    4'b0100 : XOR   4'b0101 : SLL
+//   4'b0110 : SRL   4'b0111 : SRA   4'b1000 : SLT
+//   4'b1001 : SLTU
+// =============================================================================
+
+module alu (
+   input  logic [31:0] operand_a,
+   input  logic [31:0] operand_b,
+   input  logic [3:0]  alu_ctrl,
+   output logic [31:0] alu_result,
+   output logic        alu_zero
+);
+
+   logic [4:0] shamt;
+   assign shamt = operand_b[4:0];
+
+   always_comb begin
+      case (alu_ctrl)
+         4'b0000: alu_result = operand_a + operand_b;
+         4'b0001: alu_result = operand_a - operand_b;
+         4'b0010: alu_result = operand_a &amp; operand_b;
+         4'b0011: alu_result = operand_a | operand_b;
+         4'b0100: alu_result = operand_a ^ operand_b;
+         4'b0101: alu_result = operand_a &lt;&lt; shamt;
+         4'b0110: alu_result = operand_a &gt;&gt; shamt;
+         4'b0111: alu_result = $signed(operand_a) &gt;&gt;&gt; shamt;
+         4'b1000: alu_result = {31'b0, $signed(operand_a) &lt; $signed(operand_b)};
+         4'b1001: alu_result = {31'b0, operand_a &lt; operand_b};
+         default: alu_result = 32'b0;
+      endcase
+   end
+
+   assign alu_zero = (alu_result == 32'b0);
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch04_register_file.sv</h3>
+    <pre><code class="language-verilog">// =============================================================================
+// 모듈명: register_file
+// 설  명: RV32I 레지스터 파일 — 32개 x 32비트, 2 Read / 1 Write 포트
+// 파  일: ch04_register_file.sv
+// 표  준: IEEE 1800-2017 (SystemVerilog)
+// =============================================================================
+
+module register_file (
+   input  logic        clk,
+   input  logic        rst_n,
+   input  logic [4:0]  rs1_addr,
+   output logic [31:0] rs1_data,
+   input  logic [4:0]  rs2_addr,
+   output logic [31:0] rs2_data,
+   input  logic [4:0]  rd_addr,
+   input  logic [31:0] rd_data,
+   input  logic        reg_wr_en
+);
+
+   logic [31:0] registers [0:31];
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         for (int i = 0; i &lt; 32; i++) begin
+            registers[i] &lt;= 32'b0;
+         end
+      end else if (reg_wr_en &amp;&amp; (rd_addr != 5'b0)) begin
+         registers[rd_addr] &lt;= rd_data;
+      end
+   end
+
+   assign rs1_data = (rs1_addr == 5'b0) ? 32'b0 : registers[rs1_addr];
+   assign rs2_data = (rs2_addr == 5'b0) ? 32'b0 : registers[rs2_addr];
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch04_imm_gen.sv</h3>
+    <pre><code class="language-verilog">// =============================================================================
+// 모듈명: imm_gen
+// 설  명: RV32I 즉치수 생성기 — 6가지 명령어 타입별 즉치수 추출 및 부호 확장
+// 파  일: ch04_imm_gen.sv
+// 표  준: IEEE 1800-2017 (SystemVerilog)
+// =============================================================================
+// imm_sel[2:0]: 000=I, 001=S, 010=B, 011=U, 100=J, 101=R(즉치수 없음)
+
+module imm_gen (
+   input  logic [31:0] inst,
+   input  logic [2:0]  imm_sel,
+   output logic [31:0] imm_out
+);
+
+   always_comb begin
+      case (imm_sel)
+         3'b000: imm_out = {{20{inst[31]}}, inst[31:20]};
+         3'b001: imm_out = {{20{inst[31]}}, inst[31:25], inst[11:7]};
+         3'b010: imm_out = {{19{inst[31]}}, inst[31], inst[7],
+                            inst[30:25], inst[11:8], 1'b0};
+         3'b011: imm_out = {inst[31:12], 12'b0};
+         3'b100: imm_out = {{11{inst[31]}}, inst[31], inst[19:12],
+                            inst[20], inst[30:21], 1'b0};
+         default: imm_out = 32'b0;
+      endcase
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch04_alu_tb.sv</h3>
+    <pre><code class="language-verilog">// =============================================================================
+// 모듈명: alu_tb
+// 설  명: ALU 단위 테스트벤치 — 10가지 연산 + 경계값 검증
+// 파  일: ch04_alu_tb.sv
+// 표  준: IEEE 1800-2017 (SystemVerilog)
+// =============================================================================
+
+`timescale 1ns / 1ps
+
+module alu_tb;
+   logic [31:0] operand_a, operand_b, alu_result;
+   logic [3:0]  alu_ctrl;
+   logic        alu_zero;
+
+   alu u_alu (.operand_a(operand_a), .operand_b(operand_b),
+              .alu_ctrl(alu_ctrl), .alu_result(alu_result), .alu_zero(alu_zero));
+
+   localparam logic [3:0] ALU_ADD=4'b0000, ALU_SUB=4'b0001, ALU_AND=4'b0010,
+      ALU_OR=4'b0011, ALU_XOR=4'b0100, ALU_SLL=4'b0101, ALU_SRL=4'b0110,
+      ALU_SRA=4'b0111, ALU_SLT=4'b1000, ALU_SLTU=4'b1001;
+
+   int pass_count=0, fail_count=0, test_count=0;
+
+   task automatic check(input string name, input [31:0] exp_r, input exp_z);
+      test_count++; #1;
+      if (alu_result!==exp_r || alu_zero!==exp_z)
+         begin $display("[FAIL] %s", name); fail_count++; end
+      else begin $display("[PASS] %s: 0x%08h", name, alu_result); pass_count++; end
+   endtask
+
+   initial begin
+      // ADD
+      operand_a=32'd10; operand_b=32'd20; alu_ctrl=ALU_ADD; check("ADD 10+20",32'd30,0);
+      operand_a=32'hFFFF_FFFF; operand_b=32'd1; alu_ctrl=ALU_ADD; check("ADD overflow",32'd0,1);
+      // SUB
+      operand_a=32'd30; operand_b=32'd10; alu_ctrl=ALU_SUB; check("SUB 30-10",32'd20,0);
+      operand_a=32'd10; operand_b=32'd10; alu_ctrl=ALU_SUB; check("SUB zero flag",32'd0,1);
+      // AND
+      operand_a=32'hFF00_FF00; operand_b=32'h0F0F_0F0F; alu_ctrl=ALU_AND;
+      check("AND",32'h0F00_0F00,0);
+      // OR
+      operand_a=32'hFF00_0000; operand_b=32'h00FF_0000; alu_ctrl=ALU_OR;
+      check("OR",32'hFFFF_0000,0);
+      // XOR
+      operand_a=32'hFFFF_FFFF; operand_b=32'hFFFF_FFFF; alu_ctrl=ALU_XOR;
+      check("XOR same",32'd0,1);
+      // SLL
+      operand_a=32'd1; operand_b=32'd4; alu_ctrl=ALU_SLL; check("SLL 1&lt;&lt;4",32'd16,0);
+      // SRL
+      operand_a=32'h8000_0000; operand_b=32'd4; alu_ctrl=ALU_SRL;
+      check("SRL",32'h0800_0000,0);
+      // SRA
+      operand_a=32'h8000_0000; operand_b=32'd4; alu_ctrl=ALU_SRA;
+      check("SRA sign-ext",32'hF800_0000,0);
+      // SLT
+      operand_a=32'hFFFF_FFFF; operand_b=32'd1; alu_ctrl=ALU_SLT;
+      check("SLT -1&lt;1 true",32'd1,0);
+      // SLTU
+      operand_a=32'd1; operand_b=32'hFFFF_FFFF; alu_ctrl=ALU_SLTU;
+      check("SLTU 1&lt;0xFFFF true",32'd1,0);
+
+      $display("결과: 총 %0d | 통과 %0d | 실패 %0d", test_count, pass_count, fail_count);
+      $finish;
+   end
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch04_register_file_tb.sv</h3>
+    <pre><code class="language-verilog">// =============================================================================
+// 모듈명: register_file_tb
+// 설  명: 레지스터 파일 단위 테스트벤치
+// 파  일: ch04_register_file_tb.sv
+// 표  준: IEEE 1800-2017 (SystemVerilog)
+// =============================================================================
+
+`timescale 1ns / 1ps
+
+module register_file_tb;
+   logic clk, rst_n;
+   logic [4:0]  rs1_addr, rs2_addr, rd_addr;
+   logic [31:0] rs1_data, rs2_data, rd_data;
+   logic        reg_wr_en;
+
+   register_file u_rf (
+      .clk(clk), .rst_n(rst_n),
+      .rs1_addr(rs1_addr), .rs1_data(rs1_data),
+      .rs2_addr(rs2_addr), .rs2_data(rs2_data),
+      .rd_addr(rd_addr), .rd_data(rd_data), .reg_wr_en(reg_wr_en)
+   );
+
+   initial clk = 1'b0;
+   always #5 clk = ~clk;
+
+   int pass_count=0, fail_count=0, test_count=0;
+
+   task automatic check_read(input string name, input [31:0] actual, expected);
+      test_count++;
+      if (actual!==expected) begin
+         $display("[FAIL] %s: got=0x%08h, exp=0x%08h", name, actual, expected);
+         fail_count++;
+      end else begin
+         $display("[PASS] %s: 0x%08h", name, actual);
+         pass_count++;
+      end
+   endtask
+
+   task automatic write_reg(input [4:0] addr, input [31:0] data);
+      @(posedge clk); rd_addr=addr; rd_data=data; reg_wr_en=1'b1;
+      @(posedge clk); reg_wr_en=1'b0;
+   endtask
+
+   initial begin
+      rst_n=1'b0; rs1_addr=0; rs2_addr=0; rd_addr=0; rd_data=0; reg_wr_en=0;
+      repeat(3) @(posedge clk);
+      rst_n=1'b1; @(posedge clk);
+
+      // x0 항상 0
+      rs1_addr=5'd0; #1; check_read("x0 read", rs1_data, 32'd0);
+      // x1에 쓰기/읽기
+      write_reg(5'd1, 32'hDEAD_BEEF);
+      rs1_addr=5'd1; #1; check_read("x1 read", rs1_data, 32'hDEAD_BEEF);
+      // x0 쓰기 무시
+      write_reg(5'd0, 32'h1234_5678);
+      rs1_addr=5'd0; #1; check_read("x0 write ignored", rs1_data, 32'd0);
+      // 두 포트 동시 읽기
+      write_reg(5'd2, 32'hAAAA_AAAA);
+      write_reg(5'd3, 32'h5555_5555);
+      rs1_addr=5'd2; rs2_addr=5'd3; #1;
+      check_read("port1 x2", rs1_data, 32'hAAAA_AAAA);
+      check_read("port2 x3", rs2_data, 32'h5555_5555);
+      // 리셋 재적용
+      rst_n=1'b0; repeat(2) @(posedge clk); rst_n=1'b1; @(posedge clk);
+      rs1_addr=5'd1; #1; check_read("x1 after reset", rs1_data, 32'd0);
+
+      $display("결과: 총 %0d | 통과 %0d | 실패 %0d", test_count, pass_count, fail_count);
+      $finish;
+   end
+
+   initial begin $dumpfile("rf_tb.vcd"); $dumpvars(0, register_file_tb); end
+endmodule</code></pre>
+  </div>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
 </body>
 </html>

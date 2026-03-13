@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter NN — 챕터 제목</title>
   <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js atom-one-dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
 
@@ -45,8 +47,9 @@
     <figcaption>그림 NN.1: 캡션</figcaption>
   </figure>
 
-  <!-- 코드 예제 -->
-  <pre><code class="language-systemverilog">
+  <!-- 코드 예제 (주의: <pre><code> 내부에서 <, >, & 는 반드시 이스케이프) -->
+  <!-- < → &lt;   > → &gt;   & → &amp;   <= → &lt;=   >> → &gt;&gt; -->
+  <pre><code class="language-verilog">
 // SystemVerilog 코드 예제
 module example (
    input  logic        clk,
@@ -114,6 +117,46 @@ endmodule
   <h2>다음 챕터 예고</h2>
   <p>다음 챕터에서는 ... 를 다룹니다. 이번 챕터에서 배운 ... 개념이 기반이 됩니다.</p>
 </section>
+
+<!-- ========== 전체 소스 코드 (연습문제 다음, 스크립트 직전에 위치) ========== -->
+<!-- 파일별 구조:
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>chNN_filename.sv</h3>
+    <pre><code class="language-verilog">
+[코드 내용 — HTML 특수문자 이스케이프 필수]
+    </code></pre>
+  </div>
+  언어별 file-badge: SV(SystemVerilog), TB(Testbench), XDC(제약파일), ASM(어셈블리), SH(쉘스크립트)
+  언어별 class: language-verilog, language-tcl, language-bash, language-armasm
+-->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+  본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+  이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>chNN_module_name.sv</h3>
+    <pre><code class="language-verilog">
+// 전체 소스 코드
+    </code></pre>
+  </div>
+</section>
+
+<!-- ========== Highlight.js 스크립트 (body 종료 직전) ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
 
 </body>
 </html>

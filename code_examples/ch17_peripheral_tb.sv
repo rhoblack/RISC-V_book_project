@@ -88,19 +88,22 @@ module peripheral_tb;
    // AHB 쓰기 태스크 — 소프트웨어의 MMIO 쓰기를 모사
    // =========================================================================
    task ahb_write(input logic [31:0] addr, input logic [31:0] data);
+      // AHB-Lite 규격: 이전 전송의 HREADY=1 확인 후 새 주소 구동
       @(posedge hclk);
-      // 주소 단계
+      while (!hready_out) @(posedge hclk);
+
+      // 주소 단계: HREADY=1인 사이클에 새 주소/제어 신호 구동
       haddr  <= addr;
       htrans <= HTRANS_NONSEQ;
       hwrite <= 1'b1;
       hsize  <= 3'b010;        // 워드 (32비트)
 
+      // 데이터 단계: 다음 클럭에 HWDATA 구동, HTRANS=IDLE로 단일 전송 완료
       @(posedge hclk);
-      // 데이터 단계
       hwdata <= data;
       htrans <= HTRANS_IDLE;
 
-      // HREADY 대기
+      // 브리지가 SETUP→ACCESS FSM을 거치는 동안 HREADY=0 → 완료 대기
       @(posedge hclk);
       while (!hready_out) @(posedge hclk);
    endtask
@@ -109,7 +112,10 @@ module peripheral_tb;
    // AHB 읽기 태스크 — 소프트웨어의 MMIO 읽기를 모사
    // =========================================================================
    task ahb_read(input logic [31:0] addr, output logic [31:0] data);
+      // AHB-Lite 규격: 이전 전송의 HREADY=1 확인 후 새 주소 구동
       @(posedge hclk);
+      while (!hready_out) @(posedge hclk);
+
       // 주소 단계
       haddr  <= addr;
       htrans <= HTRANS_NONSEQ;
@@ -119,7 +125,7 @@ module peripheral_tb;
       @(posedge hclk);
       htrans <= HTRANS_IDLE;
 
-      // HREADY 대기
+      // HREADY 대기 후 HRDATA 캡처
       @(posedge hclk);
       while (!hready_out) @(posedge hclk);
       data = hrdata;
@@ -128,22 +134,22 @@ module peripheral_tb;
    // =========================================================================
    // 주소 상수 (메모리 맵)
    // =========================================================================
-   // UART 기본 주소: 0x4000_0000
-   localparam UART_BASE    = 32'h4000_0000;
+   // UART 기본 주소: 0xFFFF_0000 (Ch16 인터커넥트 APB 슬롯)
+   localparam UART_BASE    = 32'hFFFF_0000;
    localparam UART_TX_DATA = UART_BASE + 32'h00;
    localparam UART_RX_DATA = UART_BASE + 32'h04;
    localparam UART_STATUS  = UART_BASE + 32'h08;
    localparam UART_CTRL    = UART_BASE + 32'h0C;
    localparam UART_BAUD    = UART_BASE + 32'h10;
 
-   // GPIO 기본 주소: 0x4000_1000
-   localparam GPIO_BASE    = 32'h4000_1000;
+   // GPIO 기본 주소: 0xFFFF_1000
+   localparam GPIO_BASE    = 32'hFFFF_1000;
    localparam GPIO_DIR     = GPIO_BASE + 32'h00;
    localparam GPIO_OUT     = GPIO_BASE + 32'h04;
    localparam GPIO_IN      = GPIO_BASE + 32'h08;
 
-   // Timer 기본 주소: 0x4000_2000
-   localparam TIMER_BASE      = 32'h4000_2000;
+   // Timer 기본 주소: 0xFFFF_2000
+   localparam TIMER_BASE      = 32'hFFFF_2000;
    localparam TIMER_CTRL      = TIMER_BASE + 32'h00;
    localparam TIMER_COUNT     = TIMER_BASE + 32'h04;
    localparam TIMER_CMP       = TIMER_BASE + 32'h08;

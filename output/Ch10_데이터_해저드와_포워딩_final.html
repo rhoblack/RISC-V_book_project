@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 10 — 데이터 해저드와 포워딩</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 10</span>
+  <h1>데이터 해저드와 포워딩</h1>
+  <p class="chapter-intro">
+    Ch09에서 우리는 연속된 명령어 사이에 NOP을 수동으로 삽입하여 파이프라인이 올바르게 동작하도록 했습니다.
+    이 챕터에서는 그 NOP 삽입의 이유였던 <strong>데이터 해저드(data hazard)</strong>를 정식으로 분류하고,
+    하드웨어가 스스로 해저드를 감지하고 처리하는 두 유닛 — 포워딩 유닛(forwarding unit)과
+    해저드 감지 유닛(hazard detection unit) — 을 설계합니다.
+    Ch09에서 예약해 둔 <code>en</code>, <code>flush</code> 포트가 드디어 실제 신호와 연결됩니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: RAW, WAW, WAR 세 종류의 데이터 해저드를 설명하고, RV32I 인오더 파이프라인에서 RAW만 처리하면 되는 이유를 논증할 수 있다. (이해/분석)</li>
+    <li><strong>LO-2</strong>: EX-EX 포워딩과 MEM-EX 포워딩의 조건을 자연어와 SystemVerilog 코드로 각각 기술하고, 우선순위 규칙을 설명할 수 있다. (이해/적용)</li>
+    <li><strong>LO-3</strong>: Load-Use 해저드를 감지하는 조건을 도출하고, 1사이클 스톨 메커니즘을 파이프라인 레지스터 제어 관점에서 설명할 수 있다. (분석)</li>
+    <li><strong>LO-4</strong>: Ch09의 예약 포트(en/flush)에 스톨 신호를 연결하여 파이프라인 제어 경로를 완성할 수 있다. (적용)</li>
+    <li><strong>LO-5</strong>: 1~10 합산 프로그램을 포워딩 파이프라인에서 실행하고 x10=55 결과를 시뮬레이션으로 검증할 수 있다. (적용/평가)</li>
+    <li><strong>LO-6</strong>: 포워딩 유닛과 해저드 감지 유닛이 통합된 파이프라인에서 RAW 해저드 시나리오를 테스트벤치로 <strong>검증하고</strong>, 시뮬레이션 파형에서 포워딩 경로와 스톨 동작을 <strong>확인할 수 있다</strong>. (분석/평가)</li>
+    <li><strong>LO-7</strong>: Load-Use 해저드에서 사용한 <code>id_ex_flush</code> 메커니즘이 Ch11 분기 플러시에 어떻게 활용되는지 <strong>예측할 수 있다</strong>. (분석)</li>
+  </ul>
+</nav>
+
+<section id="chapter-intro-narrative">
+  <p>
+    Ch09에서 우리는 다음과 같은 경험을 했습니다. <code>ADD x1, x2, x3</code> 다음에 <code>ADD x4, x1, x5</code>를
+    실행하면 x1의 값이 아직 레지스터 파일에 반영되지 않아 틀린 결과가 나왔습니다. 그래서 NOP을 3개 삽입했습니다.
+    그 NOP 삽입 행위의 정식 이름이 바로 <strong>데이터 해저드(data hazard)</strong>에 대한 소프트웨어 해결책입니다.
+    이 챕터에서는 그 작업을 하드웨어가 자동으로 처리하도록 만듭니다.
+  </p>
+  <p>
+    패스트푸드 주방을 상상해 보십시오. 다섯 직원이 일렬로 서서 ① 주문 확인 → ② 재료 꺼내기 → ③ 조리 → ④ 포장 → ⑤ 전달을 담당합니다.
+    조리 담당(③)이 방금 구운 패티를 포장 담당(④)에게 바로 건넬 수 있다면 창고(레지스터 파일)를 경유할 필요가 없습니다.
+    이것이 <strong>포워딩(forwarding, 우회 전달)</strong>입니다. 그런데 냉동 패티가 아직 해동 중이라면? 아무리 빠른 직원이라도
+    해동이 끝날 때까지 기다려야 합니다. 이것이 <strong>Load-Use 스톨(stall, 정지)</strong>입니다.
+  </p>
+</section>
+
+<!-- ========== 10.1 데이터 해저드의 3가지 유형 ========== -->
+<section id="sec-10-1">
+  <h2>10.1 데이터 해저드의 3가지 유형</h2>
+
+  <p>
+    Ch09에서 우리가 NOP 3개를 삽입했던 그 경험 — 그것의 이름이 <strong>데이터 해저드(data hazard)</strong>입니다.
+    파이프라인에서 명령어들이 겹쳐 실행될 때, 한 명령어가 아직 결과를 생산하지 못한 상태에서 다음 명령어가
+    그 결과를 소비하려 할 때 발생합니다. 컴퓨터 구조 교과서는 데이터 해저드를 세 가지로 분류합니다.
+  </p>
+
+  <h3>RAW — 읽기-후-쓰기(Read After Write)</h3>
+  <p>
+    <strong>RAW(Read After Write, 읽기-후-쓰기)</strong>는 명령어 i가 레지스터 r에 쓰기 전에,
+    이후 명령어 j가 같은 레지스터 r을 읽으려는 상황입니다. 파이프라인에서는 i의 WB 스테이지가 완료되기 전에
+    j가 ID 스테이지에서 r을 읽으면 오래된(stale) 값을 읽게 됩니다. Ch09의 NOP 삽입이 바로 이 문제를 피하기 위한 것이었습니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch10_sec01_raw_timing.svg" alt="RAW 데이터 해저드 타이밍 다이어그램">
+    <figcaption>그림 10.1: ADD x3,x1,x2 → ADD x5,x3,x4 연속 실행 시 RAW 해저드 발생. ①이 WB(C5)에서 x3를 쓰기 전, ②는 EX(C4)에서 이미 x3 값이 필요합니다. 포워딩으로 해결 가능합니다.</figcaption>
+  </figure>
+
+  <h3>WAW — 쓰기-후-쓰기(Write After Write)</h3>
+  <p>
+    <strong>WAW(Write After Write, 쓰기-후-쓰기)</strong>는 두 명령어 i, j가 모두 같은 레지스터 r에 쓸 때,
+    j의 쓰기가 i보다 먼저 완료되어 최종 값이 잘못되는 상황입니다. 그러나 RV32I의 인오더(in-order, 순서대로 처리하는)
+    파이프라인에서는 명령어 발행 순서대로 WB 스테이지에 도달하므로 i가 항상 j보다 먼저 WB를 완료합니다.
+    따라서 <strong>WAW는 발생하지 않습니다.</strong>
+  </p>
+
+  <h3>WAR — 쓰기-후-읽기(Write After Read)</h3>
+  <p>
+    <strong>WAR(Write After Read, 쓰기-후-읽기)</strong>는 명령어 i가 레지스터 r을 읽기 전에,
+    이후 명령어 j가 r에 먼저 쓰는 상황입니다. 인오더 파이프라인에서는 i가 항상 j보다 ID(읽기) 스테이지를
+    먼저 지나가므로 <strong>WAR 역시 발생하지 않습니다.</strong>
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      WAW와 WAR는 걱정하지 않아도 됩니다. RV32I 인오더 파이프라인에서는 명령어가 발행 순서 그대로 각 스테이지를
+      통과하기 때문에 이 두 해저드는 발생하지 않습니다. <strong>RAW에만 집중하십시오.</strong>
+      아웃-오브-오더(out-of-order, 비순서 실행) 프로세서나 슈퍼스칼라(superscalar, 복수 명령어 병렬 발행)에서는
+      WAW/WAR도 중요해지지만, 그것은 이 교재의 범위 밖입니다.
+    </p>
+  </aside>
+
+  <h3>RV32I 5단 파이프라인에서 RAW 발생 패턴</h3>
+  <p>
+    5단 파이프라인(IF-ID-EX-MEM-WB)에서 RAW가 실제로 문제가 되는 경우는 두 가지 거리 패턴입니다.
+  </p>
+  <ul>
+    <li>
+      <strong>EX-EX 의존성 (1사이클 차이):</strong> 명령어 i가 EX에 있을 때 i+1도 EX에 진입.
+      i의 ALU 결과가 아직 레지스터에 쓰이지 않았는데 i+1도 같은 EX 스테이지에서 그 값이 필요합니다.
+      → <strong>EX-EX 포워딩</strong>으로 해결 가능합니다.
+    </li>
+    <li>
+      <strong>MEM-EX 의존성 (2사이클 차이):</strong> 명령어 i가 MEM에 있을 때 i+2가 EX에 진입.
+      i의 결과가 아직 레지스터에 없습니다.
+      → <strong>MEM-EX 포워딩</strong>으로 해결 가능합니다 (단, LW 직후 명령어는 예외).
+    </li>
+    <li>
+      <strong>Load-Use 의존성 (특수 케이스):</strong> LW 명령어(i)의 데이터는 MEM 스테이지에서야 메모리에서 읽힙니다.
+      i+1이 그 값을 EX에서 즉시 사용하려 해도 데이터가 아직 존재하지 않습니다.
+      → <strong>1사이클 스톨 필수</strong>. 스톨 후 MEM-EX 포워딩으로 처리합니다.
+    </li>
+  </ul>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: 데이터 해저드의 세 종류를 설명하고, RV32I 5단 파이프라인에서 RAW만 처리하면 되는 이유를 설명하십시오.</strong>
+    </p>
+    <p>
+      <strong>A:</strong> 데이터 해저드는 RAW(읽기-후-쓰기), WAW(쓰기-후-쓰기), WAR(쓰기-후-읽기)로 분류됩니다.
+      RV32I 5단 인오더 파이프라인에서는 명령어가 발행 순서 그대로 각 스테이지를 통과합니다.
+      WAW는 두 명령어가 같은 레지스터에 쓸 때 순서가 뒤집혀야 발생하는데, 인오더에서는 항상 선행 명령어가 먼저 WB에 도달하므로 발생하지 않습니다.
+      WAR는 후행 명령어의 쓰기가 선행 명령어의 읽기를 앞질러야 하는데, 인오더에서는 선행 명령어의 ID(읽기)가 항상 후행 명령어의 WB(쓰기)보다 앞서 있으므로 발생하지 않습니다.
+      따라서 RAW만 실질적으로 처리해야 합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      다음 명령어 시퀀스에서 RAW 해저드가 몇 쌍 존재합니까?
+      포워딩 없이 올바르게 실행하려면 NOP을 어디에 몇 개 삽입해야 합니까?
+    </p>
+    <pre><code class="language-armasm">ADD  x1, x2, x3
+SUB  x4, x1, x5
+AND  x6, x1, x4
+ORI  x7, x6,  1
+</code></pre>
+    <p>
+      (힌트: x1에 대한 의존성, x4에 대한 의존성, x6에 대한 의존성을 각각 추적하십시오.)
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 10.2 포워딩 유닛 설계 ========== -->
+<section id="sec-10-2">
+  <h2>10.2 포워딩 유닛 설계</h2>
+
+  <p>
+    포워딩(forwarding)이란 이미 계산된 결과를 레지스터 파일에 쓰기 전에 직접 다음 명령어의 ALU 입력으로
+    연결하는 기법입니다. Ch09에서 NOP을 3개 삽입해야 했던 이유는 레지스터 파일에 값이 쓰이기를 기다렸기 때문입니다.
+    포워딩을 사용하면 이 대기를 없앨 수 있습니다.
+  </p>
+  <p>
+    Ch09에서 ID/EX 파이프라인 레지스터에 <code>rs1_addr</code>과 <code>rs2_addr</code> 필드를
+    "Ch10 포워딩 유닛 준비"라는 주석과 함께 포함시켰습니다.
+    그 이유가 바로 이 절에서 드러납니다 — 포워딩 유닛은 <em>현재 EX 스테이지의 소스 레지스터 번호</em>와
+    <em>앞선 스테이지의 목적 레지스터 번호</em>를 비교해야 합니다.
+    <code>rs1_addr_ex</code>, <code>rs2_addr_ex</code> 없이는 포워딩 조건을 판단할 수 없습니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch10_sec02_forwarding_datapath.svg" alt="포워딩 유닛이 추가된 파이프라인 데이터패스">
+    <figcaption>그림 10.2: 포워딩 유닛(Forwarding Unit)이 EX-EX 경로(녹색)와 MEM-EX 경로(오렌지)를 통해 EX 스테이지 ALU 입력에 최신 값을 직접 공급합니다.</figcaption>
+  </figure>
+
+  <h3>포워딩 경로 두 가지</h3>
+  <p>
+    Ch09 파이프라인 구조에서 두 가지 포워딩 경로가 존재합니다.
+  </p>
+  <ul>
+    <li>
+      <strong>EX-EX 포워딩:</strong> EX/MEM 파이프라인 레지스터의 <code>alu_result</code>을
+      현재 EX 스테이지의 ALU 입력으로 연결합니다. 1사이클 앞선 명령어의 결과를 즉시 활용합니다.
+    </li>
+    <li>
+      <strong>MEM-EX 포워딩:</strong> MEM/WB 파이프라인 레지스터에서 WB로 전달되는
+      <code>wb_data</code>(<strong>WB 스테이지 MUX의 출력</strong> — ALU 결과, 메모리 읽기 데이터, 또는 PC+4 중 하나를 선택한 최종 쓰기 값)를 EX 스테이지 ALU 입력으로 연결합니다.
+      2사이클 앞선 명령어의 결과를 활용합니다.
+    </li>
+  </ul>
+
+  <h3>포워딩 제어 신호 인코딩</h3>
+  <p>
+    포워딩 유닛은 <code>forward_a[1:0]</code>과 <code>forward_b[1:0]</code> 두 신호를 출력합니다.
+    이 신호들은 EX 스테이지 앞에 놓인 MUX를 제어하여 ALU의 실제 입력을 선택합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>신호 값</th><th>선택 데이터 소스</th><th>의미</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>2'b00</code></td><td>ID/EX 레지스터의 rs_data</td><td>해저드 없음 — 레지스터 파일 값 사용</td></tr>
+      <tr><td><code>2'b01</code></td><td>EX/MEM 레지스터의 <code>alu_result</code></td><td>EX-EX 포워딩 (가장 최신 값, 우선순위 최고)</td></tr>
+      <tr><td><code>2'b10</code></td><td>MEM/WB 레지스터의 <code>wb_data</code></td><td>MEM-EX 포워딩 (두 사이클 전 결과)</td></tr>
+    </tbody>
+  </table>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      포워딩 조건식은 산업 현장에서도 버그가 자주 발생하는 부분입니다. 10년 이상 경력의 시니어 RTL 설계자도
+      처음 포워딩 유닛을 작성할 때 조건 하나를 빠뜨려 종일 시뮬레이션 결과를 추적한 경험을 갖고 있습니다.
+      조건식을 코드로 바로 작성하기 전에, 자연어로 먼저 쓰는 습관을 들이십시오:
+      "지금 내가 읽으려는 레지스터를, 아직 쓰기가 끝나지 않은 앞선 명령어가 갖고 있는가?"
+      이 질문에서 세 조건이 자연스럽게 도출됩니다.
+    </p>
+  </aside>
+
+  <h3>EX-EX 포워딩 조건 (자연어 → 코드)</h3>
+  <p>
+    EX-EX 포워딩이 필요한 조건을 자연어로 먼저 쓰면 다음과 같습니다:
+  </p>
+  <ol>
+    <li>"EX/MEM 단계의 명령어가 레지스터에 쓰기를 수행하는가?" → <code>ex_mem_reg_write == 1</code></li>
+    <li>"EX/MEM 단계의 목적 레지스터가 x0이 아닌가?" → <code>ex_mem_rd_addr != 5'b0</code></li>
+    <li>"EX/MEM 단계의 목적 레지스터가 현재 EX 단계 소스 레지스터 rs1과 같은가?" → <code>ex_mem_rd_addr == id_ex_rs1_addr</code></li>
+  </ol>
+
+  <p>세 조건을 AND로 결합하면:</p>
+  <pre><code class="language-verilog">// EX-EX 포워딩 조건 (forward_a 기준)
+ex_mem_reg_write &amp;&amp; (ex_mem_rd_addr != 5'b0) &amp;&amp; (ex_mem_rd_addr == id_ex_rs1_addr)
+</code></pre>
+
+  <h3>MEM-EX 포워딩 조건</h3>
+  <p>
+    MEM-EX 포워딩도 같은 논리 구조입니다. 단, EX-EX 조건이 이미 성립하지 않는 경우에만 적용합니다:
+  </p>
+  <pre><code class="language-verilog">// MEM-EX 포워딩 조건 (EX-EX 미성립 시)
+mem_wb_reg_write &amp;&amp; (mem_wb_rd_addr != 5'b0) &amp;&amp; (mem_wb_rd_addr == id_ex_rs1_addr)
+</code></pre>
+
+  <h3>우선순위: EX-EX &gt; MEM-EX</h3>
+  <p>
+    두 포워딩 조건이 동시에 만족될 수 있습니다. 예를 들어 연속된 세 명령어가 모두 같은 레지스터에
+    의존하는 경우입니다. 이때는 <strong>더 최신 값인 EX-EX 포워딩이 우선</strong>합니다.
+    <code>if-else if</code> 구조를 사용하여 EX-EX를 먼저 검사합니다.
+  </p>
+
+  <h3>forwarding_unit 모듈 구현</h3>
+
+  <pre><code class="language-verilog">// ============================================================
+// 파일: forwarding_unit.sv
+// 설명: EX 스테이지 포워딩 MUX 제어 신호 생성
+//       forward_a/b 인코딩:
+//         2'b00 = 포워딩 없음 (레지스터 파일 값)
+//         2'b01 = EX-EX 포워딩 (EX/MEM.alu_result) ← 우선순위 높음
+//         2'b10 = MEM-EX 포워딩 (MEM/WB wb_data)
+// ============================================================
+module forwarding_unit (
+   input  logic [4:0] id_ex_rs1_addr,   // 현재 EX 소스1 레지스터 주소
+   input  logic [4:0] id_ex_rs2_addr,   // 현재 EX 소스2 레지스터 주소
+   input  logic [4:0] ex_mem_rd_addr,   // EX/MEM 목적 레지스터 주소
+   input  logic [4:0] mem_wb_rd_addr,   // MEM/WB 목적 레지스터 주소
+   input  logic       ex_mem_reg_write, // EX/MEM 단계 reg_write
+   input  logic       mem_wb_reg_write, // MEM/WB 단계 reg_write
+   output logic [1:0] forward_a,        // rs1 포워딩 선택
+   output logic [1:0] forward_b         // rs2 포워딩 선택
+);
+
+   // ---- forward_a: rs1 포워딩 ----
+   always_comb begin
+      // 자연어: "EX/MEM 단계가 reg_write=1이고, rd가 x0이 아니며, rd==rs1인가?"
+      if (ex_mem_reg_write &amp;&amp;
+          (ex_mem_rd_addr != 5'b0) &amp;&amp;
+          (ex_mem_rd_addr == id_ex_rs1_addr))
+         forward_a = 2'b01;  // EX-EX 포워딩 (우선순위 최고)
+      // 자연어: "MEM/WB 단계가 reg_write=1이고, rd가 x0이 아니며, rd==rs1인가?"
+      else if (mem_wb_reg_write &amp;&amp;
+               (mem_wb_rd_addr != 5'b0) &amp;&amp;
+               (mem_wb_rd_addr == id_ex_rs1_addr))
+         forward_a = 2'b10;  // MEM-EX 포워딩
+      else
+         forward_a = 2'b00;  // 포워딩 없음
+   end
+
+   // ---- forward_b: rs2 포워딩 ----
+   always_comb begin
+      if (ex_mem_reg_write &amp;&amp;
+          (ex_mem_rd_addr != 5'b0) &amp;&amp;
+          (ex_mem_rd_addr == id_ex_rs2_addr))
+         forward_b = 2'b01;  // EX-EX 포워딩 (우선순위 최고)
+      else if (mem_wb_reg_write &amp;&amp;
+               (mem_wb_rd_addr != 5'b0) &amp;&amp;
+               (mem_wb_rd_addr == id_ex_rs2_addr))
+         forward_b = 2'b10;  // MEM-EX 포워딩
+      else
+         forward_b = 2'b00;  // 포워딩 없음
+   end
+
+endmodule
+</code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q: x0을 별도로 확인하는 이유가 무엇입니까?</strong></p>
+    <p>
+      <strong>A:</strong> RV32I에서 x0은 하드웨어적으로 항상 0으로 고정된 레지스터입니다.
+      만약 <code>ex_mem_rd_addr=0</code>이고 <code>id_ex_rs1_addr=0</code>이면 조건이 우연히 만족되어
+      불필요한 포워딩이 일어납니다. 포워딩된 0이 우연히 맞을 수도 있지만,
+      명시적으로 제외하는 편이 설계 의도를 분명히 합니다.
+    </p>
+  </aside>
+
+  <h3>최상위 모듈에서 포워딩 MUX 연결</h3>
+  <p>
+    포워딩 유닛이 생성한 <code>forward_a</code>, <code>forward_b</code> 신호로 EX 스테이지 앞에
+    MUX를 삽입합니다. Ch09의 ALU 입력 선택 로직을 다음과 같이 수정합니다.
+  </p>
+
+  <pre><code class="language-verilog">// ① 포워딩 MUX — EX 스테이지 입력 직전
+logic [31:0] rs1_fwd_ex, rs2_fwd_ex;
+
+always_comb begin
+   // rs1 포워딩 MUX
+   case (forward_a)
+      2'b01:   rs1_fwd_ex = alu_result_mem;  // EX-EX: EX/MEM.alu_result
+      2'b10:   rs1_fwd_ex = wb_data;          // MEM-EX: MEM/WB wb_data
+      default: rs1_fwd_ex = rs1_data_ex;      // 포워딩 없음
+   endcase
+   // rs2 포워딩 MUX
+   case (forward_b)
+      2'b01:   rs2_fwd_ex = alu_result_mem;  // EX-EX: EX/MEM.alu_result
+      2'b10:   rs2_fwd_ex = wb_data;          // MEM-EX: MEM/WB wb_data
+      default: rs2_fwd_ex = rs2_data_ex;      // 포워딩 없음
+   endcase
+end
+
+// ② ALU 입력 MUX (포워딩된 값 사용)
+assign alu_a_ex = ctrl_ex.alu_src_a ? pc_ex      : rs1_fwd_ex;
+assign alu_b_ex = ctrl_ex.alu_src_b ? imm_ext_ex : rs2_fwd_ex;
+
+// ③ Store 명령어의 메모리 쓰기 데이터도 포워딩 필수
+// EX/MEM 레지스터에 rs2_data 저장 시 rs2_fwd_ex를 사용해야 합니다
+// (Ch09: .rs2_data_in(rs2_data_ex) → Ch10: .rs2_data_in(rs2_fwd_ex))
+</code></pre>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: EX-EX 포워딩과 MEM-EX 포워딩이 동시에 조건을 만족하면 어느 쪽을 선택해야 하며, 그 이유는 무엇입니까?</strong>
+    </p>
+    <p>
+      <strong>A:</strong> EX-EX 포워딩(EX/MEM 레지스터 값)을 선택합니다. 두 조건이 동시에 만족된다는 것은
+      두 서로 다른 명령어가 모두 같은 레지스터에 결과를 쓰는 상황입니다.
+      EX/MEM 단계의 명령어가 MEM/WB 단계 명령어보다 프로그램 순서상 나중에 발행된 명령어이므로,
+      프로그램 의미(semantics) 상 EX/MEM의 결과가 최신 값입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      Store 명령어(SW)에서 rs2 데이터도 포워딩되어야 합니다. 왜 그런지 설명할 수 있습니까?
+      EX/MEM 레지스터에 저장되는 <code>rs2_data</code> 필드에 <code>rs2_fwd_ex</code>를 사용해야 하는 이유는 무엇입니까?
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 10.3 Load-Use 해저드 ========== -->
+<section id="sec-10-3">
+  <h2>10.3 Load-Use 해저드</h2>
+
+  <p>
+    포워딩은 RAW 해저드의 대부분을 처리하지만, <strong>Load-Use 해저드</strong>라는 예외가 있습니다.
+    신호등 비유를 생각해 보십시오. 교차로에서 신호가 빨간색이면 아무리 급해도 기다려야 합니다.
+    포워딩은 "이미 있는 것을 빠르게 전달"하는 기법입니다. 그런데 LW 명령어는 데이터를 메모리에서 읽어야 합니다 —
+    MEM 스테이지가 끝나야 비로소 데이터가 존재합니다. <strong>1사이클만 기다리면 됩니다.</strong>
+    그 1사이클이 Load-Use 스톨입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch10_sec03_load_use_stall.svg" alt="Load-Use 해저드 스톨 전후 비교">
+    <figcaption>그림 10.3: LW x3,0(x1) → ADD x5,x3,x4. 스톨 없이 실행하면 LW의 MEM과 ADD의 EX가 동일 사이클에 충돌합니다. 1사이클 스톨 후에는 MEM-EX 포워딩으로 해결됩니다.</figcaption>
+  </figure>
+
+  <p>
+    그림 10.3의 위 패널에서 LW(i)는 사이클 C4(MEM 스테이지)에서 <code>read_data</code>를 생산합니다.
+    ADD(i+1)가 스톨 없이 진행하면 사이클 C4에 EX 스테이지에 있어야 합니다. 이때 MEM-EX 포워딩 경로는
+    MEM/WB 레지스터에서 데이터를 가져오는데, 이 레지스터는 C4 클럭 상승 엣지에서 업데이트됩니다 —
+    즉 C5에야 값을 읽을 수 있습니다. 따라서 C4의 EX에서 LW 결과를 사용하는 것은 물리적으로 불가능합니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q: 왜 1사이클만 스톨하면 됩니까? 더 기다려야 하지 않습니까?</strong></p>
+    <p>
+      <strong>A:</strong> 1사이클로 충분합니다. LW가 MEM(C4)에서 완료되면 C5 시작 시점에 MEM/WB 레지스터에
+      <code>read_data</code>가 들어 있습니다. ADD가 1사이클 지연되어 C5에 EX에 진입하면,
+      바로 이 MEM/WB 레지스터 값을 MEM-EX 포워딩으로 받을 수 있습니다.
+      정확히 1사이클 대기하면 데이터가 준비됩니다.
+    </p>
+  </aside>
+
+  <h3>Hazard Detection Unit 설계</h3>
+  <p>
+    Load-Use 해저드를 감지하는 조건은 다음과 같습니다.
+    ID/EX 레지스터에 있는 명령어가 LW 계열이고, 그 목적 레지스터가 현재 IF/ID 레지스터 명령어의
+    소스 레지스터(rs1 또는 rs2)와 일치하면 스톨을 발생시킵니다.
+  </p>
+
+  <pre><code class="language-verilog">// ============================================================
+// 파일: hazard_detection_unit.sv
+// 설명: Load-Use 해저드 감지 — stall 신호 생성
+//       stall=1이면 PC/IF_ID 홀드, ID/EX 플러시(NOP 버블)
+// ============================================================
+module hazard_detection_unit (
+   input  logic [4:0] id_ex_rd_addr,   // ID/EX 목적 레지스터 (rd)
+   input  logic       id_ex_mem_read,  // ID/EX의 mem_read 신호 (LW 여부)
+   input  logic [4:0] if_id_rs1_addr,  // IF/ID 명령어[19:15] = rs1 주소
+   input  logic [4:0] if_id_rs2_addr,  // IF/ID 명령어[24:20] = rs2 주소
+   output logic       stall            // 1 = 스톨 발생
+);
+   // 조건: ① EX 단계가 LW(mem_read=1)이며
+   //       ② rd가 x0이 아니고
+   //       ③ rd가 ID 단계 rs1 또는 rs2와 일치
+   assign stall = id_ex_mem_read &amp;&amp;
+                  (id_ex_rd_addr != 5'b0) &amp;&amp;
+                  ((id_ex_rd_addr == if_id_rs1_addr) ||
+                   (id_ex_rd_addr == if_id_rs2_addr));
+
+endmodule
+</code></pre>
+
+  <h3>스톨 시 파이프라인 동작</h3>
+  <p>
+    <code>stall = 1</code>이 되면 파이프라인에서 세 가지 일이 동시에 일어납니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>대상</th><th>동작</th><th>효과</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PC 레지스터</td><td>업데이트 중지 (<code>pc_en = ~stall</code>)</td><td>같은 명령어 주소 재사용</td></tr>
+      <tr><td>IF/ID 레지스터</td><td>업데이트 중지 (<code>en = ~stall</code>)</td><td>ID 단계 명령어 유지</td></tr>
+      <tr><td>ID/EX 레지스터</td><td>플러시 (<code>flush = stall</code>)</td><td>EX에 NOP 버블 삽입</td></tr>
+      <tr><td>EX/MEM, MEM/WB</td><td>정상 진행</td><td>앞선 명령어들은 계속 완료</td></tr>
+    </tbody>
+  </table>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      Load-Use 감지 조건과 포워딩 조건을 혼동하는 것은 매우 흔한 실수입니다.
+      핵심 차이를 이렇게 정리하십시오:<br>
+      <strong>포워딩 유닛</strong>은 <em>EX/MEM 또는 MEM/WB에 있는 이미 완료된 값</em>을 EX로 전달합니다.<br>
+      <strong>해저드 감지 유닛</strong>은 <em>ID/EX에 있는 아직 완료되지 않은 LW</em>가 다음 ID 명령어에 영향을 줄지 감시합니다.<br>
+      포워딩은 "이미 있는 값을 빠르게 전달"하고, 해저드 감지는 "아직 없는 값을 기다리게" 합니다.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: Load-Use 해저드가 포워딩으로 해결되지 않는 이유를 타이밍 관점에서 설명하십시오.</strong>
+    </p>
+    <p>
+      <strong>A:</strong> 포워딩은 파이프라인 레지스터에 이미 저장된 값을 앞으로 전달합니다.
+      LW 명령어가 MEM 스테이지를 완료해야 <code>read_data</code>가 확정됩니다.
+      만약 i+1이 스톨 없이 사이클 N에 EX에 진입한다면, LW는 같은 사이클 N에 MEM 스테이지에 있습니다.
+      MEM-EX 포워딩 경로는 MEM/WB 파이프라인 레지스터에서 데이터를 가져오는데,
+      이 레지스터는 사이클 N의 클럭 상승 엣지에서 업데이트됩니다 — 즉 사이클 N+1에야 값을 읽을 수 있습니다.
+      따라서 사이클 N의 EX 스테이지에서 LW 결과를 사용하는 것은 시간적으로 불가능합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      다음 명령어 시퀀스에서 스톨이 몇 사이클 발생합니까?
+    </p>
+    <pre><code class="language-armasm">LW   x1, 0(x2)
+LW   x3, 4(x2)
+ADD  x4, x1, x3
+</code></pre>
+    <p>
+      (힌트: 두 번째 LW의 소스는 x2이고, ADD의 소스는 x1과 x3입니다.
+      각 명령어에 대해 Load-Use 감지 조건을 점검하십시오.)
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 10.4 파이프라인 제어: Enable/Flush ========== -->
+<section id="sec-10-4">
+  <h2>10.4 파이프라인 제어: Enable/Flush</h2>
+
+  <p>
+    Ch09에서 파이프라인 레지스터들에 <code>en=1'b1</code>, <code>flush=1'b0</code>을 예약 포트로
+    연결해 두었습니다. 이 절에서는 드디어 그 포트들을 실제 스톨 신호와 연결합니다.
+    Ch09에서 "Ch10에서 연결 예정"이라고 주석을 달았던 코드가 완성되는 순간입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch10_sec04_stall_signals.svg" alt="스톨 제어 신호 타이밍 파형">
+    <figcaption>그림 10.4: LW → ADD 시퀀스에서 C4에 stall=1이 되면 pc_en=0, if_id_en=0(동결), id_ex_flush=1(NOP 버블 삽입). C5에서 ADD가 EX에 진입할 때 forward_b=2'b10(MEM-EX 포워딩)이 활성화됩니다.</figcaption>
+  </figure>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      드디어 Ch09 예약 포트가 연결됩니다. 좋은 설계 습관은 이렇게 "미래를 위한 포트"를 처음부터 만들어 두는 것입니다.
+      실제 설계 현장에서도 인터페이스를 먼저 정의하고 기능을 나중에 추가하는 방식이 널리 사용됩니다.
+      Ch11에서는 IF/ID의 <code>flush=1'b0</code> 포트도 분기 플러시 신호로 대체됩니다.
+    </p>
+  </aside>
+
+  <h3>파이프라인 레지스터별 신호 연결 정리</h3>
+
+  <table>
+    <thead>
+      <tr><th>파이프라인 레지스터</th><th>en</th><th>flush</th><th>비고</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PC 레지스터</td><td><code>~stall</code></td><td>N/A</td><td>스톨 시 현재 PC 유지 (같은 명령어 재인출)</td></tr>
+      <tr><td>IF/ID</td><td><code>~stall</code></td><td><code>1'b0</code></td><td>스톨 시 현재 명령어 유지; Ch11에서 flush 활성화</td></tr>
+      <tr><td>ID/EX</td><td><code>1'b1</code></td><td><code>stall</code></td><td>스톨 시 모든 필드를 0으로 → NOP 버블</td></tr>
+      <tr><td>EX/MEM</td><td><code>1'b1</code></td><td><code>1'b0</code></td><td>Ch11에서 flush 활성화 예정</td></tr>
+      <tr><td>MEM/WB</td><td><code>1'b1</code></td><td>N/A</td><td>변경 없음</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    <code>pc_en=0</code>과 <code>if_id_en=0</code>은 파이프라인 레지스터의 이네이블(enable) 신호를 끄는 것입니다. 이네이블이 0이면 클럭이 상승해도 레지스터 내용이 <strong>유지</strong>(동결)됩니다. 반면 <code>id_ex_flush=1</code>은 레지스터를 <strong>클리어</strong>하여 모든 제어 신호를 0으로 만드는 것입니다 — NOP 버블을 삽입하는 효과입니다. 동결과 버블 삽입은 전혀 다른 동작입니다.
+  </p>
+
+  <h3>Flush &gt; Enable 우선순위</h3>
+  <p>
+    ID/EX 레지스터에서 <code>flush=1</code>이면 <code>en=1</code>이더라도 내용이 0으로 클리어됩니다.
+    Ch09에서 설계한 <code>always_ff</code> 블록의 <code>if (rst || flush) ... else if (en)</code> 패턴이
+    이 우선순위를 보장합니다. NOP 버블이 삽입되면 모든 제어 신호(<code>mem_read</code> 포함)가 0이 됩니다.
+    이것이 중요합니다 — <code>mem_read=0</code>이어야 NOP 버블이 무한 스톨을 유발하지 않습니다.
+  </p>
+
+  <pre><code class="language-verilog">// id_ex_reg 내부 — Ch09 설계 확인 (flush &gt; en 우선순위)
+always_ff @(posedge clk or posedge rst) begin
+   if (rst || flush) begin
+      // NOP 버블: 모든 제어 신호 0 (mem_read=0 필수!)
+      ctrl_out     &lt;= '0;
+      rs1_data_out &lt;= 32'd0;
+      rs2_data_out &lt;= 32'd0;
+      imm_ext_out  &lt;= 32'd0;
+      pc_out       &lt;= 32'd0;
+      pc_plus4_out &lt;= 32'd0;
+      rs1_addr_out &lt;= 5'd0;
+      rs2_addr_out &lt;= 5'd0;
+      rd_addr_out  &lt;= 5'd0;
+   end else if (en) begin
+      ctrl_out     &lt;= ctrl_in;
+      rs1_data_out &lt;= rs1_data_in;
+      rs2_data_out &lt;= rs2_data_in;
+      imm_ext_out  &lt;= imm_ext_in;
+      pc_out       &lt;= pc_in;
+      pc_plus4_out &lt;= pc_plus4_in;
+      rs1_addr_out &lt;= rs1_addr_in;
+      rs2_addr_out &lt;= rs2_addr_in;
+      rd_addr_out  &lt;= rd_addr_in;
+   end
+end
+// flush가 en보다 우선순위 높음 → NOP 버블 삽입 시 mem_read=0 보장
+</code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q: NOP 버블에서 mem_read=0이어야 하는 이유가 무엇입니까?</strong></p>
+    <p>
+      <strong>A:</strong> NOP 버블의 rd_addr도 0으로 초기화됩니다. 만약 mem_read=1이 남아 있으면
+      해저드 감지 유닛이 "EX 단계에 LW가 있고, rd=x0인데 IF/ID의 rs1 또는 rs2도 x0이면" 조건을 평가합니다.
+      x0 조건으로 스톨이 발생하지 않아야 하는데, 설계에 따라 의도치 않은 동작이 생길 수 있습니다.
+      무엇보다 <code>ctrl_out &lt;= '0</code>으로 전체 초기화하면 <code>mem_read=0</code>이 자동으로 보장됩니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      스톨이 2사이클 연속으로 발생하는 경우(예: 두 LW가 같은 목적 레지스터를 사용하고 직후 명령어가 그 레지스터에 의존)가 있습니까?
+      PC, IF/ID, ID/EX 각각의 en/flush 값을 사이클별로 추적해 보십시오.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 10.5 데이터 해저드 테스트벤치 ========== -->
+<section id="sec-10-5">
+  <h2>10.5 데이터 해저드 테스트벤치</h2>
+
+  <p>
+    이 절에서는 포워딩 유닛과 해저드 감지 유닛이 올바르게 동작하는지 7가지 RAW 시나리오로 검증합니다.
+    각 시나리오는 독립적으로 실행하여 <code>forward_a</code>, <code>forward_b</code>, <code>stall</code>
+    신호를 파형에서 확인합니다.
+  </p>
+
+  <h3>테스트 시나리오 7가지</h3>
+
+  <table>
+    <thead>
+      <tr><th>번호</th><th>시나리오</th><th>명령어 시퀀스</th><th>검증 포인트</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>T1</td><td>EX-EX 포워딩 (rs1)</td>
+        <td><code>ADD x1,x2,x3 → ADD x4,x1,x5</code></td>
+        <td><code>forward_a=2'b01</code>, 스톨 없음</td>
+      </tr>
+      <tr>
+        <td>T2</td><td>EX-EX 포워딩 (rs2)</td>
+        <td><code>ADD x1,x2,x3 → ADD x4,x5,x1</code></td>
+        <td><code>forward_b=2'b01</code>, 스톨 없음</td>
+      </tr>
+      <tr>
+        <td>T3</td><td>MEM-EX 포워딩 (1개 NOP 사이)</td>
+        <td><code>ADD x1,x2,x3 → NOP → ADD x4,x1,x5</code></td>
+        <td><code>forward_a=2'b10</code>, 스톨 없음</td>
+      </tr>
+      <tr>
+        <td>T4</td><td>EX-EX 우선순위</td>
+        <td><code>ADD x1,x2,x3 → ADD x1,x4,x5 → ADD x6,x1,x7</code></td>
+        <td><code>forward_a=2'b01</code> (EX/MEM 값 선택)</td>
+      </tr>
+      <tr>
+        <td>T5</td><td>해저드 없음 (3개 NOP 사이)</td>
+        <td><code>ADD x1,x2,x3 → NOP×3 → ADD x4,x1,x5</code></td>
+        <td><code>forward_a=2'b00</code>, 스톨 없음</td>
+      </tr>
+      <tr>
+        <td>T6</td><td>Load-Use 스톨</td>
+        <td><code>LW x1,0(x6) → ADD x3,x1,x4</code></td>
+        <td><code>stall=1</code> 1사이클, 이후 <code>forward_a=2'b10</code></td>
+      </tr>
+      <tr>
+        <td>T7</td><td>Store 포워딩</td>
+        <td><code>ADD x1,x2,x3 → SW x1,0(x4)</code></td>
+        <td><code>forward_b=2'b01</code> (rs2=x1 포워딩)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 포워딩 신호 디버깅 3단계</strong>
+    <p>
+      포워딩 조건을 처음에 틀리는 것은 완전히 정상입니다. <code>forward_a</code> 값이 예상과 다를 때
+      다음 순서로 점검하십시오:<br>
+      <strong>① rd_addr 추적:</strong> <code>ex_mem_rd_addr</code> 값이 올바르게 파이프라인을 따라 전파되고 있는가?<br>
+      <strong>② reg_write 확인:</strong> <code>ex_mem_reg_write</code> 신호가 해당 사이클에 활성화되어 있는가?<br>
+      <strong>③ rs_addr 확인:</strong> <code>id_ex_rs1_addr</code>가 올바른 레지스터 번호를 가리키는가?<br>
+      세 신호를 파형에 동시에 올려놓고 사이클별로 추적하면 반드시 원인을 찾을 수 있습니다.
+    </p>
+  </aside>
+
+  <h3>테스트벤치 VCS 실행 커맨드</h3>
+
+  <pre><code class="language-bash"># VCS 컴파일 및 시뮬레이션
+vcs -sverilog -debug_all \
+    forwarding_unit.sv \
+    hazard_detection_unit.sv \
+    rv32i_pipeline_top_ch10.sv \
+    rv32i_pipeline_tb_ch10.sv \
+    -o sim_ch10
+
+# 실행
+./sim_ch10
+
+# Verdi로 파형 확인
+verdi -ssf rv32i_pipeline_tb_ch10.vcd &amp;</code></pre>
+
+</section>
+
+<!-- ========== 10.6 중간 마일스톤: 1~10 합산 프로그램 검증 ========== -->
+<section id="sec-10-6">
+  <h2>10.6 ★ 중간 마일스톤: 1~10 합산 프로그램 검증</h2>
+
+  <p>
+    Ch01부터 이 챕터까지 — ISA, RTL 기초, 단일사이클, 멀티사이클, 파이프라인 기초, 그리고 포워딩.
+    이제 이 모든 것이 하나로 합쳐지는 순간입니다. <strong>1부터 10까지의 합은 55입니다. 55 = Ch01~Ch10의 합.</strong>
+    이 프로그램이 포워딩 파이프라인에서 올바르게 실행된다면, 여러분은 데이터 해저드를 스스로 해결하는
+    파이프라인 프로세서를 설계한 것입니다.
+  </p>
+
+  <h3>1~10 합산 어셈블리 프로그램</h3>
+  <p>
+    분기 명령어 없이 루프를 언롤(unroll, 펼치기)한 직선 코드입니다.
+    <code>ADD x10,x10,x11</code> 명령어에서 rs1(x10)은 이전 ADD의 결과이므로 <strong>MEM-EX 포워딩</strong>,
+    rs2(x11)은 방금 완료된 ADDI의 결과이므로 <strong>EX-EX 포워딩</strong>이 동시에 발생합니다.
+    프로그램 끝의 <code>ADDI x13,x12,0</code>에서 Load-Use 해저드가 1사이클 스톨을 유발합니다.
+  </p>
+
+  <pre><code class="language-armasm">; ============================================================
+; 1~10 합산 (루프 언롤 버전, 분기 없음)
+; 레지스터: x10=sum(합계), x11=i(현재값), x12=메모리 검증, x13=Load-Use 검증
+; 기대 결과: x10=55, x12=55, x13=55
+; ============================================================
+ADDI x10, x0,  0       ; x10 = 0 (합계 초기화)
+ADDI x11, x0,  1       ; x11 = 1
+ADD  x10, x10, x11     ; x10 = 0+1 = 1    &lt;-- EX-EX 포워딩(forward_b=2'b01): ADDI x11 결과가 EX/MEM에 있음
+ADDI x11, x11, 1       ; x11 = 2          &lt;-- EX-EX 포워딩(forward_a=2'b01): ADD x10 결과가 EX/MEM에 있음
+ADD  x10, x10, x11     ; x10 = 1+2 = 3    &lt;-- rs1(x10): MEM-EX 포워딩(forward_a=2'b10), rs2(x11): EX-EX 포워딩(forward_b=2'b01) 동시 발생
+ADDI x11, x11, 1       ; x11 = 3
+ADD  x10, x10, x11     ; x10 = 3+3 = 6
+ADDI x11, x11, 1       ; x11 = 4
+ADD  x10, x10, x11     ; x10 = 6+4 = 10
+ADDI x11, x11, 1       ; x11 = 5
+ADD  x10, x10, x11     ; x10 = 10+5 = 15
+ADDI x11, x11, 1       ; x11 = 6
+ADD  x10, x10, x11     ; x10 = 15+6 = 21
+ADDI x11, x11, 1       ; x11 = 7
+ADD  x10, x10, x11     ; x10 = 21+7 = 28
+ADDI x11, x11, 1       ; x11 = 8
+ADD  x10, x10, x11     ; x10 = 28+8 = 36
+ADDI x11, x11, 1       ; x11 = 9
+ADD  x10, x10, x11     ; x10 = 36+9 = 45
+ADDI x11, x11, 1       ; x11 = 10
+ADD  x10, x10, x11     ; x10 = 45+10 = 55 &lt;-- 최종 결과
+SW   x10, 0(x0)        ; mem[0] = 55      &lt;-- EX-EX 포워딩 (forward_b=2'b01): ADD 결과 x10이 EX/MEM에 있음
+LW   x12, 0(x0)        ; x12 = mem[0] = 55
+ADDI x13, x12, 0       ; x13 = x12 = 55  &lt;-- Load-Use 해저드! 1사이클 스톨
+</code></pre>
+
+  <h3>기계어 hex 코드 (IMEM 초기화용)</h3>
+
+  <table>
+    <thead>
+      <tr><th>주소</th><th>기계어</th><th>어셈블리</th><th>비고</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>0x00</td><td><code>0x00000513</code></td><td>ADDI x10, x0, 0</td><td>sum=0</td></tr>
+      <tr><td>0x04</td><td><code>0x00100593</code></td><td>ADDI x11, x0, 1</td><td>i=1</td></tr>
+      <tr><td>0x08</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=1, EX-EX</td></tr>
+      <tr><td>0x0C</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=2, EX-EX</td></tr>
+      <tr><td>0x10</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=3</td></tr>
+      <tr><td>0x14</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=3</td></tr>
+      <tr><td>0x18</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=6</td></tr>
+      <tr><td>0x1C</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=4</td></tr>
+      <tr><td>0x20</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=10</td></tr>
+      <tr><td>0x24</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=5</td></tr>
+      <tr><td>0x28</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=15</td></tr>
+      <tr><td>0x2C</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=6</td></tr>
+      <tr><td>0x30</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=21</td></tr>
+      <tr><td>0x34</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=7</td></tr>
+      <tr><td>0x38</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=28</td></tr>
+      <tr><td>0x3C</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=8</td></tr>
+      <tr><td>0x40</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=36</td></tr>
+      <tr><td>0x44</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=9</td></tr>
+      <tr><td>0x48</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=45</td></tr>
+      <tr><td>0x4C</td><td><code>0x00158593</code></td><td>ADDI x11, x11, 1</td><td>i=10</td></tr>
+      <tr><td>0x50</td><td><code>0x00B50533</code></td><td>ADD x10, x10, x11</td><td>sum=55</td></tr>
+      <tr><td>0x54</td><td><code>0x00A02023</code></td><td>SW x10, 0(x0)</td><td>mem[0]=55, EX-EX(forward_b=2'b01)</td></tr>
+      <tr><td>0x58</td><td><code>0x00002603</code></td><td>LW x12, 0(x0)</td><td>x12=55</td></tr>
+      <tr><td>0x5C</td><td><code>0x00060693</code></td><td>ADDI x13, x12, 0</td><td>Load-Use 스톨!</td></tr>
+    </tbody>
+  </table>
+
+  <h3>검증 기준</h3>
+  <p>
+    시뮬레이션 종료 후 레지스터 값이 다음과 같아야 합니다:
+  </p>
+  <ul>
+    <li><code>regs[10] = 32'h00000037</code> (십진수 55) — EX-EX 포워딩 동작 확인</li>
+    <li><code>regs[12] = 32'h00000037</code> (십진수 55) — SW/LW 메모리 접근 확인</li>
+    <li><code>regs[13] = 32'h00000037</code> (십진수 55) — Load-Use 스톨 + MEM-EX 포워딩 확인</li>
+  </ul>
+
+  <p>
+    파형에서 <code>forward_a = 2'b01</code>이 주기적으로 표시되는 순간, 여러분의 포워딩 유닛이
+    정확히 동작하고 있다는 증거입니다. 스톨 없이 ADD 명령어들을 연속 실행하면서 올바른 값 55에 도달한다면,
+    <strong>데이터 해저드를 스스로 해결하는 파이프라인 프로세서를 여러분이 설계한 것입니다.</strong>
+  </p>
+
+  <p>파형에서 최종 레지스터 x10에 <code>0x00000037</code> — 십진수로 55 — 가 나타난다면, 잠시 멈추고 이 순간을 의식적으로 느껴 보십시오.</p>
+  <p>1부터 10까지의 합이 55입니다. 그리고 여러분은 Chapter 01부터 Chapter 10까지 지식을 쌓아 이 결과를 만들어냈습니다. NOP이 하나도 없는 코드가, 여러분이 직접 설계한 포워딩 유닛 덕분에 정확하게 실행되었습니다. Ch09에서 NOP 3개를 손으로 계산해서 삽입했던 그 불편함이 지금 완전히 사라졌습니다. 이것이 여러분의 하드웨어가 한 일입니다.</p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      1~10 합산 프로그램에서 Load-Use 스톨은 정확히 몇 번 발생합니까? 어느 명령어에서 발생합니까?
+      EX-EX 포워딩은 총 몇 번 발생합니까? <code>ADD x10,x10,x11</code> 10번 중 몇 번이나 포워딩이 일어납니까?
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 10.7 요약 및 다음 단계 ========== -->
+<section id="sec-10-7">
+  <h2>10.7 요약 및 다음 단계</h2>
+
+  <p>
+    이 챕터에서는 파이프라인의 핵심 과제인 데이터 해저드를 완전히 처리했습니다.
+    RAW 해저드를 이론적으로 분류하고, 포워딩 유닛과 해저드 감지 유닛을 설계하여 하드웨어에 구현했습니다.
+    Ch09에서 예약해 두었던 <code>en</code>/<code>flush</code> 포트들이 의미 있는 신호로 연결되었고,
+    파이프라인은 이제 소프트웨어(NOP 삽입) 도움 없이 스스로 데이터 의존성을 처리합니다.
+  </p>
+
+  <section class="chapter-summary">
+    <h2>핵심 정리</h2>
+    <ul>
+      <li><strong>데이터 해저드 3종:</strong> RAW(읽기-후-쓰기), WAW(쓰기-후-쓰기), WAR(쓰기-후-읽기). RV32I 인오더 파이프라인에서는 RAW만 처리하면 된다.</li>
+      <li><strong>포워딩 인코딩:</strong> <code>2'b00</code>=레지스터 파일, <code>2'b01</code>=EX-EX(EX/MEM.alu_result), <code>2'b10</code>=MEM-EX(MEM/WB wb_data).</li>
+      <li><strong>우선순위:</strong> EX-EX &gt; MEM-EX. 두 조건 동시 만족 시 더 최신 값(EX/MEM)을 선택한다.</li>
+      <li><strong>x0 예외:</strong> 목적 레지스터가 x0이면 포워딩 조건에서 제외. x0은 항상 0으로 고정.</li>
+      <li><strong>Load-Use 해저드:</strong> LW 다음 명령어가 같은 레지스터에 의존하면 포워딩 불가, 1사이클 스톨 필수.</li>
+      <li><strong>스톨 동작:</strong> PC 홀드(pc_en=0) + IF/ID 홀드(en=0) + ID/EX 플러시(flush=1, NOP 버블). EX/MEM, MEM/WB는 정상 진행.</li>
+      <li><strong>NOP 버블 안전:</strong> id_ex_flush=1 시 ctrl 전체 0으로 초기화 → mem_read=0 보장 → 무한 스톨 방지.</li>
+      <li><strong>Store 포워딩:</strong> EX/MEM 레지스터에 rs2_data 저장 시 반드시 rs2_fwd_ex(포워딩 MUX 출력)를 사용해야 한다.</li>
+    </ul>
+  </section>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — Ch10 완료 + Ch11 진입 준비 확인</strong>
+    <p>다음 항목을 스스로 평가하십시오. ✅ 또는 ❌로 표시하고, ❌인 항목은 해당 절로 돌아가십시오.</p>
+    <ol>
+      <li>RAW, WAW, WAR 해저드의 차이를 설명하고 RV32I에서 RAW만 발생하는 이유를 논증할 수 있다. (10.1절)</li>
+      <li>EX-EX 포워딩과 MEM-EX 포워딩의 활성화 조건을 자연어와 코드로 표현할 수 있다. (10.2절)</li>
+      <li>포워딩 조건에서 EX-EX가 MEM-EX보다 우선 처리되어야 하는 이유를 설명할 수 있다. (10.2절)</li>
+      <li>Load-Use 해저드에서 포워딩이 불가능한 이유와 1사이클 스톨이 정확히 1사이클인 이유를 설명할 수 있다. (10.3절)</li>
+      <li>스톨 시 PC(<code>en=0</code>), IF/ID(<code>en=0</code>), ID/EX(<code>flush=1</code>)의 동작을 각각 설명할 수 있다. (10.4절)</li>
+      <li>파형에서 <code>forward_a</code>, <code>forward_b</code>, <code>stall</code> 신호를 확인하고 포워딩·스톨 동작을 추적할 수 있다. (10.5절)</li>
+      <li>1~10 합산 프로그램 시뮬레이션에서 x10=55 결과를 확인했다. (10.6절)</li>
+    </ol>
+    <p>7개 항목 중 6개 이상이 ✅이면 Chapter 11 진입 준비 완료입니다. <strong>Chapter 11 예고</strong>: Ch10에서 배운 <code>flush</code> 메커니즘이 분기 예측 실패 시 잘못 인출된 명령어를 제거하는 핵심 도구가 됩니다.</p>
+  </aside>
+
+  <section class="next-chapter">
+    <h2>다음 챕터 예고</h2>
+    <p>
+      데이터 해저드를 정복한 여러분에게 <strong>제어 해저드(control hazard)</strong>는 "같은 패턴의 다음 문제"입니다.
+      Ch11에서는 분기(BEQ, BNE 등)와 점프(JAL, JALR) 명령어에서 발생하는 제어 해저드를 다룹니다.
+      분기 결과는 EX 스테이지에서야 확정되므로, 그 사이에 페치된 명령어들을 <strong>플러시(flush)</strong>해야 합니다.
+      Ch10에서 만든 flush 경로 — IF/ID 레지스터의 <code>flush=1'b0</code>으로 예약한 포트 — 가
+      Ch11에서 드디어 활성화됩니다.
+    </p>
+  </section>
+
+</section>
+
+<!-- ========== 연습문제 ========== -->
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li>
+      <strong>[기억]</strong> RAW, WAW, WAR 해저드를 각각 정의하고, RV32I 인오더 5단 파이프라인에서
+      WAW와 WAR가 발생하지 않는 이유를 논리적으로 설명하십시오.
+    </li>
+    <li>
+      <strong>[이해]</strong> <code>forward_a = 2'b01</code>과 <code>2'b10</code>이 각각 어느 파이프라인
+      레지스터에서 데이터를 가져오는지 설명하고, 두 조건이 동시에 만족될 때 EX-EX를 선택해야 하는 이유를
+      프로그램 의미(semantics) 관점에서 서술하십시오.
+    </li>
+    <li>
+      <strong>[적용]</strong> 다음 명령어 시퀀스에서 각 명령어가 EX 스테이지에 있을 때
+      <code>forward_a</code>와 <code>forward_b</code>의 값을 사이클별로 기입하십시오.
+      <pre><code class="language-armasm">ADD  x1, x2, x3   ; 명령어 A
+SUB  x4, x1, x5   ; 명령어 B
+AND  x6, x1, x4   ; 명령어 C
+</code></pre>
+    </li>
+    <li>
+      <strong>[분석]</strong> 다음 시퀀스에서 포워딩 유닛을 구현했음에도 스톨이 필요한 이유를
+      타이밍 다이어그램으로 분석하십시오. 각 사이클에서 <code>read_data</code>가 어느 파이프라인 레지스터에
+      존재하는지 추적하십시오.
+      <pre><code class="language-armasm">LW  x1, 0(x2)    ; 사이클 1에 IF
+ADD x3, x1, x4   ; 사이클 2에 IF
+</code></pre>
+    </li>
+    <li>
+      <strong>[분석]</strong> 포워딩 유닛과 해저드 감지 유닛이 모두 활성화된 상태에서 다음 시퀀스를 사이클별로 분석하십시오.
+      각 사이클에서 <code>forward_a</code>, <code>forward_b</code>, <code>stall</code> 값을 표로 작성하고,
+      Ch09에서 이 코드를 올바르게 실행하려면 NOP을 몇 개 삽입해야 했는지와 비교하십시오.
+      <pre><code class="language-armasm">LW   x1, 0(x2)    ; 사이클 1에 IF
+ADD  x3, x1, x4   ; 사이클 2에 IF
+SUB  x5, x3, x1   ; 사이클 3에 IF
+</code></pre>
+    </li>
+    <li>
+      <strong>[평가]</strong> 컴파일러가 코드 스케줄링으로 Load-Use 해저드를 피할 수 있습니다.
+      다음 코드에서 명령어 순서를 바꾸어 스톨을 제거하면서 결과가 동일하도록 재배열하십시오.
+      재배열 전후 CPI를 비교하십시오.
+      <pre><code class="language-armasm">LW   x1, 0(x2)
+ADD  x3, x1, x4    ; Load-Use 해저드
+LW   x5, 4(x2)
+ADD  x6, x5, x4    ; Load-Use 해저드
+</code></pre>
+    </li>
+  </ol>
+</section>
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>
+    이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+    본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+    이 코드는 Ch11에서 제어 해저드 처리를 추가할 때 기반으로 사용됩니다. 참고용으로 활용하십시오.
+  </p>
+
+  <!-- forwarding_unit.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>forwarding_unit.sv</h3>
+    <pre><code class="language-verilog">// ============================================================
+// 파일: forwarding_unit.sv
+// 설명: EX 스테이지 포워딩 MUX 제어 신호 생성
+//       forward_a/b 인코딩:
+//         2'b00 = 포워딩 없음 (레지스터 파일 값)
+//         2'b01 = EX-EX 포워딩 (EX/MEM.alu_result) ← 우선순위 높음
+//         2'b10 = MEM-EX 포워딩 (MEM/WB wb_data)
+//       우선순위: EX-EX(01) &gt; MEM-EX(10) (if-else if 구조)
+// ============================================================
+module forwarding_unit (
+   input  logic [4:0] id_ex_rs1_addr,   // 현재 EX 소스1 레지스터 주소 (rs1)
+   input  logic [4:0] id_ex_rs2_addr,   // 현재 EX 소스2 레지스터 주소 (rs2)
+   input  logic [4:0] ex_mem_rd_addr,   // EX/MEM 목적 레지스터 주소
+   input  logic [4:0] mem_wb_rd_addr,   // MEM/WB 목적 레지스터 주소
+   input  logic       ex_mem_reg_write, // EX/MEM 단계 레지스터 쓰기 활성화
+   input  logic       mem_wb_reg_write, // MEM/WB 단계 레지스터 쓰기 활성화
+   output logic [1:0] forward_a,        // rs1 포워딩 선택 신호
+   output logic [1:0] forward_b         // rs2 포워딩 선택 신호
+);
+
+   // ---- forward_a: rs1 포워딩 ----
+   always_comb begin
+      // EX-EX 포워딩 조건 (우선순위 최고)
+      if (ex_mem_reg_write &amp;&amp;
+          (ex_mem_rd_addr != 5'b0) &amp;&amp;
+          (ex_mem_rd_addr == id_ex_rs1_addr))
+         forward_a = 2'b01;  // EX-EX: EX/MEM.alu_result 사용
+      // MEM-EX 포워딩 조건 (EX-EX 미성립 시)
+      else if (mem_wb_reg_write &amp;&amp;
+               (mem_wb_rd_addr != 5'b0) &amp;&amp;
+               (mem_wb_rd_addr == id_ex_rs1_addr))
+         forward_a = 2'b10;  // MEM-EX: MEM/WB wb_data 사용
+      else
+         forward_a = 2'b00;  // 포워딩 없음: 레지스터 파일 값 사용
+   end
+
+   // ---- forward_b: rs2 포워딩 ----
+   always_comb begin
+      // EX-EX 포워딩 조건 (우선순위 최고)
+      if (ex_mem_reg_write &amp;&amp;
+          (ex_mem_rd_addr != 5'b0) &amp;&amp;
+          (ex_mem_rd_addr == id_ex_rs2_addr))
+         forward_b = 2'b01;  // EX-EX: EX/MEM.alu_result 사용
+      // MEM-EX 포워딩 조건 (EX-EX 미성립 시)
+      else if (mem_wb_reg_write &amp;&amp;
+               (mem_wb_rd_addr != 5'b0) &amp;&amp;
+               (mem_wb_rd_addr == id_ex_rs2_addr))
+         forward_b = 2'b10;  // MEM-EX: MEM/WB wb_data 사용
+      else
+         forward_b = 2'b00;  // 포워딩 없음
+   end
+
+endmodule
+</code></pre>
+  </div>
+
+  <!-- hazard_detection_unit.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>hazard_detection_unit.sv</h3>
+    <pre><code class="language-verilog">// ============================================================
+// 파일: hazard_detection_unit.sv
+// 설명: Load-Use 해저드 감지 유닛
+//       stall=1이면:
+//         - PC en=0 (PC 동결)
+//         - IF/ID en=0 (명령어 동결)
+//         - ID/EX flush=1 (NOP 버블 삽입)
+// ============================================================
+module hazard_detection_unit (
+   input  logic [4:0] id_ex_rd_addr,   // ID/EX 목적 레지스터 주소
+   input  logic       id_ex_mem_read,  // ID/EX mem_read (LW 여부)
+   input  logic [4:0] if_id_rs1_addr,  // IF/ID 명령어[19:15] = rs1
+   input  logic [4:0] if_id_rs2_addr,  // IF/ID 명령어[24:20] = rs2
+   output logic       stall            // 1 = Load-Use 스톨 발생
+);
+   // Load-Use 해저드 감지 조건:
+   //   ① EX 단계 명령어가 LW 계열 (mem_read=1)
+   //   ② EX 목적 레지스터(rd)가 x0이 아님
+   //   ③ EX rd가 ID 단계 rs1 또는 rs2와 일치
+   assign stall = id_ex_mem_read &amp;&amp;
+                  (id_ex_rd_addr != 5'b0) &amp;&amp;
+                  ((id_ex_rd_addr == if_id_rs1_addr) ||
+                   (id_ex_rd_addr == if_id_rs2_addr));
+
+endmodule
+</code></pre>
+  </div>
+
+  <!-- rv32i_pipeline_top_ch10.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>rv32i_pipeline_top_ch10.sv</h3>
+    <pre><code class="language-verilog">// ============================================================
+// 파일: rv32i_pipeline_top_ch10.sv
+// 설명: RV32I 5단 파이프라인 최상위 모듈 (Ch10 완성판)
+//       Ch09 대비 변경사항:
+//         1) forwarding_unit 인스턴스 추가
+//         2) hazard_detection_unit 인스턴스 추가
+//         3) 포워딩 MUX (rs1_fwd_ex, rs2_fwd_ex) 추가
+//         4) PC: always_ff en=~stall
+//         5) IF/ID: en=~stall (Ch09: 1'b1 → Ch10: ~stall)
+//         6) ID/EX: flush=stall (Ch09: 1'b0 → Ch10: stall)
+//         7) EX/MEM: rs2_data_in = rs2_fwd_ex (Store 포워딩)
+// ============================================================
+module rv32i_pipeline_top_ch10 (
+   input  logic clk,
+   input  logic rst
+);
+
+   import rv32i_pkg::*;  // ctrl_t 구조체 정의
+
+   // ============================================================
+   // 내부 신호 선언
+   // ============================================================
+
+   // IF 스테이지
+   logic [31:0] pc_reg, pc_next, pc_plus4;
+   logic [31:0] imem_rdata;
+
+   // IF/ID 레지스터 출력
+   logic [31:0] instr_id, pc_id, pc_plus4_id;
+
+   // ID 스테이지
+   logic [4:0]  rs1_addr_id, rs2_addr_id, rd_addr_id;
+   logic [31:0] rs1_data_id, rs2_data_id, imm_ext_id;
+   ctrl_t       ctrl_id;
+
+   // ID/EX 레지스터 출력
+   logic [31:0] rs1_data_ex, rs2_data_ex, imm_ext_ex, pc_ex, pc_plus4_ex;
+   logic [4:0]  rs1_addr_ex, rs2_addr_ex, rd_addr_ex;
+   ctrl_t       ctrl_ex;
+
+   // EX 스테이지
+   logic [31:0] rs1_fwd_ex, rs2_fwd_ex;   // 포워딩 MUX 출력
+   logic [31:0] alu_a_ex, alu_b_ex, alu_result_ex;
+   logic        zero_ex, branch_taken_ex;
+   logic [1:0]  forward_a, forward_b;      // 포워딩 제어 신호
+
+   // EX/MEM 레지스터 출력
+   logic [31:0] alu_result_mem, rs2_data_mem, pc_plus4_mem;
+   logic [4:0]  rd_addr_mem;
+   ctrl_t       ctrl_mem;
+
+   // MEM 스테이지
+   logic [31:0] read_data_mem;
+
+   // MEM/WB 레지스터 출력
+   logic [31:0] read_data_wb, alu_result_wb, pc_plus4_wb;
+   logic [4:0]  rd_addr_wb;
+   ctrl_t       ctrl_wb;
+
+   // WB 스테이지
+   logic [31:0] wb_data;
+
+   // 스톨 신호
+   logic stall;
+
+   // ============================================================
+   // IF 스테이지
+   // ============================================================
+   assign pc_plus4 = pc_reg + 32'd4;
+   assign pc_next  = pc_plus4;  // Ch11에서 분기 MUX 추가 예정
+
+   // PC 레지스터 — Ch10: stall 시 홀드
+   always_ff @(posedge clk or posedge rst) begin
+      if (rst)          pc_reg &lt;= 32'd0;
+      else if (~stall)  pc_reg &lt;= pc_next;  // stall=1이면 PC 유지
+   end
+
+   // 명령어 메모리 (조합논리, LUTRAM 추론)
+   imem u_imem (
+      .addr  (pc_reg),
+      .rdata (imem_rdata)
+   );
+
+   // ============================================================
+   // IF/ID 파이프라인 레지스터
+   // Ch10: en = ~stall (Ch09: en=1'b1)
+   // ============================================================
+   if_id_reg u_if_id (
+      .clk          (clk),
+      .rst          (rst),
+      .en           (~stall),    // ★ Ch09: 1'b1 → Ch10: ~stall
+      .flush        (1'b0),      // Ch11: 분기 플러시 시 활성화 예정
+      .instr_in     (imem_rdata),
+      .pc_in        (pc_reg),
+      .pc_plus4_in  (pc_plus4),
+      .instr_out    (instr_id),
+      .pc_out       (pc_id),
+      .pc_plus4_out (pc_plus4_id)
+   );
+
+   // ============================================================
+   // ID 스테이지
+   // ============================================================
+   assign rs1_addr_id = instr_id[19:15];
+   assign rs2_addr_id = instr_id[24:20];
+   assign rd_addr_id  = instr_id[11:7];
+
+   // 레지스터 파일 (WB에서 쓰기, ID에서 읽기)
+   regfile u_regfile (
+      .clk    (clk),
+      .we     (ctrl_wb.reg_write),
+      .waddr  (rd_addr_wb),
+      .wdata  (wb_data),
+      .raddr1 (rs1_addr_id),
+      .raddr2 (rs2_addr_id),
+      .rdata1 (rs1_data_id),
+      .rdata2 (rs2_data_id)
+   );
+
+   // 즉치수 확장
+   imm_extend u_imm_ext (
+      .instr (instr_id),
+      .imm   (imm_ext_id)
+   );
+
+   // 제어 신호 생성
+   control_unit u_ctrl (
+      .opcode (instr_id[6:0]),
+      .funct3 (instr_id[14:12]),
+      .funct7 (instr_id[31:25]),
+      .ctrl   (ctrl_id)
+   );
+
+   // ============================================================
+   // Hazard Detection Unit (Ch10 신규)
+   // ============================================================
+   hazard_detection_unit u_hdu (
+      .id_ex_rd_addr   (rd_addr_ex),
+      .id_ex_mem_read  (ctrl_ex.mem_read),
+      .if_id_rs1_addr  (instr_id[19:15]),
+      .if_id_rs2_addr  (instr_id[24:20]),
+      .stall           (stall)
+   );
+
+   // ============================================================
+   // ID/EX 파이프라인 레지스터
+   // Ch10: flush = stall (Ch09: flush=1'b0)
+   // ============================================================
+   id_ex_reg u_id_ex (
+      .clk          (clk),
+      .rst          (rst),
+      .en           (1'b1),      // 항상 활성화
+      .flush        (stall),     // ★ Ch09: 1'b0 → Ch10: stall
+      .rs1_data_in  (rs1_data_id),
+      .rs2_data_in  (rs2_data_id),
+      .imm_ext_in   (imm_ext_id),
+      .pc_in        (pc_id),
+      .pc_plus4_in  (pc_plus4_id),
+      .rs1_addr_in  (rs1_addr_id),
+      .rs2_addr_in  (rs2_addr_id),
+      .rd_addr_in   (rd_addr_id),
+      .ctrl_in      (ctrl_id),
+      .rs1_data_out (rs1_data_ex),
+      .rs2_data_out (rs2_data_ex),
+      .imm_ext_out  (imm_ext_ex),
+      .pc_out       (pc_ex),
+      .pc_plus4_out (pc_plus4_ex),
+      .rs1_addr_out (rs1_addr_ex),
+      .rs2_addr_out (rs2_addr_ex),
+      .rd_addr_out  (rd_addr_ex),
+      .ctrl_out     (ctrl_ex)
+   );
+
+   // ============================================================
+   // Forwarding Unit (Ch10 신규)
+   // ============================================================
+   forwarding_unit u_fwd (
+      .id_ex_rs1_addr   (rs1_addr_ex),
+      .id_ex_rs2_addr   (rs2_addr_ex),
+      .ex_mem_rd_addr   (rd_addr_mem),
+      .mem_wb_rd_addr   (rd_addr_wb),
+      .ex_mem_reg_write (ctrl_mem.reg_write),
+      .mem_wb_reg_write (ctrl_wb.reg_write),
+      .forward_a        (forward_a),
+      .forward_b        (forward_b)
+   );
+
+   // ============================================================
+   // EX 스테이지
+   // ============================================================
+
+   // ① 포워딩 MUX (Ch10 신규)
+   always_comb begin
+      case (forward_a)
+         2'b01:   rs1_fwd_ex = alu_result_mem;  // EX-EX: EX/MEM.alu_result
+         2'b10:   rs1_fwd_ex = wb_data;          // MEM-EX: MEM/WB wb_data
+         default: rs1_fwd_ex = rs1_data_ex;      // 포워딩 없음
+      endcase
+      case (forward_b)
+         2'b01:   rs2_fwd_ex = alu_result_mem;  // EX-EX: EX/MEM.alu_result
+         2'b10:   rs2_fwd_ex = wb_data;          // MEM-EX: MEM/WB wb_data
+         default: rs2_fwd_ex = rs2_data_ex;      // 포워딩 없음
+      endcase
+   end
+
+   // ② ALU 입력 선택 (포워딩 후 적용)
+   assign alu_a_ex = ctrl_ex.alu_src_a ? pc_ex      : rs1_fwd_ex;
+   assign alu_b_ex = ctrl_ex.alu_src_b ? imm_ext_ex : rs2_fwd_ex;
+
+   // ALU
+   alu u_alu (
+      .a        (alu_a_ex),
+      .b        (alu_b_ex),
+      .alu_ctrl (ctrl_ex.alu_control),
+      .result   (alu_result_ex),
+      .zero     (zero_ex)
+   );
+
+   assign branch_taken_ex = ctrl_ex.branch &amp;&amp; zero_ex;
+
+   // ============================================================
+   // EX/MEM 파이프라인 레지스터
+   // ★ Ch10 수정: rs2_data_in = rs2_fwd_ex (Store 포워딩)
+   // ============================================================
+   ex_mem_reg u_ex_mem (
+      .clk            (clk),
+      .rst            (rst),
+      .en             (1'b1),
+      .flush          (1'b0),        // Ch11에서 분기 플러시 시 활성화 예정
+      .alu_result_in  (alu_result_ex),
+      .rs2_data_in    (rs2_fwd_ex),  // ★ Ch09: rs2_data_ex → Ch10: rs2_fwd_ex
+      .pc_plus4_in    (pc_plus4_ex),
+      .rd_addr_in     (rd_addr_ex),
+      .ctrl_in        (ctrl_ex),
+      .alu_result_out (alu_result_mem),
+      .rs2_data_out   (rs2_data_mem),
+      .pc_plus4_out   (pc_plus4_mem),
+      .rd_addr_out    (rd_addr_mem),
+      .ctrl_out       (ctrl_mem)
+   );
+
+   // ============================================================
+   // MEM 스테이지
+   // ============================================================
+   dmem u_dmem (
+      .clk   (clk),
+      .we    (ctrl_mem.mem_write),
+      .re    (ctrl_mem.mem_read),
+      .addr  (alu_result_mem),
+      .wdata (rs2_data_mem),
+      .rdata (read_data_mem)
+   );
+
+   // ============================================================
+   // MEM/WB 파이프라인 레지스터 (변경 없음)
+   // ============================================================
+   mem_wb_reg u_mem_wb (
+      .clk            (clk),
+      .rst            (rst),
+      .en             (1'b1),
+      .read_data_in   (read_data_mem),
+      .alu_result_in  (alu_result_mem),
+      .pc_plus4_in    (pc_plus4_mem),
+      .rd_addr_in     (rd_addr_mem),
+      .ctrl_in        (ctrl_mem),
+      .read_data_out  (read_data_wb),
+      .alu_result_out (alu_result_wb),
+      .pc_plus4_out   (pc_plus4_wb),
+      .rd_addr_out    (rd_addr_wb),
+      .ctrl_out       (ctrl_wb)
+   );
+
+   // ============================================================
+   // WB 스테이지
+   // ============================================================
+   always_comb begin
+      case (ctrl_wb.mem_to_reg)
+         2'b01:   wb_data = read_data_wb;   // LW: 메모리 읽기 데이터
+         2'b10:   wb_data = pc_plus4_wb;    // JAL/JALR: 복귀 주소
+         default: wb_data = alu_result_wb;  // 기본: ALU 결과
+      endcase
+   end
+
+endmodule
+</code></pre>
+  </div>
+
+  <!-- rv32i_pipeline_tb_ch10.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>rv32i_pipeline_tb_ch10.sv</h3>
+    <pre><code class="language-verilog">// ============================================================
+// 파일: rv32i_pipeline_tb_ch10.sv
+// 설명: Ch10 데이터 해저드 검증 테스트벤치
+//       시나리오 T1~T7 (RAW 7가지) + 1~10 합산 마일스톤
+//       기대 결과: x10=55, x12=55, x13=55
+// ============================================================
+`timescale 1ns/1ps
+
+module rv32i_pipeline_tb_ch10;
+
+   // 클럭 / 리셋
+   logic clk = 1'b0;
+   logic rst = 1'b1;
+   always #5 clk = ~clk;  // 100 MHz (주기 10 ns)
+
+   // DUT
+   rv32i_pipeline_top_ch10 dut (
+      .clk (clk),
+      .rst (rst)
+   );
+
+   // ============================================================
+   // 명령어 메모리 초기화 — 1~10 합산 마일스톤 프로그램
+   // (T1~T7 시나리오는 별도 initial 블록으로 오버라이드 가능)
+   // ============================================================
+   initial begin
+      // 1~10 합산 프로그램 (루프 언롤)
+      dut.u_imem.mem[0]  = 32'h00000513; // ADDI x10, x0, 0    sum=0
+      dut.u_imem.mem[1]  = 32'h00100593; // ADDI x11, x0, 1    i=1
+      dut.u_imem.mem[2]  = 32'h00B50533; // ADD  x10, x10, x11 sum=1
+      dut.u_imem.mem[3]  = 32'h00158593; // ADDI x11, x11, 1   i=2
+      dut.u_imem.mem[4]  = 32'h00B50533; // ADD  x10, x10, x11 sum=3
+      dut.u_imem.mem[5]  = 32'h00158593; // ADDI x11, x11, 1   i=3
+      dut.u_imem.mem[6]  = 32'h00B50533; // ADD  x10, x10, x11 sum=6
+      dut.u_imem.mem[7]  = 32'h00158593; // ADDI x11, x11, 1   i=4
+      dut.u_imem.mem[8]  = 32'h00B50533; // ADD  x10, x10, x11 sum=10
+      dut.u_imem.mem[9]  = 32'h00158593; // ADDI x11, x11, 1   i=5
+      dut.u_imem.mem[10] = 32'h00B50533; // ADD  x10, x10, x11 sum=15
+      dut.u_imem.mem[11] = 32'h00158593; // ADDI x11, x11, 1   i=6
+      dut.u_imem.mem[12] = 32'h00B50533; // ADD  x10, x10, x11 sum=21
+      dut.u_imem.mem[13] = 32'h00158593; // ADDI x11, x11, 1   i=7
+      dut.u_imem.mem[14] = 32'h00B50533; // ADD  x10, x10, x11 sum=28
+      dut.u_imem.mem[15] = 32'h00158593; // ADDI x11, x11, 1   i=8
+      dut.u_imem.mem[16] = 32'h00B50533; // ADD  x10, x10, x11 sum=36
+      dut.u_imem.mem[17] = 32'h00158593; // ADDI x11, x11, 1   i=9
+      dut.u_imem.mem[18] = 32'h00B50533; // ADD  x10, x10, x11 sum=45
+      dut.u_imem.mem[19] = 32'h00158593; // ADDI x11, x11, 1   i=10
+      dut.u_imem.mem[20] = 32'h00B50533; // ADD  x10, x10, x11 sum=55
+      dut.u_imem.mem[21] = 32'h00A02023; // SW   x10, 0(x0)    mem[0]=55
+      dut.u_imem.mem[22] = 32'h00002603; // LW   x12, 0(x0)    x12=55
+      dut.u_imem.mem[23] = 32'h00060693; // ADDI x13, x12, 0   Load-Use!
+      // 나머지 NOP (파이프라인 드레인)
+      for (int i = 24; i &lt; 64; i++)
+         dut.u_imem.mem[i] = 32'h00000013; // NOP (ADDI x0, x0, 0)
+   end
+
+   // ============================================================
+   // 리셋 제어
+   // ============================================================
+   initial begin
+      rst = 1'b1;
+      repeat(3) @(posedge clk);
+      #1 rst = 1'b0;
+   end
+
+   // ============================================================
+   // 자동 결과 검증
+   // ============================================================
+   initial begin
+      // 24명령어 + 파이프라인 드레인(5) + 스톨(1) + 마진(5)
+      repeat(40) @(posedge clk);
+      #1;
+
+      $display("============================================================");
+      $display("[Ch10 마일스톤 검증 결과]");
+      $display("============================================================");
+
+      // 검증 1: EX-EX 포워딩 — 1~10 합산
+      if (dut.u_regfile.regs[10] === 32'h00000037)
+         $display("[PASS] x10 = 0x%08h = %0d (기대: 55) — EX-EX 포워딩 동작 확인",
+                  dut.u_regfile.regs[10], dut.u_regfile.regs[10]);
+      else
+         $display("[FAIL] x10 = 0x%08h (기대: 0x00000037 = 55)",
+                  dut.u_regfile.regs[10]);
+
+      // 검증 2: SW/LW 메모리 접근
+      if (dut.u_regfile.regs[12] === 32'h00000037)
+         $display("[PASS] x12 = 0x%08h = %0d (기대: 55) — SW/LW 동작 확인",
+                  dut.u_regfile.regs[12], dut.u_regfile.regs[12]);
+      else
+         $display("[FAIL] x12 = 0x%08h (기대: 0x00000037 = 55)",
+                  dut.u_regfile.regs[12]);
+
+      // 검증 3: Load-Use 스톨 + MEM-EX 포워딩
+      if (dut.u_regfile.regs[13] === 32'h00000037)
+         $display("[PASS] x13 = 0x%08h = %0d (기대: 55) — Load-Use 스톨 동작 확인",
+                  dut.u_regfile.regs[13], dut.u_regfile.regs[13]);
+      else
+         $display("[FAIL] x13 = 0x%08h (기대: 0x00000037 = 55)",
+                  dut.u_regfile.regs[13]);
+
+      $display("============================================================");
+      $finish;
+   end
+
+   // ============================================================
+   // 파형 덤프
+   // ============================================================
+   initial begin
+      $dumpfile("rv32i_pipeline_tb_ch10.vcd");
+      $dumpvars(0, rv32i_pipeline_tb_ch10);
+   end
+
+   // ============================================================
+   // 포워딩/스톨 신호 실시간 모니터
+   // ============================================================
+   initial begin
+      $monitor("[%4t ns] PC=%3h instr=%8h stall=%b fwdA=%b fwdB=%b",
+               $time,
+               dut.pc_reg,
+               dut.instr_id,
+               dut.stall,
+               dut.forward_a,
+               dut.forward_b);
+   end
+
+endmodule
+</code></pre>
+  </div>
+
+</section>
+
+<!-- ========== Highlight.js 스크립트 ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

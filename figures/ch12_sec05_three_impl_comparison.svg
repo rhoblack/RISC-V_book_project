@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" width="760" height="440" font-family="Pretendard, monospace, sans-serif">
+  <rect width="760" height="440" fill="#F8FAFC" rx="8"/>
+  <text x="380" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#1E293B">단일 사이클 / 멀티사이클 / 파이프라인 성능 비교 (버블정렬 기준)</text>
+
+  <!-- 상단 표 -->
+  <!-- 표 헤더 -->
+  <rect x="30" y="45" width="700" height="28" fill="#1E40AF" rx="4"/>
+  <text x="120" y="63" text-anchor="middle" font-size="11" fill="white" font-weight="bold">구현 방식</text>
+  <text x="265" y="63" text-anchor="middle" font-size="11" fill="white" font-weight="bold">Fmax (MHz)</text>
+  <text x="375" y="63" text-anchor="middle" font-size="11" fill="white" font-weight="bold">CPI (버블정렬)</text>
+  <text x="500" y="63" text-anchor="middle" font-size="11" fill="white" font-weight="bold">실행시간 상대값</text>
+  <text x="640" y="63" text-anchor="middle" font-size="11" fill="white" font-weight="bold">LUT 사용량</text>
+
+  <!-- 단일 사이클 행 -->
+  <rect x="30" y="73" width="700" height="28" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="120" y="91" text-anchor="middle" font-size="11" fill="#374151">단일 사이클 (Ch06)</text>
+  <text x="265" y="91" text-anchor="middle" font-size="11" fill="#374151">~25</text>
+  <text x="375" y="91" text-anchor="middle" font-size="11" fill="#374151">1.0</text>
+  <text x="500" y="91" text-anchor="middle" font-size="11" fill="#374151">1.0 (기준)</text>
+  <text x="640" y="91" text-anchor="middle" font-size="11" fill="#374151">~1,500</text>
+
+  <!-- 멀티사이클 행 -->
+  <rect x="30" y="101" width="700" height="28" fill="#EFF6FF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="120" y="119" text-anchor="middle" font-size="11" fill="#374151">멀티사이클 (Ch08)</text>
+  <text x="265" y="119" text-anchor="middle" font-size="11" fill="#374151">~50</text>
+  <text x="375" y="119" text-anchor="middle" font-size="11" fill="#374151">~4.1</text>
+  <text x="500" y="119" text-anchor="middle" font-size="11" fill="#374151">~0.82</text>
+  <text x="640" y="119" text-anchor="middle" font-size="11" fill="#374151">~1,200</text>
+
+  <!-- 파이프라인 행 -->
+  <rect x="30" y="129" width="700" height="28" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="120" y="147" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">파이프라인 (Ch12) ★</text>
+  <text x="265" y="147" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">~65</text>
+  <text x="375" y="147" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">~1.2</text>
+  <text x="500" y="147" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">~0.22</text>
+  <text x="640" y="147" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">~2,200</text>
+
+  <!-- 가로 막대 그래프 — 실행 시간 상대값 (낮을수록 좋음) -->
+  <text x="380" y="182" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E293B">실행 시간 상대값 비교 (낮을수록 빠름)</text>
+
+  <!-- 단일 사이클 막대 (1.0 기준) -->
+  <text x="145" y="213" text-anchor="end" font-size="11" fill="#374151">단일 사이클</text>
+  <rect x="150" y="198" width="400" height="28" fill="#94A3B8" stroke="#64748B" stroke-width="1" rx="3"/>
+  <text x="558" y="216" font-size="11" fill="#374151" font-weight="bold">1.00</text>
+  <text x="350" y="216" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IC × 1.0 / 25MHz = 40ns/명령어</text>
+
+  <!-- 멀티사이클 막대 (0.82) -->
+  <text x="145" y="250" text-anchor="end" font-size="11" fill="#374151">멀티사이클</text>
+  <rect x="150" y="235" width="328" height="28" fill="#3B82F6" stroke="#2563EB" stroke-width="1" rx="3"/>
+  <text x="486" y="253" font-size="11" fill="#374151" font-weight="bold">0.82</text>
+  <text x="314" y="253" text-anchor="middle" font-size="10" fill="white" font-weight="bold">IC × 4.1 / 50MHz = 82ns/명령어</text>
+
+  <!-- 파이프라인 막대 (0.22) -->
+  <text x="145" y="288" text-anchor="end" font-size="11" fill="#1E40AF" font-weight="bold">파이프라인</text>
+  <rect x="150" y="273" width="88" height="28" fill="#2563EB" stroke="#1D4ED8" stroke-width="1.5" rx="3"/>
+  <text x="246" y="291" font-size="11" fill="#1E40AF" font-weight="bold">0.22</text>
+  <text x="194" y="291" text-anchor="middle" font-size="10" fill="white" font-weight="bold">~19ns</text>
+  <!-- 화살표 강조 -->
+  <text x="290" y="291" font-size="10" fill="#1D4ED8">← 단일 사이클 대비 4.6배 빠름!</text>
+
+  <!-- 공식 설명 박스 -->
+  <rect x="30" y="318" width="700" height="70" fill="#FFF7ED" stroke="#F59E0B" stroke-width="1.5" rx="8"/>
+  <text x="380" y="337" text-anchor="middle" font-size="12" font-weight="bold" fill="#92400E">성능 분석 공식: 실행 시간 = (IC × CPI) / Fmax</text>
+  <text x="130" y="358" text-anchor="middle" font-size="11" fill="#78350F">단일: IC × 1.0 / 25MHz</text>
+  <text x="130" y="373" text-anchor="middle" font-size="10" fill="#92400E">= IC × 40ns</text>
+  <text x="380" y="358" text-anchor="middle" font-size="11" fill="#78350F">멀티: IC × 4.1 / 50MHz</text>
+  <text x="380" y="373" text-anchor="middle" font-size="10" fill="#92400E">= IC × 82ns (CPI 불리)</text>
+  <text x="640" y="358" text-anchor="middle" font-size="11" fill="#78350F" font-weight="bold">파이프라인: IC × 1.2 / 65MHz</text>
+  <text x="640" y="373" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="bold">≈ IC × 18.5ns (최고!)</text>
+
+  <!-- 파이프라인 이점 설명 -->
+  <rect x="30" y="398" width="700" height="32" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5" rx="5"/>
+  <text x="380" y="419" text-anchor="middle" font-size="11" fill="#1E40AF">파이프라인은 CPI를 낮추는 동시에 Fmax도 높입니다 — 두 이점이 동시에 작용하여 성능이 극대화됩니다.</text>
+</svg>

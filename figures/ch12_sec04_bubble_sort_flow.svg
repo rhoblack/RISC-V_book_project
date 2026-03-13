@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 580" width="760" height="580" font-family="Pretendard, monospace, sans-serif">
+  <rect width="760" height="580" fill="#F8FAFC" rx="8"/>
+  <text x="380" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#1E293B">버블정렬 알고리즘 순서도 (RISC-V 어셈블리 대응)</text>
+
+  <defs>
+    <marker id="arr-sort" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-yes" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#16A34A"/>
+    </marker>
+    <marker id="arr-no" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <!-- START -->
+  <ellipse cx="380" cy="60" rx="70" ry="22" fill="#2563EB" stroke="#1D4ED8" stroke-width="2"/>
+  <text x="380" y="65" text-anchor="middle" font-size="12" fill="white" font-weight="bold">시작 (START)</text>
+  <text x="490" y="62" font-size="10" fill="#64748B" font-family="monospace">bubble_sort: li x13,8 / li x10,0 / li x11,0</text>
+
+  <line x1="380" y1="82" x2="380" y2="110" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-sort)"/>
+
+  <!-- 외부 루프 조건 -->
+  <polygon points="380,115 290,145 380,175 470,145" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="380" y="141" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">i &lt; N-1 ?</text>
+  <text x="380" y="155" text-anchor="middle" font-size="10" fill="#3B82F6">(x11 &lt; x13-1)</text>
+  <text x="490" y="138" font-size="10" fill="#64748B" font-family="monospace">outer_loop: bge x11,x16,done</text>
+
+  <!-- NO → done -->
+  <line x1="290" y1="145" x2="150" y2="145" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-no)"/>
+  <text x="215" y="138" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="bold">No (종료)</text>
+
+  <!-- YES ↓ -->
+  <line x1="380" y1="175" x2="380" y2="200" stroke="#16A34A" stroke-width="2" marker-end="url(#arr-yes)"/>
+  <text x="396" y="193" font-size="10" fill="#16A34A" font-weight="bold">Yes</text>
+
+  <!-- j = 0 초기화 -->
+  <rect x="310" y="200" width="140" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="5"/>
+  <text x="380" y="219" text-anchor="middle" font-size="11" fill="#5B21B6" font-weight="bold">j = 0</text>
+  <text x="490" y="218" font-size="10" fill="#64748B" font-family="monospace">li x12, 0</text>
+
+  <line x1="380" y1="230" x2="380" y2="255" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-sort)"/>
+
+  <!-- 내부 루프 조건 -->
+  <polygon points="380,260 275,295 380,330 485,295" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="380" y="289" text-anchor="middle" font-size="11" fill="#1E40AF" font-weight="bold">j &lt; N-1-i ?</text>
+  <text x="380" y="305" text-anchor="middle" font-size="10" fill="#3B82F6">(x12 &lt; N-1-x11)</text>
+  <text x="510" y="288" font-size="10" fill="#64748B" font-family="monospace">inner_loop: bge x12,x17,outer_next</text>
+
+  <!-- NO → 외부 루프 증가 -->
+  <line x1="485" y1="295" x2="620" y2="295" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-no)"/>
+  <text x="548" y="285" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="bold">No</text>
+
+  <!-- YES ↓ -->
+  <line x1="380" y1="330" x2="380" y2="355" stroke="#16A34A" stroke-width="2" marker-end="url(#arr-yes)"/>
+  <text x="396" y="348" font-size="10" fill="#16A34A" font-weight="bold">Yes</text>
+
+  <!-- a[j], a[j+1] 읽기 -->
+  <rect x="285" y="355" width="190" height="35" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5" rx="5"/>
+  <text x="380" y="372" text-anchor="middle" font-size="11" fill="#14532D" font-weight="bold">a[j], a[j+1] 로드</text>
+  <text x="380" y="385" text-anchor="middle" font-size="10" fill="#15803D">lw x14, 0(x19) / lw x15, 4(x19)</text>
+
+  <line x1="380" y1="390" x2="380" y2="412" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-sort)"/>
+
+  <!-- 비교 조건 -->
+  <polygon points="380,415 280,448 380,481 480,448" fill="#FEF9C3" stroke="#CA8A04" stroke-width="2"/>
+  <text x="380" y="441" text-anchor="middle" font-size="11" fill="#78350F" font-weight="bold">a[j] &gt; a[j+1] ?</text>
+  <text x="380" y="457" text-anchor="middle" font-size="10" fill="#92400E">ble x14, x15, no_swap</text>
+
+  <!-- NO → no_swap (j++) -->
+  <line x1="480" y1="448" x2="600" y2="448" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-no)"/>
+  <text x="536" y="440" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="bold">No</text>
+  <text x="536" y="460" text-anchor="middle" font-size="10" fill="#64748B" font-family="monospace">no_swap:</text>
+
+  <!-- YES → 교환 -->
+  <line x1="380" y1="481" x2="380" y2="503" stroke="#16A34A" stroke-width="2" marker-end="url(#arr-yes)"/>
+  <text x="396" y="497" font-size="10" fill="#16A34A" font-weight="bold">Yes</text>
+
+  <!-- 교환 -->
+  <rect x="285" y="503" width="190" height="35" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="5"/>
+  <text x="380" y="520" text-anchor="middle" font-size="11" fill="#991B1B" font-weight="bold">a[j] ↔ a[j+1] 교환</text>
+  <text x="380" y="533" text-anchor="middle" font-size="10" fill="#DC2626">sw x15, 0(x19) / sw x14, 4(x19)</text>
+
+  <!-- 교환 → j++ -->
+  <line x1="380" y1="538" x2="620" y2="538" stroke="#2563EB" stroke-width="2"/>
+  <line x1="620" y1="538" x2="620" y2="448" stroke="#2563EB" stroke-width="2"/>
+
+  <!-- j++ 박스 -->
+  <rect x="580" y="415" width="80" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="5"/>
+  <text x="620" y="434" text-anchor="middle" font-size="11" fill="#5B21B6" font-weight="bold">j++</text>
+  <text x="620" y="410" text-anchor="middle" font-size="10" fill="#64748B" font-family="monospace">addi x12,x12,1</text>
+
+  <!-- j++ → inner_loop -->
+  <line x1="620" y1="415" x2="620" y2="295" stroke="#2563EB" stroke-width="2"/>
+  <line x1="620" y1="295" x2="485" y2="295" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-sort)"/>
+
+  <!-- outer_next: i++ -->
+  <rect x="585" y="258" width="80" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="5"/>
+  <text x="625" y="277" text-anchor="middle" font-size="11" fill="#5B21B6" font-weight="bold">i++</text>
+  <text x="625" y="254" text-anchor="middle" font-size="10" fill="#64748B" font-family="monospace">outer_next: addi x11,x11,1</text>
+
+  <!-- outer_next → outer_loop -->
+  <line x1="665" y1="273" x2="720" y2="273" stroke="#2563EB" stroke-width="2"/>
+  <line x1="720" y1="273" x2="720" y2="145" stroke="#2563EB" stroke-width="2"/>
+  <line x1="720" y1="145" x2="470" y2="145" stroke="#2563EB" stroke-width="2" marker-end="url(#arr-sort)"/>
+
+  <!-- done -->
+  <ellipse cx="85" cy="145" rx="55" ry="22" fill="#16A34A" stroke="#15803D" stroke-width="2"/>
+  <text x="85" y="150" text-anchor="middle" font-size="12" fill="white" font-weight="bold">완료 (done)</text>
+  <text x="85" y="172" text-anchor="middle" font-size="10" fill="#64748B" font-family="monospace">nop</text>
+
+</svg>

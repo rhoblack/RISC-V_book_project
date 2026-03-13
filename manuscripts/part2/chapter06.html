@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 06 — 제어 유닛과 단일 사이클 통합</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 06</span>
+  <h1>제어 유닛과 단일 사이클 통합</h1>
+  <p class="chapter-intro">
+    지금까지 CPU를 이루는 부품들을 하나씩 제작했습니다. 이 챕터에서는 그 부품들이 하나의 완전한 CPU가 됩니다.
+    명령어 디코더와 제어 신호를 설계하고, 이를 통해 RV32I 37개 명령어를 실행하는 단일 사이클 프로세서를 완성합니다.
+    챕터가 끝날 때, 여러분이 직접 만든 CPU 위에서 피보나치 수열 프로그램이 실행됩니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>opcode, funct3, funct7 필드를 해석하여 37개 RV32I 명령어를 분류하는 명령어 디코더를 설명할 수 있다. <em>(이해)</em></li>
+    <li>ALUSel, ImmSel, RegWEn, MemRW, PCSel, WBSel 등 제어 신호의 기능을 정의하고, 각 명령어 유형별 제어 신호 값을 도출할 수 있다. <em>(이해/적용)</em></li>
+    <li>Ch04~Ch05에서 완성한 모듈을 계층적으로 연결하여 단일 사이클 프로세서 top-level을 구현할 수 있다. <em>(적용)</em></li>
+    <li>피보나치 수열 프로그램이 단일 사이클 CPU에서 올바르게 실행됨을 시뮬레이션 파형으로 검증할 수 있다. <em>(적용)</em></li>
+    <li>Vivado 합성 결과에서 단일 사이클 프로세서의 임계 경로와 최대 동작 주파수를 찾아내고 설명할 수 있다. <em>(분석)</em></li>
+    <li>WNS, TNS의 의미를 해석하고, 타이밍 위반 시 최적화 전략을 근거와 함께 제시할 수 있다. <em>(평가)</em></li>
+  </ul>
+</nav>
+
+<!-- ===== 챕터 도입부 ===== -->
+<section id="chapter-intro-narrative">
+  <h2>지금까지 만든 것, 그리고 앞으로 할 것</h2>
+
+  <p>
+    여러분은 이미 CPU의 핵심 부품들을 모두 만들었습니다. Ch04에서는 ALU(산술 논리 유닛, Arithmetic Logic Unit),
+    레지스터 파일(Register File), 즉치수 생성기(Immediate Generator)를 설계했고,
+    Ch05에서는 명령어 메모리(Instruction Memory)와 데이터 메모리(Data Memory)를 완성했습니다.
+  </p>
+
+  <p>
+    이 챕터에서 새로 배울 개념은 단 두 가지입니다: <strong>명령어 디코더(Instruction Decoder)</strong>와
+    <strong>제어 신호(Control Signal)</strong>. 나머지는 연결(wiring)입니다. 부품들을 올바른 순서로
+    올바르게 연결하면, 그것이 바로 CPU가 됩니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong>
+    레고 세트를 생각해 보십시오. 각 블록은 이미 만들어져 있습니다. 설명서가 바로 제어 신호입니다.
+    "1번 블록의 왼쪽 돌출부를 2번 블록의 오른쪽 홈에 끼우시오"—이 지시 사항들이 없으면
+    아무리 좋은 블록이 있어도 집을 지을 수 없습니다. 제어 유닛은 CPU의 설명서 역할을 합니다.
+  </div>
+
+  <p>
+    이 챕터가 끝날 때, 여러분이 직접 설계한 CPU 위에서 피보나치 수열이 실행됩니다.
+    F(0)=0, F(1)=1, F(2)=1, …, F(11)=89까지, 여러분의 RISC-V 프로세서가 직접 계산합니다.
+    이것이 <strong>Part 2의 첫 번째 대성취(★★)</strong>입니다.
+  </p>
+</section>
+
+
+<!-- ========== 6.1절 ========== -->
+<section id="sec-06-1">
+  <h2>6.1 명령어 디코더 설계</h2>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 디코더가 할 일을 먼저 상상해봅시다</strong>
+    <p>
+      CPU는 32비트 이진수 명령어를 받습니다. 어떻게 그 이진수가 "ADD 연산을 수행하고 레지스터 파일에 저장하라"는 동작으로 바뀔까요?
+      이 질문에 아직 답이 없어도 괜찮습니다. 이 절을 읽은 뒤 다시 이 질문으로 돌아오십시오.
+    </p>
+  </aside>
+
+  <h3>6.1.1 명령어 필드와 디코딩 원리</h3>
+
+  <p>
+    RISC-V 32비트 명령어는 기능에 따라 여러 필드(field)로 나뉩니다. 디코더의 역할은 이 필드들을 읽어
+    "지금 이 명령어는 무엇을 하라는 것인가?"를 결정하는 것입니다.
+    핵심 필드는 세 가지입니다.
+  </p>
+
+  <ul>
+    <li><strong>opcode [6:0]</strong> — 명령어 유형을 결정합니다. R 타입인지, Load인지, Branch인지 이 7비트만 보면 알 수 있습니다.</li>
+    <li><strong>funct3 [14:12]</strong> — 같은 opcode 내에서 세부 연산을 구분합니다. ADD와 SUB는 같은 R 타입 opcode를 가지지만 funct3이 다릅니다.</li>
+    <li><strong>funct7[5] (instr[30])</strong> — funct3만으로 구분이 안 될 때 사용합니다. ADD(funct7[5]=0)와 SUB(funct7[5]=1), SRL과 SRA를 구분합니다.</li>
+  </ul>
+
+  <figure>
+    <img src="../../figures/ch06_sec01_decoder_overview.svg" alt="명령어 디코딩 흐름도: 32비트 명령어에서 opcode, funct3, funct7을 분리하여 9개 제어 신호를 생성하는 과정">
+    <figcaption>그림 6.1: 명령어 디코딩 흐름 — 32비트 명령어의 각 필드가 어떤 제어 신호로 변환되는지 보여줍니다.</figcaption>
+  </figure>
+
+  <h3>6.1.2 RV32I opcode 분류표</h3>
+
+  <p>
+    RV32I에는 37개의 명령어가 있습니다. 이들을 opcode 값에 따라 분류하면 다음과 같습니다.
+    디코더의 첫 번째 단계는 이 opcode를 case 문으로 분기하는 것입니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>opcode (2진수)</th><th>명령어 타입</th><th>해당 명령어</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>7'b011_0011</code></td><td>R 타입</td><td>ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND (10개)</td></tr>
+      <tr><td><code>7'b001_0011</code></td><td>I-ALU 타입</td><td>ADDI, SLLI, SLTI, SLTIU, XORI, SRLI, SRAI, ORI, ANDI (9개)</td></tr>
+      <tr><td><code>7'b000_0011</code></td><td>Load 타입</td><td>LB, LH, LW, LBU, LHU (5개)</td></tr>
+      <tr><td><code>7'b010_0011</code></td><td>S 타입 (Store)</td><td>SB, SH, SW (3개)</td></tr>
+      <tr><td><code>7'b110_0011</code></td><td>B 타입 (Branch)</td><td>BEQ, BNE, BLT, BGE, BLTU, BGEU (6개)</td></tr>
+      <tr><td><code>7'b011_0111</code></td><td>LUI</td><td>LUI (1개)</td></tr>
+      <tr><td><code>7'b001_0111</code></td><td>AUIPC</td><td>AUIPC (1개)</td></tr>
+      <tr><td><code>7'b110_1111</code></td><td>JAL</td><td>JAL (1개)</td></tr>
+      <tr><td><code>7'b110_0111</code></td><td>JALR</td><td>JALR (1개)</td></tr>
+      <tr><td><code>7'b000_1111</code></td><td>FENCE</td><td>FENCE → NOP 처리</td></tr>
+      <tr><td><code>7'b111_0011</code></td><td>SYSTEM</td><td>ECALL, EBREAK → NOP 처리</td></tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 37개 명령어를 모두 외울 필요 없습니다</strong>
+    <p>
+      실무에서 디코더를 설계할 때는 opcode만 외우면 됩니다. funct3, funct7은 ISA 스펙 문서를 옆에 놓고 참조하면서 작성합니다.
+      중요한 것은 "어떤 필드를 보고 어떤 신호를 결정하는가"라는 논리적 구조를 이해하는 것입니다.
+      Vivado에서 합성할 때 경고 메시지가 나오면 스펙 문서를 다시 확인하는 습관을 들이십시오.
+    </p>
+  </aside>
+
+  <h3>6.1.2.1 B 타입과 J 타입의 즉치수 비트 재배열</h3>
+
+  <p>
+    opcode 분류표를 보면 B 타입(분기)과 J 타입(JAL)이 따로 구분됩니다.
+    이 두 타입의 즉치수(immediate) 인코딩에는 한 가지 특이한 점이 있습니다.
+    다른 타입과 달리, 비트들이 뒤섞인 순서로 배치됩니다.
+  </p>
+
+  <p><strong>B 타입 즉치수 인코딩:</strong></p>
+  <pre><code class="language-verilog">// B 타입: imm = {instr[31], instr[7], instr[30:25], instr[11:8], 1'b0}
+// 비트 매핑:
+//   imm[12]  ← instr[31]  (부호 비트)
+//   imm[11]  ← instr[7]   (← 왜 여기에?)
+//   imm[10:5] ← instr[30:25]
+//   imm[4:1] ← instr[11:8]
+//   imm[0]   = 1'b0       (분기 오프셋은 항상 짝수)</code></pre>
+
+  <p><strong>J 타입 즉치수 인코딩:</strong></p>
+  <pre><code class="language-verilog">// J 타입: imm = {instr[31], instr[19:12], instr[20], instr[30:21], 1'b0}
+// 비트 매핑:
+//   imm[20]   ← instr[31]   (부호 비트)
+//   imm[19:12] ← instr[19:12]
+//   imm[11]   ← instr[20]  (← 왜 여기에?)
+//   imm[10:1] ← instr[30:21]
+//   imm[0]   = 1'b0        (점프 오프셋은 항상 짝수)</code></pre>
+
+  <p>
+    <strong>왜 비트를 섞어 놓았는가?</strong> 처음 보면 의도적으로 복잡하게 만든 것처럼 보입니다.
+    그러나 이는 하드웨어 복잡성을 낮추기 위한 의도적 설계입니다.
+    RISC-V ISA 스펙(Vol. I, 2.3절)에 따르면 이 설계에는 두 가지 핵심 목표가 있습니다.
+  </p>
+
+  <ol>
+    <li>
+      <strong>부호 비트(instr[31])의 위치 통일</strong>: I/S/B/U/J 모든 타입에서
+      즉치수의 부호 비트(최상위 비트)는 항상 <code>instr[31]</code>에 위치합니다.
+      덕분에 부호 확장(sign extension) 회로를 하나만 공유할 수 있습니다.
+      만약 타입마다 부호 비트 위치가 다르면, 각 타입마다 별도의 부호 확장 회로가 필요했을 것입니다.
+    </li>
+    <li>
+      <strong>rs1/rs2 필드 위치 보존</strong>: B 타입 명령어의 인코딩에서
+      <code>instr[19:15]</code>(rs1)와 <code>instr[24:20]</code>(rs2) 필드는
+      R 타입, I 타입과 동일한 위치를 유지합니다.
+      디코더가 opcode를 보기 전에 미리 레지스터 주소를 읽기 시작하는
+      <em>조기 레지스터 읽기(early register read)</em> 최적화가 가능해집니다.
+    </li>
+  </ol>
+
+  <p>
+    결론적으로, <code>instr[7]</code>이 <code>imm[11]</code>에 배치되는 이유는
+    그 자리에 rs2 필드(<code>instr[24:20]</code>)와 funct7(<code>instr[31:25]</code>)을
+    유지해야 하기 때문입니다. 즉치수의 일부 비트가 rs2/funct7 영역에서 밀려나
+    <code>instr[7]</code>이라는 빈 자리를 채우게 됩니다.
+    비트 재배열은 즉치수 생성기(Immediate Generator)가 담당하며,
+    디코더 자체의 복잡성은 전혀 증가하지 않습니다.
+  </p>
+
+  <h3>6.1.3 명령어 디코더 SystemVerilog 구현</h3>
+
+  <p>
+    디코더는 순수한 조합 논리(combinational logic)입니다. 클록이 없습니다.
+    명령어가 입력되면 즉시(동시에) 모든 제어 신호가 출력됩니다.
+    SystemVerilog에서는 <code>always_comb</code> 블록으로 구현합니다.
+  </p>
+
+  <p>먼저 5개의 <code>typedef enum</code>을 정의합니다. 이 열거형은 제어 신호의 의미를 코드에서 명확하게 표현하기 위한 것입니다.</p>
+
+  <pre><code class="language-verilog">// ALU 연산 코드 (4비트 — 10가지 연산)
+typedef enum logic [3:0] {
+   ALU_ADD  = 4'b0000,   // 덧셈
+   ALU_SUB  = 4'b0001,   // 뺄셈
+   ALU_AND  = 4'b0010,   // 비트 AND
+   ALU_OR   = 4'b0011,   // 비트 OR
+   ALU_XOR  = 4'b0100,   // 비트 XOR
+   ALU_SLL  = 4'b0101,   // 좌측 논리 시프트
+   ALU_SRL  = 4'b0110,   // 우측 논리 시프트
+   ALU_SRA  = 4'b0111,   // 우측 산술 시프트
+   ALU_SLT  = 4'b1000,   // 부호 있는 비교
+   ALU_SLTU = 4'b1001    // 부호 없는 비교
+} alu_op_t;
+
+// 즉치수 타입 (3비트)
+typedef enum logic [2:0] {
+   IMM_I = 3'b000,   // I 타입: instr[31:20]
+   IMM_S = 3'b001,   // S 타입: {instr[31:25], instr[11:7]}
+   IMM_B = 3'b010,   // B 타입: 분기 오프셋
+   IMM_U = 3'b011,   // U 타입: 상위 20비트
+   IMM_J = 3'b100    // J 타입: 점프 오프셋
+} imm_sel_t;
+
+// Write-Back 소스 (2비트)
+typedef enum logic [1:0] {
+   WB_ALU = 2'b00,   // ALU 결과
+   WB_MEM = 2'b01,   // 메모리 읽기 결과
+   WB_PC4 = 2'b10    // PC + 4 (JAL/JALR 복귀 주소)
+} wb_sel_t;
+
+// PC 소스 (2비트)
+typedef enum logic [1:0] {
+   PC_PLUS4  = 2'b00,  // 순차 실행
+   PC_BRANCH = 2'b01,  // 분기/JAL 목표 주소
+   PC_JALR   = 2'b10   // JALR 목표 주소
+} pc_sel_t;
+
+// 메모리 접근 (2비트)
+typedef enum logic [1:0] {
+   MEM_NONE  = 2'b00,  // 메모리 접근 없음
+   MEM_READ  = 2'b01,  // Load 명령어
+   MEM_WRITE = 2'b10   // Store 명령어
+} mem_rw_t;</code></pre>
+
+  <p>다음은 디코더 모듈의 포트와 핵심 opcode case 문입니다. 기본값(default value)을 먼저 설정하고 각 opcode별로 재정의하는 방식은 래치(latch) 생성을 방지하는 표준적인 SystemVerilog 관용구입니다.</p>
+
+  <pre><code class="language-verilog">module instruction_decoder (
+   input  logic [31:0] instr,
+   input  logic        br_eq,
+   input  logic        br_lt,
+   output alu_op_t     alu_sel,
+   output imm_sel_t    imm_sel,
+   output logic        reg_w_en,
+   output mem_rw_t     mem_rw,
+   output pc_sel_t     pc_sel,
+   output wb_sel_t     wb_sel,
+   output logic        a_sel,
+   output logic        b_sel,
+   output logic        br_un,
+   output logic        illegal_instr
+);
+   logic [6:0] opcode;
+   logic [2:0] funct3;
+   logic [6:0] funct7;
+
+   assign opcode = instr[6:0];
+   assign funct3 = instr[14:12];
+   assign funct7 = instr[31:25];
+
+   // --- 분기 조건 판정 (조합 논리) ---
+   logic branch_taken;
+   always_comb begin
+      branch_taken = 1'b0;
+      if (opcode == 7'b1100011) begin
+         case (funct3)
+            3'b000: branch_taken = br_eq;   // BEQ
+            3'b001: branch_taken = ~br_eq;  // BNE
+            3'b100: branch_taken = br_lt;   // BLT
+            3'b101: branch_taken = ~br_lt;  // BGE
+            3'b110: branch_taken = br_lt;   // BLTU
+            3'b111: branch_taken = ~br_lt;  // BGEU
+            default: branch_taken = 1'b0;
+         endcase
+      end
+   end
+
+   // --- 메인 디코더: opcode 기반 제어 신호 생성 ---
+   always_comb begin
+      // 기본값 설정 (래치 방지 — synthesizable 관용구)
+      alu_sel = ALU_ADD;  imm_sel = IMM_I;  reg_w_en = 1'b0;
+      mem_rw  = MEM_NONE; pc_sel  = PC_PLUS4; wb_sel = WB_ALU;
+      a_sel   = 1'b0;     b_sel   = 1'b0;    br_un  = 1'b0;
+      illegal_instr = 1'b0;
+
+      case (opcode)
+         7'b0110011: begin  // R 타입
+            reg_w_en = 1'b1;
+            case (funct3)
+               3'b000: alu_sel = funct7[5] ? ALU_SUB : ALU_ADD;
+               3'b001: alu_sel = ALU_SLL;
+               3'b010: alu_sel = ALU_SLT;
+               3'b011: alu_sel = ALU_SLTU;
+               3'b100: alu_sel = ALU_XOR;
+               3'b101: alu_sel = funct7[5] ? ALU_SRA : ALU_SRL;
+               3'b110: alu_sel = ALU_OR;
+               3'b111: alu_sel = ALU_AND;
+            endcase
+         end
+
+         7'b0010011: begin  // I-ALU 타입
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_I;
+            case (funct3)
+               3'b000: alu_sel = ALU_ADD;   // ADDI
+               3'b001: alu_sel = ALU_SLL;   // SLLI
+               3'b010: alu_sel = ALU_SLT;   // SLTI
+               3'b011: alu_sel = ALU_SLTU;  // SLTIU
+               3'b100: alu_sel = ALU_XOR;   // XORI
+               3'b101: alu_sel = funct7[5] ? ALU_SRA : ALU_SRL;
+               3'b110: alu_sel = ALU_OR;    // ORI
+               3'b111: alu_sel = ALU_AND;   // ANDI
+            endcase
+         end
+
+         7'b0000011: begin  // Load
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_I;
+            mem_rw = MEM_READ; wb_sel = WB_MEM;
+         end
+
+         7'b0100011: begin  // Store
+            b_sel = 1'b1; imm_sel = IMM_S; mem_rw = MEM_WRITE;
+         end
+
+         7'b1100011: begin  // Branch
+            a_sel = 1'b1; b_sel = 1'b1; imm_sel = IMM_B;
+            pc_sel = branch_taken ? PC_BRANCH : PC_PLUS4;
+            br_un  = funct3[1];
+         end
+
+         7'b1101111: begin  // JAL
+            reg_w_en = 1'b1; a_sel = 1'b1; b_sel = 1'b1;
+            imm_sel = IMM_J; pc_sel = PC_BRANCH; wb_sel = WB_PC4;
+         end
+
+         7'b1100111: begin  // JALR
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_I;
+            pc_sel = PC_JALR; wb_sel = WB_PC4;
+         end
+
+         7'b0110111: begin  // LUI
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_U;
+         end
+
+         7'b0010111: begin  // AUIPC
+            reg_w_en = 1'b1; a_sel = 1'b1; b_sel = 1'b1; imm_sel = IMM_U;
+         end
+
+         7'b0001111: begin  // FENCE → NOP 처리 (명시적 case)
+            // 아무 동작 없음 (기본값 유지)
+         end
+
+         7'b1110011: begin  // ECALL/EBREAK → NOP 처리
+            // 최소 구현: 아무 동작 없음
+         end
+
+         default: begin
+            illegal_instr = 1'b1;
+         end
+      endcase
+   end
+endmodule</code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> SLLI, SRLI, SRAI는 I 타입인데 왜 funct7도 확인하나요? I 타입이면 funct7이 없지 않나요?</p>
+    <p>
+      <strong>A:</strong> 엄밀히 말하면 맞습니다. 하지만 시프트 즉치수 명령어는 예외적으로
+      instr[31:25] 필드(통상 I 타입에서 즉치수의 상위 7비트에 해당하는 영역)를 funct7처럼 사용합니다.
+      시프트 양(shamt)은 5비트(instr[24:20])이면 충분하고, 나머지 7비트(instr[31:25])에서
+      bit[5](instr[30])이 0이면 논리 시프트, 1이면 산술 시프트를 의미합니다.
+      RISC-V ISA 스펙(Vol.1, 2.4절)에 명시된 규약입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 질문에 답해 보십시오:</p>
+    <ul>
+      <li>디코더가 사용하는 필드 세 가지는 무엇입니까? 각각 몇 비트입니까?</li>
+      <li>R 타입 ADD와 SUB를 구분하는 필드는 무엇입니까? (힌트: funct3은 둘 다 3'b000)</li>
+      <li>디코더 출력은 조합 논리입니까, 순차 논리입니까? 클록이 필요합니까?</li>
+    </ul>
+  </aside>
+
+</section>
+
+
+<!-- ========== 6.2절 ========== -->
+<section id="sec-06-2">
+  <h2>6.2 제어 신호 정의</h2>
+
+  <p>
+    디코더가 출력하는 제어 신호(control signal)들은 데이터패스의 각 구성 요소가 이번 클록 사이클에
+    무엇을 해야 할지를 지시합니다. 교통 신호처럼, 데이터가 어느 길로 흘러야 하는지, 어디서 멈추어야 하는지,
+    어느 연산을 수행해야 하는지를 결정합니다.
+  </p>
+
+  <h3>6.2.1 제어 신호 목록과 역할</h3>
+
+  <table>
+    <thead>
+      <tr><th>신호명</th><th>비트 폭</th><th>역할</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>alu_sel</code></td><td>4비트 (enum)</td><td>ALU가 수행할 연산 선택 (ADD, SUB, AND, …)</td></tr>
+      <tr><td><code>imm_sel</code></td><td>3비트 (enum)</td><td>즉치수 생성기의 출력 타입 선택 (I/S/B/U/J)</td></tr>
+      <tr><td><code>reg_w_en</code></td><td>1비트</td><td>1이면 레지스터 파일 rd에 쓰기 허용</td></tr>
+      <tr><td><code>mem_rw</code></td><td>2비트 (enum)</td><td>NONE/READ/WRITE — 데이터 메모리 접근 제어</td></tr>
+      <tr><td><code>pc_sel</code></td><td>2비트 (enum)</td><td>다음 PC 소스: PC+4 / 분기 목표 / JALR 목표</td></tr>
+      <tr><td><code>wb_sel</code></td><td>2비트 (enum)</td><td>Write-Back 소스: ALU 결과 / 메모리 데이터 / PC+4</td></tr>
+      <tr><td><code>a_sel</code></td><td>1비트</td><td>ALU A 입력: 0=rs1, 1=PC</td></tr>
+      <tr><td><code>b_sel</code></td><td>1비트</td><td>ALU B 입력: 0=rs2, 1=즉치수</td></tr>
+      <tr><td><code>br_un</code></td><td>1비트</td><td>분기 비교기 모드: 0=부호 있는 비교, 1=무부호 비교</td></tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../figures/ch06_sec02_control_signals.svg" alt="제어 신호 9개가 데이터패스의 각 구성 요소를 파선 화살표로 제어하는 다이어그램">
+    <figcaption>그림 6.2: 9개 제어 신호와 데이터패스 제어 관계 — 파선은 제어 신호, 실선은 데이터 경로를 나타냅니다.</figcaption>
+  </figure>
+
+  <h3>6.2.2 명령어 타입별 제어 신호 진리표</h3>
+
+  <p>
+    이 표는 암기 목록이 아닙니다. 총 9가지 명령어 그룹에 걸쳐 패턴은 세 가지뿐입니다:
+    <strong>RegWEn</strong>(레지스터에 쓰는가?), <strong>MemRW</strong>(메모리에 접근하는가?),
+    <strong>PCSel</strong>(PC를 분기하는가?). 나머지 신호들은 이 세 가지를 결정하고 나면
+    자연스럽게 따라옵니다.
+    지금은 전체 흐름을 이해하는 데 집중하십시오.
+  </p>
+
+  <p>
+    제어 신호 진리표는 순서대로 살펴보겠습니다. 외우려 하지 말고, 각 명령어가 무엇을 해야 하는지를
+    논리적으로 유도하십시오.
+  </p>
+
+  <h4>R 타입 (ADD, SUB, XOR, …)</h4>
+  <p>
+    R 타입은 두 레지스터를 읽어 ALU 연산 후 결과를 레지스터에 쓰는 가장 단순한 형태입니다.
+    메모리 접근이 없고, 즉치수도 사용하지 않습니다.
+  </p>
+  <table>
+    <thead><tr><th>reg_w_en</th><th>mem_rw</th><th>wb_sel</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>pc_sel</th><th>alu_sel</th></tr></thead>
+    <tbody><tr><td>1</td><td>NONE</td><td>ALU</td><td>rs1(0)</td><td>rs2(0)</td><td>X</td><td>PC+4</td><td>funct3/7 결정</td></tr></tbody>
+  </table>
+
+  <h4>I-ALU 타입 (ADDI, XORI, ANDI, …)</h4>
+  <p>
+    R 타입과 거의 같지만, ALU B 입력이 rs2 대신 즉치수(imm)입니다.
+    <code>b_sel=1</code>이 핵심 차이점입니다.
+  </p>
+  <table>
+    <thead><tr><th>reg_w_en</th><th>mem_rw</th><th>wb_sel</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>pc_sel</th><th>alu_sel</th></tr></thead>
+    <tbody><tr><td>1</td><td>NONE</td><td>ALU</td><td>rs1(0)</td><td>imm(1)</td><td>I</td><td>PC+4</td><td>funct3 결정</td></tr></tbody>
+  </table>
+
+  <h4>Load 타입 (LW, LB, LH, …)</h4>
+  <p>
+    주소를 ALU로 계산(rs1+imm)하고, 메모리를 읽어 레지스터에 씁니다.
+    Write-Back 소스가 ALU가 아닌 메모리(<code>wb_sel=MEM</code>)임에 주목하십시오.
+  </p>
+  <table>
+    <thead><tr><th>reg_w_en</th><th>mem_rw</th><th>wb_sel</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>pc_sel</th><th>alu_sel</th></tr></thead>
+    <tbody><tr><td>1</td><td>READ</td><td>MEM</td><td>rs1(0)</td><td>imm(1)</td><td>I</td><td>PC+4</td><td>ADD</td></tr></tbody>
+  </table>
+
+  <h4>Store 타입 (SW, SB, SH)</h4>
+  <p>
+    레지스터에서 메모리로 쓰는 명령어. 목적지 레지스터(rd)가 없으므로 <code>reg_w_en=0</code>입니다.
+    즉치수 타입이 S 타입(<code>imm_sel=IMM_S</code>)이라는 점도 중요합니다.
+  </p>
+  <table>
+    <thead><tr><th>reg_w_en</th><th>mem_rw</th><th>wb_sel</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>pc_sel</th><th>alu_sel</th></tr></thead>
+    <tbody><tr><td>0</td><td>WRITE</td><td>X</td><td>rs1(0)</td><td>imm(1)</td><td>S</td><td>PC+4</td><td>ADD</td></tr></tbody>
+  </table>
+
+  <h4>Branch 타입 (BEQ, BNE, BLT, …)</h4>
+  <p>
+    분기 명령어는 레지스터에 쓰지 않습니다(<code>reg_w_en=0</code>).
+    ALU는 분기 목표 주소(PC + imm)를 계산하므로 <code>a_sel=PC(1)</code>입니다.
+    분기 성립 여부에 따라 <code>pc_sel</code>이 결정됩니다.
+  </p>
+  <table>
+    <thead><tr><th>reg_w_en</th><th>mem_rw</th><th>wb_sel</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>pc_sel</th><th>alu_sel</th></tr></thead>
+    <tbody><tr><td>0</td><td>NONE</td><td>X</td><td>PC(1)</td><td>imm(1)</td><td>B</td><td>조건부</td><td>ADD</td></tr></tbody>
+  </table>
+
+  <h4>JAL / JALR</h4>
+  <p>
+    JAL은 점프 목표 주소를 PC+imm으로 계산합니다(<code>a_sel=PC</code>).
+    JALR은 rs1+imm으로 계산합니다(<code>a_sel=rs1</code>).
+    둘 다 복귀 주소(PC+4)를 rd에 저장하므로 <code>wb_sel=WB_PC4</code>입니다.
+  </p>
+  <table>
+    <thead><tr><th>명령어</th><th>reg_w_en</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>pc_sel</th><th>wb_sel</th></tr></thead>
+    <tbody>
+      <tr><td>JAL</td><td>1</td><td>PC(1)</td><td>imm(1)</td><td>J</td><td>BRANCH</td><td>PC+4</td></tr>
+      <tr><td>JALR</td><td>1</td><td>rs1(0)</td><td>imm(1)</td><td>I</td><td>JALR</td><td>PC+4</td></tr>
+    </tbody>
+  </table>
+
+  <h4>LUI / AUIPC</h4>
+  <p>
+    LUI는 상위 20비트 즉치수를 레지스터에 로드합니다. ALU에서 0+imm을 계산하는 방식으로 구현합니다.
+    AUIPC는 PC+imm을 계산하므로 <code>a_sel=PC(1)</code>입니다.
+  </p>
+  <p>
+    LUI에서 <code>a_sel=0</code>(rs1 선택)으로 구현하는 근거는 RISC-V ISA 스펙(Vol. I, 2.4절)에 있습니다.
+    LUI 명령어의 rs1 필드는 <em>don't-care</em>로 정의됩니다.
+    표준 어셈블러(GAS, LLVM)는 이 필드를 항상 <code>x0</code>(5'b00000)으로 채웁니다.
+    레지스터 파일은 <code>rs1_addr == 5'd0</code>일 때 항상 <code>32'h0</code>을 반환하므로,
+    <code>a_sel=0</code> 시 ALU A 입력은 항상 0이 됩니다.
+    이 구현은 어셈블러가 RISC-V 스펙을 준수함을 전제로 합니다.
+  </p>
+  <table>
+    <thead><tr><th>명령어</th><th>reg_w_en</th><th>a_sel</th><th>b_sel</th><th>imm_sel</th><th>alu_sel</th><th>wb_sel</th></tr></thead>
+    <tbody>
+      <tr><td>LUI</td><td>1</td><td>rs1(0, x0)</td><td>imm(1)</td><td>U</td><td>ADD</td><td>ALU</td></tr>
+      <tr><td>AUIPC</td><td>1</td><td>PC(1)</td><td>imm(1)</td><td>U</td><td>ADD</td><td>ALU</td></tr>
+    </tbody>
+  </table>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 진리표에 X(don't-care) 값이 있는데, 합성 시 어떻게 처리되나요? 아무 값이나 넣어도 되나요?</p>
+    <p>
+      <strong>A:</strong> 합성 도구는 don't-care를 최적화에 활용합니다. 즉, 합성 도구가 타이밍 또는 면적에 유리한 값을 자동으로 선택합니다.
+      그러나 시뮬레이션에서는 X가 그대로 X(unknown)로 전파될 수 있어 파형 해석이 어려워집니다.
+      따라서 SystemVerilog 코드에서는 always_comb 블록의 기본값 설정(default assignment) 관용구를 사용하여
+      모든 신호를 명시적으로 초기화한 뒤, 필요한 경우에만 재정의하는 방식을 권장합니다.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 진리표를 외우지 말고 유도하세요</strong>
+    <p>
+      제어 신호 진리표는 암기 대상이 아닙니다. 각 명령어에 대해 "데이터가 어디서 와서 어디로 가는가?"를
+      데이터패스 그림에서 추적하면 자연스럽게 유도됩니다. 예를 들어 SW 명령어를 분석한다면:
+      "메모리에 써야 하니 mem_rw=WRITE, rd가 없으니 reg_w_en=0, 주소는 rs1+offset이니 a_sel=0, b_sel=1, imm_sel=IMM_S, ALU는 ADD."
+      이 추론 과정 자체가 실력입니다.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트 — 하드와이어드 vs 마이크로프로그래밍</strong>
+    <p>
+      <strong>Q:</strong> 우리가 구현한 제어 유닛 방식의 명칭과 장단점은 무엇입니까?
+    </p>
+    <p>
+      <strong>A:</strong> 하드와이어드 제어(hardwired control) 방식입니다. 조합 논리로 구현하므로
+      속도가 빠르고 구현이 간단합니다. 반면 마이크로프로그래밍(microprogramming) 방식은
+      제어 신호를 ROM에 저장하여 유연성이 높지만 속도가 느립니다.
+      현대 고성능 CPU는 하드와이어드 방식을 사용하며, RISC ISA의 단순한 명령어 형식이
+      이 방식에 특히 적합합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <ul>
+      <li>reg_w_en=1인 명령어 유형을 모두 나열해 보십시오. (힌트: rd가 있는 타입들)</li>
+      <li>S 타입(Store)의 MemRW와 RegWEn 값은 각각 무엇입니까?</li>
+      <li>BEQ에서 분기가 성립(taken)하면 PCSel은 무엇입니까? 성립하지 않으면(not-taken)?</li>
+    </ul>
+  </aside>
+
+</section>
+
+
+<!-- ========== 6.3절 ========== -->
+<section id="sec-06-3">
+  <h2>6.3 단일 사이클 데이터패스 통합</h2>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 지금 연결하는 것과 아직 연결하지 않은 것</strong>
+    <p>
+      이 절에서는 6개의 모듈(PC, IMEM, 제어유닛, RF, ImmGen, ALU, DMEM)과 3개의 MUX를 연결합니다.
+      시작하기 전에, 각 모듈의 입출력 포트가 무엇인지 Ch04~Ch05 코드를 머릿속으로 떠올려 보십시오.
+      포트 이름과 비트 폭을 정확히 기억하고 있어야 연결 오류를 줄일 수 있습니다.
+    </p>
+  </aside>
+
+  <h3>6.3.1 Top-Level 모듈 구조</h3>
+
+  <p>
+    6.1절에서 만든 <code>instruction_decoder</code>와 분기 비교기(<code>branch_comparator</code>)를
+    하나의 모듈로 묶은 것이 <code>control_unit</code>입니다.
+    <code>branch_comparator</code>는 <code>rs1_data</code>와 <code>rs2_data</code>를 입력받아
+    <code>br_eq</code>(같음)와 <code>br_lt</code>(작음) 신호를 출력하는 조합 논리 모듈입니다.
+    <code>control_unit</code>은 이 두 신호를 <code>instruction_decoder</code>에 전달하여
+    분기 조건을 판정합니다.
+    top-level 코드에서 <code>instruction_decoder</code> 대신 <code>control_unit</code>이
+    인스턴스화되는 이유가 바로 여기에 있습니다.
+    <code>control_unit</code>의 전체 코드는 전체 소스 코드 섹션의 <code>ch06_control_unit.sv</code>를 참조하십시오.
+  </p>
+
+  <p>
+    단일 사이클 프로세서의 최상위 모듈 <code>rv32i_single_cycle_top</code>은
+    모든 서브모듈을 포함합니다. 계층 구조는 다음과 같습니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch06_sec03_single_cycle_datapath.svg" alt="완성된 단일 사이클 데이터패스: PC, IMEM, 제어유닛, RF, ImmGen, MUX들, ALU, DMEM, WB MUX가 연결된 전체 구조">
+    <figcaption>그림 6.3: 완성된 단일 사이클 데이터패스 — 실선은 데이터 경로, 파선은 제어 신호입니다.</figcaption>
+  </figure>
+
+  <p>
+    이 다이어그램을 처음 보면 복잡해 보일 수 있습니다.
+    다음 순서로 한 경로씩 따라가십시오:
+    ① <strong>PC→IMEM</strong>(명령어 인출 경로),
+    ② <strong>IMEM→제어유닛→각 모듈</strong>(제어 신호 경로, 파선),
+    ③ <strong>RF→ALU→MUX</strong>(산술 연산 경로),
+    ④ <strong>ALU→DMEM→WB MUX→RF</strong>(Load 명령어 경로).
+    네 경로를 모두 이해하면 단일 사이클 CPU의 전체 동작이 보입니다.
+  </p>
+
+  <h3>6.3.2 MUX 연결: 세 곳의 선택 지점</h3>
+
+  <p>
+    데이터패스에는 세 곳의 멀티플렉서(MUX)가 있습니다. 이 MUX들은 제어 신호에 따라 데이터 경로를 결정합니다.
+  </p>
+
+  <ul>
+    <li><strong>ALU-A MUX</strong>: <code>a_sel=0</code>이면 rs1_data, <code>a_sel=1</code>이면 PC</li>
+    <li><strong>ALU-B MUX</strong>: <code>b_sel=0</code>이면 rs2_data, <code>b_sel=1</code>이면 즉치수(imm)</li>
+    <li><strong>WB MUX</strong>: <code>wb_sel=WB_ALU</code>이면 ALU 결과, <code>WB_MEM</code>이면 메모리 데이터, <code>WB_PC4</code>이면 PC+4</li>
+  </ul>
+
+  <pre><code class="language-verilog">// ALU 입력 MUX (assign 문으로 간결하게 구현)
+assign alu_a = a_sel ? pc : rs1_data;
+assign alu_b = b_sel ? imm : rs2_data;
+
+// Write-Back MUX
+always_comb begin
+   case (wb_sel)
+      WB_ALU: rd_data = alu_result;
+      WB_MEM: rd_data = dmem_rdata_ext;   // 부호/무부호 확장 후
+      WB_PC4: rd_data = pc_plus4;
+      default: rd_data = alu_result;
+   endcase
+end</code></pre>
+
+  <h3>6.3.3 Top-Level 전체 구현</h3>
+
+  <p>
+    아래는 단일 사이클 프로세서의 top-level 모듈 핵심 부분입니다.
+    PC 레지스터, 서브모듈 인스턴스, MUX, 로드 데이터 확장까지 포함합니다.
+  </p>
+
+  <p>
+    코드가 길어 보이지만, 이 코드에서 실제로 새로 작성해야 하는 논리는 세 부분뿐입니다:
+    ① PC 레지스터와 다음 PC MUX,
+    ② ALU 입력 MUX 2개(A/B),
+    ③ Write-Back MUX와 로드 데이터 확장 로직.
+    나머지는 Ch04~Ch05 모듈의 포트 연결(instantiation)입니다.
+    신호 선언 블록은 이후 각 서브모듈 연결 과정에서 의미가 드러납니다.
+  </p>
+
+  <pre><code class="language-verilog">module rv32i_single_cycle_top #(
+   parameter IMEM_DEPTH = 1024,
+   parameter DMEM_DEPTH = 1024,
+   parameter IMEM_INIT  = ""
+)(
+   input  logic clk,
+   input  logic rst_n
+);
+
+   // --- 내부 신호 선언 ---
+   logic [31:0] pc, pc_plus4, pc_next;
+   logic [31:0] instr;
+   logic [31:0] rs1_data, rs2_data, rd_data;
+   logic [31:0] imm, alu_a, alu_b, alu_result;
+   logic [31:0] dmem_rdata, dmem_rdata_ext;
+   alu_op_t alu_sel; imm_sel_t imm_sel; wb_sel_t wb_sel;
+   pc_sel_t pc_sel;  mem_rw_t  mem_rw;
+   logic reg_w_en, a_sel, b_sel, br_un, illegal_instr;
+   logic [4:0] rs1_addr, rs2_addr, rd_addr;
+   logic [2:0] funct3;
+
+   // --- PC 레지스터 ---
+   assign pc_plus4 = pc + 32'd4;
+   always_ff @(posedge clk or negedge rst_n)
+      if (!rst_n) pc &lt;= 32'h0;
+      else        pc &lt;= pc_next;
+
+   always_comb begin
+      case (pc_sel)
+         PC_PLUS4:  pc_next = pc_plus4;
+         PC_BRANCH: pc_next = alu_result;
+         PC_JALR:   pc_next = alu_result &amp; 32'hFFFF_FFFE;
+         default:   pc_next = pc_plus4;
+      endcase
+   end
+
+   // --- 서브모듈 인스턴스 ---
+   instruction_memory #(.DEPTH(IMEM_DEPTH), .INIT_FILE(IMEM_INIT))
+      u_imem (.addr(pc), .instr(instr));
+
+   control_unit u_control (
+      .instr(instr), .rs1_data(rs1_data), .rs2_data(rs2_data),
+      .alu_sel(alu_sel), .imm_sel(imm_sel), .reg_w_en(reg_w_en),
+      .mem_rw(mem_rw), .pc_sel(pc_sel), .wb_sel(wb_sel),
+      .a_sel(a_sel), .b_sel(b_sel), .br_un(br_un),
+      .illegal_instr(illegal_instr),
+      .rs1_addr(rs1_addr), .rs2_addr(rs2_addr),
+      .rd_addr(rd_addr), .funct3_out(funct3)
+   );
+
+   register_file u_rf (
+      .clk(clk), .rst_n(rst_n),
+      .rs1_addr(rs1_addr), .rs2_addr(rs2_addr),
+      .rd_addr(rd_addr), .rd_data(rd_data), .reg_w_en(reg_w_en),
+      .rs1_data(rs1_data), .rs2_data(rs2_data)
+   );
+
+   immediate_generator u_immgen (.instr(instr), .imm_sel(imm_sel), .imm(imm));
+
+   // ALU 입력 MUX
+   assign alu_a = a_sel ? pc : rs1_data;
+   assign alu_b = b_sel ? imm : rs2_data;
+
+   alu u_alu (.a(alu_a), .b(alu_b), .alu_op(alu_sel), .result(alu_result));
+
+   data_memory #(.DEPTH(DMEM_DEPTH)) u_dmem (
+      .clk(clk), .addr(alu_result), .wdata(rs2_data),
+      .mem_rw(mem_rw), .funct3(funct3), .rdata(dmem_rdata)
+   );
+
+   // 로드 데이터 부호/무부호 확장
+   always_comb begin
+      case (funct3)
+         3'b000: dmem_rdata_ext = {{24{dmem_rdata[7]}},  dmem_rdata[7:0]};   // LB
+         3'b001: dmem_rdata_ext = {{16{dmem_rdata[15]}}, dmem_rdata[15:0]};  // LH
+         3'b010: dmem_rdata_ext = dmem_rdata;                                  // LW
+         3'b100: dmem_rdata_ext = {24'b0, dmem_rdata[7:0]};                   // LBU
+         3'b101: dmem_rdata_ext = {16'b0, dmem_rdata[15:0]};                  // LHU
+         default: dmem_rdata_ext = dmem_rdata;
+      endcase
+   end
+
+   // Write-Back MUX
+   always_comb begin
+      case (wb_sel)
+         WB_ALU: rd_data = alu_result;
+         WB_MEM: rd_data = dmem_rdata_ext;
+         WB_PC4: rd_data = pc_plus4;
+         default: rd_data = alu_result;
+      endcase
+   end
+
+endmodule</code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 포트 연결 오류 Top 3와 Vivado 에러 메시지 해석</strong>
+    <p>
+      모듈을 처음 연결할 때 가장 자주 발생하는 오류 세 가지입니다:
+    </p>
+    <ol>
+      <li><strong>비트 폭 불일치</strong>: <code>[Synth 8-3512] width mismatch</code> — 포트 선언과 연결된 신호의 비트 폭이 다를 때. 항상 포트 선언과 신호 선언을 나란히 확인하십시오.</li>
+      <li><strong>미연결 포트</strong>: <code>[Synth 8-3917] unconnected port</code> — 포트를 연결하지 않았을 때. 출력 포트에 연결하지 않으면 합성 도구가 경고를 발생시킵니다.</li>
+      <li><strong>다중 구동</strong>: <code>[Synth 8-6859] multi-driven net</code> — 같은 신호에 두 곳 이상에서 assign을 했을 때. always_comb와 assign을 혼용할 때 자주 발생합니다.</li>
+    </ol>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — 수강생이 가장 많이 실수하는 MUX 방향</strong>
+    <p>
+      ALU-A MUX에서 <code>a_sel=1</code>이 PC인지 rs1인지 헷갈려하는 수강생이 많습니다.
+      코드에서 <code>assign alu_a = a_sel ? pc : rs1_data</code>를 작성할 때
+      "1이면 PC, 0이면 rs1"으로 일관성 있게 정의하고 이를 주석으로 명시하게 하십시오.
+      분기/JAL/AUIPC에서 a_sel=1(PC)이 필요하고, 나머지는 a_sel=0(rs1)이라는 패턴을 강조하면 도움이 됩니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <ul>
+      <li>alu_result 신호는 어디로 연결됩니까? (힌트: 두 곳 이상)</li>
+      <li>wb_sel이 WB_MEM인 명령어 유형은 무엇입니까?</li>
+      <li>분기 명령어에서 다음 PC를 결정하는 경로를 순서대로 추적해 보십시오: 비교기 → 디코더 → pc_sel → PC MUX → PC 레지스터.</li>
+    </ul>
+  </aside>
+
+</section>
+
+
+<!-- ========== 6.4절 ========== -->
+<section id="sec-06-4">
+  <h2>6.4 단일 사이클 통합 시뮬레이션</h2>
+
+  <h3>6.4.1 피보나치 프로그램 준비</h3>
+
+  <p>
+    이 절에서 실행할 프로그램은 피보나치 수열입니다. F(0)=0부터 F(11)=89까지 12개의 값을
+    데이터 메모리 주소 0x1000 번지부터 저장하는 프로그램입니다.
+    다음 RISC-V 어셈블리 코드가 동작의 기반이 됩니다.
+  </p>
+
+  <pre><code class="language-verilog">// 피보나치 수열 프로그램 — RISC-V 어셈블리 의사 코드
+// x10(a0) = 이전 값, x11(a1) = 현재 값
+// x12(a2) = 다음 값(임시), x13(a3) = 루프 카운터
+// x14(a4) = 루프 한계(10), x15(a5) = 메모리 포인터
+
+// 초기화
+ADDI x10, x0, 0       // a0 = 0  (F(0))
+ADDI x11, x0, 1       // a1 = 1  (F(1))
+LUI  x15, 0x1         // a5 = 0x1000  (메모리 베이스)
+ADDI x13, x0, 0       // a3 = 0  (카운터)
+ADDI x14, x0, 10      // a4 = 10 (반복 횟수)
+
+// F(0), F(1) 저장
+SW   x10, 0(x15)
+SW   x11, 4(x15)
+ADDI x15, x15, 8
+
+// 루프: 10회 반복
+LOOP:
+  ADD  x12, x10, x11   // a2 = a0 + a1  (다음 피보나치)
+  SW   x12, 0(x15)     // 메모리에 저장
+  ADDI x15, x15, 4     // 포인터 증가
+  ADD  x10, x0, x11    // a0 = a1  (슬라이딩)
+  ADD  x11, x0, x12    // a1 = a2
+  ADDI x13, x13, 1     // 카운터++
+  BLT  x13, x14, LOOP  // 카운터 &lt; 10이면 반복
+
+END:
+  JAL  x0, END          // 무한 루프 (프로그램 종료)</code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 피보나치 프로그램 hex 파일 생성 방법</strong>
+    <p>
+      이 챕터에서는 이미 생성된 <code>ch06_fibonacci_mem.hex</code> 파일을 사용합니다.
+      직접 hex 파일을 생성하려면 RISC-V GNU toolchain의 어셈블러를 사용하거나,
+      온라인 RISC-V 어셈블러(venus.kvakil.me)를 활용할 수 있습니다.
+      Vivado의 Memory Editor에서 hex 파일 형식을 직접 확인하고 편집할 수도 있습니다.
+      hex 파일은 각 줄에 32비트 명령어를 리틀 엔디언 16진수로 기록합니다.
+    </p>
+  </aside>
+
+  <h3>6.4.2 테스트벤치 구조</h3>
+
+  <p>
+    테스트벤치는 DUT(Device Under Test)인 <code>rv32i_single_cycle_top</code>을 인스턴스화하고,
+    리셋 후 충분한 클록 사이클을 돌린 뒤 레지스터 파일과 데이터 메모리를 검사합니다.
+  </p>
+
+  <pre><code class="language-verilog">module rv32i_single_cycle_tb;
+   localparam CLK_PERIOD = 20;      // 50 MHz
+   localparam IMEM_DEPTH = 256;
+   localparam DMEM_DEPTH = 2048;
+
+   logic clk, rst_n;
+
+   rv32i_single_cycle_top #(
+      .IMEM_DEPTH(IMEM_DEPTH),
+      .DMEM_DEPTH(DMEM_DEPTH),
+      .IMEM_INIT ("ch06_fibonacci_mem.hex")
+   ) dut (.clk(clk), .rst_n(rst_n));
+
+   initial clk = 1'b0;
+   always #(CLK_PERIOD/2) clk = ~clk;
+
+   initial begin
+      $dumpfile("rv32i_single_cycle.vcd");
+      $dumpvars(0, rv32i_single_cycle_tb);
+
+      rst_n = 1'b0;
+      repeat (5) @(posedge clk);
+      rst_n = 1'b1;
+
+      // 120 사이클 실행 (피보나치 루프 완료 여유)
+      repeat (120) @(posedge clk);
+
+      // 결과 검증: 레지스터 및 메모리 확인
+      $display("x10(a0) = %0d (기대: 55)", dut.u_rf.regs[10]);
+      $display("x11(a1) = %0d (기대: 89)", dut.u_rf.regs[11]);
+
+      $finish;
+   end
+endmodule</code></pre>
+
+  <h3>6.4.3 ★★ 첫 번째 대성취: CPU 실행 확인</h3>
+
+  <div class="analogy">
+    <strong>이 순간을 기억하십시오.</strong>
+    지금 여러분이 시뮬레이터의 실행 버튼을 누르면, 여러분이 직접 설계한 CPU가
+    처음으로 실제 프로그램을 실행합니다. 파형 창에 PC가 0x00000000에서 시작하여
+    명령어를 하나씩 실행하는 모습, 레지스터 값이 피보나치 수열에 따라 변화하는 모습,
+    그리고 메모리에 값이 차례로 저장되는 모습을 확인하게 됩니다.
+  </div>
+
+  <p>
+    시뮬레이션을 실행하면 콘솔에 다음과 같은 출력이 나타납니다.
+    F(0)부터 F(11)까지 모든 값에 <code>[PASS]</code>가 표시되면 성공입니다.
+  </p>
+
+  <pre><code class="language-verilog">// 예상 시뮬레이션 출력 (VCS/Vivado 시뮬레이터)
+// ==================================================
+//  RV32I 단일 사이클 프로세서 통합 테스트
+//  테스트 프로그램: 피보나치 수열 (F(0)~F(11))
+// ==================================================
+// [50] 리셋 해제, 프로그램 실행 시작
+// --- 실행 완료: 레지스터 상태 확인 ---
+//   x10 (a0) = 55  (기대값: 55)
+//   x11 (a1) = 89  (기대값: 89)
+// --- 데이터 메모리 확인 (0x1000~) ---
+//   F(0)  = 0    [PASS]
+//   F(1)  = 1    [PASS]
+//   F(2)  = 1    [PASS]
+//   F(3)  = 2    [PASS]
+//   F(4)  = 3    [PASS]
+//   F(5)  = 5    [PASS]
+//   F(6)  = 8    [PASS]
+//   F(7)  = 13   [PASS]
+//   F(8)  = 21   [PASS]
+//   F(9)  = 34   [PASS]
+//   F(10) = 55   [PASS]
+//   F(11) = 89   [PASS]</code></pre>
+
+  <p>
+    모든 테스트가 PASS라면, 이 순간을 잠시 음미하십시오. [PASS] 메시지 12개가 뜨는 이 화면은
+    Ch04부터 시작된 여정의 완성입니다. 여러분은 37개 명령어를 이해하고,
+    각 명령어에 필요한 제어 신호를 설계하고, 5개 모듈을 하나의 CPU로 연결하여,
+    실제 프로그램이 올바르게 실행되는 것을 검증했습니다.
+    아직 파이프라인도 없고 캐시도 없습니다 — 하지만 이것이 모든 현대 프로세서의 출발점입니다.
+  </p>
+  <p>
+    ALU, 레지스터 파일, 메모리, 제어 유닛이 모두 하나로 동작하는 것을 직접 확인한 것입니다.
+    이 성취는 이어지는 멀티사이클(Ch07)과 파이프라인(Ch08~Ch12) 설계의 완전한 토대가 됩니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 파형에서 무엇을 봐야 할까요?</strong>
+    <p>
+      시뮬레이션 파형을 볼 때, 단순히 값이 맞는지만 확인하지 말고 다음을 관찰하십시오:
+    </p>
+    <ul>
+      <li>BLT 명령어가 실행될 때 PC는 어떻게 변화합니까? 분기 성립 시와 미성립 시를 비교하십시오.</li>
+      <li>SW 명령어 실행 후 DMEM에 데이터가 저장되는 사이클은 몇 번째입니까?</li>
+      <li>a0(x10), a1(x11) 레지스터 값이 각각 55, 89인지 확인하십시오. 피보나치 프로그램에서 x10(a0)은 이전 값, x11(a1)은 현재 값을 저장합니다.</li>
+    </ul>
+  </aside>
+
+  <p>
+    만약 파형이 예상과 다르다면, 당황하지 마십시오.
+    제어 신호 오류는 경험 있는 설계자도 자주 범하는 실수입니다.
+    파이프라인 CPU를 설계하는 산업 현장에서도 제어 로직 버그는 가장 흔한 오류 유형 중 하나입니다.
+    PC 값, instr 신호, 제어 신호 파형을 순서대로 확인하면서 어느 명령어에서 오류가 발생했는지 찾아보십시오.
+  </p>
+
+</section>
+
+
+<!-- ========== 6.5절 ========== -->
+<section id="sec-06-5">
+  <h2>6.5 Basys 3 합성 및 타이밍 분석</h2>
+
+  <p>
+    시뮬레이션에서 동작을 검증했다면, 이제 실제 FPGA에 합성(synthesis)하여 타이밍을 확인합니다.
+    합성은 RTL 코드를 FPGA의 물리적 자원(LUT, 플립플롭)으로 변환하는 과정입니다.
+    Basys 3 보드의 Xilinx Artix-7 FPGA를 대상으로 합성합니다.
+  </p>
+
+  <h3>6.5.1 Vivado 합성 절차</h3>
+
+  <p>
+    Vivado에서 단일 사이클 프로세서를 합성하는 절차는 다음과 같습니다.
+  </p>
+
+  <pre><code class="language-verilog">// Vivado TCL 콘솔에서 합성 실행 (단계별)
+// 1. 프로젝트 생성 후 모든 .sv 파일 추가
+// 2. Top Module을 rv32i_single_cycle_top으로 설정
+// 3. 제약 파일(.xdc) 작성 — 클록 주파수 지정
+
+// Basys 3 마스터 제약 파일 (일부)
+// create_clock -period 10.000 -name sys_clk [get_ports clk]
+// (Basys 3의 기본 클록: 100MHz = 10ns 주기)
+
+// 합성 실행
+// Flow → Run Synthesis
+// 합성 완료 후: Reports → Timing → Report Timing Summary</code></pre>
+
+  <h3>6.5.2 타이밍 용어: WNS와 TNS</h3>
+
+  <p>
+    합성 후 타이밍 리포트에서 가장 먼저 확인해야 할 두 가지 수치가 있습니다.
+  </p>
+
+  <p>
+    <strong>슬랙(Slack, 여유 시간)</strong>은 타이밍 여유를 나타냅니다.
+    계산식은 다음과 같습니다:
+  </p>
+
+  <div class="analogy">
+    <strong>슬랙 = 요구 도착 시간(Required Arrival Time) − 실제 도착 시간(Actual Arrival Time)</strong>
+    <br><br>
+    지하철 비유로 이해하면 쉽습니다. 열차가 오후 3시에 출발한다고 합시다(요구 도착 시간).
+    내가 2시 58분에 도착하면 슬랙 = +2분(여유 있음).
+    3시 2분에 도착하면 슬랙 = −2분(타이밍 위반).
+    CPU에서도 클록 엣지 전에 데이터가 안정적으로 도착해야 합니다.
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>용어</th><th>의미</th><th>판정 기준</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>WNS</strong><br>(Worst Negative Slack)</td>
+        <td>모든 타이밍 경로 중 가장 나쁜(가장 작은) 슬랙</td>
+        <td>WNS ≥ 0 이면 타이밍 만족<br>WNS &lt; 0 이면 타이밍 위반</td>
+      </tr>
+      <tr>
+        <td><strong>TNS</strong><br>(Total Negative Slack)</td>
+        <td>타이밍 위반 경로들의 슬랙 합계</td>
+        <td>TNS = 0 이면 모든 경로 만족<br>TNS &lt; 0 이면 복수 경로 위반</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — WNS와 TNS를 직관적으로 이해하기</strong>
+    <p>
+      WNS는 "가장 느린 경로가 얼마나 느린가"를 나타내고, TNS는 "전체적으로 얼마나 많은 경로가 문제인가"를 나타냅니다.
+      WNS가 −1ns라면 가장 느린 경로가 1ns 초과한다는 의미입니다.
+      설계를 수정할 때 WNS를 먼저 개선하고, 그 다음 TNS를 줄여나가는 전략을 사용합니다.
+      Vivado의 Timing Summary에서 <strong>Setup WNS &gt; 0</strong>이 합성 성공의 첫 번째 목표입니다.
+    </p>
+  </aside>
+
+  <h3>6.5.3 임계 경로 분석</h3>
+
+  <p>
+    단일 사이클 프로세서의 임계 경로(critical path)는 한 클록 사이클 내에서 신호가 통과해야 하는
+    가장 긴 조합 논리 경로입니다. 이 경로의 지연 시간이 최대 클록 주파수(Fmax)를 결정합니다.
+  </p>
+
+  <p>RV32I 단일 사이클 프로세서에서 임계 경로는 <strong>Load 명령어</strong>의 경로입니다:</p>
+
+  <figure>
+    <img src="../../figures/ch06_sec05_critical_path.svg" alt="Load 명령어의 임계 경로: IMEM → 디코더 → RF 읽기 → ALU(ADD) → DMEM → WB MUX → RF 쓰기로 이어지는 빨간 굵은 선">
+    <figcaption>그림 6.4: 단일 사이클 프로세서의 임계 경로 — LW 명령어가 통과하는 경로(빨간 굵은 선)가 Fmax를 결정합니다.</figcaption>
+  </figure>
+
+  <pre><code class="language-verilog">// 임계 경로 (Load 명령어 LW 기준)
+// IMEM → 제어유닛(디코더) → RF(읽기) → ALU(ADD) → DMEM → WB_MUX → RF(쓰기)
+//
+// 각 단계 예상 지연 시간 (Basys 3, Artix-7 -1 등급):
+//   IMEM 읽기:       ~3.0 ns
+//   디코더:          ~1.0 ns
+//   RF 읽기:         ~2.0 ns
+//   ALU (ADD):       ~3.5 ns
+//   DMEM 읽기:       ~3.5 ns
+//   WB MUX:          ~0.5 ns
+//   셋업 타임:       ~0.5 ns
+//   ---------------------------
+//   합계:           ~14.0 ns  →  Fmax ≈ 71 MHz (이론)
+//
+// 실제 Vivado 합성 결과 (배선 지연 포함): 25~35 MHz 예상</code></pre>
+
+  <h3>6.5.4 타이밍 위반 시 최적화 전략</h3>
+
+  <p>
+    만약 타이밍 위반(WNS &lt; 0)이 발생한다면, 다음 전략을 순서대로 시도합니다.
+  </p>
+
+  <ol>
+    <li><strong>클록 주파수 낮추기</strong>: 제약 파일에서 클록 주기를 늘립니다. 가장 간단하지만 성능을 포기합니다.</li>
+    <li><strong>Vivado 합성 옵션 변경</strong>: Strategy를 <code>Performance_ExplorePostRoutePhysOpt</code>로 변경합니다.</li>
+    <li><strong>임계 경로 파이프라이닝</strong>: 임계 경로 중간에 레지스터를 추가하여 조합 논리를 분리합니다. 이것이 멀티사이클/파이프라인의 핵심 아이디어입니다.</li>
+    <li><strong>RTL 리팩토링</strong>: 임계 경로의 논리를 재구성하여 지연을 줄입니다.</li>
+  </ol>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트 — Setup/Hold Time Violation과 해결 방법</strong>
+    <p><strong>Q:</strong> Setup Time Violation과 Hold Time Violation의 차이와 각각의 해결 방법을 설명하시오.</p>
+    <p>
+      <strong>A:</strong> Setup Time Violation은 클록 엣지 이전에 데이터가 충분히 빨리 도착하지 못할 때 발생합니다.
+      조합 논리 경로가 너무 길 때 나타나며, 클록 주파수를 낮추거나 파이프라이닝으로 해결합니다.
+      Hold Time Violation은 클록 엣지 이후 데이터가 너무 빨리 바뀔 때 발생합니다.
+      클록 스큐나 너무 빠른 경로가 원인이며, 배선 지연을 추가하거나 버퍼를 삽입하여 해결합니다.
+      FPGA에서는 Hold Violation이 비교적 드물고 주로 Setup Violation이 문제가 됩니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 단일 사이클 프로세서가 20~35 MHz밖에 안 되는 이유가 뭔가요? 요즘 CPU는 3~5 GHz인데요.</p>
+    <p>
+      <strong>A:</strong> 단일 사이클 방식은 가장 느린 명령어(Load)에 맞춰 클록 주기를 설정해야 합니다.
+      모든 명령어가 IMEM → 디코더 → RF → ALU → DMEM → RF의 전체 경로를 한 사이클에 완료해야 하기 때문입니다.
+      현대 CPU가 GHz 수준으로 동작할 수 있는 이유는 파이프라이닝으로 이 긴 경로를 여러 단계로 나누어
+      각 단계의 지연 시간을 1~2 ns 이내로 줄이기 때문입니다.
+      Ch08에서 구현할 5단계 파이프라인이 바로 이 문제의 해결책입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <ul>
+      <li>단일 사이클 프로세서의 임계 경로를 구성하는 요소들을 순서대로 나열해 보십시오.</li>
+      <li>Fmax가 낮은 이유를 Load 명령어를 예로 들어 설명해 보십시오.</li>
+      <li>멀티사이클 프로세서로 전환하면 임계 경로가 어떻게 변화합니까?</li>
+    </ul>
+  </aside>
+
+</section>
+
+
+<!-- ========== 6.6절 ========== -->
+<section id="sec-06-6">
+  <h2>6.6 본 챕터 요약 및 다음 단계</h2>
+
+  <section class="chapter-summary">
+    <h3>핵심 정리</h3>
+    <ul>
+      <li><strong>명령어 디코더</strong>는 opcode(7비트), funct3(3비트), funct7[5](1비트)를 읽어 9개의 제어 신호를 생성하는 순수 조합 논리입니다.</li>
+      <li><strong>제어 신호 9개</strong>(alu_sel, imm_sel, reg_w_en, mem_rw, pc_sel, wb_sel, a_sel, b_sel, br_un)가 데이터패스의 모든 동작을 제어합니다.</li>
+      <li><strong>단일 사이클 통합</strong>은 Ch04~Ch05의 6개 모듈과 3개의 MUX를 계층적으로 연결하는 과정입니다. 새로운 하드웨어 추가가 아니라 연결의 문제입니다.</li>
+      <li><strong>피보나치 검증</strong>을 통해 ADD, ADDI, LUI, SW, BLT, JAL 명령어가 모두 올바르게 동작함을 확인했습니다. 이것이 완전한 RV32I 단일 사이클 프로세서의 증거입니다.</li>
+      <li><strong>임계 경로</strong>는 Load 명령어의 경로(IMEM→디코더→RF→ALU→DMEM→WB MUX→RF)이며, 이 경로의 지연 시간이 Fmax(25~35 MHz)를 결정합니다.</li>
+      <li><strong>WNS ≥ 0</strong>이면 타이밍 만족, <strong>WNS &lt; 0</strong>이면 타이밍 위반입니다. 위반 시 클록 주파수를 낮추거나 파이프라이닝을 적용합니다.</li>
+    </ul>
+  </section>
+
+  <section class="next-chapter">
+    <h3>다음 챕터 예고</h3>
+    <p>
+      Ch07에서는 단일 사이클의 성능 한계를 극복하는 <strong>멀티사이클 프로세서(Multi-Cycle Processor)</strong>를 설계합니다.
+      하나의 명령어를 여러 클록 사이클에 나누어 처리함으로써, 클록 주파수를 높이고 하드웨어 자원을 공유할 수 있습니다.
+      이 챕터에서 완성한 데이터패스 구조와 제어 신호 개념이 그대로 이어집니다. 차이는 제어 유닛이 유한 상태 기계(FSM)로 바뀐다는 것입니다.
+    </p>
+  </section>
+
+  <aside class="metacognition">
+    <strong>🔍 Part 2 자가 점검 — 5가지 질문</strong>
+    <p>이 챕터를 마치고 다음 5가지 질문에 스스로 답할 수 있는지 확인하십시오:</p>
+    <ol>
+      <li>opcode만 보고 명령어 유형(R/I/S/B/U/J)을 즉시 판별할 수 있습니까?</li>
+      <li>임의의 RV32I 명령어 하나를 골라 9개 제어 신호 값을 모두 도출할 수 있습니까?</li>
+      <li>단일 사이클 top-level 모듈을 처음부터 작성할 수 있습니까? (포트 연결 포함)</li>
+      <li>피보나치 시뮬레이션 파형에서 BLT 분기 성립/미성립을 구분하여 설명할 수 있습니까?</li>
+      <li>Vivado 타이밍 리포트에서 WNS와 TNS를 찾아 해석할 수 있습니까?</li>
+    </ol>
+    <p>모든 질문에 "예"라고 답할 수 있다면, Part 2 핵심 목표를 달성한 것입니다.</p>
+  </aside>
+
+</section>
+
+
+<!-- ========== 연습문제 ========== -->
+<section class="exercises">
+  <h2>연습문제</h2>
+
+  <h3>기억 수준</h3>
+  <ol>
+    <li>
+      <strong>[기억]</strong> opcode가 <code>7'b0110011</code>(이진수)인 명령어 유형은 무엇입니까?
+      해당 유형에 속하는 명령어 5가지를 나열하십시오.
+    </li>
+    <li>
+      <strong>[기억]</strong> 다음 제어 신호 각각의 역할을 한 문장으로 설명하십시오:
+      <code>reg_w_en</code>, <code>mem_rw</code>, <code>wb_sel</code>, <code>pc_sel</code>
+    </li>
+  </ol>
+
+  <h3>이해 수준</h3>
+  <ol start="3">
+    <li>
+      <strong>[이해]</strong> ADD(R 타입)와 ADDI(I-ALU 타입)의 제어 신호를 비교하십시오.
+      두 명령어에서 값이 다른 신호는 무엇이며, 왜 다릅니까?
+    </li>
+    <li>
+      <strong>[이해]</strong> LW(Load Word) 명령어가 실행될 때, 데이터가 IMEM에서 레지스터 파일까지
+      도달하는 경로를 모든 모듈과 MUX를 포함하여 순서대로 설명하십시오.
+    </li>
+  </ol>
+
+  <h3>적용 수준</h3>
+  <ol start="5">
+    <li>
+      <strong>[적용]</strong> 다음의 불완전한 디코더 코드에서 BEQ와 JAL 명령어에 대한
+      제어 신호 값을 채워 넣으십시오:
+      <pre><code class="language-verilog">// BEQ: opcode = 7'b1100011, funct3 = 3'b000
+7'b1100011: begin
+   reg_w_en = ____;   a_sel = ____;   b_sel = ____;
+   imm_sel  = ____;   pc_sel = branch_taken ? ____ : ____;
+   br_un    = ____;
+end
+
+// JAL: opcode = 7'b1101111
+7'b1101111: begin
+   reg_w_en = ____;   a_sel = ____;   b_sel = ____;
+   imm_sel  = ____;   pc_sel = ____;   wb_sel = ____;
+end</code></pre>
+    </li>
+    <li>
+      <strong>[적용]</strong> 다음 두 ADDI 명령어를 실행하는 테스트벤치 코드 일부를 작성하고,
+      결과를 검증하는 <code>$display</code> 문을 포함하십시오:
+      <code>ADDI x1, x0, 5</code> 실행 후 <code>ADDI x2, x1, 3</code> 실행.
+      예상 결과: x1=5, x2=8.
+    </li>
+  </ol>
+
+  <h3>분석 수준</h3>
+  <ol start="7">
+    <li>
+      <strong>[분석]</strong> 다음 디코더 코드에 버그가 있습니다. 버그를 찾아 수정하고, 이 버그가 어떤 동작 오류를 유발하는지 설명하십시오:
+      <pre><code class="language-verilog">// SW 명령어 디코딩 (버그 있음)
+7'b0100011: begin   // Store
+   reg_w_en = 1'b1;        // ← 버그
+   a_sel    = 1'b0;
+   b_sel    = 1'b1;
+   imm_sel  = IMM_S;
+   alu_sel  = ALU_ADD;
+   mem_rw   = MEM_WRITE;
+end</code></pre>
+    </li>
+    <li>
+      <strong>[분석]</strong> 단일 사이클 프로세서의 임계 경로를 분석하십시오:
+      (a) 임계 경로를 유발하는 명령어 유형은 무엇이며, 그 이유는?
+      (b) 이 임계 경로 문제를 해결하기 위한 아키텍처 변화를 한 가지 제안하고, 그 원리를 설명하십시오.
+    </li>
+  </ol>
+</section>
+
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+
+  <p>
+    이 절의 코드를 지금 당장 전부 이해할 필요는 없습니다.
+    앞의 각 절에서 설명한 코드들을 한 곳에 모아둔 것으로, 필요할 때 참조하는 레퍼런스 용도로 활용하십시오.
+    각 코드 블록은 해당 절에서 이미 상세히 설명되었습니다.
+  </p>
+
+  <!-- 코드 1: ch06_decoder.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch06_decoder.sv — 명령어 디코더 (6.1절)</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 명령어 디코더 (Instruction Decoder)
+// Chapter 06 — 제어 유닛과 단일 사이클 통합
+// ============================================================================
+`timescale 1ns / 1ps
+
+// ALU 연산 코드 (4비트)
+typedef enum logic [3:0] {
+   ALU_ADD  = 4'b0000, ALU_SUB  = 4'b0001, ALU_AND  = 4'b0010,
+   ALU_OR   = 4'b0011, ALU_XOR  = 4'b0100, ALU_SLL  = 4'b0101,
+   ALU_SRL  = 4'b0110, ALU_SRA  = 4'b0111, ALU_SLT  = 4'b1000,
+   ALU_SLTU = 4'b1001
+} alu_op_t;
+
+// 즉치수 타입 (3비트)
+typedef enum logic [2:0] {
+   IMM_I = 3'b000, IMM_S = 3'b001, IMM_B = 3'b010,
+   IMM_U = 3'b011, IMM_J = 3'b100
+} imm_sel_t;
+
+// Write-Back 소스 (2비트)
+typedef enum logic [1:0] {
+   WB_ALU = 2'b00, WB_MEM = 2'b01, WB_PC4 = 2'b10
+} wb_sel_t;
+
+// PC 소스 (2비트)
+typedef enum logic [1:0] {
+   PC_PLUS4 = 2'b00, PC_BRANCH = 2'b01, PC_JALR = 2'b10
+} pc_sel_t;
+
+// 메모리 접근 (2비트)
+typedef enum logic [1:0] {
+   MEM_NONE = 2'b00, MEM_READ = 2'b01, MEM_WRITE = 2'b10
+} mem_rw_t;
+
+// ============================================================================
+module instruction_decoder (
+   input  logic [31:0] instr,
+   input  logic        br_eq,
+   input  logic        br_lt,
+   output alu_op_t     alu_sel,
+   output imm_sel_t    imm_sel,
+   output logic        reg_w_en,
+   output mem_rw_t     mem_rw,
+   output pc_sel_t     pc_sel,
+   output wb_sel_t     wb_sel,
+   output logic        a_sel,
+   output logic        b_sel,
+   output logic        br_un,
+   output logic        illegal_instr
+);
+   logic [6:0] opcode;
+   logic [2:0] funct3;
+   logic [6:0] funct7;
+   assign opcode = instr[6:0];
+   assign funct3 = instr[14:12];
+   assign funct7 = instr[31:25];
+
+   logic branch_taken;
+   always_comb begin
+      branch_taken = 1'b0;
+      if (opcode == 7'b1100011) begin
+         case (funct3)
+            3'b000: branch_taken = br_eq;
+            3'b001: branch_taken = ~br_eq;
+            3'b100: branch_taken = br_lt;
+            3'b101: branch_taken = ~br_lt;
+            3'b110: branch_taken = br_lt;
+            3'b111: branch_taken = ~br_lt;
+            default: branch_taken = 1'b0;
+         endcase
+      end
+   end
+
+   always_comb begin
+      alu_sel = ALU_ADD; imm_sel = IMM_I;  reg_w_en = 1'b0;
+      mem_rw  = MEM_NONE; pc_sel = PC_PLUS4; wb_sel = WB_ALU;
+      a_sel   = 1'b0;    b_sel  = 1'b0;   br_un   = 1'b0;
+      illegal_instr = 1'b0;
+
+      case (opcode)
+         7'b0110011: begin  // R 타입
+            reg_w_en = 1'b1;
+            case (funct3)
+               3'b000: alu_sel = funct7[5] ? ALU_SUB : ALU_ADD;
+               3'b001: alu_sel = ALU_SLL;
+               3'b010: alu_sel = ALU_SLT;
+               3'b011: alu_sel = ALU_SLTU;
+               3'b100: alu_sel = ALU_XOR;
+               3'b101: alu_sel = funct7[5] ? ALU_SRA : ALU_SRL;
+               3'b110: alu_sel = ALU_OR;
+               3'b111: alu_sel = ALU_AND;
+            endcase
+         end
+         7'b0010011: begin  // I-ALU 타입
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_I;
+            case (funct3)
+               3'b000: alu_sel = ALU_ADD;
+               3'b001: alu_sel = ALU_SLL;
+               3'b010: alu_sel = ALU_SLT;
+               3'b011: alu_sel = ALU_SLTU;
+               3'b100: alu_sel = ALU_XOR;
+               3'b101: alu_sel = funct7[5] ? ALU_SRA : ALU_SRL;
+               3'b110: alu_sel = ALU_OR;
+               3'b111: alu_sel = ALU_AND;
+            endcase
+         end
+         7'b0000011: begin  // Load
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_I;
+            mem_rw = MEM_READ; wb_sel = WB_MEM;
+         end
+         7'b0100011: begin  // Store
+            b_sel = 1'b1; imm_sel = IMM_S; mem_rw = MEM_WRITE;
+         end
+         7'b1100011: begin  // Branch
+            a_sel = 1'b1; b_sel = 1'b1; imm_sel = IMM_B;
+            pc_sel = branch_taken ? PC_BRANCH : PC_PLUS4;
+            br_un  = funct3[1];
+         end
+         7'b1101111: begin  // JAL
+            reg_w_en = 1'b1; a_sel = 1'b1; b_sel = 1'b1;
+            imm_sel = IMM_J; pc_sel = PC_BRANCH; wb_sel = WB_PC4;
+         end
+         7'b1100111: begin  // JALR
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_I;
+            pc_sel = PC_JALR; wb_sel = WB_PC4;
+         end
+         7'b0110111: begin  // LUI
+            reg_w_en = 1'b1; b_sel = 1'b1; imm_sel = IMM_U;
+         end
+         7'b0010111: begin  // AUIPC
+            reg_w_en = 1'b1; a_sel = 1'b1; b_sel = 1'b1; imm_sel = IMM_U;
+         end
+         7'b0001111: begin  // FENCE → NOP
+         end
+         7'b1110011: begin  // SYSTEM → NOP
+         end
+         default: begin
+            illegal_instr = 1'b1;
+         end
+      endcase
+   end
+endmodule</code></pre>
+  </div>
+
+  <!-- 코드 2: ch06_control_unit.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch06_control_unit.sv — 제어 유닛 + 분기 비교기 (6.1절)</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 제어 유닛 (Control Unit)
+// Chapter 06 — 제어 유닛과 단일 사이클 통합
+// ============================================================================
+`timescale 1ns / 1ps
+
+module control_unit (
+   input  logic [31:0] instr,
+   input  logic [31:0] rs1_data,
+   input  logic [31:0] rs2_data,
+   output alu_op_t     alu_sel,
+   output imm_sel_t    imm_sel,
+   output logic        reg_w_en,
+   output mem_rw_t     mem_rw,
+   output pc_sel_t     pc_sel,
+   output wb_sel_t     wb_sel,
+   output logic        a_sel,
+   output logic        b_sel,
+   output logic        br_un,
+   output logic        illegal_instr,
+   output logic [4:0]  rs1_addr,
+   output logic [4:0]  rs2_addr,
+   output logic [4:0]  rd_addr,
+   output logic [2:0]  funct3_out
+);
+   assign rs1_addr   = instr[19:15];
+   assign rs2_addr   = instr[24:20];
+   assign rd_addr    = instr[11:7];
+   assign funct3_out = instr[14:12];
+
+   logic br_eq, br_lt;
+
+   branch_comparator u_branch_comp (
+      .rs1_data(rs1_data), .rs2_data(rs2_data),
+      .br_un(br_un), .br_eq(br_eq), .br_lt(br_lt)
+   );
+
+   instruction_decoder u_decoder (
+      .instr(instr), .br_eq(br_eq), .br_lt(br_lt),
+      .alu_sel(alu_sel), .imm_sel(imm_sel), .reg_w_en(reg_w_en),
+      .mem_rw(mem_rw), .pc_sel(pc_sel), .wb_sel(wb_sel),
+      .a_sel(a_sel), .b_sel(b_sel), .br_un(br_un),
+      .illegal_instr(illegal_instr)
+   );
+endmodule
+
+// ============================================================================
+// 분기 비교기 (Branch Comparator)
+// ============================================================================
+module branch_comparator (
+   input  logic [31:0] rs1_data,
+   input  logic [31:0] rs2_data,
+   input  logic        br_un,
+   output logic        br_eq,
+   output logic        br_lt
+);
+   always_comb begin
+      br_eq = (rs1_data == rs2_data);
+      if (br_un)
+         br_lt = (rs1_data &lt; rs2_data);
+      else
+         br_lt = ($signed(rs1_data) &lt; $signed(rs2_data));
+   end
+endmodule</code></pre>
+  </div>
+
+  <!-- 코드 3: ch06_single_cycle_top.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch06_single_cycle_top.sv — RV32I 단일 사이클 Top-Level (6.3절)</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// RV32I 단일 사이클 프로세서 Top-Level
+// Chapter 06 — 제어 유닛과 단일 사이클 통합
+// ============================================================================
+`timescale 1ns / 1ps
+
+module rv32i_single_cycle_top #(
+   parameter IMEM_DEPTH = 1024,
+   parameter DMEM_DEPTH = 1024,
+   parameter IMEM_INIT  = ""
+)(
+   input  logic clk,
+   input  logic rst_n
+);
+   logic [31:0] pc, pc_plus4, pc_next;
+   logic [31:0] instr;
+   logic [31:0] rs1_data, rs2_data, rd_data;
+   logic [31:0] imm, alu_a, alu_b, alu_result;
+   logic [31:0] dmem_rdata, dmem_rdata_ext;
+   alu_op_t  alu_sel; imm_sel_t imm_sel; wb_sel_t wb_sel;
+   pc_sel_t  pc_sel;  mem_rw_t  mem_rw;
+   logic reg_w_en, a_sel, b_sel, br_un, illegal_instr;
+   logic [4:0] rs1_addr, rs2_addr, rd_addr;
+   logic [2:0] funct3;
+
+   assign pc_plus4 = pc + 32'd4;
+
+   always_ff @(posedge clk or negedge rst_n)
+      if (!rst_n) pc &lt;= 32'h0000_0000;
+      else        pc &lt;= pc_next;
+
+   always_comb begin
+      case (pc_sel)
+         PC_PLUS4:  pc_next = pc_plus4;
+         PC_BRANCH: pc_next = alu_result;
+         PC_JALR:   pc_next = alu_result &amp; 32'hFFFF_FFFE;
+         default:   pc_next = pc_plus4;
+      endcase
+   end
+
+   instruction_memory #(.DEPTH(IMEM_DEPTH), .INIT_FILE(IMEM_INIT))
+      u_imem (.addr(pc), .instr(instr));
+
+   control_unit u_control (
+      .instr(instr), .rs1_data(rs1_data), .rs2_data(rs2_data),
+      .alu_sel(alu_sel), .imm_sel(imm_sel), .reg_w_en(reg_w_en),
+      .mem_rw(mem_rw), .pc_sel(pc_sel), .wb_sel(wb_sel),
+      .a_sel(a_sel), .b_sel(b_sel), .br_un(br_un),
+      .illegal_instr(illegal_instr),
+      .rs1_addr(rs1_addr), .rs2_addr(rs2_addr),
+      .rd_addr(rd_addr), .funct3_out(funct3)
+   );
+
+   register_file u_rf (
+      .clk(clk), .rst_n(rst_n),
+      .rs1_addr(rs1_addr), .rs2_addr(rs2_addr),
+      .rd_addr(rd_addr), .rd_data(rd_data), .reg_w_en(reg_w_en),
+      .rs1_data(rs1_data), .rs2_data(rs2_data)
+   );
+
+   immediate_generator u_immgen (.instr(instr), .imm_sel(imm_sel), .imm(imm));
+
+   assign alu_a = a_sel ? pc : rs1_data;
+   assign alu_b = b_sel ? imm : rs2_data;
+
+   alu u_alu (.a(alu_a), .b(alu_b), .alu_op(alu_sel), .result(alu_result));
+
+   data_memory #(.DEPTH(DMEM_DEPTH)) u_dmem (
+      .clk(clk), .addr(alu_result), .wdata(rs2_data),
+      .mem_rw(mem_rw), .funct3(funct3), .rdata(dmem_rdata)
+   );
+
+   always_comb begin
+      case (funct3)
+         3'b000: dmem_rdata_ext = {{24{dmem_rdata[7]}},  dmem_rdata[7:0]};
+         3'b001: dmem_rdata_ext = {{16{dmem_rdata[15]}}, dmem_rdata[15:0]};
+         3'b010: dmem_rdata_ext = dmem_rdata;
+         3'b100: dmem_rdata_ext = {24'b0, dmem_rdata[7:0]};
+         3'b101: dmem_rdata_ext = {16'b0, dmem_rdata[15:0]};
+         default: dmem_rdata_ext = dmem_rdata;
+      endcase
+   end
+
+   always_comb begin
+      case (wb_sel)
+         WB_ALU: rd_data = alu_result;
+         WB_MEM: rd_data = dmem_rdata_ext;
+         WB_PC4: rd_data = pc_plus4;
+         default: rd_data = alu_result;
+      endcase
+   end
+endmodule
+
+// ============================================================================
+// 명령어 메모리 (비동기 읽기 ROM)
+// ============================================================================
+module instruction_memory #(
+   parameter DEPTH     = 1024,
+   parameter INIT_FILE = ""
+)(
+   input  logic [31:0] addr,
+   output logic [31:0] instr
+);
+   logic [31:0] mem [0:DEPTH-1];
+   initial begin
+      for (int i = 0; i &lt; DEPTH; i++) mem[i] = 32'h0000_0013;
+      if (INIT_FILE != "") $readmemh(INIT_FILE, mem);
+   end
+   assign instr = mem[addr[31:2]];
+endmodule
+
+// ============================================================================
+// 데이터 메모리 (동기 쓰기, 비동기 읽기)
+// ============================================================================
+module data_memory #(parameter DEPTH = 1024)(
+   input  logic        clk,
+   input  logic [31:0] addr,
+   input  logic [31:0] wdata,
+   input  mem_rw_t     mem_rw,
+   input  logic [2:0]  funct3,
+   output logic [31:0] rdata
+);
+   logic [7:0] mem [0:DEPTH*4-1];
+   initial begin for (int i = 0; i &lt; DEPTH*4; i++) mem[i] = 8'h00; end
+
+   always_ff @(posedge clk) begin
+      if (mem_rw == MEM_WRITE) begin
+         case (funct3)
+            3'b000: mem[addr] &lt;= wdata[7:0];
+            3'b001: begin mem[addr] &lt;= wdata[7:0]; mem[addr+1] &lt;= wdata[15:8]; end
+            3'b010: begin
+               mem[addr]   &lt;= wdata[7:0];   mem[addr+1] &lt;= wdata[15:8];
+               mem[addr+2] &lt;= wdata[23:16]; mem[addr+3] &lt;= wdata[31:24];
+            end
+         endcase
+      end
+   end
+   assign rdata = {mem[{addr[31:2],2'b00}+3], mem[{addr[31:2],2'b00}+2],
+                   mem[{addr[31:2],2'b00}+1], mem[{addr[31:2],2'b00}]};
+endmodule
+
+// ============================================================================
+// 레지스터 파일 (32x32비트, 비동기 읽기, 동기 쓰기)
+// ============================================================================
+module register_file (
+   input  logic        clk, rst_n,
+   input  logic [4:0]  rs1_addr, rs2_addr, rd_addr,
+   input  logic [31:0] rd_data,
+   input  logic        reg_w_en,
+   output logic [31:0] rs1_data, rs2_data
+);
+   logic [31:0] regs [0:31];
+   initial begin for (int i = 0; i &lt; 32; i++) regs[i] = 32'h0; end
+   assign rs1_data = (rs1_addr == 5'd0) ? 32'h0 : regs[rs1_addr];
+   assign rs2_data = (rs2_addr == 5'd0) ? 32'h0 : regs[rs2_addr];
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin for (int i = 0; i &lt; 32; i++) regs[i] &lt;= 32'h0; end
+      else if (reg_w_en &amp;&amp; rd_addr != 5'd0) regs[rd_addr] &lt;= rd_data;
+   end
+endmodule
+
+// ============================================================================
+// 즉치수 생성기
+// ============================================================================
+module immediate_generator (
+   input  logic [31:0] instr,
+   input  imm_sel_t    imm_sel,
+   output logic [31:0] imm
+);
+   always_comb begin
+      case (imm_sel)
+         IMM_I: imm = {{20{instr[31]}}, instr[31:20]};
+         IMM_S: imm = {{20{instr[31]}}, instr[31:25], instr[11:7]};
+         IMM_B: imm = {{19{instr[31]}}, instr[31], instr[7], instr[30:25], instr[11:8], 1'b0};
+         IMM_U: imm = {instr[31:12], 12'b0};
+         IMM_J: imm = {{11{instr[31]}}, instr[31], instr[19:12], instr[20], instr[30:21], 1'b0};
+         default: imm = 32'h0;
+      endcase
+   end
+endmodule
+
+// ============================================================================
+// ALU
+// ============================================================================
+module alu (
+   input  logic [31:0] a, b,
+   input  alu_op_t     alu_op,
+   output logic [31:0] result
+);
+   always_comb begin
+      case (alu_op)
+         ALU_ADD:  result = a + b;
+         ALU_SUB:  result = a - b;
+         ALU_AND:  result = a &amp; b;
+         ALU_OR:   result = a | b;
+         ALU_XOR:  result = a ^ b;
+         ALU_SLL:  result = a &lt;&lt; b[4:0];
+         ALU_SRL:  result = a &gt;&gt; b[4:0];
+         ALU_SRA:  result = $signed(a) &gt;&gt;&gt; b[4:0];
+         ALU_SLT:  result = {31'b0, $signed(a) &lt; $signed(b)};
+         ALU_SLTU: result = {31'b0, a &lt; b};
+         default:  result = 32'h0;
+      endcase
+   end
+endmodule</code></pre>
+  </div>
+
+  <!-- 코드 4: ch06_single_cycle_tb.sv -->
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>ch06_single_cycle_tb.sv — 피보나치 통합 테스트벤치 (6.4절)</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// RV32I 단일 사이클 프로세서 통합 테스트벤치
+// 피보나치 수열 F(0)~F(11) 검증
+// ============================================================================
+`timescale 1ns / 1ps
+
+module rv32i_single_cycle_tb;
+   localparam CLK_PERIOD = 20;
+   localparam IMEM_DEPTH = 256;
+   localparam DMEM_DEPTH = 2048;
+
+   logic clk, rst_n;
+
+   rv32i_single_cycle_top #(
+      .IMEM_DEPTH(IMEM_DEPTH),
+      .DMEM_DEPTH(DMEM_DEPTH),
+      .IMEM_INIT ("ch06_fibonacci_mem.hex")
+   ) dut (.clk(clk), .rst_n(rst_n));
+
+   initial clk = 1'b0;
+   always #(CLK_PERIOD/2) clk = ~clk;
+
+   int expected_fib [0:11];
+   initial begin
+      expected_fib[0]=0; expected_fib[1]=1;  expected_fib[2]=1;
+      expected_fib[3]=2; expected_fib[4]=3;  expected_fib[5]=5;
+      expected_fib[6]=8; expected_fib[7]=13; expected_fib[8]=21;
+      expected_fib[9]=34; expected_fib[10]=55; expected_fib[11]=89;
+   end
+
+   initial begin
+      $dumpfile("rv32i_single_cycle.vcd");
+      $dumpvars(0, rv32i_single_cycle_tb);
+      $display("=== RV32I 단일 사이클 프로세서 통합 테스트 ===");
+
+      rst_n = 1'b0;
+      repeat (5) @(posedge clk);
+      rst_n = 1'b1;
+      $display("[%0t] 리셋 해제, 실행 시작", $time);
+
+      repeat (120) @(posedge clk);
+
+      $display("--- 레지스터 확인 ---");
+      $display("x10(a0) = %0d (기대: 55)", dut.u_rf.regs[10]);
+      $display("x11(a1) = %0d (기대: 89)", dut.u_rf.regs[11]);
+
+      $display("--- 데이터 메모리 확인 (0x1000~) ---");
+      for (int i = 0; i &lt; 12; i++) begin
+         int ab, mv;
+         ab = 32'h1000 + i * 4;
+         mv = {dut.u_dmem.mem[ab+3], dut.u_dmem.mem[ab+2],
+               dut.u_dmem.mem[ab+1], dut.u_dmem.mem[ab]};
+         if (mv == expected_fib[i])
+            $display("  F(%0d) = %0d  [PASS]", i, mv);
+         else
+            $display("  F(%0d) = %0d  [FAIL] (기대: %0d)", i, mv, expected_fib[i]);
+      end
+      $finish;
+   end
+
+   initial begin
+      #(CLK_PERIOD * 500);
+      $display("[ERROR] 타임아웃!");
+      $finish;
+   end
+
+   always @(posedge clk) begin
+      if (rst_n)
+         $display("[%0t] PC=0x%08h instr=0x%08h rd=%0d rd_data=0x%08h WEn=%b",
+                  $time, dut.pc, dut.instr, dut.rd_addr, dut.rd_data, dut.reg_w_en);
+   end
+endmodule</code></pre>
+  </div>
+
+</section>
+
+
+<!-- Syntax Highlighting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

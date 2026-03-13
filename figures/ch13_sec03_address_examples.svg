@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460" font-family="Pretendard, sans-serif">
+  <rect width="820" height="460" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="32" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">주소 분해 예제 (Address Decomposition Examples)</text>
+
+  <!-- 헤더 -->
+  <rect x="30" y="50" width="760" height="32" fill="#1D4ED8" rx="6"/>
+  <text x="150" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="white">주소 (hex)</text>
+  <text x="310" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="white">Tag [31:12] (20비트)</text>
+  <text x="490" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="white">Index [11:5] (7비트)</text>
+  <text x="640" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="white">Offset [4:0]</text>
+  <text x="745" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="white">결과</text>
+
+  <!-- 예제 1: 0x0000_0000 -->
+  <rect x="30" y="82" width="760" height="38" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="150" y="97" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8" font-family="monospace">0x0000_0000</text>
+  <text x="150" y="112" text-anchor="middle" font-size="9" fill="#6B7280">이진: 00000...00000 | 0000000 | 00000</text>
+  <rect x="250" y="87" width="120" height="24" fill="#DBEAFE" rx="4"/>
+  <text x="310" y="103" text-anchor="middle" font-size="11" fill="#1D4ED8" font-weight="700">0x00000</text>
+  <rect x="430" y="87" width="120" height="24" fill="#D1FAE5" rx="4"/>
+  <text x="490" y="103" text-anchor="middle" font-size="11" fill="#065F46" font-weight="700">0 (0b000_0000)</text>
+  <text x="640" y="103" text-anchor="middle" font-size="11" fill="#B45309">0x00 (0바이트)</text>
+  <text x="745" y="103" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">Cold MISS</text>
+
+  <!-- 예제 2: 0x0000_0004 -->
+  <rect x="30" y="120" width="760" height="38" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="150" y="135" text-anchor="middle" font-size="12" font-weight="700" fill="#374151" font-family="monospace">0x0000_0004</text>
+  <text x="150" y="150" text-anchor="middle" font-size="9" fill="#6B7280">이진: 00000...00000 | 0000000 | 00100</text>
+  <rect x="250" y="125" width="120" height="24" fill="#DBEAFE" rx="4"/>
+  <text x="310" y="141" text-anchor="middle" font-size="11" fill="#1D4ED8" font-weight="700">0x00000</text>
+  <rect x="430" y="125" width="120" height="24" fill="#D1FAE5" rx="4"/>
+  <text x="490" y="141" text-anchor="middle" font-size="11" fill="#065F46" font-weight="700">0 (같은 블록!)</text>
+  <text x="640" y="141" text-anchor="middle" font-size="11" fill="#B45309">0x04 (4바이트)</text>
+  <text x="745" y="141" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">HIT (공간적!)</text>
+
+  <!-- 예제 3: 0x0000_0020 -->
+  <rect x="30" y="158" width="760" height="38" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="150" y="173" text-anchor="middle" font-size="12" font-weight="700" fill="#374151" font-family="monospace">0x0000_0020</text>
+  <text x="150" y="188" text-anchor="middle" font-size="9" fill="#6B7280">이진: 00000...00000 | 0000001 | 00000</text>
+  <rect x="250" y="163" width="120" height="24" fill="#DBEAFE" rx="4"/>
+  <text x="310" y="179" text-anchor="middle" font-size="11" fill="#1D4ED8" font-weight="700">0x00000</text>
+  <rect x="430" y="163" width="120" height="24" fill="#FEF3C7" rx="4" stroke="#F59E0B" stroke-width="1"/>
+  <text x="490" y="179" text-anchor="middle" font-size="11" fill="#92400E" font-weight="700">1 (다른 칸)</text>
+  <text x="640" y="179" text-anchor="middle" font-size="11" fill="#B45309">0x00 (0바이트)</text>
+  <text x="745" y="179" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">Cold MISS</text>
+
+  <!-- 예제 4: 0x0000_0040 -->
+  <rect x="30" y="196" width="760" height="38" fill="white" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="150" y="211" text-anchor="middle" font-size="12" font-weight="700" fill="#374151" font-family="monospace">0x0000_0040</text>
+  <text x="150" y="226" text-anchor="middle" font-size="9" fill="#6B7280">이진: 00000...00000 | 0000010 | 00000</text>
+  <rect x="250" y="201" width="120" height="24" fill="#DBEAFE" rx="4"/>
+  <text x="310" y="217" text-anchor="middle" font-size="11" fill="#1D4ED8" font-weight="700">0x00000</text>
+  <rect x="430" y="201" width="120" height="24" fill="#FEF3C7" rx="4" stroke="#F59E0B" stroke-width="1"/>
+  <text x="490" y="217" text-anchor="middle" font-size="11" fill="#92400E" font-weight="700">2 (다른 칸)</text>
+  <text x="640" y="217" text-anchor="middle" font-size="11" fill="#B45309">0x00 (0바이트)</text>
+  <text x="745" y="217" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">Cold MISS</text>
+
+  <!-- 예제 5: 0x0001_0000 (충돌!) -->
+  <rect x="30" y="234" width="760" height="44" fill="#FEF3C7" stroke="#EF4444" stroke-width="2"/>
+  <text x="150" y="252" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E" font-family="monospace">0x0001_0000</text>
+  <text x="150" y="270" text-anchor="middle" font-size="9" fill="#B45309">이진: 00000...00010 | 0000000 | 00000</text>
+  <rect x="250" y="240" width="120" height="30" fill="#FEE2E2" rx="4" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="310" y="258" text-anchor="middle" font-size="11" fill="#991B1B" font-weight="700">0x00010</text>
+  <text x="310" y="270" text-anchor="middle" font-size="9" fill="#EF4444">Tag 다름!</text>
+  <rect x="430" y="240" width="120" height="30" fill="#FEE2E2" rx="4" stroke="#EF4444" stroke-width="2"/>
+  <text x="490" y="258" text-anchor="middle" font-size="11" fill="#991B1B" font-weight="700">0 (같은 칸!)</text>
+  <text x="490" y="270" text-anchor="middle" font-size="9" fill="#EF4444">충돌!</text>
+  <text x="640" y="260" text-anchor="middle" font-size="11" fill="#B45309">0x00 (0바이트)</text>
+  <text x="745" y="260" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">Conflict MISS</text>
+
+  <!-- 충돌 화살표 -->
+  <defs>
+    <marker id="arEx" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#EF4444"/>
+    </marker>
+  </defs>
+  <path d="M410,120 Q370,200 410,228" stroke="#EF4444" stroke-width="2" fill="none" stroke-dasharray="5,3" marker-end="url(#arEx)"/>
+  <text x="345" y="185" font-size="10" fill="#EF4444" font-weight="600">Index=0</text>
+  <text x="345" y="197" font-size="10" fill="#EF4444" font-weight="600">충돌!</text>
+
+  <!-- 설명 박스 -->
+  <rect x="30" y="295" width="760" height="140" fill="white" rx="10" stroke="#DBEAFE" stroke-width="2"/>
+  <text x="410" y="318" text-anchor="middle" font-size="13" font-weight="700" fill="#1E3A5F">핵심 관찰 사항</text>
+  <line x1="50" y1="326" x2="770" y2="326" stroke="#DBEAFE" stroke-width="1"/>
+  <text x="50" y="348" font-size="12" fill="#374151">1.</text>
+  <text x="70" y="348" font-size="12" fill="#374151">0x0000_0000과 0x0000_0004는 같은 Index=0, 같은 캐시 블록에 속함 → 공간적 지역성 활용!</text>
+  <text x="50" y="370" font-size="12" fill="#374151">2.</text>
+  <text x="70" y="370" font-size="12" fill="#374151">0x0000_0020은 Index=1로 다른 칸 → 독립적으로 저장 가능</text>
+  <text x="50" y="392" font-size="12" fill="#EF4444">3.</text>
+  <text x="70" y="392" font-size="12" fill="#EF4444">0x0000_0000과 0x0001_0000은 Index=0으로 같은 칸 → Tag만 다름 → 충돌 미스!</text>
+  <line x1="50" y1="402" x2="770" y2="402" stroke="#DBEAFE" stroke-width="1"/>
+  <text x="410" y="422" text-anchor="middle" font-size="12" fill="#2563EB" font-weight="700">충돌 주소 패턴: 주소 차이가 캐시 크기(4KB=0x1000)의 배수이면 같은 Index에 충돌!</text>
+</svg>

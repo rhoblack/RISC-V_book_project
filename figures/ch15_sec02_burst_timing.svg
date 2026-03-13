@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="860" height="480" viewBox="0 0 860 480" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, monospace, sans-serif">
+
+  <rect width="860" height="480" fill="#F8FAFC" rx="12"/>
+  <text x="430" y="34" text-anchor="middle" font-size="17" font-weight="bold" fill="#1E3A5F">8-Beat 버스트 전송 타이밍 다이어그램 (I-Cache REFILL 예시)</text>
+
+  <!-- 열 정의 -->
+  <!-- 사이클 라벨 행 -->
+  <text x="120" y="60" text-anchor="end" font-size="12" fill="#6B7280">사이클</text>
+  <text x="30" y="60" font-size="11" fill="#6B7280">신호</text>
+
+  <!-- 사이클 번호 (T0~T12) -->
+  <text x="175" y="60" text-anchor="middle" font-size="11" fill="#374151">T0</text>
+  <text x="235" y="60" text-anchor="middle" font-size="11" fill="#374151">T1</text>
+  <text x="295" y="60" text-anchor="middle" font-size="11" fill="#374151">T2</text>
+  <text x="355" y="60" text-anchor="middle" font-size="11" fill="#374151">T3</text>
+  <text x="415" y="60" text-anchor="middle" font-size="11" fill="#374151">T4</text>
+  <text x="475" y="60" text-anchor="middle" font-size="11" fill="#374151">T5</text>
+  <text x="535" y="60" text-anchor="middle" font-size="11" fill="#374151">T6</text>
+  <text x="595" y="60" text-anchor="middle" font-size="11" fill="#374151">T7</text>
+  <text x="655" y="60" text-anchor="middle" font-size="11" fill="#374151">T8</text>
+  <text x="715" y="60" text-anchor="middle" font-size="11" fill="#374151">T9</text>
+  <text x="775" y="60" text-anchor="middle" font-size="11" fill="#374151">T10</text>
+  <text x="830" y="60" text-anchor="middle" font-size="11" fill="#374151">T11</text>
+
+  <!-- 구분선 -->
+  <line x1="130" y1="65" x2="855" y2="65" stroke="#CBD5E1" stroke-width="1"/>
+
+  <!-- ====== CLK 행 ====== -->
+  <text x="120" y="90" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">CLK</text>
+  <!-- CLK 파형 (12사이클) -->
+  <polyline points="135,98 145,98 145,76 175,76 175,98 205,98 205,76 235,76 235,98 265,98 265,76 295,76 295,98 325,98 325,76 355,76 355,98 385,98 385,76 415,76 415,98 445,98 445,76 475,76 475,98 505,98 505,76 535,76 535,98 565,98 565,76 595,76 595,98 625,98 625,76 655,76 655,98 685,98 685,76 715,76 715,98 745,98 745,76 775,76 775,98 805,98 805,76 835,76 835,98 855,98"
+    fill="none" stroke="#2563EB" stroke-width="2"/>
+
+  <!-- ====== 상태 행 ====== -->
+  <text x="120" y="128" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">FSM 상태</text>
+  <!-- IDLE (T0) -->
+  <rect x="135" y="112" width="60" height="26" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <text x="165" y="129" text-anchor="middle" font-size="10" fill="#374151">IDLE</text>
+  <!-- MISS (T1) -->
+  <rect x="195" y="112" width="60" height="26" fill="#FEE2E2" stroke="#EF4444" stroke-width="1"/>
+  <text x="225" y="129" text-anchor="middle" font-size="10" fill="#B91C1C">MISS</text>
+  <!-- WAIT_GRANT (T2) -->
+  <rect x="255" y="112" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="285" y="129" text-anchor="middle" font-size="9" fill="#854D0E">WAIT_GNT</text>
+  <!-- FILL T3~T10 (8 beats) -->
+  <rect x="315" y="112" width="480" height="26" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="555" y="129" text-anchor="middle" font-size="10" fill="#1D4ED8">FILL (beat 0 → 7, 8사이클)</text>
+  <!-- DONE T11 -->
+  <rect x="795" y="112" width="60" height="26" fill="#DCFCE7" stroke="#22C55E" stroke-width="1"/>
+  <text x="825" y="129" text-anchor="middle" font-size="10" fill="#15803D">DONE</text>
+
+  <!-- ====== mem_req 행 ====== -->
+  <text x="120" y="166" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">mem_req</text>
+  <!-- LOW T0 -->
+  <line x1="135" y1="168" x2="195" y2="168" stroke="#94A3B8" stroke-width="2"/>
+  <!-- HIGH T1~T2 (MISS, WAIT 동안 req=1) -->
+  <polyline points="195,168 195,152 315,152 315,168" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <!-- LOW after grant -->
+  <line x1="315" y1="168" x2="855" y2="168" stroke="#94A3B8" stroke-width="2"/>
+
+  <!-- ====== mem_addr 행 ====== -->
+  <text x="120" y="204" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">mem_addr</text>
+  <!-- X T0 -->
+  <rect x="135" y="188" width="60" height="26" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="165" y="204" text-anchor="middle" font-size="9" fill="#94A3B8">X</text>
+  <!-- 유효 주소 T1~T2 -->
+  <rect x="195" y="188" width="120" height="26" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1"/>
+  <text x="255" y="204" text-anchor="middle" font-size="9" fill="#1D4ED8">0x0000_0000</text>
+  <text x="255" y="214" text-anchor="middle" font-size="8" fill="#1D4ED8">{tag,idx,5'b0}</text>
+  <!-- X 나머지 -->
+  <rect x="315" y="188" width="540" height="26" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="585" y="204" text-anchor="middle" font-size="9" fill="#94A3B8">X (burst 중 내부 관리)</text>
+
+  <!-- ====== mem_ack 행 ====== -->
+  <text x="120" y="248" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">mem_ack</text>
+  <!-- LOW T0~T3 -->
+  <line x1="135" y1="250" x2="375" y2="250" stroke="#94A3B8" stroke-width="2"/>
+  <!-- HIGH T3~T10 (8 beats) -->
+  <polyline points="375,250 375,234 795,234 795,250" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <!-- LOW T11 -->
+  <line x1="795" y1="250" x2="855" y2="250" stroke="#94A3B8" stroke-width="2"/>
+
+  <!-- ====== mem_rdata 행 ====== -->
+  <text x="120" y="288" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">mem_rdata</text>
+  <!-- X T0~T3 -->
+  <rect x="135" y="268" width="240" height="30" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="255" y="286" text-anchor="middle" font-size="9" fill="#94A3B8">X</text>
+  <!-- Beat 0 T3 -->
+  <rect x="375" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="405" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 0</text>
+  <!-- Beat 1 T4 -->
+  <rect x="435" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="465" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 1</text>
+  <!-- Beat 2 T5 -->
+  <rect x="495" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="525" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 2</text>
+  <!-- Beat 3 T6 -->
+  <rect x="555" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="585" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 3</text>
+  <!-- Beat 4 T7 -->
+  <rect x="615" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="645" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 4</text>
+  <!-- Beat 5 T8 -->
+  <rect x="675" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="705" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 5</text>
+  <!-- Beat 6 T9 -->
+  <rect x="735" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="765" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 6</text>
+  <!-- Beat 7 T10 -->
+  <rect x="795" y="268" width="60" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="825" y="286" text-anchor="middle" font-size="9" fill="#1D4ED8">Beat 7</text>
+
+  <!-- ====== beat_cnt 행 ====== -->
+  <text x="120" y="326" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">beat_cnt</text>
+  <rect x="135" y="308" width="240" height="26" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="255" y="325" text-anchor="middle" font-size="9" fill="#94A3B8">0</text>
+  <rect x="375" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="405" y="325" text-anchor="middle" font-size="10" fill="#854D0E">0</text>
+  <rect x="435" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="465" y="325" text-anchor="middle" font-size="10" fill="#854D0E">1</text>
+  <rect x="495" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="525" y="325" text-anchor="middle" font-size="10" fill="#854D0E">2</text>
+  <rect x="555" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="585" y="325" text-anchor="middle" font-size="10" fill="#854D0E">3</text>
+  <rect x="615" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="645" y="325" text-anchor="middle" font-size="10" fill="#854D0E">4</text>
+  <rect x="675" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="705" y="325" text-anchor="middle" font-size="10" fill="#854D0E">5</text>
+  <rect x="735" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="765" y="325" text-anchor="middle" font-size="10" fill="#854D0E">6</text>
+  <rect x="795" y="308" width="60" height="26" fill="#FEF9C3" stroke="#EAB308" stroke-width="1"/>
+  <text x="825" y="325" text-anchor="middle" font-size="10" fill="#854D0E">7</text>
+
+  <!-- ====== icache_stall 행 ====== -->
+  <text x="120" y="364" text-anchor="end" font-size="12" font-weight="bold" fill="#374151">icache_stall</text>
+  <!-- LOW T0 -->
+  <line x1="135" y1="366" x2="195" y2="366" stroke="#94A3B8" stroke-width="2"/>
+  <!-- HIGH T1~T10 (MISS~FILL) -->
+  <polyline points="195,366 195,350 795,350 795,366" fill="none" stroke="#EF4444" stroke-width="2.5"/>
+  <!-- LOW T11 -->
+  <line x1="795" y1="366" x2="855" y2="366" stroke="#94A3B8" stroke-width="2"/>
+
+  <!-- ====== 페널티 표시 ====== -->
+  <rect x="135" y="390" width="720" height="70" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.5"/>
+  <text x="495" y="410" text-anchor="middle" font-size="12" font-weight="bold" fill="#78350F">미스 페널티 = 11사이클 (T1~T11)</text>
+  <!-- 브레이스 / 구간 표시 -->
+  <line x1="195" y1="420" x2="795" y2="420" stroke="#D97706" stroke-width="1.5"/>
+  <line x1="195" y1="415" x2="195" y2="425" stroke="#D97706" stroke-width="1.5"/>
+  <line x1="795" y1="415" x2="795" y2="425" stroke="#D97706" stroke-width="1.5"/>
+  <text x="280" y="440" text-anchor="middle" font-size="10" fill="#92400E">1: MISS감지</text>
+  <text x="340" y="440" text-anchor="middle" font-size="10" fill="#92400E">1: 핸드셰이크</text>
+  <text x="555" y="440" text-anchor="middle" font-size="10" fill="#1D4ED8">8: FILL (8-beat burst)</text>
+  <text x="825" y="440" text-anchor="middle" font-size="10" fill="#15803D">1: DONE</text>
+  <text x="495" y="456" text-anchor="middle" font-size="11" fill="#78350F">총 11사이클 (Ch13 단순화 5사이클 → Ch15 실제 모델 11사이클)</text>
+
+  <!-- 수직 구분선 -->
+  <line x1="135" y1="68" x2="135" y2="380" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="855" y1="68" x2="855" y2="380" stroke="#E2E8F0" stroke-width="1"/>
+</svg>

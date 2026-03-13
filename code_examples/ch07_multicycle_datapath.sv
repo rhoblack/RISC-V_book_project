@@ -101,7 +101,7 @@ module multicycle_datapath (
       case (pc_src)
          2'b00:   pc_next = alu_result;     // ALU 직접 출력 (PC+4)
          2'b01:   pc_next = alu_out_reg;    // ALUOut (분기 목표 주소)
-         2'b10:   pc_next = {alu_out_reg[31:28], ir_reg[25:0], 2'b00}; // 점프 주소
+         2'b10:   pc_next = {alu_out_reg[31:28], ir_reg[25:0], 2'b00}; // [Ch08 검토 예정] JAL은 pc_src=2'b01(ALUOut)로 처리 권장, RV32I는 PC-relative
          default: pc_next = alu_result;
       endcase
    end
@@ -239,7 +239,6 @@ module multicycle_datapath (
    // 10. ALU (공유 — 모든 단계에서 재사용)
    // =====================================================================
    always_comb begin
-      alu_zero = 1'b0;
       case (alu_op)
          4'b0000: alu_result = alu_a + alu_b;                          // ADD
          4'b0001: alu_result = alu_a - alu_b;                          // SUB
@@ -253,7 +252,7 @@ module multicycle_datapath (
          4'b1001: alu_result = $signed(alu_a) >>> alu_b[4:0];          // SRA
          default: alu_result = alu_a + alu_b;                          // 기본: ADD
       endcase
-      alu_zero = (alu_result == 32'd0);
+      alu_zero = (alu_result == 32'd0);   // case 이후 단 한 번 할당 (다중 드라이브 경고 방지)
    end
 
    // =====================================================================

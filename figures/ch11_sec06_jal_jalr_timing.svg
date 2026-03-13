@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="840" height="470" viewBox="0 0 840 470" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="840" height="470" fill="#F8FAFC" rx="8"/>
+  <text x="420" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">JAL vs JALR 처리 타이밍 비교</text>
+  <text x="420" y="44" text-anchor="middle" font-size="11" fill="#64748B">JAL: ID 단계 처리 (1사이클 버블) | JALR: EX 단계 처리 (2사이클 버블)</text>
+
+  <!-- ========================= JAL 섹션 ========================= -->
+  <rect x="10" y="58" width="820" height="26" fill="#1E40AF" rx="4"/>
+  <text x="420" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="white">JAL (J-type) — ID 단계에서 타겟 계산, if_id_flush만 활성화</text>
+
+  <!-- 헤더 -->
+  <rect x="180" y="88" width="650" height="22" fill="#3B82F6" rx="3"/>
+  <text x="225" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C1</text>
+  <text x="290" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C2</text>
+  <text x="355" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C3</text>
+  <text x="420" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C4</text>
+  <text x="485" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C5</text>
+  <text x="550" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C6</text>
+  <text x="615" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C7</text>
+  <text x="680" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C8</text>
+  <text x="745" y="103" text-anchor="middle" font-size="10" font-weight="600" fill="white">C9</text>
+
+  <!-- JAL rows -->
+  <text x="90" y="128" text-anchor="middle" font-size="9" fill="#1E40AF">JAL x1, target</text>
+  <rect x="180" y="114" width="65" height="28" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="212" y="132" text-anchor="middle" font-size="10" fill="#7C3AED">IF</text>
+  <rect x="245" y="114" width="65" height="28" fill="#8B5CF6" stroke="#6D28D9" stroke-width="2" rx="3"/>
+  <text x="277" y="128" text-anchor="middle" font-size="10" font-weight="700" fill="white">ID</text>
+  <text x="277" y="140" text-anchor="middle" font-size="7" fill="#FDE68A">타겟계산!</text>
+  <rect x="310" y="114" width="65" height="28" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="342" y="132" text-anchor="middle" font-size="10" fill="#7C3AED">EX</text>
+  <rect x="375" y="114" width="65" height="28" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="407" y="132" text-anchor="middle" font-size="10" fill="#7C3AED">MEM</text>
+  <rect x="440" y="114" width="65" height="28" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="472" y="132" text-anchor="middle" font-size="10" fill="#7C3AED">WB</text>
+  <text x="472" y="143" text-anchor="middle" font-size="7" fill="#7C3AED">rd=PC+4</text>
+
+  <text x="90" y="164" text-anchor="middle" font-size="9" fill="#DC2626">wrong (IF중)</text>
+  <rect x="245" y="150" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="277" y="168" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">IF❌</text>
+  <rect x="310" y="150" width="65" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="342" y="168" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">NOP</text>
+
+  <text x="90" y="200" text-anchor="middle" font-size="9" fill="#16A34A">target: 올바름</text>
+  <rect x="310" y="186" width="65" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="3"/>
+  <text x="342" y="204" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">IF✓</text>
+  <rect x="375" y="186" width="65" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="407" y="204" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">ID✓</text>
+
+  <!-- JAL 1사이클 페널티 -->
+  <line x1="245" y1="222" x2="310" y2="222" stroke="#DC2626" stroke-width="2"/>
+  <line x1="245" y1="217" x2="245" y2="227" stroke="#DC2626" stroke-width="2"/>
+  <line x1="310" y1="217" x2="310" y2="227" stroke="#DC2626" stroke-width="2"/>
+  <text x="277" y="237" text-anchor="middle" font-size="11" font-weight="700" fill="#DC2626">1사이클 버블</text>
+  <text x="277" y="250" text-anchor="middle" font-size="9" fill="#DC2626">(if_id_flush만)</text>
+
+  <!-- ========================= JALR 섹션 ========================= -->
+  <rect x="10" y="268" width="820" height="26" fill="#DC2626" rx="4"/>
+  <text x="420" y="286" text-anchor="middle" font-size="12" font-weight="700" fill="white">JALR (I-type) — EX 단계에서 rs1 읽어 타겟 계산, if_id_flush + id_ex_flush 활성화</text>
+
+  <!-- 헤더 JALR -->
+  <rect x="180" y="298" width="650" height="22" fill="#DC2626" rx="3"/>
+  <text x="225" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C1</text>
+  <text x="290" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C2</text>
+  <text x="355" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C3</text>
+  <text x="420" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C4</text>
+  <text x="485" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C5</text>
+  <text x="550" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C6</text>
+  <text x="615" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C7</text>
+  <text x="680" y="313" text-anchor="middle" font-size="10" font-weight="600" fill="white">C8</text>
+
+  <!-- JALR rows -->
+  <text x="90" y="338" text-anchor="middle" font-size="9" fill="#DC2626">JALR x0, 0(x1)</text>
+  <rect x="180" y="324" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" rx="3"/>
+  <text x="212" y="342" text-anchor="middle" font-size="10" fill="#DC2626">IF</text>
+  <rect x="245" y="324" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" rx="3"/>
+  <text x="277" y="342" text-anchor="middle" font-size="10" fill="#DC2626">ID</text>
+  <rect x="310" y="324" width="65" height="28" fill="#B91C1C" stroke="#991B1B" stroke-width="2" rx="3"/>
+  <text x="342" y="338" text-anchor="middle" font-size="10" font-weight="700" fill="white">EX</text>
+  <text x="342" y="350" text-anchor="middle" font-size="7" fill="#FDE68A">rs1+imm 계산!</text>
+  <rect x="375" y="324" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" rx="3"/>
+  <text x="407" y="342" text-anchor="middle" font-size="10" fill="#DC2626">MEM</text>
+  <rect x="440" y="324" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" rx="3"/>
+  <text x="472" y="342" text-anchor="middle" font-size="10" fill="#DC2626">WB</text>
+
+  <text x="90" y="374" text-anchor="middle" font-size="9" fill="#DC2626">wrong 1</text>
+  <rect x="245" y="360" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="277" y="378" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">IF❌</text>
+  <rect x="310" y="360" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="342" y="378" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">ID❌</text>
+  <rect x="375" y="360" width="65" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="407" y="378" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">NOP</text>
+
+  <text x="90" y="410" text-anchor="middle" font-size="9" fill="#DC2626">wrong 2</text>
+  <rect x="310" y="396" width="65" height="28" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="342" y="414" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">IF❌</text>
+  <rect x="375" y="396" width="65" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="407" y="414" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">NOP</text>
+
+  <text x="90" y="444" text-anchor="middle" font-size="9" fill="#16A34A">target: 올바름</text>
+  <rect x="375" y="430" width="65" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="3"/>
+  <text x="407" y="448" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">IF✓</text>
+
+  <!-- JALR 2사이클 페널티 -->
+  <line x1="245" y1="462" x2="375" y2="462" stroke="#DC2626" stroke-width="2"/>
+  <line x1="245" y1="456" x2="245" y2="468" stroke="#DC2626" stroke-width="2"/>
+  <line x1="375" y1="456" x2="375" y2="468" stroke="#DC2626" stroke-width="2"/>
+  <text x="310" y="455" text-anchor="middle" font-size="11" font-weight="700" fill="#DC2626">2사이클 버블 (if_id_flush + id_ex_flush)</text>
+
+  <!-- 비교 요약 -->
+  <rect x="500" y="360" width="320" height="70" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5" rx="6"/>
+  <text x="660" y="380" text-anchor="middle" font-size="10" font-weight="700" fill="#15803D">JAL vs JALR 비교</text>
+  <text x="660" y="396" text-anchor="middle" font-size="9" fill="#334155">JAL: 타겟=PC+imm_J, ID에서 계산 → 1버블</text>
+  <text x="660" y="412" text-anchor="middle" font-size="9" fill="#334155">JALR: 타겟=(rs1+imm)&amp;~1, EX에서 계산 → 2버블</text>
+  <text x="660" y="428" text-anchor="middle" font-size="9" fill="#DC2626">JALR rs1 의존성 → 포워딩으로 해결</text>
+</svg>

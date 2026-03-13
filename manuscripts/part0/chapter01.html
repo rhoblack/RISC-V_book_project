@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 01 — 프로젝트 소개와 개발 환경 구축</title>
   <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
 
@@ -343,7 +345,7 @@ module alu_example (
       case (alu_op)
          4'b0000: result = a + b;       // 덧셈
          4'b0001: result = a - b;       // 뺄셈
-         4'b0010: result = a & b;       // AND
+         4'b0010: result = a &amp; b;       // AND
          4'b0011: result = a | b;       // OR
          4'b0100: result = a ^ b;       // XOR
          default: result = 32'h0;       // 기본값
@@ -373,9 +375,9 @@ module register_example (
 );
    always_ff @(posedge clk or negedge rst_n) begin
       if (!rst_n)
-         q <= 32'h0;             // 리셋 시 0으로 초기화
+         q &lt;= 32'h0;             // 리셋 시 0으로 초기화
       else if (en)
-         q <= d;                 // 인에이블 활성 시 데이터 래치
+         q &lt;= d;                 // 인에이블 활성 시 데이터 래치
       // en이 비활성이면 현재 값 유지 (명시적 else 불필요)
    end
 endmodule</code></pre>
@@ -427,15 +429,15 @@ endmodule</code></pre>
   <pre><code class="language-systemverilog">// 블로킹 vs 비블로킹 할당 비교
 // 조합 논리에서의 블로킹 할당 — 순서대로 즉시 반영
 always_comb begin
-   temp = a & b;       // temp에 a & b 결과를 즉시 반영
+   temp = a &amp; b;       // temp에 a &amp; b 결과를 즉시 반영
    result = temp | c;  // temp의 최신 값을 사용
 end
 
 // 순차 논리에서의 비블로킹 할당 — 사이클 끝에 동시 반영
 always_ff @(posedge clk) begin
-   q1 <= d;            // 모든 비블로킹 할당이
-   q2 <= q1;           // 사이클 끝에 동시에 반영된다
-   q3 <= q2;           // → 3단 시프트 레지스터 생성
+   q1 &lt;= d;            // 모든 비블로킹 할당이
+   q2 &lt;= q1;           // 사이클 끝에 동시에 반영된다
+   q3 &lt;= q2;           // → 3단 시프트 레지스터 생성
 end</code></pre>
 
   <h3>typedef enum: 상태 머신 정의</h3>
@@ -463,9 +465,9 @@ module fsm_example (
    // 상태 레지스터: always_ff
    always_ff @(posedge clk or negedge rst_n) begin
       if (!rst_n)
-         curr_state <= IDLE;
+         curr_state &lt;= IDLE;
       else
-         curr_state <= next_state;
+         curr_state &lt;= next_state;
    end
 
    // 다음 상태 논리: always_comb
@@ -563,11 +565,11 @@ module led_blinker (
    // -------------------------------------------------
    always_ff @(posedge clk or negedge rst_n) begin
       if (!rst_n)
-         counter <= 26'd0;
+         counter &lt;= 26'd0;
       else if (counter == 26'd49_999_999)
-         counter <= 26'd0;
+         counter &lt;= 26'd0;
       else
-         counter <= counter + 1'b1;
+         counter &lt;= counter + 1'b1;
    end
 
    // 0.5초마다 1 사이클 동안 활성화되는 틱 신호
@@ -578,9 +580,9 @@ module led_blinker (
    // -------------------------------------------------
    always_ff @(posedge clk or negedge rst_n) begin
       if (!rst_n)
-         led <= 16'h0001;     // 리셋 시 첫 번째 LED만 점등
+         led &lt;= 16'h0001;     // 리셋 시 첫 번째 LED만 점등
       else if (tick)
-         led <= {led[14:0], led[15]};  // 좌측 순환 시프트
+         led &lt;= {led[14:0], led[15]};  // 좌측 순환 시프트
    end
 
 endmodule</code></pre>
@@ -777,7 +779,7 @@ module simple_adder_tb;
       input logic        exp_cout
    );
       #1;  // 조합 논리 안정화 대기
-      if (sum === exp_sum && cout === exp_cout) begin
+      if (sum === exp_sum &amp;&amp; cout === exp_cout) begin
          pass_count++;
       end else begin
          $display("[FAIL] a=%h, b=%h, cin=%b → sum=%h (기대:%h), cout=%b (기대:%b)",
@@ -871,7 +873,7 @@ vcs -sverilog -full64 -debug_access+all \
 
 # 3단계: Verdi로 파형 분석 (선택)
 verdi -sv simple_adder.sv simple_adder_tb.sv \
-      -ssf simple_adder_tb.fsdb &</code></pre>
+      -ssf simple_adder_tb.fsdb &amp;</code></pre>
 
   <p><code>-sverilog</code> 옵션은 SystemVerilog 문법을 활성화하며, <code>-debug_access+all</code>은 Verdi에서 모든 신호에 접근할 수 있도록 한다. 위 명령에서 <code>.fsdb</code>는 Synopsys 고유의 파형 데이터베이스 형식(Fast Signal DataBase)으로, Verdi에서 사용한다. 앞서 사용한 <code>.vcd</code>(Value Change Dump)는 표준 형식으로 호환성이 높지만, FSDB가 더 빠르고 파일 크기가 작다. VCS는 Linux 환경에서 동작하므로, Windows 환경에서는 WSL(Windows Subsystem for Linux)이나 원격 서버를 활용한다.</p>
 
@@ -956,20 +958,20 @@ module led_blinker #(
 
    always_ff @(posedge clk or negedge rst_n) begin
       if (!rst_n)
-         counter <= '0;                  // 모든 비트를 0으로 (fill literal)
+         counter &lt;= '0;                  // 모든 비트를 0으로 (fill literal)
       else if (counter == CNT_W'(COUNT_MAX))  // 비트 폭 명시적 캐스팅
-         counter <= '0;
+         counter &lt;= '0;
       else
-         counter <= counter + 1'b1;
+         counter &lt;= counter + 1'b1;
    end
 
    assign tick = (counter == CNT_W'(COUNT_MAX));
 
    always_ff @(posedge clk or negedge rst_n) begin
       if (!rst_n)
-         led <= 16'h0001;
+         led &lt;= 16'h0001;
       else if (tick)
-         led <= {led[14:0], led[15]};
+         led &lt;= {led[14:0], led[15]};
    end
 endmodule</code></pre>
 
@@ -997,6 +999,7 @@ led_blinker #(
   <p>가장 중요한 것은, 이 챕터를 통해 <strong>첫 번째 성공 경험</strong>을 얻었다는 것이다. LED가 점멸하는 그 작은 빛이, 20주 후에 C 프로그램을 실행하는 프로세서의 출발점이다.</p>
 
 </section>
+
 
 <!-- ========== 챕터 마무리 ========== -->
 <section class="chapter-summary">
@@ -1048,5 +1051,229 @@ end</code></pre>
   <p>다음 Chapter 02에서는 RISC-V 아키텍처의 설계 철학과 RV32I 명령어 집합 구조의 전체 모습을 학습한다. 모듈형 ISA(Modular ISA)라는 RISC-V만의 독특한 설계 철학이 왜 혁신적인지, 32개의 범용 레지스터(x0~x31)가 어떤 역할을 하는지, 그리고 6가지 명령어 형식(R/I/S/B/U/J 타입)이 어떤 패턴으로 구성되는지를 배우게 된다. 이번 챕터에서 설치한 개발 환경과 SystemVerilog 문법이 Chapter 02의 이해를 위한 기반이 된다.</p>
 </section>
 
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch01_led_blinker.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 모듈명  : led_blinker
+// 파일명  : ch01_led_blinker.sv
+// 설명    : Basys 3 FPGA 보드에서 LED를 1Hz 주기로 점멸하는 모듈
+//           100MHz 시스템 클록을 분주하여 사람이 인식할 수 있는 속도로 LED 제어
+// 대상 보드: Digilent Basys 3 (Artix-7 XC7A35T)
+// 작성 기준: SystemVerilog IEEE 1800-2017
+// ============================================================================
+
+module led_blinker (
+   input  logic       clk,      // 100MHz 시스템 클록 (Basys 3 W5 핀)
+   input  logic       rst_n,    // 능동 저(Active-Low) 리셋 (Basys 3 센터 버튼)
+   output logic [3:0] led       // LED 출력 (Basys 3 U16, E19, U19, V19 핀)
+);
+
+   // -----------------------------------------------------------------------
+   // 파라미터 정의
+   // -----------------------------------------------------------------------
+   // 100MHz 클록에서 1초 = 100,000,000 사이클
+   // 0.5초마다 토글하려면 50,000,000 사이클 카운트
+   localparam int unsigned MAX_COUNT = 50_000_000 - 1;
+
+   // 시뮬레이션 시 빠른 확인을 위한 조건부 파라미터
+   // synthesis translate_off
+   // localparam int unsigned MAX_COUNT = 5 - 1;  // 시뮬레이션용
+   // synthesis translate_on
+
+   // -----------------------------------------------------------------------
+   // 내부 신호 선언
+   // -----------------------------------------------------------------------
+   logic [25:0] counter;     // 26비트 카운터 (최대 67,108,863까지 카운트 가능)
+   logic        tick;        // 0.5초마다 발생하는 틱 신호
+   logic [3:0]  led_pattern; // LED 패턴 레지스터
+
+   // -----------------------------------------------------------------------
+   // 카운터 로직: 0.5초마다 틱 신호 생성
+   // -----------------------------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         counter &lt;= '0;
+      end else if (counter == MAX_COUNT[25:0]) begin
+         counter &lt;= '0;
+      end else begin
+         counter &lt;= counter + 1'b1;
+      end
+   end
+
+   // 틱 신호 생성 (조합 논리)
+   always_comb begin
+      tick = (counter == MAX_COUNT[25:0]);
+   end
+
+   // -----------------------------------------------------------------------
+   // LED 패턴 생성: 틱마다 패턴 순환
+   // -----------------------------------------------------------------------
+   // 패턴 순서: 0001 → 0010 → 0100 → 1000 → 0001 (시프트 레지스터)
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         led_pattern &lt;= 4'b0001;  // 초기값: 첫 번째 LED만 점등
+      end else if (tick) begin
+         led_pattern &lt;= {led_pattern[2:0], led_pattern[3]};  // 좌측 순환 시프트
+      end
+   end
+
+   // -----------------------------------------------------------------------
+   // 출력 연결
+   // -----------------------------------------------------------------------
+   assign led = led_pattern;
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch01_led_blinker_tb.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 모듈명  : led_blinker_tb
+// 파일명  : ch01_led_blinker_tb.sv
+// 설명    : led_blinker 모듈의 테스트벤치
+//           시뮬레이션에서 LED 패턴 순환과 리셋 동작을 검증
+// 작성 기준: SystemVerilog IEEE 1800-2017
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module led_blinker_tb;
+
+   // -----------------------------------------------------------------------
+   // 테스트벤치 신호 선언
+   // -----------------------------------------------------------------------
+   logic       clk;
+   logic       rst_n;
+   logic [3:0] led;
+
+   // -----------------------------------------------------------------------
+   // 시뮬레이션용 파라미터 (빠른 검증을 위해 카운터 최대값을 작게 설정)
+   // -----------------------------------------------------------------------
+   localparam int unsigned SIM_MAX_COUNT = 5;  // 5 사이클마다 틱 발생
+
+   // -----------------------------------------------------------------------
+   // DUT (Design Under Test) 인스턴스화
+   // -----------------------------------------------------------------------
+   led_blinker dut (
+      .clk   (clk),
+      .rst_n (rst_n),
+      .led   (led)
+   );
+
+   // -----------------------------------------------------------------------
+   // 클록 생성: 100MHz (주기 10ns)
+   // -----------------------------------------------------------------------
+   initial begin
+      clk = 1'b0;
+      forever #5 clk = ~clk;  // 5ns 반주기 → 10ns 주기 → 100MHz
+   end
+
+   // -----------------------------------------------------------------------
+   // 테스트 시나리오
+   // -----------------------------------------------------------------------
+   initial begin
+      $dumpfile("led_blinker_tb.vcd");
+      $dumpvars(0, led_blinker_tb);
+
+      // ---- 테스트 1: 리셋 동작 확인 ----
+      $display("=== 테스트 1: 리셋 동작 확인 ===");
+      rst_n = 1'b0;
+      #100;
+
+      assert (led == 4'b0001)
+         $display("[PASS] 리셋 중 LED 초기값 = %b", led);
+      else
+         $error("[FAIL] 리셋 중 LED 값 = %b, 기대값 = 0001", led);
+
+      // ---- 테스트 2: 리셋 해제 후 정상 동작 ----
+      $display("\n=== 테스트 2: 리셋 해제 후 정상 동작 ===");
+      rst_n = 1'b1;
+      $display("리셋 해제 시각: %0t ns", $time);
+      #1000;
+
+      // ---- 테스트 3: 리셋 재인가 ----
+      $display("\n=== 테스트 3: 리셋 재인가 ===");
+      rst_n = 1'b0;
+      #50;
+
+      assert (led == 4'b0001)
+         $display("[PASS] 재리셋 후 LED 초기값 = %b", led);
+      else
+         $error("[FAIL] 재리셋 후 LED 값 = %b, 기대값 = 0001", led);
+
+      rst_n = 1'b1;
+      #500;
+
+      $display("\n=== 테스트 완료 ===");
+      $display("파형 파일: led_blinker_tb.vcd 에서 상세 동작을 확인하십시오.");
+      $finish;
+   end
+
+   // -----------------------------------------------------------------------
+   // LED 변화 모니터링
+   // -----------------------------------------------------------------------
+   always @(led) begin
+      $display("[%0t ns] LED 변화 감지: led = %b", $time, led);
+   end
+
+   initial begin
+      #10_000_000;
+      $display("[TIMEOUT] 시뮬레이션 시간 초과 — 강제 종료");
+      $finish;
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">XDC</span>ch01_basys3.xdc</h3>
+    <pre><code class="language-tcl">## ============================================================================
+## 파일명  : ch01_basys3.xdc
+## 설명    : Basys 3 FPGA 보드용 XDC 제약 파일 (LED 점멸 실습)
+## 대상 보드: Digilent Basys 3 (Artix-7 XC7A35TCPG236-1)
+## ============================================================================
+
+## 클록 신호 (100MHz 온보드 오실레이터)
+set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports {clk}]
+create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports {clk}]
+
+## 리셋 신호 (센터 푸시 버튼 — 능동 저 리셋)
+set_property -dict { PACKAGE_PIN U18  IOSTANDARD LVCMOS33 } [get_ports {rst_n}]
+
+## LED 출력 (4개)
+set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]
+set_property -dict { PACKAGE_PIN E19  IOSTANDARD LVCMOS33 } [get_ports {led[1]}]
+set_property -dict { PACKAGE_PIN U19  IOSTANDARD LVCMOS33 } [get_ports {led[2]}]
+set_property -dict { PACKAGE_PIN V19  IOSTANDARD LVCMOS33 } [get_ports {led[3]}]
+
+## 비트스트림 설정
+set_property CFGBVS VCCO [current_design]
+set_property CONFIG_VOLTAGE 3.3 [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]</code></pre>
+  </div>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
 </body>
 </html>

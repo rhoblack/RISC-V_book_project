@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" font-family="Pretendard, sans-serif">
+  <rect width="1000" height="700" fill="#F8FAFF" rx="12"/>
+  <text x="500" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">RV32I 멀티사이클 FSM 전체 상태 전이도 (17개 상태)</text>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#374151"/></marker>
+    <marker id="arr-b" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2563EB"/></marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#16A34A"/></marker>
+    <marker id="arr-r" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#DC2626"/></marker>
+    <marker id="arr-p" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#7C3AED"/></marker>
+    <marker id="arr-o" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#CA8A04"/></marker>
+  </defs>
+  <!-- 범례 -->
+  <rect x="760" y="40" width="225" height="175" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.5"/>
+  <text x="872" y="60" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">명령어 타입별 색상</text>
+  <ellipse cx="782" cy="80" rx="16" ry="10" fill="#E2E8F0" stroke="#64748B" stroke-width="2"/>
+  <text x="805" y="84" font-size="11" fill="#374151">IF / ID (공통)</text>
+  <ellipse cx="782" cy="103" rx="16" ry="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="805" y="107" font-size="11" fill="#1E40AF">R / I / LUI / AUIPC</text>
+  <ellipse cx="782" cy="126" rx="16" ry="10" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="805" y="130" font-size="11" fill="#166534">Load</text>
+  <ellipse cx="782" cy="149" rx="16" ry="10" fill="#FEF9C3" stroke="#CA8A04" stroke-width="2"/>
+  <text x="805" y="153" font-size="11" fill="#854D0E">Store</text>
+  <ellipse cx="782" cy="172" rx="16" ry="10" fill="#FEE2E2" stroke="#DC2626" stroke-width="2"/>
+  <text x="805" y="176" font-size="11" fill="#991B1B">Branch</text>
+  <ellipse cx="782" cy="195" rx="16" ry="10" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="805" y="199" font-size="11" fill="#5B21B6">JAL / JALR</text>
+  <!-- S0 IF -->
+  <ellipse cx="200" cy="90" rx="55" ry="30" fill="#E2E8F0" stroke="#64748B" stroke-width="2.5"/>
+  <text x="200" y="86" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E293B">S0: IF</text>
+  <text x="200" y="101" text-anchor="middle" font-size="10" fill="#475569">명령어 인출</text>
+  <!-- S1 ID -->
+  <ellipse cx="200" cy="205" rx="55" ry="30" fill="#E2E8F0" stroke="#64748B" stroke-width="2.5"/>
+  <text x="200" y="201" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E293B">S1: ID</text>
+  <text x="200" y="216" text-anchor="middle" font-size="10" fill="#475569">디코딩/레지스터</text>
+  <!-- S0 to S1 -->
+  <line x1="200" y1="120" x2="200" y2="175" stroke="#64748B" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="218" y="150" font-size="10" fill="#475569">항상</text>
+  <!-- EX_R -->
+  <ellipse cx="75" cy="320" rx="50" ry="27" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="75" y="316" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">S2: EX_R</text>
+  <text x="75" y="330" text-anchor="middle" font-size="9" fill="#1E40AF">R-type 실행</text>
+  <!-- EX_I -->
+  <ellipse cx="205" cy="320" rx="50" ry="27" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="205" y="316" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">S3: EX_I</text>
+  <text x="205" y="330" text-anchor="middle" font-size="9" fill="#1E40AF">I-type 실행</text>
+  <!-- WB_RI -->
+  <ellipse cx="140" cy="420" rx="52" ry="27" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="140" y="416" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">S12: WB_RI</text>
+  <text x="140" y="431" text-anchor="middle" font-size="9" fill="#1E40AF">ALUOut to rd</text>
+  <!-- EX_LUI -->
+  <ellipse cx="55" cy="535" rx="50" ry="27" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="55" y="531" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">S10: EX_LUI</text>
+  <text x="55" y="545" text-anchor="middle" font-size="9" fill="#1E40AF">0 + imm_U</text>
+  <!-- EX_AUIPC -->
+  <ellipse cx="225" cy="535" rx="52" ry="27" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="225" y="531" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">S11: EX_AUIPC</text>
+  <text x="225" y="545" text-anchor="middle" font-size="9" fill="#1E40AF">PC + imm_U</text>
+  <!-- EX_LOAD -->
+  <ellipse cx="375" cy="295" rx="55" ry="27" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="375" y="291" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">S4: EX_LOAD</text>
+  <text x="375" y="306" text-anchor="middle" font-size="9" fill="#166534">주소 계산</text>
+  <!-- MEM_LD -->
+  <ellipse cx="375" cy="385" rx="55" ry="27" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="375" y="381" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">S5: MEM_LD</text>
+  <text x="375" y="396" text-anchor="middle" font-size="9" fill="#166534">메모리 읽기</text>
+  <!-- WB_LD -->
+  <ellipse cx="375" cy="475" rx="55" ry="27" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="375" y="471" text-anchor="middle" font-size="11" font-weight="bold" fill="#166534">S6: WB_LD</text>
+  <text x="375" y="486" text-anchor="middle" font-size="9" fill="#166534">MDR to rd</text>
+  <!-- EX_ST -->
+  <ellipse cx="520" cy="295" rx="52" ry="27" fill="#FEF9C3" stroke="#CA8A04" stroke-width="2"/>
+  <text x="520" y="291" text-anchor="middle" font-size="11" font-weight="bold" fill="#854D0E">S7: EX_ST</text>
+  <text x="520" y="306" text-anchor="middle" font-size="9" fill="#854D0E">주소 계산</text>
+  <!-- MEM_ST -->
+  <ellipse cx="520" cy="385" rx="52" ry="27" fill="#FEF9C3" stroke="#CA8A04" stroke-width="2"/>
+  <text x="520" y="381" text-anchor="middle" font-size="11" font-weight="bold" fill="#854D0E">S8: MEM_ST</text>
+  <text x="520" y="396" text-anchor="middle" font-size="9" fill="#854D0E">메모리 쓰기</text>
+  <!-- EX_BR -->
+  <ellipse cx="645" cy="295" rx="52" ry="27" fill="#FEE2E2" stroke="#DC2626" stroke-width="2"/>
+  <text x="645" y="291" text-anchor="middle" font-size="11" font-weight="bold" fill="#991B1B">S9: EX_BR</text>
+  <text x="645" y="306" text-anchor="middle" font-size="9" fill="#991B1B">비교+분기(3사이클)</text>
+  <!-- EX_JAL -->
+  <ellipse cx="760" cy="295" rx="52" ry="27" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="760" y="291" text-anchor="middle" font-size="11" font-weight="bold" fill="#5B21B6">S13: EX_JAL</text>
+  <text x="760" y="306" text-anchor="middle" font-size="9" fill="#5B21B6">PC + imm_J</text>
+  <!-- WB_JAL -->
+  <ellipse cx="760" cy="395" rx="52" ry="27" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="760" y="391" text-anchor="middle" font-size="11" font-weight="bold" fill="#5B21B6">S14: WB_JAL</text>
+  <text x="760" y="406" text-anchor="middle" font-size="9" fill="#5B21B6">rd=PC+4, PC=목표</text>
+  <!-- EX_JALR -->
+  <ellipse cx="645" cy="395" rx="52" ry="27" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="645" y="391" text-anchor="middle" font-size="11" font-weight="bold" fill="#5B21B6">S15: EX_JALR</text>
+  <text x="645" y="406" text-anchor="middle" font-size="9" fill="#5B21B6">rs1 + imm_I</text>
+  <!-- WB_JALR -->
+  <ellipse cx="645" cy="490" rx="52" ry="27" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="645" y="486" text-anchor="middle" font-size="11" font-weight="bold" fill="#5B21B6">S16: WB_JALR</text>
+  <text x="645" y="501" text-anchor="middle" font-size="9" fill="#5B21B6">rd=PC+4, PC=목표</text>
+  <!-- ID to EX states arrows -->
+  <line x1="165" y1="222" x2="101" y2="296" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <text x="112" y="257" font-size="9" fill="#2563EB">OP_R</text>
+  <line x1="200" y1="235" x2="202" y2="293" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <text x="215" y="267" font-size="9" fill="#2563EB">OP_I</text>
+  <line x1="220" y1="228" x2="335" y2="278" stroke="#16A34A" stroke-width="1.5" marker-end="url(#arr-g)"/>
+  <text x="280" y="250" font-size="9" fill="#16A34A">LOAD</text>
+  <line x1="232" y1="225" x2="478" y2="279" stroke="#CA8A04" stroke-width="1.5" marker-end="url(#arr-o)"/>
+  <text x="375" y="248" font-size="9" fill="#854D0E">STORE</text>
+  <line x1="242" y1="221" x2="603" y2="280" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arr-r)"/>
+  <text x="460" y="243" font-size="9" fill="#991B1B">BRANCH</text>
+  <line x1="248" y1="219" x2="716" y2="281" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#arr-p)"/>
+  <text x="560" y="240" font-size="9" fill="#5B21B6">JAL</text>
+  <line x1="244" y1="223" x2="600" y2="377" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-p)"/>
+  <text x="390" y="315" font-size="9" fill="#5B21B6">JALR</text>
+  <!-- LUI/AUIPC from ID -->
+  <line x1="158" y1="228" x2="75" y2="508" stroke="#2563EB" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arr-b)"/>
+  <text x="90" y="378" font-size="9" fill="#1E40AF">LUI</text>
+  <line x1="185" y1="232" x2="218" y2="508" stroke="#2563EB" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arr-b)"/>
+  <text x="210" y="378" font-size="9" fill="#1E40AF">AUIPC</text>
+  <!-- EX_R EX_I to WB_RI -->
+  <line x1="93" y1="344" x2="112" y2="396" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <line x1="183" y1="344" x2="165" y2="396" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <!-- LUI AUIPC to WB_RI -->
+  <line x1="77" y1="508" x2="110" y2="445" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <line x1="210" y1="509" x2="170" y2="446" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arr-b)"/>
+  <!-- Load chain -->
+  <line x1="375" y1="322" x2="375" y2="358" stroke="#16A34A" stroke-width="1.5" marker-end="url(#arr-g)"/>
+  <line x1="375" y1="412" x2="375" y2="448" stroke="#16A34A" stroke-width="1.5" marker-end="url(#arr-g)"/>
+  <!-- Store chain -->
+  <line x1="520" y1="322" x2="520" y2="358" stroke="#CA8A04" stroke-width="1.5" marker-end="url(#arr-o)"/>
+  <!-- JAL chain -->
+  <line x1="760" y1="322" x2="760" y2="368" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#arr-p)"/>
+  <!-- JALR chain -->
+  <line x1="645" y1="422" x2="645" y2="463" stroke="#7C3AED" stroke-width="1.5" marker-end="url(#arr-p)"/>
+  <!-- Return note -->
+  <rect x="25" y="625" width="720" height="50" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="385" y="645" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">모든 종료 상태 후 next_state = S0 (IF) 복귀</text>
+  <text x="385" y="663" text-anchor="middle" font-size="10" fill="#92400E">WB_RI, WB_LD, MEM_ST, EX_BR, WB_JAL, WB_JALR → S0 (IF)</text>
+</svg>

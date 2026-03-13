@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 420" font-family="Pretendard, sans-serif">
+  <rect width="820" height="420" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="34" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">32비트 주소 분해 (Address Decomposition)</text>
+  <text x="410" y="55" text-anchor="middle" font-size="12" fill="#374151">4KB 캐시 / 128 엔트리 / 32바이트 블록 기준</text>
+
+  <!-- 32비트 주소 박스 전체 -->
+  <!-- Tag[31:12]: 20비트 (파란색) -->
+  <rect x="60" y="80" width="400" height="52" fill="#DBEAFE" rx="4" stroke="#2563EB" stroke-width="2.5"/>
+  <text x="260" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#1D4ED8">Tag [31:12]</text>
+  <text x="260" y="122" text-anchor="middle" font-size="12" fill="#2563EB">20비트 — 어느 메모리 블록인가? (주인 확인)</text>
+
+  <!-- Index[11:5]: 7비트 (초록색) -->
+  <rect x="462" y="80" width="140" height="52" fill="#D1FAE5" rx="4" stroke="#10B981" stroke-width="2.5"/>
+  <text x="532" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#065F46">Index [11:5]</text>
+  <text x="532" y="122" text-anchor="middle" font-size="12" fill="#047857">7비트 — 몇 번 칸?</text>
+
+  <!-- Offset[4:0]: 5비트 (주황색) -->
+  <rect x="604" y="80" width="100" height="52" fill="#FEF3C7" rx="4" stroke="#F59E0B" stroke-width="2.5"/>
+  <text x="654" y="100" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">Offset [4:0]</text>
+  <text x="654" y="122" text-anchor="middle" font-size="11" fill="#B45309">5비트</text>
+
+  <!-- 비트 번호 레이블 -->
+  <text x="60" y="74" text-anchor="start" font-size="11" fill="#6B7280">비트31</text>
+  <text x="456" y="74" text-anchor="end" font-size="11" fill="#6B7280">비트12</text>
+  <text x="464" y="74" text-anchor="start" font-size="11" fill="#6B7280">비트11</text>
+  <text x="598" y="74" text-anchor="end" font-size="11" fill="#6B7280">비트5</text>
+  <text x="606" y="74" text-anchor="start" font-size="11" fill="#6B7280">비트4</text>
+  <text x="702" y="74" text-anchor="end" font-size="11" fill="#6B7280">비트0</text>
+
+  <!-- 설명 박스 (3개) -->
+  <!-- Tag 설명 -->
+  <line x1="260" y1="134" x2="260" y2="165" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <rect x="60" y="165" width="400" height="85" fill="white" rx="8" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="260" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8">Tag (태그) — 20비트</text>
+  <text x="260" y="206" text-anchor="middle" font-size="11" fill="#374151">같은 Index에 서로 다른 메모리 블록이 저장될 수 있음</text>
+  <text x="260" y="222" text-anchor="middle" font-size="11" fill="#374151">Tag = 주소의 상위 20비트로 "원본 블록" 식별</text>
+  <text x="260" y="238" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="600">2^20 = 1,048,576개 서로 다른 블록 구분 가능</text>
+
+  <!-- Index 설명 -->
+  <line x1="532" y1="134" x2="532" y2="165" stroke="#10B981" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <rect x="462" y="165" width="140" height="85" fill="white" rx="8" stroke="#10B981" stroke-width="1.5"/>
+  <text x="532" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">Index (인덱스)</text>
+  <text x="532" y="204" text-anchor="middle" font-size="11" fill="#374151">7비트</text>
+  <text x="532" y="220" text-anchor="middle" font-size="11" fill="#374151">= 128개 칸</text>
+  <text x="532" y="238" text-anchor="middle" font-size="11" fill="#047857">log₂(128)=7</text>
+
+  <!-- Offset 설명 -->
+  <line x1="654" y1="134" x2="654" y2="165" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <rect x="604" y="165" width="160" height="85" fill="white" rx="8" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="684" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">Offset (오프셋)</text>
+  <text x="684" y="204" text-anchor="middle" font-size="11" fill="#374151">5비트 = 32바이트</text>
+  <text x="684" y="220" text-anchor="middle" font-size="11" fill="#374151">블록 내 위치</text>
+  <text x="684" y="238" text-anchor="middle" font-size="11" fill="#B45309">log₂(32)=5</text>
+
+  <!-- 계산 방법 박스 -->
+  <rect x="60" y="270" width="700" height="125" fill="white" rx="10" stroke="#DBEAFE" stroke-width="2"/>
+  <text x="410" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#1E3A5F">비트 분할 계산 순서</text>
+  <line x1="80" y1="300" x2="740" y2="300" stroke="#DBEAFE" stroke-width="1"/>
+  <text x="410" y="320" text-anchor="middle" font-size="12" fill="#374151">1단계: Offset = log₂(블록 크기) = log₂(32) = 5비트  →  주소[4:0]</text>
+  <text x="410" y="340" text-anchor="middle" font-size="12" fill="#374151">2단계: Index = log₂(엔트리 수) = log₂(128) = 7비트  →  주소[11:5]</text>
+  <text x="410" y="360" text-anchor="middle" font-size="12" fill="#374151">3단계: Tag = 32 - 5 - 7 = 20비트  →  주소[31:12]</text>
+  <line x1="80" y1="370" x2="740" y2="370" stroke="#DBEAFE" stroke-width="1"/>
+  <text x="410" y="387" text-anchor="middle" font-size="12" fill="#2563EB" font-weight="600">예: 주소 0x0001_0024 → Tag=0x00010, Index=1, Offset=4</text>
+</svg>

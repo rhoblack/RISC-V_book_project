@@ -1,127 +1,135 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 480" font-family="Pretendard, sans-serif">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+
+  <!-- 배경 -->
+  <rect width="920" height="420" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="460" y="30" text-anchor="middle" font-size="15" font-weight="bold" fill="#1E293B">RV32I 5단계 파이프라인 구조</text>
+  <text x="460" y="48" text-anchor="middle" font-size="10" fill="#64748B">Harvard 구조 (IMEM / DMEM 분리)</text>
+
   <defs>
-    <marker id="ar" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    <marker id="arrB" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#374151"/>
     </marker>
-    <marker id="ar-w" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    <marker id="arrP" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#7C3AED"/>
     </marker>
   </defs>
 
-  <!-- 제목 -->
-  <text x="550" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1F2937">RV32I 5단계 파이프라인 스테이지 블록도</text>
+  <!-- IF 스테이지 -->
+  <rect x="30" y="70" width="145" height="220" fill="#DBEAFE" rx="6" stroke="#3B82F6" stroke-width="2"/>
+  <text x="102" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">IF</text>
+  <text x="102" y="107" text-anchor="middle" font-size="9" fill="#1E40AF">Instruction Fetch</text>
+  <text x="102" y="120" text-anchor="middle" font-size="8" fill="#1D4ED8">명령어 인출</text>
+  <rect x="42" y="130" width="121" height="26" fill="white" rx="3" stroke="#93C5FD"/>
+  <text x="102" y="147" text-anchor="middle" font-size="9" fill="#1E40AF">PC 레지스터</text>
+  <rect x="42" y="160" width="121" height="26" fill="white" rx="3" stroke="#93C5FD"/>
+  <text x="102" y="177" text-anchor="middle" font-size="9" fill="#1E40AF">IMEM (비동기 읽기)</text>
+  <rect x="42" y="190" width="121" height="26" fill="white" rx="3" stroke="#93C5FD"/>
+  <text x="102" y="207" text-anchor="middle" font-size="9" fill="#1E40AF">PC+4 가산기</text>
+  <rect x="42" y="220" width="121" height="26" fill="white" rx="3" stroke="#93C5FD"/>
+  <text x="102" y="237" text-anchor="middle" font-size="9" fill="#1E40AF">PC 선택 MUX</text>
 
-  <!-- ===== 스테이지 1: IF ===== -->
-  <rect x="20" y="60" width="190" height="320" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
-  <rect x="20" y="60" width="190" height="36" rx="10" fill="#2563EB"/>
-  <rect x="20" y="80" width="190" height="16" fill="#2563EB"/>
-  <text x="115" y="82" text-anchor="middle" font-size="14" fill="white" font-weight="bold">IF (Instruction Fetch)</text>
+  <!-- IF/ID 레지스터 -->
+  <rect x="178" y="90" width="22" height="200" fill="#374151" rx="3"/>
+  <text x="189" y="196" text-anchor="middle" font-size="8" fill="white" transform="rotate(-90,189,196)">IF/ID</text>
 
-  <rect x="40" y="110" width="150" height="35" rx="5" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="115" y="132" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">PC (Program Counter)</text>
+  <!-- ID 스테이지 -->
+  <rect x="203" y="70" width="145" height="220" fill="#BBF7D0" rx="6" stroke="#22C55E" stroke-width="2"/>
+  <text x="276" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#065F46">ID</text>
+  <text x="276" y="107" text-anchor="middle" font-size="9" fill="#065F46">Instruction Decode</text>
+  <text x="276" y="120" text-anchor="middle" font-size="8" fill="#14532D">명령어 해석</text>
+  <rect x="215" y="130" width="121" height="26" fill="white" rx="3" stroke="#86EFAC"/>
+  <text x="276" y="147" text-anchor="middle" font-size="9" fill="#065F46">제어 유닛 (Control)</text>
+  <rect x="215" y="160" width="121" height="26" fill="white" rx="3" stroke="#86EFAC"/>
+  <text x="276" y="177" text-anchor="middle" font-size="9" fill="#065F46">레지스터 파일 (읽기)</text>
+  <rect x="215" y="190" width="121" height="26" fill="white" rx="3" stroke="#86EFAC"/>
+  <text x="276" y="207" text-anchor="middle" font-size="9" fill="#065F46">즉치수 생성기</text>
+  <rect x="215" y="220" width="121" height="26" fill="white" rx="3" stroke="#86EFAC"/>
+  <text x="276" y="237" text-anchor="middle" font-size="9" fill="#065F46">(Imm Generator)</text>
 
-  <rect x="40" y="160" width="150" height="35" rx="5" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="115" y="182" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">IMEM (명령어 메모리)</text>
+  <!-- ID/EX 레지스터 -->
+  <rect x="351" y="90" width="22" height="200" fill="#374151" rx="3"/>
+  <text x="362" y="196" text-anchor="middle" font-size="8" fill="white" transform="rotate(-90,362,196)">ID/EX</text>
 
-  <rect x="40" y="210" width="150" height="35" rx="5" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="115" y="232" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">PC + 4 가산기</text>
+  <!-- EX 스테이지 -->
+  <rect x="376" y="70" width="145" height="220" fill="#FEF3C7" rx="6" stroke="#F59E0B" stroke-width="2"/>
+  <text x="448" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#78350F">EX</text>
+  <text x="448" y="107" text-anchor="middle" font-size="9" fill="#78350F">Execute</text>
+  <text x="448" y="120" text-anchor="middle" font-size="8" fill="#92400E">실행</text>
+  <rect x="388" y="130" width="121" height="26" fill="white" rx="3" stroke="#FCD34D"/>
+  <text x="448" y="147" text-anchor="middle" font-size="9" fill="#78350F">ALU</text>
+  <rect x="388" y="160" width="121" height="26" fill="white" rx="3" stroke="#FCD34D"/>
+  <text x="448" y="177" text-anchor="middle" font-size="9" fill="#78350F">MUX A (alu_src_a)</text>
+  <rect x="388" y="190" width="121" height="26" fill="white" rx="3" stroke="#FCD34D"/>
+  <text x="448" y="207" text-anchor="middle" font-size="9" fill="#78350F">MUX B (alu_src_b)</text>
+  <rect x="388" y="220" width="121" height="26" fill="white" rx="3" stroke="#FCD34D"/>
+  <text x="448" y="237" text-anchor="middle" font-size="9" fill="#78350F">분기 조건 판단</text>
 
-  <text x="115" y="275" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 다음 명령어 주소 생성</text>
-  <text x="115" y="292" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 명령어 메모리에서 인출</text>
-  <text x="115" y="309" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; PC+4 계산</text>
+  <!-- EX/MEM 레지스터 -->
+  <rect x="524" y="90" width="22" height="200" fill="#374151" rx="3"/>
+  <text x="535" y="196" text-anchor="middle" font-size="8" fill="white" transform="rotate(-90,535,196)">EX/MEM</text>
 
-  <!-- 파이프라인 레지스터 IF/ID -->
-  <rect x="215" y="55" width="18" height="330" rx="3" fill="#FCD34D" stroke="#D97706" stroke-width="1.5"/>
-  <text x="224" y="225" text-anchor="middle" font-size="9" fill="#92400E" font-weight="bold" transform="rotate(-90, 224, 225)">IF/ID</text>
+  <!-- MEM 스테이지 -->
+  <rect x="549" y="70" width="145" height="220" fill="#FCE7F3" rx="6" stroke="#EC4899" stroke-width="2"/>
+  <text x="621" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#831843">MEM</text>
+  <text x="621" y="107" text-anchor="middle" font-size="9" fill="#831843">Memory Access</text>
+  <text x="621" y="120" text-anchor="middle" font-size="8" fill="#9D174D">메모리 접근</text>
+  <rect x="561" y="130" width="121" height="26" fill="white" rx="3" stroke="#F9A8D4"/>
+  <text x="621" y="147" text-anchor="middle" font-size="9" fill="#831843">DMEM 읽기/쓰기</text>
+  <rect x="561" y="160" width="121" height="26" fill="white" rx="3" stroke="#F9A8D4"/>
+  <text x="621" y="177" text-anchor="middle" font-size="9" fill="#831843">동기 쓰기 (clk edge)</text>
+  <rect x="561" y="190" width="121" height="26" fill="white" rx="3" stroke="#F9A8D4"/>
+  <text x="621" y="207" text-anchor="middle" font-size="9" fill="#831843">비동기 읽기</text>
+  <rect x="561" y="220" width="121" height="26" fill="white" rx="3" stroke="#F9A8D4"/>
+  <text x="621" y="237" text-anchor="middle" font-size="9" fill="#831843">mem_read/write 제어</text>
 
-  <!-- ===== 스테이지 2: ID ===== -->
-  <rect x="240" y="60" width="190" height="320" rx="10" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-  <rect x="240" y="60" width="190" height="36" rx="10" fill="#3B82F6"/>
-  <rect x="240" y="80" width="190" height="16" fill="#3B82F6"/>
-  <text x="335" y="82" text-anchor="middle" font-size="14" fill="white" font-weight="bold">ID (Instruction Decode)</text>
+  <!-- MEM/WB 레지스터 -->
+  <rect x="697" y="90" width="22" height="200" fill="#374151" rx="3"/>
+  <text x="708" y="196" text-anchor="middle" font-size="8" fill="white" transform="rotate(-90,708,196)">MEM/WB</text>
 
-  <rect x="260" y="110" width="150" height="35" rx="5" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="335" y="132" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">명령어 디코더</text>
+  <!-- WB 스테이지 -->
+  <rect x="722" y="70" width="145" height="220" fill="#F3E8FF" rx="6" stroke="#8B5CF6" stroke-width="2"/>
+  <text x="795" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#4C1D95">WB</text>
+  <text x="795" y="107" text-anchor="middle" font-size="9" fill="#4C1D95">Write-Back</text>
+  <text x="795" y="120" text-anchor="middle" font-size="8" fill="#5B21B6">결과 저장</text>
+  <rect x="734" y="130" width="121" height="26" fill="white" rx="3" stroke="#C4B5FD"/>
+  <text x="795" y="147" text-anchor="middle" font-size="9" fill="#4C1D95">MUX (mem_to_reg)</text>
+  <rect x="734" y="160" width="121" height="26" fill="white" rx="3" stroke="#C4B5FD"/>
+  <text x="795" y="177" text-anchor="middle" font-size="9" fill="#4C1D95">레지스터 파일 (쓰기)</text>
+  <rect x="734" y="190" width="121" height="26" fill="white" rx="3" stroke="#C4B5FD"/>
+  <text x="795" y="207" text-anchor="middle" font-size="9" fill="#4C1D95">rd_addr 선택</text>
+  <rect x="734" y="220" width="121" height="26" fill="white" rx="3" stroke="#C4B5FD"/>
+  <text x="795" y="237" text-anchor="middle" font-size="9" fill="#4C1D95">reg_write = 1 시 저장</text>
 
-  <rect x="260" y="160" width="150" height="35" rx="5" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="335" y="182" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">레지스터 파일 읽기</text>
+  <!-- 데이터 흐름 화살표 -->
+  <line x1="175" y1="190" x2="178" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="200" y1="190" x2="203" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="348" y1="190" x2="351" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="373" y1="190" x2="376" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="521" y1="190" x2="524" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="546" y1="190" x2="549" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="694" y1="190" x2="697" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
+  <line x1="719" y1="190" x2="722" y2="190" stroke="#374151" stroke-width="2" marker-end="url(#arrB)"/>
 
-  <rect x="260" y="210" width="150" height="35" rx="5" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
-  <text x="335" y="232" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">즉치수 생성기</text>
+  <!-- WB→ID 피드백 (레지스터 파일 쓰기) -->
+  <path d="M795,290 L795,350 L276,350 L276,290" fill="none" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrP)"/>
+  <text x="535" y="365" text-anchor="middle" font-size="8" fill="#7C3AED">Write-Back 피드백: rd에 결과 기록 (WB → RF)</text>
 
-  <text x="335" y="275" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; opcode/funct3/funct7 해독</text>
-  <text x="335" y="292" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; rs1, rs2 레지스터 읽기</text>
-  <text x="335" y="309" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 즉치수 부호 확장</text>
-  <text x="335" y="326" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 제어 신호 생성</text>
-
-  <!-- 파이프라인 레지스터 ID/EX -->
-  <rect x="435" y="55" width="18" height="330" rx="3" fill="#FCD34D" stroke="#D97706" stroke-width="1.5"/>
-  <text x="444" y="225" text-anchor="middle" font-size="9" fill="#92400E" font-weight="bold" transform="rotate(-90, 444, 225)">ID/EX</text>
-
-  <!-- ===== 스테이지 3: EX ===== -->
-  <rect x="460" y="60" width="190" height="320" rx="10" fill="#DBEAFE" stroke="#60A5FA" stroke-width="2"/>
-  <rect x="460" y="60" width="190" height="36" rx="10" fill="#60A5FA"/>
-  <rect x="460" y="80" width="190" height="16" fill="#60A5FA"/>
-  <text x="555" y="82" text-anchor="middle" font-size="14" fill="white" font-weight="bold">EX (Execute)</text>
-
-  <rect x="480" y="110" width="150" height="35" rx="5" fill="white" stroke="#60A5FA" stroke-width="1.5"/>
-  <text x="555" y="132" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">ALU</text>
-
-  <rect x="480" y="160" width="150" height="35" rx="5" fill="white" stroke="#60A5FA" stroke-width="1.5"/>
-  <text x="555" y="182" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">분기 비교기</text>
-
-  <rect x="480" y="210" width="150" height="35" rx="5" fill="white" stroke="#60A5FA" stroke-width="1.5"/>
-  <text x="555" y="232" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">분기 목표 주소 계산</text>
-
-  <text x="555" y="275" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 산술/논리 연산 수행</text>
-  <text x="555" y="292" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 분기 조건 판정</text>
-  <text x="555" y="309" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 메모리 주소 계산</text>
-
-  <!-- 파이프라인 레지스터 EX/MEM -->
-  <rect x="655" y="55" width="18" height="330" rx="3" fill="#FCD34D" stroke="#D97706" stroke-width="1.5"/>
-  <text x="664" y="225" text-anchor="middle" font-size="9" fill="#92400E" font-weight="bold" transform="rotate(-90, 664, 225)">EX/MEM</text>
-
-  <!-- ===== 스테이지 4: MEM ===== -->
-  <rect x="680" y="60" width="190" height="320" rx="10" fill="#DBEAFE" stroke="#93C5FD" stroke-width="2"/>
-  <rect x="680" y="60" width="190" height="36" rx="10" fill="#93C5FD"/>
-  <rect x="680" y="80" width="190" height="16" fill="#93C5FD"/>
-  <text x="775" y="82" text-anchor="middle" font-size="14" fill="#1F2937" font-weight="bold">MEM (Memory Access)</text>
-
-  <rect x="700" y="110" width="150" height="35" rx="5" fill="white" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="775" y="132" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">DMEM (데이터 메모리)</text>
-
-  <rect x="700" y="160" width="150" height="35" rx="5" fill="white" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="775" y="182" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">로드 데이터 확장</text>
-
-  <text x="775" y="225" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; Load: 메모리에서 읽기</text>
-  <text x="775" y="242" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; Store: 메모리에 쓰기</text>
-  <text x="775" y="259" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; 기타: 통과 (pass-through)</text>
-
-  <!-- 파이프라인 레지스터 MEM/WB -->
-  <rect x="875" y="55" width="18" height="330" rx="3" fill="#FCD34D" stroke="#D97706" stroke-width="1.5"/>
-  <text x="884" y="225" text-anchor="middle" font-size="9" fill="#92400E" font-weight="bold" transform="rotate(-90, 884, 225)">MEM/WB</text>
-
-  <!-- ===== 스테이지 5: WB ===== -->
-  <rect x="900" y="60" width="190" height="320" rx="10" fill="#EFF6FF" stroke="#DBEAFE" stroke-width="2"/>
-  <rect x="900" y="60" width="190" height="36" rx="10" fill="#BFDBFE"/>
-  <rect x="900" y="80" width="190" height="16" fill="#BFDBFE"/>
-  <text x="995" y="82" text-anchor="middle" font-size="14" fill="#2563EB" font-weight="bold">WB (Write Back)</text>
-
-  <rect x="920" y="110" width="150" height="35" rx="5" fill="white" stroke="#BFDBFE" stroke-width="1.5"/>
-  <text x="995" y="132" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">WB 멀티플렉서</text>
-
-  <rect x="920" y="160" width="150" height="35" rx="5" fill="white" stroke="#BFDBFE" stroke-width="1.5"/>
-  <text x="995" y="182" text-anchor="middle" font-size="11" fill="#1F2937" font-weight="bold">레지스터 파일 쓰기</text>
-
-  <text x="995" y="225" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; ALU 결과 / 메모리 데이터</text>
-  <text x="995" y="242" text-anchor="middle" font-size="10" fill="#6B7280">    / PC+4 중 선택</text>
-  <text x="995" y="259" text-anchor="middle" font-size="10" fill="#6B7280">&#x2022; rd 레지스터에 기록</text>
-
-  <!-- WB → ID 되쓰기 화살표 -->
-  <path d="M 995 200 L 995 420 L 335 420 L 335 400" fill="none" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ar-w)"/>
-  <text x="665" y="440" text-anchor="middle" font-size="11" fill="#DC2626" font-weight="bold">Write-Back 경로: WB 결과를 레지스터 파일에 기록</text>
+  <!-- Harvard 구조 강조 -->
+  <rect x="32" y="158" width="119" height="26" fill="white" rx="3" stroke="#EF4444" stroke-width="2"/>
+  <text x="102" y="175" text-anchor="middle" font-size="9" fill="#DC2626">IMEM ★분리★</text>
+  <rect x="563" y="128" width="119" height="26" fill="white" rx="3" stroke="#EF4444" stroke-width="2"/>
+  <text x="621" y="145" text-anchor="middle" font-size="9" fill="#DC2626">DMEM ★분리★</text>
 
   <!-- 범례 -->
-  <rect x="20" y="460" width="18" height="12" rx="2" fill="#FCD34D" stroke="#D97706" stroke-width="1"/>
-  <text x="45" y="471" font-size="10" fill="#6B7280">= 파이프라인 레지스터 (클록 상승 에지에서 래치)</text>
+  <rect x="30" y="380" width="860" height="28" fill="#F1F5F9" rx="4" stroke="#E2E8F0"/>
+  <rect x="42" y="388" width="18" height="12" fill="#374151" rx="2"/>
+  <text x="66" y="398" font-size="9" fill="#374151">파이프라인 레지스터 (동기 리셋)</text>
+  <rect x="230" y="389" width="18" height="10" fill="none" stroke="#EF4444" stroke-width="2" rx="2"/>
+  <text x="254" y="398" font-size="9" fill="#374151">Harvard 분리 메모리</text>
+  <line x1="400" y1="394" x2="430" y2="394" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="438" y="398" font-size="9" fill="#374151">WB 피드백 경로</text>
+  <text x="600" y="398" font-size="9" fill="#374151">CLK: 매 상승 에지에 파이프라인 레지스터 갱신</text>
 </svg>

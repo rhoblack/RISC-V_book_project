@@ -122,11 +122,11 @@ module ahb_to_apb_bridge #(
    // =========================================================================
    // APB 슬레이브 선택 디코더 (주소 상위 비트 기반)
    // =========================================================================
-   // 주소 맵 (4KB 단위):
-   //   Slave 0: 0x4000_0000 ~ 0x4000_0FFF (UART)
-   //   Slave 1: 0x4000_1000 ~ 0x4000_1FFF (GPIO)
-   //   Slave 2: 0x4000_2000 ~ 0x4000_2FFF (Timer)
-   //   Slave 3: 0x4000_3000 ~ 0x4000_3FFF (예약)
+   // 주소 맵 (4KB 단위, Ch16 인터커넥트 APB 슬롯 0xFFFF_xxxx 기준):
+   //   Slave 0: 0xFFFF_0000 ~ 0xFFFF_0FFF (UART)    addr[13:12]=2'b00
+   //   Slave 1: 0xFFFF_1000 ~ 0xFFFF_1FFF (GPIO)    addr[13:12]=2'b01
+   //   Slave 2: 0xFFFF_2000 ~ 0xFFFF_2FFF (Timer)   addr[13:12]=2'b10
+   //   Slave 3: 0xFFFF_3000 ~ 0xFFFF_3FFF (예약)    addr[13:12]=2'b11
    logic [NUM_SLAVES-1:0] psel_decoded;
 
    always_comb begin

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 05 — 메모리 서브시스템 설계</title>
   <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
 
@@ -487,13 +489,13 @@ module dmem #(
    always_ff @(posedge clk) begin
       if (we) begin
          // be[0]: 최하위 바이트 (addr+0) — wdata[7:0]
-         if (be[0]) mem[addr+0] <= wdata[7:0];
+         if (be[0]) mem[addr+0] &lt;= wdata[7:0];
          // be[1]: 두 번째 바이트 (addr+1) — wdata[15:8]
-         if (be[1]) mem[addr+1] <= wdata[15:8];
+         if (be[1]) mem[addr+1] &lt;= wdata[15:8];
          // be[2]: 세 번째 바이트 (addr+2) — wdata[23:16]
-         if (be[2]) mem[addr+2] <= wdata[23:16];
+         if (be[2]) mem[addr+2] &lt;= wdata[23:16];
          // be[3]: 최상위 바이트 (addr+3) — wdata[31:24]
-         if (be[3]) mem[addr+3] <= wdata[31:24];
+         if (be[3]) mem[addr+3] &lt;= wdata[31:24];
       end
    end
 
@@ -745,7 +747,7 @@ module mem_subsystem (
    // 데이터 메모리
    dmem u_dmem (
       .clk   (clk),
-      .we    (we & dmem_sel),  // DMEM 영역일 때만 쓰기
+      .we    (we &amp; dmem_sel),  // DMEM 영역일 때만 쓰기
       .be    (be),
       .addr  (alu_out),
       .wdata (wdata),
@@ -1113,6 +1115,7 @@ vcs -sverilog dmem.sv dmem_tb.sv -o dmem_sim
     </p>
   </aside>
 
+
   <section class="chapter-summary">
     <h2>핵심 정리</h2>
     <ul>
@@ -1181,5 +1184,656 @@ assign rdata = {mem[addr+0], mem[addr+1], mem[addr+2], mem[addr+3]};
 </section>
 <!-- ========== 5.6절 끝 ========== -->
 
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch05_instruction_memory.sv</h3>
+    <pre><code class="language-verilog">//=============================================================================
+// 모듈명  : instruction_memory
+// 파일명  : ch05_instruction_memory.sv
+// 설명    : RV32I 명령어 메모리 (IMEM)
+//           - 읽기 전용(ROM) 동작
+//           - 시뮬레이션: $readmemh로 .hex 파일 초기화
+//           - FPGA 합성: Vivado BRAM 추론 또는 COE 파일 사용
+//           - 비동기 읽기 (조합 논리) — 단일 사이클 프로세서 호환
+// 저자    : RISC-V 프로세서 설계 완전정복
+// 표준    : SystemVerilog IEEE 1800-2017
+//=============================================================================
+
+module instruction_memory #(
+   parameter ADDR_WIDTH = 12,                    // 주소 비트 수 (12비트 = 4096 워드)
+   parameter MEM_DEPTH  = 2**ADDR_WIDTH,         // 메모리 깊이 (4096 워드 = 16 KB)
+   parameter INIT_FILE  = "program.hex"          // 초기화 파일 경로
+)(
+   input  logic [31:0] pc_i,                     // PC 입력 (바이트 주소)
+   output logic [31:0] instr_o                   // 명령어 출력 (32비트)
+);
+
+   //--------------------------------------------------------------------------
+   // 메모리 배열 선언
+   //   - 32비트 × MEM_DEPTH 워드
+   //   - Vivado에서 BRAM으로 추론됨 (비동기 읽기 시 분산 RAM 가능)
+   //--------------------------------------------------------------------------
+   logic [31:0] mem [0:MEM_DEPTH-1];
+
+   //--------------------------------------------------------------------------
+   // 메모리 초기화 ($readmemh)
+   //   - 시뮬레이션 전용: VCS, Vivado Simulator에서 동작
+   //   - FPGA 합성 시: Vivado가 이 initial 블록을 BRAM 초기값으로 변환
+   //   - .hex 파일 형식: 한 줄에 하나의 32비트 16진수 값
+   //     예) 00500093
+   //         00A00113
+   //         002081B3
+   //--------------------------------------------------------------------------
+   initial begin
+      // 메모리를 0으로 초기화 (NOP = 0x00000013, 또는 0으로 채움)
+      for (int i = 0; i &lt; MEM_DEPTH; i++) begin
+         mem[i] = 32'h0000_0013;  // ADDI x0, x0, 0 (NOP)
+      end
+      // .hex 파일에서 명령어 로드
+      $readmemh(INIT_FILE, mem);
+   end
+
+   //--------------------------------------------------------------------------
+   // 비동기 읽기 (조합 논리)
+   //   - PC의 하위 2비트(pc_i[1:0])는 항상 00 (워드 정렬)
+   //   - pc_i[ADDR_WIDTH+1:2]를 워드 주소로 사용
+   //   - 클럭 없이 즉시 출력 → 단일 사이클 프로세서에 적합
+   //--------------------------------------------------------------------------
+   assign instr_o = mem[pc_i[ADDR_WIDTH+1:2]];
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch05_data_memory.sv</h3>
+    <pre><code class="language-verilog">//=============================================================================
+// 모듈명  : data_memory
+// 파일명  : ch05_data_memory.sv
+// 설명    : RV32I 데이터 메모리 (DMEM)
+//           - 바이트 인에이블(byte enable) 기반 쓰기
+//           - LB/LBU/LH/LHU/LW 로드 시 부호/제로 확장
+//           - SB/SH/SW 스토어 지원
+//           - 리틀 엔디언(little-endian) 바이트 순서
+//           - 동기 쓰기, 비동기 읽기 (단일 사이클 프로세서 호환)
+// 저자    : RISC-V 프로세서 설계 완전정복
+// 표준    : SystemVerilog IEEE 1800-2017
+//=============================================================================
+
+module data_memory #(
+   parameter ADDR_WIDTH = 12,                    // 주소 비트 수 (12비트 = 4096 워드)
+   parameter MEM_DEPTH  = 2**ADDR_WIDTH          // 메모리 깊이 (4096 워드 = 16 KB)
+)(
+   input  logic        clk_i,                    // 시스템 클록
+   input  logic        rst_ni,                   // 비동기 리셋 (액티브 로우)
+
+   // 메모리 인터페이스
+   input  logic [31:0] addr_i,                   // 바이트 주소
+   input  logic [31:0] wdata_i,                  // 쓰기 데이터
+   input  logic        mem_write_i,              // 쓰기 인에이블 (1=쓰기, 0=읽기)
+   input  logic [2:0]  funct3_i,                 // funct3 필드 (접근 크기/부호 결정)
+   output logic [31:0] rdata_o                   // 읽기 데이터 (부호/제로 확장 완료)
+);
+
+   //--------------------------------------------------------------------------
+   // funct3 인코딩 상수 정의
+   //--------------------------------------------------------------------------
+   localparam logic [2:0] FUNCT3_LB  = 3'b000;  // Load Byte (부호 확장)
+   localparam logic [2:0] FUNCT3_LH  = 3'b001;  // Load Halfword (부호 확장)
+   localparam logic [2:0] FUNCT3_LW  = 3'b010;  // Load Word
+   localparam logic [2:0] FUNCT3_LBU = 3'b100;  // Load Byte Unsigned (제로 확장)
+   localparam logic [2:0] FUNCT3_LHU = 3'b101;  // Load Halfword Unsigned (제로 확장)
+   // 스토어 명령어도 동일한 funct3[1:0] 비트 사용
+   // SB = 3'b000, SH = 3'b001, SW = 3'b010
+
+   //--------------------------------------------------------------------------
+   // 메모리 배열 선언 (바이트 단위로 4개 뱅크)
+   //   - 바이트 인에이블 BRAM 추론을 위해 바이트 배열로 선언
+   //   - bank[0]: Byte 0 (최하위, addr[1:0]=00)
+   //   - bank[1]: Byte 1 (addr[1:0]=01)
+   //   - bank[2]: Byte 2 (addr[1:0]=10)
+   //   - bank[3]: Byte 3 (최상위, addr[1:0]=11)
+   //--------------------------------------------------------------------------
+   logic [7:0] mem_bank0 [0:MEM_DEPTH-1];  // Byte 0 (LSB)
+   logic [7:0] mem_bank1 [0:MEM_DEPTH-1];  // Byte 1
+   logic [7:0] mem_bank2 [0:MEM_DEPTH-1];  // Byte 2
+   logic [7:0] mem_bank3 [0:MEM_DEPTH-1];  // Byte 3 (MSB)
+
+   //--------------------------------------------------------------------------
+   // 내부 신호
+   //--------------------------------------------------------------------------
+   logic [ADDR_WIDTH-1:0] word_addr;             // 워드 주소 (addr_i[ADDR_WIDTH+1:2])
+   logic [1:0]            byte_offset;           // 바이트 오프셋 (addr_i[1:0])
+   logic [3:0]            byte_we;               // 바이트 쓰기 인에이블
+   logic [31:0]           mem_word;              // 메모리에서 읽은 원본 워드
+
+   //--------------------------------------------------------------------------
+   // 주소 분해
+   //--------------------------------------------------------------------------
+   assign word_addr   = addr_i[ADDR_WIDTH+1:2];
+   assign byte_offset = addr_i[1:0];
+
+   //--------------------------------------------------------------------------
+   // 바이트 쓰기 인에이블 생성
+   //   - funct3[1:0]과 byte_offset에 따라 활성화할 바이트 뱅크 결정
+   //   - SB: 1바이트, SH: 2바이트, SW: 4바이트
+   //--------------------------------------------------------------------------
+   always_comb begin
+      byte_we = 4'b0000;
+      if (mem_write_i) begin
+         case (funct3_i[1:0])
+            2'b00: begin  // SB: 1바이트 쓰기
+               case (byte_offset)
+                  2'b00: byte_we = 4'b0001;
+                  2'b01: byte_we = 4'b0010;
+                  2'b10: byte_we = 4'b0100;
+                  2'b11: byte_we = 4'b1000;
+               endcase
+            end
+            2'b01: begin  // SH: 2바이트 쓰기 (하프워드 정렬 가정)
+               case (byte_offset[1])
+                  1'b0: byte_we = 4'b0011;   // 하위 하프워드
+                  1'b1: byte_we = 4'b1100;   // 상위 하프워드
+               endcase
+            end
+            2'b10: begin  // SW: 4바이트 쓰기
+               byte_we = 4'b1111;
+            end
+            default: byte_we = 4'b0000;
+         endcase
+      end
+   end
+
+   //--------------------------------------------------------------------------
+   // 동기 쓰기 (클록 상승 에지)
+   //   - 바이트 인에이블에 따라 해당 바이트 뱅크만 갱신
+   //   - SB: wdata_i[7:0]를 해당 바이트 위치에 기록
+   //   - SH: wdata_i[15:0]를 해당 하프워드 위치에 기록
+   //   - SW: wdata_i[31:0] 전체 기록
+   //--------------------------------------------------------------------------
+   always_ff @(posedge clk_i) begin
+      if (byte_we[0]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank0[word_addr] &lt;= wdata_i[7:0];            // SB
+            2'b01:   mem_bank0[word_addr] &lt;= wdata_i[7:0];            // SH 하위 바이트
+            default: mem_bank0[word_addr] &lt;= wdata_i[7:0];            // SW
+         endcase
+      end
+      if (byte_we[1]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank1[word_addr] &lt;= wdata_i[7:0];            // SB (byte_offset=01)
+            2'b01:   mem_bank1[word_addr] &lt;= wdata_i[15:8];           // SH 상위 바이트
+            default: mem_bank1[word_addr] &lt;= wdata_i[15:8];           // SW
+         endcase
+      end
+      if (byte_we[2]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank2[word_addr] &lt;= wdata_i[7:0];            // SB (byte_offset=10)
+            2'b01:   mem_bank2[word_addr] &lt;= wdata_i[7:0];            // SH 하위 바이트 (상위 HW)
+            default: mem_bank2[word_addr] &lt;= wdata_i[23:16];          // SW
+         endcase
+      end
+      if (byte_we[3]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank3[word_addr] &lt;= wdata_i[7:0];            // SB (byte_offset=11)
+            2'b01:   mem_bank3[word_addr] &lt;= wdata_i[15:8];           // SH 상위 바이트 (상위 HW)
+            default: mem_bank3[word_addr] &lt;= wdata_i[31:24];          // SW
+         endcase
+      end
+   end
+
+   //--------------------------------------------------------------------------
+   // 비동기 읽기 — 메모리 워드 조합
+   //--------------------------------------------------------------------------
+   assign mem_word = {mem_bank3[word_addr],
+                      mem_bank2[word_addr],
+                      mem_bank1[word_addr],
+                      mem_bank0[word_addr]};
+
+   //--------------------------------------------------------------------------
+   // 로드 데이터 확장 (부호 확장 / 제로 확장)
+   //   - funct3에 따라 읽은 워드에서 해당 바이트/하프워드 추출 후 확장
+   //   - funct3[2]: 0=부호 확장(signed), 1=제로 확장(unsigned)
+   //--------------------------------------------------------------------------
+   always_comb begin
+      rdata_o = 32'h0;
+      case (funct3_i)
+         FUNCT3_LB: begin  // LB: 부호 확장 바이트
+            case (byte_offset)
+               2'b00: rdata_o = {{24{mem_word[7]}},  mem_word[7:0]};
+               2'b01: rdata_o = {{24{mem_word[15]}}, mem_word[15:8]};
+               2'b10: rdata_o = {{24{mem_word[23]}}, mem_word[23:16]};
+               2'b11: rdata_o = {{24{mem_word[31]}}, mem_word[31:24]};
+            endcase
+         end
+         FUNCT3_LH: begin  // LH: 부호 확장 하프워드
+            case (byte_offset[1])
+               1'b0: rdata_o = {{16{mem_word[15]}}, mem_word[15:0]};
+               1'b1: rdata_o = {{16{mem_word[31]}}, mem_word[31:16]};
+            endcase
+         end
+         FUNCT3_LW: begin  // LW: 워드 전체
+            rdata_o = mem_word;
+         end
+         FUNCT3_LBU: begin  // LBU: 제로 확장 바이트
+            case (byte_offset)
+               2'b00: rdata_o = {24'b0, mem_word[7:0]};
+               2'b01: rdata_o = {24'b0, mem_word[15:8]};
+               2'b10: rdata_o = {24'b0, mem_word[23:16]};
+               2'b11: rdata_o = {24'b0, mem_word[31:24]};
+            endcase
+         end
+         FUNCT3_LHU: begin  // LHU: 제로 확장 하프워드
+            case (byte_offset[1])
+               1'b0: rdata_o = {16'b0, mem_word[15:0]};
+               1'b1: rdata_o = {16'b0, mem_word[31:16]};
+            endcase
+         end
+         default: rdata_o = mem_word;  // 안전 기본값
+      endcase
+   end
+
+   //--------------------------------------------------------------------------
+   // 메모리 초기화 (시뮬레이션용)
+   //   - 모든 바이트 뱅크를 0으로 초기화
+   //--------------------------------------------------------------------------
+   initial begin
+      for (int i = 0; i &lt; MEM_DEPTH; i++) begin
+         mem_bank0[i] = 8'h00;
+         mem_bank1[i] = 8'h00;
+         mem_bank2[i] = 8'h00;
+         mem_bank3[i] = 8'h00;
+      end
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch05_memory_tb.sv</h3>
+    <pre><code class="language-verilog">//=============================================================================
+// 모듈명  : memory_tb
+// 파일명  : ch05_memory_tb.sv
+// 설명    : IMEM/DMEM 통합 테스트벤치
+//           - IMEM: .hex 파일 로드 및 명령어 읽기 검증
+//           - DMEM: 바이트/하프워드/워드 스토어-로드 시퀀스 검증
+//           - 부호 확장/제로 확장 정확성 검증
+//           - 바이트 인에이블 동작 검증
+// 저자    : RISC-V 프로세서 설계 완전정복
+// 표준    : SystemVerilog IEEE 1800-2017
+//=============================================================================
+
+`timescale 1ns / 1ps
+
+module memory_tb;
+
+   //--------------------------------------------------------------------------
+   // 테스트벤치 신호 선언
+   //--------------------------------------------------------------------------
+   logic        clk;
+   logic        rst_n;
+
+   // IMEM 인터페이스
+   logic [31:0] imem_pc;
+   logic [31:0] imem_instr;
+
+   // DMEM 인터페이스
+   logic [31:0] dmem_addr;
+   logic [31:0] dmem_wdata;
+   logic        dmem_write;
+   logic [2:0]  dmem_funct3;
+   logic [31:0] dmem_rdata;
+
+   // 테스트 결과 카운터
+   int          test_pass;
+   int          test_fail;
+   int          test_total;
+
+   //--------------------------------------------------------------------------
+   // 클록 생성 (주기: 10ns = 100MHz)
+   //--------------------------------------------------------------------------
+   initial clk = 1'b0;
+   always #5 clk = ~clk;
+
+   //--------------------------------------------------------------------------
+   // DUT 인스턴스: 명령어 메모리 (IMEM)
+   //--------------------------------------------------------------------------
+   instruction_memory #(
+      .ADDR_WIDTH (12),
+      .INIT_FILE  ("test_program.hex")
+   ) u_imem (
+      .pc_i    (imem_pc),
+      .instr_o (imem_instr)
+   );
+
+   //--------------------------------------------------------------------------
+   // DUT 인스턴스: 데이터 메모리 (DMEM)
+   //--------------------------------------------------------------------------
+   data_memory #(
+      .ADDR_WIDTH (12)
+   ) u_dmem (
+      .clk_i       (clk),
+      .rst_ni      (rst_n),
+      .addr_i      (dmem_addr),
+      .wdata_i     (dmem_wdata),
+      .mem_write_i (dmem_write),
+      .funct3_i    (dmem_funct3),
+      .rdata_o     (dmem_rdata)
+   );
+
+   //--------------------------------------------------------------------------
+   // funct3 상수 정의 (가독성)
+   //--------------------------------------------------------------------------
+   localparam logic [2:0] F3_B  = 3'b000;  // Byte
+   localparam logic [2:0] F3_H  = 3'b001;  // Halfword
+   localparam logic [2:0] F3_W  = 3'b010;  // Word
+   localparam logic [2:0] F3_BU = 3'b100;  // Byte Unsigned
+   localparam logic [2:0] F3_HU = 3'b101;  // Halfword Unsigned
+
+   //--------------------------------------------------------------------------
+   // 검증 태스크: 기대값과 실제값 비교
+   //--------------------------------------------------------------------------
+   task automatic check_result(
+      input string test_name,
+      input logic [31:0] expected,
+      input logic [31:0] actual
+   );
+      test_total++;
+      if (expected === actual) begin
+         test_pass++;
+         $display("[PASS] %s: expected=0x%08h, actual=0x%08h", test_name, expected, actual);
+      end else begin
+         test_fail++;
+         $display("[FAIL] %s: expected=0x%08h, actual=0x%08h", test_name, expected, actual);
+      end
+   endtask
+
+   //--------------------------------------------------------------------------
+   // DMEM 쓰기 태스크
+   //--------------------------------------------------------------------------
+   task automatic dmem_store(
+      input logic [31:0] addr,
+      input logic [31:0] data,
+      input logic [2:0]  funct3
+   );
+      @(negedge clk);          // 클록 하강 에지에서 입력 안정화
+      dmem_addr   = addr;
+      dmem_wdata  = data;
+      dmem_funct3 = funct3;
+      dmem_write  = 1'b1;
+      @(posedge clk);          // 상승 에지에서 쓰기 수행
+      #1;                       // 약간의 지연 (전파 시간)
+      dmem_write  = 1'b0;
+   endtask
+
+   //--------------------------------------------------------------------------
+   // DMEM 읽기 태스크
+   //--------------------------------------------------------------------------
+   task automatic dmem_load(
+      input  logic [31:0] addr,
+      input  logic [2:0]  funct3,
+      output logic [31:0] data
+   );
+      @(negedge clk);
+      dmem_addr   = addr;
+      dmem_funct3 = funct3;
+      dmem_write  = 1'b0;
+      #1;                       // 비동기 읽기 안정화 대기
+      data = dmem_rdata;
+   endtask
+
+   //--------------------------------------------------------------------------
+   // 메인 테스트 시퀀스
+   //--------------------------------------------------------------------------
+   initial begin
+      // 초기화
+      test_pass  = 0;
+      test_fail  = 0;
+      test_total = 0;
+      rst_n      = 1'b0;
+      dmem_write = 1'b0;
+      dmem_addr  = 32'h0;
+      dmem_wdata = 32'h0;
+      dmem_funct3 = F3_W;
+      imem_pc    = 32'h0;
+
+      // 리셋 해제
+      #20;
+      rst_n = 1'b1;
+      #10;
+
+      $display("============================================================");
+      $display("  메모리 서브시스템 테스트벤치 시작");
+      $display("============================================================");
+
+      //----------------------------------------------------------------------
+      // 테스트 1: IMEM 명령어 읽기 검증
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 1: IMEM 명령어 읽기 ---");
+
+      imem_pc = 32'h0000_0000;  // 첫 번째 명령어 주소
+      #2;
+      // 주의: test_program.hex가 없으면 NOP(0x00000013)이 읽힘
+      $display("  IMEM[0x000] = 0x%08h", imem_instr);
+
+      imem_pc = 32'h0000_0004;  // 두 번째 명령어 (PC+4)
+      #2;
+      $display("  IMEM[0x004] = 0x%08h", imem_instr);
+
+      imem_pc = 32'h0000_0008;  // 세 번째 명령어 (PC+8)
+      #2;
+      $display("  IMEM[0x008] = 0x%08h", imem_instr);
+
+      //----------------------------------------------------------------------
+      // 테스트 2: DMEM 워드 스토어/로드 (SW/LW)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 2: 워드 스토어/로드 (SW/LW) ---");
+
+      // SW: 0xDEAD_BEEF를 주소 0x00에 저장
+      dmem_store(32'h0001_0000, 32'hDEAD_BEEF, F3_W);
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0000, F3_W, read_data);
+         check_result("SW/LW 0xDEADBEEF", 32'hDEAD_BEEF, read_data);
+      end
+
+      // SW: 0x1234_5678을 주소 0x04에 저장
+      dmem_store(32'h0001_0004, 32'h1234_5678, F3_W);
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0004, F3_W, read_data);
+         check_result("SW/LW 0x12345678", 32'h1234_5678, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 3: DMEM 바이트 스토어/로드 (SB/LB/LBU)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 3: 바이트 스토어/로드 (SB/LB/LBU) ---");
+
+      // 먼저 워드 전체를 0으로 초기화
+      dmem_store(32'h0001_0010, 32'h0000_0000, F3_W);
+
+      // SB: 0xA5를 바이트 오프셋 0에 저장
+      dmem_store(32'h0001_0010, 32'h0000_00A5, F3_B);
+      begin
+         logic [31:0] read_data;
+         // LBU: 제로 확장 읽기
+         dmem_load(32'h0001_0010, F3_BU, read_data);
+         check_result("SB/LBU byte0=0xA5", 32'h0000_00A5, read_data);
+
+         // LB: 부호 확장 읽기 (0xA5의 MSB=1이므로 부호 확장)
+         dmem_load(32'h0001_0010, F3_B, read_data);
+         check_result("SB/LB byte0=0xA5(sign-ext)", 32'hFFFF_FFA5, read_data);
+      end
+
+      // SB: 0x7F를 바이트 오프셋 1에 저장
+      dmem_store(32'h0001_0011, 32'h0000_007F, F3_B);
+      begin
+         logic [31:0] read_data;
+         // LBU: 제로 확장
+         dmem_load(32'h0001_0011, F3_BU, read_data);
+         check_result("SB/LBU byte1=0x7F", 32'h0000_007F, read_data);
+
+         // LB: 부호 확장 (0x7F의 MSB=0이므로 제로 확장과 동일)
+         dmem_load(32'h0001_0011, F3_B, read_data);
+         check_result("SB/LB byte1=0x7F(sign-ext)", 32'h0000_007F, read_data);
+      end
+
+      // SB: 0x80을 바이트 오프셋 2에 저장 (부호 확장 경계값)
+      dmem_store(32'h0001_0012, 32'h0000_0080, F3_B);
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0012, F3_B, read_data);
+         check_result("SB/LB byte2=0x80(sign-ext)", 32'hFFFF_FF80, read_data);
+
+         dmem_load(32'h0001_0012, F3_BU, read_data);
+         check_result("SB/LBU byte2=0x80(zero-ext)", 32'h0000_0080, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 4: DMEM 하프워드 스토어/로드 (SH/LH/LHU)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 4: 하프워드 스토어/로드 (SH/LH/LHU) ---");
+
+      // 주소 0x20을 0으로 초기화
+      dmem_store(32'h0001_0020, 32'h0000_0000, F3_W);
+
+      // SH: 0x8765를 하위 하프워드에 저장
+      dmem_store(32'h0001_0020, 32'h0000_8765, F3_H);
+      begin
+         logic [31:0] read_data;
+         // LHU: 제로 확장
+         dmem_load(32'h0001_0020, F3_HU, read_data);
+         check_result("SH/LHU lower=0x8765", 32'h0000_8765, read_data);
+
+         // LH: 부호 확장 (0x8765의 MSB=1)
+         dmem_load(32'h0001_0020, F3_H, read_data);
+         check_result("SH/LH lower=0x8765(sign-ext)", 32'hFFFF_8765, read_data);
+      end
+
+      // SH: 0x1234를 상위 하프워드에 저장
+      dmem_store(32'h0001_0022, 32'h0000_1234, F3_H);
+      begin
+         logic [31:0] read_data;
+         // LHU: 제로 확장 (상위 하프워드)
+         dmem_load(32'h0001_0022, F3_HU, read_data);
+         check_result("SH/LHU upper=0x1234", 32'h0000_1234, read_data);
+
+         // LW: 전체 워드 확인 (상위 0x1234 + 하위 0x8765)
+         dmem_load(32'h0001_0020, F3_W, read_data);
+         check_result("Full word after SH×2", 32'h1234_8765, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 5: 연속 주소 스토어/로드 (데이터 무결성)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 5: 연속 주소 데이터 무결성 ---");
+
+      // 4개 연속 워드 저장
+      dmem_store(32'h0001_0100, 32'hAAAA_AAAA, F3_W);
+      dmem_store(32'h0001_0104, 32'hBBBB_BBBB, F3_W);
+      dmem_store(32'h0001_0108, 32'hCCCC_CCCC, F3_W);
+      dmem_store(32'h0001_010C, 32'hDDDD_DDDD, F3_W);
+
+      // 역순으로 읽기 검증
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_010C, F3_W, read_data);
+         check_result("Sequential[3]=0xDDDDDDDD", 32'hDDDD_DDDD, read_data);
+
+         dmem_load(32'h0001_0108, F3_W, read_data);
+         check_result("Sequential[2]=0xCCCCCCCC", 32'hCCCC_CCCC, read_data);
+
+         dmem_load(32'h0001_0104, F3_W, read_data);
+         check_result("Sequential[1]=0xBBBBBBBB", 32'hBBBB_BBBB, read_data);
+
+         dmem_load(32'h0001_0100, F3_W, read_data);
+         check_result("Sequential[0]=0xAAAAAAAA", 32'hAAAA_AAAA, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 6: 바이트 인에이블 독립성 검증
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 6: 바이트 인에이블 독립성 ---");
+
+      // 워드 전체를 0xFF로 초기화
+      dmem_store(32'h0001_0200, 32'hFFFF_FFFF, F3_W);
+
+      // Byte 0만 0x11로 변경 (나머지 바이트는 0xFF 유지)
+      dmem_store(32'h0001_0200, 32'h0000_0011, F3_B);
+
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0200, F3_W, read_data);
+         check_result("Byte0 only write", 32'hFFFF_FF11, read_data);
+      end
+
+      // Byte 2만 0x22로 변경
+      dmem_store(32'h0001_0202, 32'h0000_0022, F3_B);
+
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0200, F3_W, read_data);
+         check_result("Byte2 only write", 32'hFF22_FF11, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 결과 요약
+      //----------------------------------------------------------------------
+      $display("\n============================================================");
+      $display("  테스트 완료");
+      $display("  총 테스트: %0d | 통과: %0d | 실패: %0d",
+               test_total, test_pass, test_fail);
+      if (test_fail == 0)
+         $display("  ★ 모든 테스트 통과! ★");
+      else
+         $display("  ✗ %0d개 테스트 실패", test_fail);
+      $display("============================================================");
+
+      #20;
+      $finish;
+   end
+
+   //--------------------------------------------------------------------------
+   // 시뮬레이션 타임아웃 보호
+   //--------------------------------------------------------------------------
+   initial begin
+      #100_000;
+      $display("[TIMEOUT] 시뮬레이션이 100us를 초과하여 강제 종료합니다.");
+      $finish;
+   end
+
+   //--------------------------------------------------------------------------
+   // VCD 파형 덤프 (선택)
+   //--------------------------------------------------------------------------
+   initial begin
+      $dumpfile("memory_tb.vcd");
+      $dumpvars(0, memory_tb);
+   end
+
+endmodule</code></pre>
+  </div>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
 </body>
 </html>

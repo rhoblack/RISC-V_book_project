@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 03 — RV32I 명령어 세트 완전 분석</title>
   <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
 </head>
 <body>
 
@@ -748,7 +750,7 @@ assign imm_b = {{19{inst[31]}},  // 부호 확장 19비트
 
   <pre><code class="language-systemverilog">// 32비트 상수 0xDEAD_BEEF를 레지스터 a0(x10)에 로드
 // 방법: LUI + ADDI 조합
-// 주의: ADDI의 즉치수는 부호 확장되므로 하위 12비트 >= 0x800이면
+// 주의: ADDI의 즉치수는 부호 확장되므로 하위 12비트 &gt;= 0x800이면
 //       LUI의 즉치수에 1을 더해 보정해야 한다.
 //
 // 0xDEADBEEF = 0xDEADB_000 + 0xEEF
@@ -757,15 +759,15 @@ assign imm_b = {{19{inst[31]}},  // 부호 확장 19비트
 //   ADDI a0, a0, 0xEEF  ; a0 = 0xDEADB_EEF (≠ 0xDEADBEEF!)
 //
 // 올바른 계산: 0xDEADBEEF
-//   하위 12비트 = 0xBEEF & 0xFFF = 0xEEF ← 맞음
+//   하위 12비트 = 0xBEEF &amp; 0xFFF = 0xEEF ← 맞음
 //   실제로 0xDEADBEEF = 0xDEADB000 + 0xEEF이므로 위 코드가 올바름
 //
 // 부호 확장 주의 케이스: 0x12345ABC
-//   하위 12비트 = 0xABC = 2748 (< 0x800, 양수) → 보정 불필요
+//   하위 12비트 = 0xABC = 2748 (&lt; 0x800, 양수) → 보정 불필요
 //   LUI  a0, 0x12345    ; a0 = 0x12345_000
 //   ADDI a0, a0, 0xABC  ; a0 = 0x12345ABC ✓
 //
-// 부호 확장이 문제되는 케이스: 0xDEAD_BEEF에서 하위=0xEEF > 0 → 문제없음
+// 부호 확장이 문제되는 케이스: 0xDEAD_BEEF에서 하위=0xEEF &gt; 0 → 문제없음
 // 만약 하위 12비트 = 0x900 (부호 확장 시 -1792)
 //   LUI  a0, imm20+1    ; 상위부분에 1 추가로 보정
 //   ADDI a0, a0, -0x700 ; 음수 즉치수 사용
@@ -1094,7 +1096,7 @@ loop:
     add  a0, a0, a1     # 합계에 카운터 추가: a0 = a0 + a1
     addi a1, a1, 1      # 카운터 증가: a1 = a1 + 1
     li   t0, 11         # 비교 기준값: t0 = 11
-    blt  a1, t0, loop   # a1 < 11이면 loop로 분기
+    blt  a1, t0, loop   # a1 &lt; 11이면 loop로 분기
     # 루프 종료 후: a0 = 1+2+3+...+10 = 55
 
     li   a7, 1          # ECALL 서비스 번호: 정수 출력 (a0 값 출력)
@@ -1158,7 +1160,7 @@ _start:
     li   t2, 0          # t2 = 인덱스 초기화
 
 sum_loop:
-    bge  t2, t1, done   # 인덱스 >= 크기이면 종료
+    bge  t2, t1, done   # 인덱스 &gt;= 크기이면 종료
     lw   t3, 0(t0)      # t3 = Mem[t0 + 0] (현재 원소 로드)
     add  a0, a0, t3     # 합계에 추가
     addi t0, t0, 4      # 포인터를 다음 원소로 이동 (4바이트)
@@ -1305,6 +1307,7 @@ riscv32-unknown-elf-objdump -d sum.elf
 </section>
 
 
+
 <!-- ========== 챕터 마무리 ========== -->
 <section class="chapter-summary">
   <h2>핵심 정리</h2>
@@ -1348,5 +1351,124 @@ riscv32-unknown-elf-objdump -d sum.elf
   </p>
 </section>
 
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">ASM</span>ch03_fibonacci.s</h3>
+    <pre><code class="language-armasm"># ============================================================
+# ch03_fibonacci.s
+# RISC-V RV32I 피보나치 수열 계산 프로그램
+#
+# 목적: RV32I 기본 명령어(R/I/S/B/J 타입)를 종합적으로 활용하는
+#       어셈블리 프로그램 예제. RARS 시뮬레이터에서 실행 가능.
+#
+# 동작: N번째 피보나치 수를 계산하여 메모리에 저장
+#       F(0)=0, F(1)=1, F(2)=1, F(3)=2, ...
+#
+# 사용 명령어:
+#   R 타입: ADD
+#   I 타입: ADDI, LW
+#   S 타입: SW
+#   B 타입: BEQ, BGE
+#   U 타입: LUI
+#   J 타입: JAL, JALR
+# ============================================================
+
+.data
+    fib_array:  .space 64       # 16 × 4바이트 = 64바이트
+    n_value:    .word  10       # 계산할 피보나치 수열 개수
+
+.text
+.globl main
+
+# ============================================================
+# main: 프로그램 진입점
+# ============================================================
+main:
+    la      a0, fib_array       # a0 = fib_array 시작 주소
+    la      a1, n_value         # a1 = n_value 주소
+    lw      a1, 0(a1)           # a1 = N (계산할 개수)
+
+    jal     ra, calc_fibonacci  # calc_fibonacci(a0, a1) 호출
+
+    la      t1, fib_array
+    addi    t2, a1, -1          # t2 = N - 1 (마지막 인덱스)
+    slli    t2, t2, 2           # t2 = (N-1) × 4 (바이트 오프셋)
+    add     t1, t1, t2          # t1 = fib_array + 오프셋
+    lw      t0, 0(t1)           # t0 = F(N-1) 결과값
+
+    li      a7, 10              # 시스템 콜 번호 10 = exit
+    ecall
+
+# ============================================================
+# calc_fibonacci: 피보나치 수열 계산 서브루틴
+#   입력: a0 = 배열 시작 주소, a1 = 계산할 개수 N
+#   출력: fib_array[0..N-1]에 피보나치 수열 저장
+# ============================================================
+calc_fibonacci:
+    addi    sp, sp, -16         # 스택 16바이트 확보
+    sw      ra, 12(sp)          # 복귀 주소 저장
+    sw      s0, 8(sp)
+    sw      s1, 4(sp)
+
+    addi    t0, zero, 1
+    bge     zero, a1, fib_done  # N &lt;= 0이면 종료
+
+    sw      zero, 0(a0)         # F(0) = 0
+
+    beq     a1, t0, fib_done    # N == 1이면 완료
+
+    addi    t1, zero, 1
+    sw      t1, 4(a0)           # F(1) = 1
+
+    addi    t0, zero, 2
+    beq     a1, t0, fib_done    # N == 2이면 완료
+
+    addi    t3, zero, 2         # i = 2
+    addi    t0, zero, 0         # F(i-2) = 0
+    addi    t1, zero, 1         # F(i-1) = 1
+
+fib_loop:
+    add     t2, t0, t1          # F(i) = F(i-2) + F(i-1)
+    slli    t4, t3, 2           # t4 = i × 4
+    add     t4, a0, t4
+    sw      t2, 0(t4)           # fib_array[i] = F(i)
+    add     t0, zero, t1        # F(i-2) ← 이전 F(i-1)
+    add     t1, zero, t2        # F(i-1) ← 이전 F(i)
+    addi    t3, t3, 1           # i++
+    bge     t3, a1, fib_done    # i &gt;= N → 종료
+    jal     zero, fib_loop
+
+fib_done:
+    lw      s1, 4(sp)
+    lw      s0, 8(sp)
+    lw      ra, 12(sp)
+    addi    sp, sp, 16
+    jalr    zero, ra, 0
+
+# 실행 결과 (N=10): {0, 1, 1, 2, 3, 5, 8, 13, 21, 34}</code></pre>
+  </div>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
 </body>
 </html>

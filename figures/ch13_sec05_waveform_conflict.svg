@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 390" font-family="Pretendard, sans-serif">
+  <rect width="820" height="390" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">시나리오 4: Conflict Miss 파형 (히트율 0%)</text>
+  <text x="410" y="48" text-anchor="middle" font-size="11" fill="#EF4444" font-weight="600">A=0x0000_0000 (Index=0, Tag=0x00000) ↔ B=0x0001_0000 (Index=0, Tag=0x00010) 번갈아 접근</text>
+
+  <!-- 사이클 레이블 -->
+  <text x="155" y="75" text-anchor="middle" font-size="10" fill="#6B7280">신호</text>
+  <text x="226" y="75" text-anchor="middle" font-size="10" fill="#374151">C1</text>
+  <text x="286" y="75" text-anchor="middle" font-size="10" fill="#374151">C2~5</text>
+  <text x="380" y="75" text-anchor="middle" font-size="10" fill="#374151">C6</text>
+  <text x="440" y="75" text-anchor="middle" font-size="10" fill="#374151">C7~10</text>
+  <text x="534" y="75" text-anchor="middle" font-size="10" fill="#374151">C11</text>
+  <text x="594" y="75" text-anchor="middle" font-size="10" fill="#374151">C12~15</text>
+  <text x="688" y="75" text-anchor="middle" font-size="10" fill="#374151">C16</text>
+  <text x="748" y="75" text-anchor="middle" font-size="10" fill="#374151">C17~20</text>
+
+  <!-- cpu_addr 신호 -->
+  <text x="95" y="108" text-anchor="middle" font-size="11" fill="#374151">cpu_addr</text>
+  <!-- A: 0x0000_0000 (C1) -->
+  <rect x="196" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="2"/>
+  <text x="225" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8" font-weight="700">A: 0x0000</text>
+  <!-- 스톨 (C2~5) -->
+  <rect x="256" y="90" width="118" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="315" y="108" text-anchor="middle" font-size="9" fill="#EF4444">A 대기(MISS)</text>
+  <!-- B: 0x0001_0000 (C6) -->
+  <rect x="376" y="90" width="58" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="2"/>
+  <text x="405" y="108" text-anchor="middle" font-size="9" fill="#991B1B" font-weight="700">B: 0x1000</text>
+  <!-- 스톨 (C7~10) -->
+  <rect x="436" y="90" width="118" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="495" y="108" text-anchor="middle" font-size="9" fill="#EF4444">B 대기(MISS)</text>
+  <!-- A (C11) -->
+  <rect x="556" y="90" width="58" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="2"/>
+  <text x="585" y="108" text-anchor="middle" font-size="9" fill="#1D4ED8" font-weight="700">A: 0x0000</text>
+  <!-- 스톨 (C12~15) -->
+  <rect x="616" y="90" width="118" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="675" y="108" text-anchor="middle" font-size="9" fill="#EF4444">A 대기(MISS)</text>
+  <!-- B (C16) -->
+  <rect x="736" y="90" width="58" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="2"/>
+  <text x="765" y="108" text-anchor="middle" font-size="9" fill="#991B1B" font-weight="700">B: 0x1000</text>
+
+  <!-- cache_hit 신호 -->
+  <text x="95" y="155" text-anchor="middle" font-size="11" fill="#374151">cache_hit</text>
+  <rect x="196" y="138" width="838" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="2"/>
+  <text x="600" y="156" text-anchor="middle" font-size="12" fill="#EF4444" font-weight="700">항상 MISS  (cache_hit = 0)</text>
+
+  <!-- icache_stall 신호 -->
+  <text x="95" y="205" text-anchor="middle" font-size="11" fill="#374151">icache_stall</text>
+  <!-- A 요청 순간(C1): 스톨 시작 -->
+  <rect x="196" y="188" width="178" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="285" y="206" text-anchor="middle" font-size="10" fill="#92400E" font-weight="700">stall=1 (C1~5)</text>
+  <!-- B 요청 -->
+  <rect x="376" y="188" width="178" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="465" y="206" text-anchor="middle" font-size="10" fill="#92400E" font-weight="700">stall=1 (C6~10)</text>
+  <!-- A 재요청 -->
+  <rect x="556" y="188" width="178" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="645" y="206" text-anchor="middle" font-size="10" fill="#92400E" font-weight="700">stall=1 (C11~15)</text>
+  <!-- B 재요청 -->
+  <rect x="736" y="188" width="58" height="28" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="765" y="206" text-anchor="middle" font-size="10" fill="#92400E" font-weight="700">stall</text>
+
+  <!-- 캐시 내용 표시 -->
+  <text x="95" y="252" text-anchor="middle" font-size="11" fill="#374151">캐시[0]</text>
+  <rect x="196" y="235" width="238" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="315" y="253" text-anchor="middle" font-size="10" fill="#1D4ED8">Tag=0x00000 (A)</text>
+  <rect x="376" y="235" width="238" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="495" y="253" text-anchor="middle" font-size="10" fill="#EF4444">Tag=0x00010 (B) — A 축출!</text>
+  <rect x="556" y="235" width="238" height="28" fill="#DBEAFE" rx="3" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="675" y="253" text-anchor="middle" font-size="10" fill="#1D4ED8">Tag=0x00000 (A) — B 축출!</text>
+  <rect x="736" y="235" width="58" height="28" fill="#FEE2E2" rx="3" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="765" y="253" text-anchor="middle" font-size="9" fill="#EF4444">B 로드</text>
+
+  <!-- 결론 박스 -->
+  <rect x="30" y="280" width="760" height="90" fill="#FEF3C7" rx="10" stroke="#EF4444" stroke-width="2"/>
+  <text x="410" y="302" text-anchor="middle" font-size="14" font-weight="700" fill="#EF4444">직접 매핑의 한계: 히트율 0%!</text>
+  <text x="410" y="324" text-anchor="middle" font-size="12" fill="#374151">A와 B는 둘 다 Index=0을 사용 → 캐시가 4KB여도 두 주소가 항상 충돌</text>
+  <text x="410" y="344" text-anchor="middle" font-size="12" fill="#374151">4회 접근에 20사이클 낭비 → CPI가 5로 증가 (캐시 없음과 동일!)</text>
+  <text x="410" y="362" text-anchor="middle" font-size="12" fill="#2563EB" font-weight="600">해결책 → 2-Way 집합 연관 캐시(Ch14): 같은 Index에 2개 블록 저장 가능</text>
+</svg>

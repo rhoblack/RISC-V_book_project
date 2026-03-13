@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="900" height="540" font-family="Pretendard, monospace, sans-serif">
+  <rect width="900" height="540" fill="#F8FAFC" rx="8"/>
+  <text x="450" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E293B">rv32i_pipeline_complete — 완성된 5단계 파이프라인 전체 구조</text>
+
+  <defs>
+    <marker id="cpArr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#2563EB"/>
+    </marker>
+    <marker id="cpArrG" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#16A34A"/>
+    </marker>
+    <marker id="cpArrO" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#EA580C"/>
+    </marker>
+    <marker id="cpArrP" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#7C3AED"/>
+    </marker>
+  </defs>
+
+  <!-- ======= 파이프라인 5단계 블록 ======= -->
+  <!-- IF -->
+  <rect x="15" y="55" width="130" height="60" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <text x="80" y="79" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E40AF">IF</text>
+  <text x="80" y="95" text-anchor="middle" font-size="9" fill="#1E40AF">PC + IMEM</text>
+  <text x="80" y="108" text-anchor="middle" font-size="9" fill="#3B82F6">instruction_memory</text>
+
+  <!-- IF/ID 레지스터 -->
+  <rect x="155" y="65" width="18" height="42" fill="#64748B" rx="2"/>
+  <text x="164" y="89" text-anchor="middle" font-size="7" fill="white" writing-mode="tb">IF/ID</text>
+
+  <!-- ID -->
+  <rect x="183" y="55" width="130" height="60" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <text x="248" y="79" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E40AF">ID</text>
+  <text x="248" y="95" text-anchor="middle" font-size="9" fill="#1E40AF">해독 + 레지스터 읽기</text>
+  <text x="248" y="108" text-anchor="middle" font-size="9" fill="#3B82F6">ctrl_unit / imm_gen / RF</text>
+
+  <!-- ID/EX 레지스터 -->
+  <rect x="323" y="65" width="18" height="42" fill="#64748B" rx="2"/>
+  <text x="332" y="89" text-anchor="middle" font-size="7" fill="white" writing-mode="tb">ID/EX</text>
+
+  <!-- EX -->
+  <rect x="351" y="55" width="130" height="60" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <text x="416" y="79" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E40AF">EX</text>
+  <text x="416" y="95" text-anchor="middle" font-size="9" fill="#1E40AF">포워딩 MUX + ALU</text>
+  <text x="416" y="108" text-anchor="middle" font-size="9" fill="#3B82F6">alu / branch_unit</text>
+
+  <!-- EX/MEM 레지스터 -->
+  <rect x="491" y="65" width="18" height="42" fill="#64748B" rx="2"/>
+  <text x="500" y="89" text-anchor="middle" font-size="7" fill="white" writing-mode="tb">EX/MEM</text>
+
+  <!-- MEM -->
+  <rect x="519" y="55" width="130" height="60" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <text x="584" y="79" text-anchor="middle" font-size="13" font-weight="bold" fill="#1E40AF">MEM</text>
+  <text x="584" y="95" text-anchor="middle" font-size="9" fill="#1E40AF">데이터 메모리 접근</text>
+  <text x="584" y="108" text-anchor="middle" font-size="9" fill="#3B82F6">data_memory</text>
+
+  <!-- MEM/WB 레지스터 -->
+  <rect x="659" y="65" width="18" height="42" fill="#64748B" rx="2"/>
+  <text x="668" y="89" text-anchor="middle" font-size="7" fill="white" writing-mode="tb">MEM/WB</text>
+
+  <!-- WB -->
+  <rect x="687" y="55" width="130" height="60" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2" rx="6"/>
+  <text x="752" y="79" text-anchor="middle" font-size="13" font-weight="bold" fill="#5B21B6">WB</text>
+  <text x="752" y="95" text-anchor="middle" font-size="9" fill="#5B21B6">쓰기 데이터 선택</text>
+  <text x="752" y="108" text-anchor="middle" font-size="9" fill="#7C3AED">wb_sel MUX</text>
+
+  <!-- 데이터 흐름 화살표 -->
+  <line x1="145" y1="85" x2="155" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="173" y1="85" x2="183" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="313" y1="85" x2="323" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="341" y1="85" x2="351" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="481" y1="85" x2="491" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="509" y1="85" x2="519" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="649" y1="85" x2="659" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+  <line x1="677" y1="85" x2="687" y2="85" stroke="#2563EB" stroke-width="2" marker-end="url(#cpArr)"/>
+
+  <!-- ======= forwarding_unit ======= -->
+  <rect x="285" y="165" width="170" height="50" fill="#D1FAE5" stroke="#16A34A" stroke-width="2" rx="6"/>
+  <text x="370" y="186" text-anchor="middle" font-size="11" font-weight="bold" fill="#14532D">forwarding_unit</text>
+  <text x="370" y="200" text-anchor="middle" font-size="9" fill="#166534">EX-EX (2'b10) | MEM-EX (2'b01)</text>
+  <text x="370" y="213" text-anchor="middle" font-size="9" fill="#166534">fwd_a / fwd_b → EX 포워딩 MUX</text>
+
+  <!-- forwarding_unit 연결선 -->
+  <line x1="370" y1="165" x2="416" y2="115" stroke="#16A34A" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#cpArrG)"/>
+
+  <!-- ======= hazard_detection_unit ======= -->
+  <rect x="50" y="165" width="180" height="50" fill="#FEF9C3" stroke="#CA8A04" stroke-width="2" rx="6"/>
+  <text x="140" y="186" text-anchor="middle" font-size="11" font-weight="bold" fill="#78350F">hazard_detection_unit</text>
+  <text x="140" y="200" text-anchor="middle" font-size="9" fill="#92400E">Load-Use 스톨 감지</text>
+  <text x="140" y="213" text-anchor="middle" font-size="9" fill="#92400E">pc_en / if_id_en / id_ex_flush</text>
+
+  <!-- hazard 연결선 -->
+  <line x1="140" y1="165" x2="248" y2="115" stroke="#CA8A04" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#cpArrO)"/>
+
+  <!-- ======= branch_unit ======= -->
+  <rect x="510" y="165" width="170" height="50" fill="#FEE2E2" stroke="#EF4444" stroke-width="2" rx="6"/>
+  <text x="595" y="186" text-anchor="middle" font-size="11" font-weight="bold" fill="#991B1B">branch_unit</text>
+  <text x="595" y="200" text-anchor="middle" font-size="9" fill="#DC2626">BEQ/BNE/BLT/BGE/BLTU/BGEU</text>
+  <text x="595" y="213" text-anchor="middle" font-size="9" fill="#DC2626">branch_taken_ex → if_id_flush</text>
+
+  <!-- branch_unit 연결선 -->
+  <line x1="595" y1="165" x2="416" y2="115" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#cpArr)"/>
+
+  <!-- ======= 포워딩 경로 3종 ======= -->
+  <text x="450" y="255" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E293B">포워딩 경로 (3종)</text>
+
+  <!-- EX-EX 포워딩 -->
+  <line x1="584" y1="115" x2="584" y2="275" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3"/>
+  <line x1="584" y1="275" x2="416" y2="275" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#cpArrG)"/>
+  <text x="500" y="267" text-anchor="middle" font-size="10" fill="#16A34A" font-weight="bold">EX-EX 포워딩</text>
+  <text x="500" y="280" text-anchor="middle" font-size="9" fill="#14532D">EX/MEM.alu_result → fwd_a/b (2'b10)</text>
+
+  <!-- MEM-EX 포워딩 -->
+  <line x1="752" y1="115" x2="752" y2="310" stroke="#3B82F6" stroke-width="2" stroke-dasharray="5,3"/>
+  <line x1="752" y1="310" x2="416" y2="310" stroke="#3B82F6" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#cpArr)"/>
+  <text x="580" y="302" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="bold">MEM-EX 포워딩</text>
+  <text x="580" y="316" text-anchor="middle" font-size="9" fill="#1D4ED8">MEM/WB.wb_data → fwd_a/b (2'b01)</text>
+
+  <!-- WB-ID 포워딩 (붉은 점선) -->
+  <line x1="752" y1="115" x2="752" y2="345" stroke="#EF4444" stroke-width="2" stroke-dasharray="7,4"/>
+  <line x1="752" y1="345" x2="248" y2="345" stroke="#EF4444" stroke-width="2" stroke-dasharray="7,4" marker-end="url(#cpArr)"/>
+  <text x="500" y="337" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="bold">WB-ID 포워딩 (레지스터 파일 내부)</text>
+  <text x="500" y="351" text-anchor="middle" font-size="9" fill="#991B1B">WB.wb_data → 레지스터 파일 읽기 MUX</text>
+
+  <!-- ======= 제어 신호 박스 ======= -->
+  <rect x="30" y="380" width="840" height="60" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5" rx="8"/>
+  <text x="450" y="398" text-anchor="middle" font-size="12" font-weight="bold" fill="#4C1D95">제어 신호 통합 (Ch09~Ch12)</text>
+  <text x="170" y="418" text-anchor="middle" font-size="10" fill="#5B21B6">if_id_flush = branch_taken_ex | jal_id | jalr_taken_ex</text>
+  <text x="530" y="418" text-anchor="middle" font-size="10" fill="#5B21B6">id_ex_flush = load_use_stall | branch_taken_ex | jalr_taken_ex</text>
+  <text x="450" y="433" text-anchor="middle" font-size="10" fill="#7C3AED">pc_en = if_id_flush ? 1'b1 : hdu_pc_en  (Flush > Stall 우선순위)</text>
+
+  <!-- ======= 모듈 목록 ======= -->
+  <rect x="30" y="452" width="840" height="72" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5" rx="8"/>
+  <text x="450" y="470" text-anchor="middle" font-size="11" font-weight="bold" fill="#14532D">rv32i_pipeline_complete 서브모듈 목록</text>
+  <text x="90" y="488" text-anchor="middle" font-size="10" fill="#374151">instruction_memory</text>
+  <text x="205" y="488" text-anchor="middle" font-size="10" fill="#374151">data_memory</text>
+  <text x="325" y="488" text-anchor="middle" font-size="10" fill="#374151">register_file</text>
+  <text x="450" y="488" text-anchor="middle" font-size="10" fill="#374151">imm_gen</text>
+  <text x="555" y="488" text-anchor="middle" font-size="10" fill="#374151">control_unit</text>
+  <text x="660" y="488" text-anchor="middle" font-size="10" fill="#374151">alu</text>
+  <text x="760" y="488" text-anchor="middle" font-size="10" fill="#374151">branch_unit</text>
+  <text x="200" y="507" text-anchor="middle" font-size="10" fill="#374151">forwarding_unit (Ch10)</text>
+  <text x="450" y="507" text-anchor="middle" font-size="10" fill="#374151">hazard_detection_unit (Ch10)</text>
+  <text x="700" y="507" text-anchor="middle" font-size="10" fill="#374151">포워딩 MUX (EX-EX / MEM-EX / WB-ID)</text>
+</svg>

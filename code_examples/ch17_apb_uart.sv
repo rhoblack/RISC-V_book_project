@@ -5,7 +5,7 @@
 // =============================================================================
 // 8N1 포맷(8비트 데이터, 패리티 없음, 1 정지 비트) UART 송수신기.
 // 송신/수신 각각 8엔트리 FIFO를 보유하며, 보드레이트 분주 레지스터로 설정.
-// Basys 3 USB-UART (FTDI FT2232) 연결 기준: 115200 baud @ 100MHz.
+// Basys 3 USB-UART (Silicon Laboratories CP2102) 연결 기준: 115200 baud @ 100MHz.
 // =============================================================================
 
 module apb_uart #(
@@ -331,7 +331,7 @@ module apb_uart #(
    // RX FIFO 읽기 신호
    assign rx_fifo_pop = apb_read && (paddr == ADDR_RX_DATA);
 
-   // 레지스터 쓰기
+   // 레지스터 쓰기 (int_status_reg 제외 — 아래 전용 블록에서 처리)
    always_ff @(posedge pclk or negedge preset_n) begin
       if (!preset_n) begin
          ctrl_reg   <= 8'h03;        // TX_EN=1, RX_EN=1 (기본 활성화)
@@ -340,12 +340,12 @@ module apb_uart #(
       end else if (apb_write) begin
          case (paddr)
             ADDR_CTRL:     ctrl_reg   <= pwdata[7:0];
-            ADDR_BAUD_DIV: baud_div   <= pwdata[15:0];
-            ADDR_INT_EN:   int_en_reg <= pwdata[7:0];
-            ADDR_INT_STATUS: begin
-               // W1C (Write-1-to-Clear) 방식
-               int_status_reg <= int_status_reg & ~pwdata[7:0];
+            ADDR_BAUD_DIV: begin
+               // baud_div=0 방어: 0 또는 1은 최솟값 2로 클램프
+               // (baud_counter >= baud_div-1이 baud_div=0이면 >= 16'hFFFF가 됨)
+               baud_div <= (pwdata[15:0] < 16'd2) ? 16'd2 : pwdata[15:0];
             end
+            ADDR_INT_EN:   int_en_reg <= pwdata[7:0];
             default: ; // 무시
          endcase
       end
@@ -371,18 +371,22 @@ module apb_uart #(
    assign pready = 1'b1;
 
    // =========================================================================
-   // 인터럽트 로직
+   // 인터럽트 상태 레지스터 — 단일 always_ff로 W1C + 이벤트 세트 통합
    // =========================================================================
-   // TX FIFO 비면 int_status[0] 세트, RX 데이터 도착 시 int_status[1] 세트
+   // 우선순위: W1C 클리어(소프트웨어 쓰기) > 이벤트 세트(하드웨어)
+   // 다중 드라이버 방지: int_status_reg는 이 블록에서만 구동
    always_ff @(posedge pclk or negedge preset_n) begin
       if (!preset_n) begin
          int_status_reg <= '0;
+      end else if (apb_write && (paddr == ADDR_INT_STATUS)) begin
+         // W1C (Write-1-to-Clear): 소프트웨어가 1을 쓰면 해당 비트 클리어
+         int_status_reg <= int_status_reg & ~pwdata[7:0];
       end else begin
-         // W1C 쓰기는 위 레지스터 쓰기 블록에서 처리
+         // 하드웨어 이벤트 세트 (클리어보다 낮은 우선순위)
          if (tx_fifo_empty)
-            int_status_reg[0] <= 1'b1;
+            int_status_reg[0] <= 1'b1;   // TX FIFO 비면 인터럽트 세트
          if (!rx_fifo_empty)
-            int_status_reg[1] <= 1'b1;
+            int_status_reg[1] <= 1'b1;   // RX 데이터 도착 시 인터럽트 세트
       end
    end
 

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="350" viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, 'Noto Sans KR', sans-serif">
+
+  <!-- 배경 -->
+  <rect width="800" height="350" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="400" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">RAW 데이터 해저드 타이밍 다이어그램</text>
+  <text x="400" y="46" text-anchor="middle" font-size="11" fill="#64748B">ADD x3, x1, x2 → ADD x5, x3, x4 연속 실행 시 발생하는 의존성</text>
+
+  <!-- 열 헤더 (사이클) -->
+  <rect x="160" y="60" width="610" height="28" fill="#1E40AF" rx="4"/>
+  <text x="90" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">명령어</text>
+  <text x="215" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C1</text>
+  <text x="276" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C2</text>
+  <text x="337" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C3</text>
+  <text x="398" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C4</text>
+  <text x="459" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C5</text>
+  <text x="520" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C6</text>
+  <text x="581" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C7</text>
+  <text x="642" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C8</text>
+  <text x="703" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C9</text>
+  <text x="764" y="79" text-anchor="middle" font-size="12" font-weight="600" fill="white">C10</text>
+
+  <!-- 명령어 레이블 배경 -->
+  <rect x="5" y="92" width="155" height="200" fill="#EFF6FF" rx="4" stroke="#BFDBFE" stroke-width="1"/>
+
+  <!-- 명령어 1: ADD x3, x1, x2 -->
+  <text x="10" y="112" font-size="10" font-weight="700" fill="#1E40AF">① ADD x3,</text>
+  <text x="10" y="125" font-size="10" font-weight="700" fill="#1E40AF">    x1, x2</text>
+  <text x="10" y="138" font-size="9" fill="#64748B">(결과: x3)</text>
+
+  <!-- 명령어 2: ADD x5, x3, x4 -->
+  <text x="10" y="165" font-size="10" font-weight="700" fill="#DC2626">② ADD x5,</text>
+  <text x="10" y="178" font-size="10" font-weight="700" fill="#DC2626">    x3, x4</text>
+  <text x="10" y="191" font-size="9" fill="#64748B">(소스: x3)</text>
+
+  <!-- 명령어 3: SUB x6, x5, x1 -->
+  <text x="10" y="218" font-size="10" font-weight="700" fill="#7C3AED">③ SUB x6,</text>
+  <text x="10" y="231" font-size="10" font-weight="700" fill="#7C3AED">    x5, x1</text>
+  <text x="10" y="244" font-size="9" fill="#64748B">(소스: x5)</text>
+
+  <!-- 스테이지 셀 정의 (너비 61) -->
+  <!-- 명령어 ①: C1=IF, C2=ID, C3=EX, C4=MEM, C5=WB -->
+  <rect x="160" y="92" width="61" height="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="190" y="117" text-anchor="middle" font-size="11" font-weight="600" fill="#1D4ED8">IF</text>
+  <text x="190" y="131" text-anchor="middle" font-size="9" fill="#3B82F6">PC→IMEM</text>
+  <rect x="221" y="92" width="61" height="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="251" y="117" text-anchor="middle" font-size="11" font-weight="600" fill="#1D4ED8">ID</text>
+  <text x="251" y="131" text-anchor="middle" font-size="9" fill="#3B82F6">디코딩</text>
+  <!-- EX 단계 — 결과 생성 (강조) -->
+  <rect x="282" y="92" width="61" height="55" fill="#1E40AF" stroke="#1D4ED8" stroke-width="2" rx="3"/>
+  <text x="312" y="113" text-anchor="middle" font-size="11" font-weight="700" fill="white">EX</text>
+  <text x="312" y="127" text-anchor="middle" font-size="9" fill="#BFDBFE">x3 계산</text>
+  <text x="312" y="139" text-anchor="middle" font-size="9" fill="#93C5FD">완료!</text>
+  <rect x="343" y="92" width="61" height="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="373" y="117" text-anchor="middle" font-size="11" font-weight="600" fill="#1D4ED8">MEM</text>
+  <text x="373" y="131" text-anchor="middle" font-size="9" fill="#3B82F6">통과</text>
+  <rect x="404" y="92" width="61" height="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="434" y="117" text-anchor="middle" font-size="11" font-weight="600" fill="#1D4ED8">WB</text>
+  <text x="434" y="131" text-anchor="middle" font-size="9" fill="#3B82F6">레지스터</text>
+
+  <!-- 명령어 ②: C2=IF, C3=ID, C4=EX(RAW!), C5=MEM, C6=WB -->
+  <rect x="221" y="157" width="61" height="55" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="3"/>
+  <text x="251" y="182" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">IF</text>
+  <text x="251" y="196" text-anchor="middle" font-size="9" fill="#EF4444">인출</text>
+  <rect x="282" y="157" width="61" height="55" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="3"/>
+  <text x="312" y="182" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">ID</text>
+  <text x="312" y="196" text-anchor="middle" font-size="9" fill="#EF4444">x3 읽기</text>
+  <!-- EX 단계 — RAW 충돌! -->
+  <rect x="343" y="157" width="61" height="55" fill="#DC2626" stroke="#B91C1C" stroke-width="2.5" rx="3"/>
+  <text x="373" y="178" text-anchor="middle" font-size="11" font-weight="700" fill="white">EX</text>
+  <text x="373" y="192" text-anchor="middle" font-size="9" fill="#FCA5A5">x3 필요!</text>
+  <text x="373" y="205" text-anchor="middle" font-size="9" fill="white">RAW!</text>
+  <rect x="404" y="157" width="61" height="55" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="3"/>
+  <text x="434" y="182" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">MEM</text>
+  <text x="434" y="196" text-anchor="middle" font-size="9" fill="#EF4444">통과</text>
+  <rect x="465" y="157" width="61" height="55" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="3"/>
+  <text x="495" y="182" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">WB</text>
+  <text x="495" y="196" text-anchor="middle" font-size="9" fill="#EF4444">레지스터</text>
+
+  <!-- 명령어 ③: C3=IF, C4=ID, C5=EX(RAW!), C6=MEM, C7=WB -->
+  <rect x="282" y="222" width="61" height="55" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5" rx="3"/>
+  <text x="312" y="247" text-anchor="middle" font-size="11" font-weight="600" fill="#7C3AED">IF</text>
+  <text x="312" y="261" text-anchor="middle" font-size="9" fill="#8B5CF6">인출</text>
+  <rect x="343" y="222" width="61" height="55" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5" rx="3"/>
+  <text x="373" y="247" text-anchor="middle" font-size="11" font-weight="600" fill="#7C3AED">ID</text>
+  <text x="373" y="261" text-anchor="middle" font-size="9" fill="#8B5CF6">x5 읽기</text>
+  <rect x="404" y="222" width="61" height="55" fill="#7C3AED" stroke="#6D28D9" stroke-width="2.5" rx="3"/>
+  <text x="434" y="243" text-anchor="middle" font-size="11" font-weight="700" fill="white">EX</text>
+  <text x="434" y="257" text-anchor="middle" font-size="9" fill="#DDD6FE">x5 필요!</text>
+  <text x="434" y="270" text-anchor="middle" font-size="9" fill="white">RAW!</text>
+  <rect x="465" y="222" width="61" height="55" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5" rx="3"/>
+  <text x="495" y="247" text-anchor="middle" font-size="11" font-weight="600" fill="#7C3AED">MEM</text>
+  <text x="495" y="261" text-anchor="middle" font-size="9" fill="#8B5CF6">통과</text>
+  <rect x="526" y="222" width="61" height="55" fill="#EDE9FE" stroke="#8B5CF6" stroke-width="1.5" rx="3"/>
+  <text x="556" y="247" text-anchor="middle" font-size="11" font-weight="600" fill="#7C3AED">WB</text>
+  <text x="556" y="261" text-anchor="middle" font-size="9" fill="#8B5CF6">레지스터</text>
+
+  <!-- RAW 화살표 1: ①EX → ②EX (EX-EX 포워딩 경로) -->
+  <defs>
+    <marker id="arrowRed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#D97706"/>
+    </marker>
+  </defs>
+
+  <!-- 화살표: ① EX(C3) → ② EX(C4): EX-EX RAW -->
+  <line x1="343" y1="145" x2="343" y2="157" stroke="#DC2626" stroke-width="2.5" stroke-dasharray="5,3" marker-end="url(#arrowRed)"/>
+  <text x="348" y="153" font-size="9" fill="#DC2626" font-weight="600">EX→EX</text>
+
+  <!-- 화살표: ① EX(C3) → ③ EX(C5): MEM-EX RAW (한 사이클 더) -->
+  <path d="M 313 147 Q 313 175 434 222" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrowOrange)"/>
+  <text x="355" y="190" font-size="9" fill="#D97706" font-weight="600">MEM→EX</text>
+
+  <!-- 범례 -->
+  <rect x="160" y="295" width="620" height="45" fill="#F1F5F9" rx="4" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="175" y="310" font-size="10" font-weight="700" fill="#1E293B">범례:</text>
+  <rect x="215" y="299" width="14" height="14" fill="#1E40AF" rx="2"/>
+  <text x="233" y="310" font-size="10" fill="#1E293B">결과 생성(EX)</text>
+  <rect x="330" y="299" width="14" height="14" fill="#DC2626" rx="2"/>
+  <text x="348" y="310" font-size="10" fill="#1E293B">RAW 충돌 지점</text>
+  <line x1="460" y1="306" x2="490" y2="306" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowRed)"/>
+  <text x="496" y="310" font-size="10" fill="#1E293B">EX-EX 의존</text>
+  <line x1="590" y1="306" x2="620" y2="306" stroke="#D97706" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowOrange)"/>
+  <text x="626" y="310" font-size="10" fill="#1E293B">MEM-EX 의존</text>
+
+  <text x="175" y="330" font-size="9" fill="#64748B">※ ①이 WB(C5)에서 레지스터에 쓰기 전, ②는 EX(C4)에서 이미 x3 값이 필요합니다 → 포워딩으로 해결</text>
+
+</svg>

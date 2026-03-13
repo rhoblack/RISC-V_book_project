@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="900" height="420" font-family="Pretendard, sans-serif">
+
+  <!-- 배경 -->
+  <rect width="900" height="420" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">CSRRW 명령어: 원자적 읽기-수정-쓰기</text>
+  <text x="450" y="50" text-anchor="middle" font-size="11" fill="#64748B">CSR Instructions (I-type 변형) · opcode=1110011</text>
+
+  <!-- ===== 상단: 32비트 명령어 인코딩 ===== -->
+  <rect x="30" y="62" width="840" height="72" rx="6" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="450" y="80" text-anchor="middle" font-size="11" font-weight="700" fill="#1E293B">32비트 명령어 인코딩 (CSRRW)</text>
+
+  <!-- 비트 구획 -->
+  <!-- csr[11:0] -->
+  <rect x="40" y="86" width="252" height="32" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="166" y="106" text-anchor="middle" font-size="11" font-weight="700" fill="#1D4ED8">csr [11:0]</text>
+
+  <!-- rs1[4:0] -->
+  <rect x="292" y="86" width="105" height="32" rx="3" fill="#BBF7D0" stroke="#10B981" stroke-width="1.5"/>
+  <text x="344" y="106" text-anchor="middle" font-size="11" font-weight="700" fill="#065F46">rs1 [4:0]</text>
+
+  <!-- funct3 -->
+  <rect x="397" y="86" width="63" height="32" rx="3" fill="#FEF9C3" stroke="#EAB308" stroke-width="1.5"/>
+  <text x="428" y="106" text-anchor="middle" font-size="10" font-weight="700" fill="#854D0E">001</text>
+
+  <!-- rd[4:0] -->
+  <rect x="460" y="86" width="105" height="32" rx="3" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5"/>
+  <text x="512" y="106" text-anchor="middle" font-size="11" font-weight="700" fill="#991B1B">rd [4:0]</text>
+
+  <!-- opcode -->
+  <rect x="565" y="86" width="147" height="32" rx="3" fill="#E2E8F0" stroke="#64748B" stroke-width="1.5"/>
+  <text x="638" y="106" text-anchor="middle" font-size="10" font-weight="700" fill="#475569">1110011</text>
+
+  <!-- 비트 레이블 -->
+  <text x="40" y="130" font-size="8" fill="#64748B">[31]</text>
+  <text x="270" y="130" text-anchor="end" font-size="8" fill="#64748B">[20]</text>
+  <text x="292" y="130" font-size="8" fill="#64748B">[19]</text>
+  <text x="380" y="130" text-anchor="end" font-size="8" fill="#64748B">[15]</text>
+  <text x="397" y="130" font-size="8" fill="#64748B">[14]</text>
+  <text x="455" y="130" text-anchor="end" font-size="8" fill="#64748B">[12]</text>
+  <text x="460" y="130" font-size="8" fill="#64748B">[11]</text>
+  <text x="558" y="130" text-anchor="end" font-size="8" fill="#64748B">[7]</text>
+  <text x="565" y="130" font-size="8" fill="#64748B">[6]</text>
+  <text x="705" y="130" text-anchor="end" font-size="8" fill="#64748B">[0]</text>
+
+  <!-- funct3 레이블 -->
+  <text x="428" y="130" text-anchor="middle" font-size="8" fill="#64748B">funct3=001</text>
+
+  <!-- ===== 중간: 원자적 동작 다이어그램 ===== -->
+  <rect x="30" y="142" width="840" height="118" rx="6" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="450" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="#1E293B">원자적 동작 순서 (3단계가 동시에 실행됨)</text>
+
+  <!-- 화살표 마커 -->
+  <defs>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#10B981"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#F59E0B"/>
+    </marker>
+  </defs>
+
+  <!-- 단계 1 -->
+  <rect x="50" y="168" width="220" height="68" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="160" y="188" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8">① CSR 읽기</text>
+  <text x="160" y="206" text-anchor="middle" font-size="11" fill="#1E293B">temp ← CSR[csr_addr]</text>
+  <text x="160" y="222" text-anchor="middle" font-size="10" fill="#64748B">현재 CSR 값을 임시 저장</text>
+
+  <!-- 단계 2 -->
+  <rect x="340" y="168" width="220" height="68" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+  <text x="450" y="188" text-anchor="middle" font-size="12" font-weight="700" fill="#B45309">② CSR 쓰기</text>
+  <text x="450" y="206" text-anchor="middle" font-size="11" fill="#1E293B">CSR[csr_addr] ← rs1</text>
+  <text x="450" y="222" text-anchor="middle" font-size="10" fill="#64748B">rs1 레지스터 값을 CSR에 쓰기</text>
+
+  <!-- 단계 3 -->
+  <rect x="630" y="168" width="220" height="68" rx="6" fill="#D1FAE5" stroke="#10B981" stroke-width="2"/>
+  <text x="740" y="188" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">③ rd 업데이트</text>
+  <text x="740" y="206" text-anchor="middle" font-size="11" fill="#1E293B">rd ← temp</text>
+  <text x="740" y="222" text-anchor="middle" font-size="10" fill="#64748B">임시값을 rd 레지스터에 저장</text>
+
+  <!-- 화살표 1→2 -->
+  <line x1="270" y1="202" x2="336" y2="202" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <!-- 화살표 2→3 -->
+  <line x1="560" y1="202" x2="626" y2="202" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowOrange)"/>
+
+  <!-- 원자성 강조 -->
+  <rect x="50" y="244" width="800" height="12" rx="3" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="450" y="253" text-anchor="middle" font-size="9" fill="#1D4ED8" font-weight="600">★ ①②③은 하나의 클럭 사이클에서 원자적(atomic)으로 실행 — 중간 상태 관찰 불가</text>
+
+  <!-- ===== 하단: 6개 CSR 명령어 비교 표 ===== -->
+  <rect x="30" y="267" width="840" height="140" rx="6" fill="white" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="450" y="285" text-anchor="middle" font-size="11" font-weight="700" fill="#1E293B">CSR 명령어 6종 비교</text>
+
+  <!-- 표 헤더 -->
+  <rect x="40" y="292" width="820" height="22" fill="#E2E8F0" rx="2"/>
+  <text x="100" y="307" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">명령어</text>
+  <text x="195" y="307" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">funct3</text>
+  <text x="355" y="307" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">쓰기 조건</text>
+  <text x="560" y="307" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">CSR 업데이트 방식</text>
+  <text x="780" y="307" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">값 소스</text>
+
+  <!-- 구분선 세로 -->
+  <line x1="148" y1="292" x2="148" y2="400" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="248" y1="292" x2="248" y2="400" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="462" y1="292" x2="462" y2="400" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="680" y1="292" x2="680" y2="400" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- 행 1 CSRRW -->
+  <rect x="40" y="314" width="820" height="20" fill="#DBEAFE"/>
+  <text x="100" y="328" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">CSRRW</text>
+  <text x="195" y="328" text-anchor="middle" font-size="10" fill="#1D4ED8">001</text>
+  <text x="355" y="328" text-anchor="middle" font-size="10" fill="#1E293B">항상 쓰기</text>
+  <text x="560" y="328" text-anchor="middle" font-size="10" fill="#1E293B">CSR = rs1 (전체 교체)</text>
+  <text x="780" y="328" text-anchor="middle" font-size="10" fill="#1E293B">rs1 레지스터 값</text>
+
+  <!-- 행 2 CSRRS -->
+  <text x="100" y="348" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">CSRRS</text>
+  <text x="195" y="348" text-anchor="middle" font-size="10" fill="#1D4ED8">010</text>
+  <text x="355" y="348" text-anchor="middle" font-size="10" fill="#1E293B">rs1 != x0일 때</text>
+  <text x="560" y="348" text-anchor="middle" font-size="10" fill="#1E293B">CSR = CSR | rs1 (비트 세트)</text>
+  <text x="780" y="348" text-anchor="middle" font-size="10" fill="#1E293B">rs1 (OR 마스크)</text>
+
+  <!-- 행 3 CSRRC -->
+  <rect x="40" y="354" width="820" height="20" fill="#F8FAFC"/>
+  <text x="100" y="368" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">CSRRC</text>
+  <text x="195" y="368" text-anchor="middle" font-size="10" fill="#1D4ED8">011</text>
+  <text x="355" y="368" text-anchor="middle" font-size="10" fill="#1E293B">rs1 != x0일 때</text>
+  <text x="560" y="368" text-anchor="middle" font-size="10" fill="#1E293B">CSR = CSR &amp; ~rs1 (비트 클리어)</text>
+  <text x="780" y="368" text-anchor="middle" font-size="10" fill="#1E293B">rs1 (AND NOT 마스크)</text>
+
+  <!-- 행 4 CSRRWI -->
+  <rect x="40" y="374" width="820" height="20" fill="#DBEAFE"/>
+  <text x="100" y="388" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">CSRRWI</text>
+  <text x="195" y="388" text-anchor="middle" font-size="10" fill="#B45309">101</text>
+  <text x="355" y="388" text-anchor="middle" font-size="10" fill="#1E293B">항상 쓰기</text>
+  <text x="560" y="388" text-anchor="middle" font-size="10" fill="#1E293B">CSR = ZeroExt(uimm[4:0])</text>
+  <text x="780" y="388" text-anchor="middle" font-size="10" fill="#1E293B">5비트 즉시값</text>
+
+  <!-- 행 5 CSRRSI -->
+  <text x="100" y="406" text-anchor="middle" font-size="10" fill="#1E293B" font-family="monospace">CSRRSI</text>
+  <text x="195" y="406" text-anchor="middle" font-size="10" fill="#B45309">110</text>
+  <text x="355" y="406" text-anchor="middle" font-size="10" fill="#1E293B">uimm != 0일 때</text>
+  <text x="560" y="406" text-anchor="middle" font-size="10" fill="#1E293B">CSR = CSR | ZeroExt(uimm)</text>
+  <text x="780" y="406" text-anchor="middle" font-size="10" fill="#1E293B">5비트 즉시값 (OR)</text>
+
+  <!-- 구분선 가로 -->
+  <line x1="40" y1="314" x2="860" y2="314" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="40" y1="334" x2="860" y2="334" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="40" y1="354" x2="860" y2="354" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="40" y1="374" x2="860" y2="374" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="40" y1="394" x2="860" y2="394" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- CSRRCI (마지막 행 - 별도로 추가) -->
+  <rect x="40" y="394" width="820" height="6" fill="#F8FAFC"/>
+
+</svg>
