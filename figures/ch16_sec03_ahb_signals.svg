@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 560" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="560" fill="#F8FAFC" rx="8"/>
+  <text x="425" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">AHB-Lite 신호 정의</text>
+  <text x="425" y="52" text-anchor="middle" font-size="12" fill="#64748B">Master → Slave (파랑) | Slave → Master (초록) | 공통 (회색)</text>
+
+  <!-- Master 블록 -->
+  <rect x="50" y="90" width="200" height="400" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="150" y="115" text-anchor="middle" font-size="16" font-weight="700" fill="#2563EB">AHB Master</text>
+  <text x="150" y="133" text-anchor="middle" font-size="10" fill="#64748B">(캐시-버스 브리지)</text>
+
+  <!-- Slave 블록 -->
+  <rect x="600" y="90" width="200" height="400" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="700" y="115" text-anchor="middle" font-size="16" font-weight="700" fill="#059669">AHB Slave</text>
+  <text x="700" y="133" text-anchor="middle" font-size="10" fill="#64748B">(SRAM 컨트롤러)</text>
+
+  <!-- Master → Slave 신호들 (파랑) -->
+  <line x1="250" y1="165" x2="600" y2="165" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <rect x="310" y="152" width="230" height="24" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="425" y="168" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">HADDR[31:0]</text>
+  <text x="150" y="170" text-anchor="middle" font-size="9" fill="#1E293B">주소</text>
+
+  <line x1="250" y1="205" x2="600" y2="205" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <rect x="310" y="192" width="230" height="24" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="425" y="208" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">HTRANS[1:0]</text>
+  <text x="150" y="210" text-anchor="middle" font-size="9" fill="#1E293B">전송 타입</text>
+
+  <line x1="250" y1="245" x2="600" y2="245" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <rect x="310" y="232" width="230" height="24" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="425" y="248" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">HWRITE</text>
+  <text x="150" y="250" text-anchor="middle" font-size="9" fill="#1E293B">읽기/쓰기</text>
+
+  <line x1="250" y1="285" x2="600" y2="285" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <rect x="310" y="272" width="230" height="24" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="425" y="288" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">HSIZE[2:0]</text>
+  <text x="150" y="290" text-anchor="middle" font-size="9" fill="#1E293B">전송 크기</text>
+
+  <line x1="250" y1="325" x2="600" y2="325" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <rect x="310" y="312" width="230" height="24" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="425" y="328" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">HBURST[2:0]</text>
+  <text x="150" y="330" text-anchor="middle" font-size="9" fill="#1E293B">버스트 타입</text>
+
+  <line x1="250" y1="365" x2="600" y2="365" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+  <rect x="310" y="352" width="230" height="24" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="425" y="368" text-anchor="middle" font-size="11" font-weight="600" fill="#2563EB">HWDATA[31:0]</text>
+  <text x="150" y="370" text-anchor="middle" font-size="9" fill="#1E293B">쓰기 데이터</text>
+
+  <!-- Slave → Master 신호들 (초록) -->
+  <line x1="600" y1="405" x2="250" y2="405" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+  <rect x="310" y="392" width="230" height="24" rx="4" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="425" y="408" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">HRDATA[31:0]</text>
+  <text x="700" y="410" text-anchor="middle" font-size="9" fill="#1E293B">읽기 데이터</text>
+
+  <line x1="600" y1="440" x2="250" y2="440" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+  <rect x="310" y="427" width="230" height="24" rx="4" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="425" y="443" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">HREADY</text>
+  <text x="700" y="445" text-anchor="middle" font-size="9" fill="#1E293B">전송 완료</text>
+
+  <line x1="600" y1="475" x2="250" y2="475" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+  <rect x="310" y="462" width="230" height="24" rx="4" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="425" y="478" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">HRESP</text>
+  <text x="700" y="480" text-anchor="middle" font-size="9" fill="#1E293B">응답 상태</text>
+
+  <!-- 공통 신호 -->
+  <rect x="340" y="505" width="170" height="24" rx="4" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1"/>
+  <text x="425" y="521" text-anchor="middle" font-size="11" font-weight="600" fill="#64748B">HCLK, HRESETn (공통)</text>
+
+  <!-- HTRANS 값 범례 -->
+  <rect x="560" y="192" width="38" height="24" rx="3" fill="#EFF6FF"/>
+  <text x="579" y="208" text-anchor="middle" font-size="8" fill="#2563EB">00~11</text>
+</svg>

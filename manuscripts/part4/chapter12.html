@@ -1,0 +1,1383 @@
+<!-- 편집장 최종 승인: 2026-03-12 | Critical: 0 | Major: 0 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 12 — 구조적 해저드와 파이프라인 완성</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 12</span>
+  <h1>구조적 해저드와 파이프라인 완성</h1>
+  <p class="chapter-intro">
+    Ch10에서 데이터 해저드를, Ch11에서 제어 해저드를 해결하였습니다.
+    이제 파이프라인 해저드의 마지막 종류인 <strong>구조적 해저드(structural hazard)</strong>를 다룹니다.
+    그리고 모든 모듈을 하나의 최상위 모듈로 통합하여 <strong>완성된 RV32I 5단계 파이프라인 프로세서</strong>를 완성합니다.
+    이 챕터의 마지막에서 버블정렬 프로그램을 파이프라인 위에서 실행하는 감동적인 순간을 경험하게 됩니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: 구조적 해저드의 발생 조건을 열거하고, RV32I 파이프라인에서 Harvard 구조가 이를 해결하는 원리를 설명할 수 있다. (이해)</li>
+    <li><strong>LO-2</strong>: WB-ID 포워딩(레지스터 파일 동시 읽기-쓰기 충돌) 회로를 SystemVerilog로 구현할 수 있다. (적용)</li>
+    <li><strong>LO-3</strong>: Ch09~Ch11에서 설계한 파이프라인 모듈 전체를 최상위 모듈로 통합하고 시뮬레이션으로 검증할 수 있다. (적용)</li>
+    <li><strong>LO-4</strong>: 버블정렬 프로그램을 RISC-V 어셈블리로 이해하고, 완성된 5단계 파이프라인에서 정확한 실행 결과를 얻을 수 있다. (분석)</li>
+    <li><strong>LO-5</strong>: 단일 사이클, 멀티사이클, 파이프라인 세 구현의 CPI·클럭 주파수·LUT 사용량 데이터를 해석하고, 설계 요구사항에 따라 최적 구현을 선택하는 근거를 설명할 수 있다. (평가)</li>
+    <li><strong>LO-6</strong>: Part 4(Ch09~Ch12)에서 구현한 파이프라인의 설계 결정을 되돌아보고, 개선 가능한 지점을 스스로 찾아낼 수 있다. (평가)</li>
+  </ul>
+</nav>
+
+<section id="chapter-intro-narrative">
+  <p>
+    Ch11에서 BNE 루프를 사용한 1~10 합산이 성공적으로 실행되었을 때의 감동을 기억하십니까?
+    포워딩 유닛과 분기 플러시가 함께 동작하며 <code>x2 = 55</code>라는 정확한 결과를 냈습니다.
+    이제 그 기반 위에 마지막 두 조각을 올릴 차례입니다.
+  </p>
+  <p>
+    두 조각만 채우면 파이프라인은 완성됩니다. 첫 번째 조각은 <strong>구조적 해저드</strong>의 마지막 잔여분 —
+    레지스터 파일의 동시 읽기-쓰기 충돌입니다. 두 번째 조각은 전체 모듈 <strong>통합</strong>입니다.
+    그리고 완성된 파이프라인 위에서 버블정렬이 실행되는 순간, Part 4의 감정적 클라이맥스가 찾아옵니다.
+  </p>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12.1 구조적 해저드: RV32I에서의 발생 조건                                  -->
+<!-- ======================================================================== -->
+<section id="sec-12-1">
+  <h2>12.1 구조적 해저드: RV32I에서의 발생 조건</h2>
+
+  <p>
+    RISC-V 파이프라인 프로세서에서 발생할 수 있는 해저드는 정확히 세 종류입니다.
+    Ch10에서 <strong>데이터 해저드(data hazard)</strong>를, Ch11에서 <strong>제어 해저드(control hazard)</strong>를
+    처리하였습니다. 이 절이 마지막입니다. 이후에는 새로운 종류의 해저드가 등장하지 않습니다.
+  </p>
+
+  <h3>구조적 해저드란?</h3>
+
+  <p>
+    <strong>구조적 해저드(structural hazard, 구조적 위험)</strong>는 여러 명령어가 파이프라인의
+    동일한 하드웨어 자원을 같은 사이클에 사용하려 할 때 발생합니다.
+    데이터 해저드가 "값이 아직 준비되지 않은 문제"이고, 제어 해저드가 "경로가 결정되지 않은 문제"라면,
+    구조적 해저드는 "하드웨어가 물리적으로 하나뿐인 문제"입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유 — ATM이 하나뿐인 은행:</strong>
+    구조적 해저드는 ATM 창구가 하나인 은행에서 입금과 출금을 동시에 처리하려는 상황과 같습니다.
+    두 고객이 동시에 같은 ATM을 사용할 수 없으므로 한 명은 기다려야 합니다.
+    해결책은 간단합니다 — 입금 창구와 출금 창구를 분리하면 됩니다. 이것이 Harvard 구조의 원리입니다.
+  </div>
+
+  <h3>RV32I 5단계 파이프라인에서의 발생 조건 분석</h3>
+
+  <p>
+    5단계 파이프라인에서 구조적 해저드가 발생할 수 있는 자원과 우리 설계의 현황을 정리하면 다음과 같습니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>자원</th>
+        <th>충돌 조건</th>
+        <th>우리 설계의 처리</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>메모리</td>
+        <td>Princeton 구조: IF(명령어 읽기) + MEM(데이터 읽기/쓰기) 동시 접근</td>
+        <td>✅ Harvard 구조 (IMEM/DMEM 분리) — Ch09에서 이미 채택</td>
+      </tr>
+      <tr>
+        <td>레지스터 파일 쓰기 포트</td>
+        <td>WB 스테이지가 2개 이상 동시에 레지스터에 쓰려는 경우</td>
+        <td>✅ WB 스테이지 1개 — 동시 충돌 없음</td>
+      </tr>
+      <tr>
+        <td>ALU</td>
+        <td>멀티사이클에서 여러 스테이지가 같은 ALU를 공유하는 경우</td>
+        <td>✅ 파이프라인은 스테이지별 독립 ALU 사용</td>
+      </tr>
+      <tr>
+        <td style="background: #FEF9C3;"><strong>레지스터 파일 읽기-쓰기</strong></td>
+        <td style="background: #FEF9C3;">ID 스테이지(읽기) + WB 스테이지(쓰기)가 <em>같은 레지스터</em>를 같은 사이클에 접근</td>
+        <td style="background: #FEF9C3;">⚠️ <strong>WB-ID 포워딩 필요</strong> → 12.2절에서 해결</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Princeton 구조 — 해결됐지만 알아야 하는 이유</h3>
+
+  <figure>
+    <img src="../../figures/ch12_sec01_princeton_hazard.svg" alt="Princeton 구조에서의 구조적 해저드 타이밍 다이어그램">
+    <figcaption>그림 12.1: Princeton 구조(통합 메모리)에서 IF와 MEM이 같은 사이클에 단일 메모리 포트를 동시에 사용하려 할 때 발생하는 구조적 해저드</figcaption>
+  </figure>
+
+  <p>
+    그림 12.1을 보면, Princeton 구조(프린스턴 구조, 폰 노이만 구조)에서 사이클 N+4에 INSTR-1의 MEM 스테이지와
+    INSTR-4의 IF 스테이지가 동시에 같은 메모리 포트를 사용하려 합니다.
+    INSTR-1은 LW/SW로 데이터를 읽거나 쓰고, INSTR-4는 다음 명령어를 인출해야 합니다.
+    단일 메모리 포트는 이 두 요청을 동시에 처리할 수 없으므로 — 구조적 해저드가 발생합니다.
+    해결책은 스톨(한 명령어를 기다리게 함) 또는 멀티포트 메모리입니다.
+  </p>
+
+  <p>
+    Ch07(멀티사이클 CPU)에서는 Princeton 구조를 사용했지만 구조적 해저드가 발생하지 않았습니다.
+    그 이유는 멀티사이클이 한 번에 하나의 명령어만 처리하기 때문입니다 — IF와 MEM이 동시에
+    실행되지 않으므로 메모리 충돌이 발생하지 않습니다.
+    하지만 파이프라인은 여러 명령어가 동시에 각 스테이지를 점유하므로, 이 충돌이 반드시 발생합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch12_sec01_harvard_solution.svg" alt="Harvard 구조로 구조적 해저드 해결">
+    <figcaption>그림 12.2: Harvard 구조에서 IMEM(명령어 메모리)과 DMEM(데이터 메모리)을 분리하여 IF와 MEM이 독립적으로 각자의 메모리에 동시 접근 — 구조적 해저드 없음</figcaption>
+  </figure>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      현대 프로세서는 Harvard 구조를 L1 캐시 수준에서 채택합니다(L1 명령어 캐시 / L1 데이터 캐시 분리).
+      L2 캐시부터는 통합(Princeton) 구조를 사용하는 경우가 많습니다.
+      Basys 3의 Artix-7 FPGA에서도 BRAM을 두 개로 나누어 IMEM/DMEM을 분리하면
+      정확히 Harvard 구조의 구조적 해저드 해결과 동일한 효과를 얻습니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      Harvard 구조를 채택한 RV32I 파이프라인에서도 구조적 해저드가 하나 남아 있습니다.
+      IMEM과 DMEM이 분리되어 있음에도 충돌이 생기는 상황은 무엇일까요?
+      (힌트: 레지스터 파일을 동시에 읽고 쓰는 스테이지를 떠올려 보십시오.)
+    </p>
+  </aside>
+
+  <h3>우리 설계의 상태: 95% 해결됨</h3>
+
+  <p>
+    Ch09에서 IMEM과 DMEM을 분리했을 때, 우리는 이미 구조적 해저드의 95%를 예방했습니다.
+    남은 5% — 레지스터 파일의 Read-During-Write 충돌 — 을 12.2절에서 처리합니다.
+    그것만 해결되면, 우리 파이프라인의 모든 해저드가 완전히 처리된 것입니다.
+  </p>
+
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12.2 WB-ID 포워딩 (레지스터 파일 포워딩)                                   -->
+<!-- ======================================================================== -->
+<section id="sec-12-2">
+  <h2>12.2 WB-ID 포워딩 (레지스터 파일 포워딩)</h2>
+
+  <aside class="tip">
+    <strong>💡 안심 문구</strong>
+    <p>
+      WB-ID 포워딩은 Ch10의 <code>forwarding_unit</code>을 수정하는 것이 아닙니다.
+      레지스터 파일 모듈 내부에서 독립적으로 처리하는 메커니즘으로,
+      기존에 완성된 포워딩 유닛과 해저드 감지 유닛은 그대로 유지됩니다.
+    </p>
+  </aside>
+
+  <h3>문제 정의: 같은 사이클에 읽기와 쓰기가 충돌</h3>
+
+  <p>
+    Ch10에서 설계한 <code>forwarding_unit</code>은 EX 스테이지에서 필요한 데이터를 앞당겨 공급합니다.
+    하지만 다음 상황을 생각해 보십시오:
+  </p>
+
+  <pre><code class="language-verilog">// 4개 명령어 파이프라인 진행 예시
+// 사이클 N:
+//   - INSTR-A: WB 스테이지 — x5에 결과 쓰기
+//   - INSTR-B: ID 스테이지 — x5를 레지스터 파일에서 읽기
+
+ADD x5, x2, x3   // INSTR-A: WB에서 x5 갱신
+LW  x6, 0(x5)   // INSTR-B: ID에서 x5 읽기 ← 이때 x5의 값은?
+</code></pre>
+
+  <p>
+    INSTR-A가 WB 스테이지에서 x5에 값을 기록하는 바로 그 사이클에,
+    INSTR-B는 ID 스테이지에서 레지스터 파일로부터 x5를 읽으려 합니다.
+    이 상황이 <strong>Read-During-Write(읽기-쓰기 동시 발생)</strong> 충돌입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유 — 선생님과 학생:</strong>
+    선생님이 칠판에 답을 적는 바로 그 순간, 학생이 칠판에서 그 답을 읽으려 합니다.
+    선생님이 아직 다 쓰지 않았다면 학생은 불완전한 값을 보게 됩니다.
+    해결책은 선생님이 쓰는 동시에 학생에게 직접 말로 알려주는 것 — 바로 WB-ID 포워딩입니다.
+  </div>
+
+  <figure>
+    <img src="../../figures/ch12_sec02_wb_id_forwarding.svg" alt="WB-ID 포워딩 경로 다이어그램">
+    <figcaption>그림 12.3: WB 스테이지(쓰기)와 ID 스테이지(읽기)가 같은 사이클에 동일 레지스터를 접근할 때, 레지스터 파일 내부의 포워딩 MUX가 새로운 값을 즉시 선택</figcaption>
+  </figure>
+
+  <h3>Ch10 포워딩 유닛이 이 경우를 다루지 않는 이유</h3>
+
+  <p>
+    Ch10의 <code>forwarding_unit</code>은 EX 스테이지 입력에 집중합니다:
+    EX-EX 포워딩(<code>fwd_a=2'b10</code>)과 MEM-EX 포워딩(<code>fwd_a=2'b01</code>)이 전부입니다.
+    ID 스테이지는 레지스터 파일 읽기 단계이므로, forwarding_unit의 MUX가 개입하기 전 단계입니다.
+    따라서 WB-ID 충돌은 forwarding_unit이 처리하는 경로 밖에 있습니다.
+  </p>
+
+  <h3>포워딩 우선순위 전체 체계 정리</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>우선순위</th>
+        <th>포워딩 경로</th>
+        <th>담당 모듈</th>
+        <th>신호</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1 (최우선)</td>
+        <td>EX-EX: EX/MEM.alu_result → EX ALU 입력</td>
+        <td>forwarding_unit</td>
+        <td><code>fwd_a=2'b10</code></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>MEM-EX: MEM/WB.wb_data → EX ALU 입력</td>
+        <td>forwarding_unit</td>
+        <td><code>fwd_a=2'b01</code></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>WB-ID: WB.wb_data → 레지스터 파일 읽기 출력</td>
+        <td>register_file 내부</td>
+        <td>조합 논리 (암묵적)</td>
+      </tr>
+      <tr>
+        <td>특별</td>
+        <td>Load-Use 스톨: 포워딩 불가 → 1사이클 대기</td>
+        <td>hazard_detection_unit</td>
+        <td><code>pc_en=0, if_id_en=0</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>구현: 레지스터 파일 내부에서 처리</h3>
+
+  <p>
+    WB-ID 포워딩은 레지스터 파일의 읽기 포트에 조건부 MUX를 추가하는 방식으로 구현합니다.
+    핵심 코드는 두 줄입니다:
+  </p>
+
+  <pre><code class="language-verilog">// ch12_register_file_with_forwarding.sv — 핵심 부분
+// 소스 레지스터 1 읽기 (WB-ID 포워딩 적용)
+assign rs1_data = (reg_w_en &amp;&amp; (rd_addr != 5'b0) &amp;&amp; (rd_addr == rs1_addr))
+                  ? rd_data         // WB-ID 포워딩: WB가 쓰는 값을 즉시 반환
+                  : rf[rs1_addr];   // 일반 읽기: 레지스터 파일에서 읽기
+
+// 소스 레지스터 2 읽기 (WB-ID 포워딩 적용)
+assign rs2_data = (reg_w_en &amp;&amp; (rd_addr != 5'b0) &amp;&amp; (rd_addr == rs2_addr))
+                  ? rd_data         // WB-ID 포워딩: WB가 쓰는 값을 즉시 반환
+                  : rf[rs2_addr];   // 일반 읽기: 레지스터 파일에서 읽기
+</code></pre>
+
+  <p>
+    포워딩 조건의 세 가지 요소:
+  </p>
+  <ol>
+    <li><code>reg_w_en</code>: WB 스테이지가 현재 사이클에 레지스터를 쓰려 한다</li>
+    <li><code>rd_addr != 5'b0</code>: x0에 대한 포워딩은 의미 없으므로 제외 (x0는 항상 0)</li>
+    <li><code>rd_addr == rs1_addr</code>: WB의 목적지와 ID의 소스 레지스터가 같다</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Vivado에서 LUTRAM으로 합성되면 Write-First 모드가 자동으로 동작한다고 들었습니다. 그렇다면 명시적 포워딩 로직이 없어도 되지 않을까요?</p>
+    <p>
+      <strong>A:</strong> 그럴 수 있습니다. Xilinx LUTRAM은 기본적으로 Write-First 모드로 추론되어,
+      같은 사이클에 쓰기와 읽기가 동시에 발생하면 새 데이터(새로 쓰인 값)를 즉시 반환합니다.
+      그러나 이 동작은 합성 속성(<code>ram_style</code>, <code>read_during_write</code>)과 Vivado 버전에 따라 달라질 수 있습니다.
+      <strong>명시적 포워딩 로직을 사용하면 합성기의 암묵적 동작에 의존하지 않아도 됩니다</strong>.
+      이 방식이 더 안전하며, 시뮬레이션과 합성 결과가 일치함을 보장합니다.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      "파이프라인 레지스터 파일의 Read-During-Write 처리 방법을 설명하십시오"라는 질문에 대해:
+      <br><br>
+      핵심 답변: "두 가지 방법이 있습니다. 첫째, FPGA의 LUTRAM Write-First 모드를 이용하는 암묵적 방법.
+      둘째, 레지스터 파일 내부에 명시적 포워딩 MUX를 추가하는 방법.
+      전자는 코드가 간결하나 합성기 의존성이 있고, 후자는 합성기와 무관하게 동작이 보장됩니다.
+      실무에서는 후자를 권장합니다."
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      WB-ID 포워딩이 없는 상태에서 <code>ADD x1, x2, x3</code> 바로 다음 명령어에서 x1을 읽으면 어떤 값이 나올까요?
+      Ch10의 <code>forwarding_unit</code>이 이 상황을 처리하는지, forwarding_unit의 조건 코드를 보기 전에 먼저 생각해 보십시오.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12.3 5단계 파이프라인 통합                                                 -->
+<!-- ======================================================================== -->
+<section id="sec-12-3">
+  <h2>12.3 5단계 파이프라인 통합</h2>
+
+  <p>
+    지금까지 Ch09~Ch12.2에서 설계한 모든 모듈을 하나의 최상위 모듈로 연결할 시간입니다.
+    레고 블록을 조립하는 단계입니다 — 개별 블록을 이미 모두 만들었고, 지금은 설명서에 따라 연결만 하면 됩니다.
+    코드가 길어 보이더라도, 대부분은 이미 여러분이 작성하고 검증한 것들입니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch12_sec03_complete_pipeline.svg" alt="완성된 5단계 파이프라인 전체 블록 다이어그램">
+    <figcaption>그림 12.4: rv32i_pipeline_complete — EX-EX, MEM-EX, WB-ID 세 가지 포워딩 경로와 해저드 제어 유닛이 통합된 완성된 5단계 파이프라인</figcaption>
+  </figure>
+
+  <h3>통합 전 체크리스트</h3>
+
+  <div style="background:#F0FDF4; border:2px solid #16A34A; border-radius:8px; padding:16px; margin:16px 0;">
+    <strong style="color:#14532D;">파이프라인 완성 체크리스트 — 통합 전 확인</strong>
+    <ul style="margin-top:10px; color:#166534; list-style:none; padding:0;">
+      <li>☐ IF/ID/EX/MEM/WB 5단계 레지스터 분리 완료 (Ch09)</li>
+      <li>☐ EX-EX, MEM-EX 포워딩 동작 확인 (Ch10 — forwarding_unit)</li>
+      <li>☐ Load-Use 스톨 (1사이클 버블) 동작 확인 (Ch10 — hazard_detection_unit)</li>
+      <li>☐ 분기 판정 EX 스테이지, wrong-path 플러시 (Ch11 — branch_unit)</li>
+      <li>☐ JAL: ID 단계 처리, 1사이클 버블 (Ch11)</li>
+      <li>☐ JALR: EX 단계 처리, 2사이클 버블 (Ch11)</li>
+      <li>☐ WB-ID 포워딩 (레지스터 파일 내부) 추가 (Ch12.2)</li>
+      <li>☐ Harvard 구조: IMEM/DMEM 분리 완료 (Ch09)</li>
+    </ul>
+    <p style="color:#14532D; margin-top:10px;">모든 항목이 체크되면 버블정렬을 실행할 준비가 됩니다.</p>
+  </div>
+
+  <h3>최종 모듈명과 파라미터</h3>
+
+  <p>
+    최종 top 모듈명은 <code>rv32i_pipeline_complete</code>입니다.
+    Ch11의 <code>rv32i_pipeline_branch</code>에서 다음 사항이 변경됩니다:
+  </p>
+
+  <pre><code class="language-verilog">// ch12_rv32i_pipeline_complete.sv — 모듈 선언부
+module rv32i_pipeline_complete #(
+   parameter int DATA_WIDTH  = 32,    // 데이터 버스 폭 (RV32I: 32비트)
+   parameter int ADDR_WIDTH  = 32,    // 주소 버스 폭
+   parameter int RF_DEPTH    = 32,    // 레지스터 파일 깊이 (x0~x31)
+   parameter int IMEM_DEPTH  = 1024,  // 명령어 메모리 깊이 (워드 단위)
+   parameter int DMEM_DEPTH  = 1024,  // 데이터 메모리 깊이 (워드 단위)
+   parameter     IMEM_INIT   = ""     // 명령어 메모리 초기화 파일 (.hex)
+)(
+   input  logic clk,
+   input  logic rst_n
+);
+</code></pre>
+
+  <h3>핵심 변경 사항: imm_gen과 control_unit 실제 인스턴스화</h3>
+
+  <p>
+    Ch11 코드에서 <code>imm_gen</code>과 <code>control_unit</code>은 주석 처리되어 있었습니다.
+    Ch11에서는 즉치수 추출과 제어 신호 생성을 최상위 모듈 내 인라인 로직(<code>always_comb</code> 블록)으로
+    직접 처리했기 때문입니다. Ch12에서는 이 두 모듈을 실제로 인스턴스화하여
+    완전한 독립 모듈 계층 구조를 갖춥니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 주의 — 파이프라인 전용 인터페이스</strong>
+    <p>
+      Ch04의 <code>imm_gen</code>은 <code>imm_sel[2:0]</code> 입력이 필요합니다 (제어 유닛에서 타입을 결정).
+      파이프라인에서는 opcode만으로 즉치수 타입을 자동 감지하는 <code>pipeline_imm_gen</code>을 사용합니다.
+      마찬가지로 Ch06의 <code>control_unit</code>은 단일 사이클용 인터페이스(<code>instr[31:0]</code> 전체 입력,
+      <code>rs1_data/rs2_data</code> 분기 비교 내장)이므로, 파이프라인에서는 opcode/funct3/funct7을
+      분리 입력받는 <code>pipeline_control_unit</code>을 사용합니다.
+      완전한 정의는 <code>ch12_rv32i_pipeline_complete.sv</code> 파일 하단을 참조하십시오.
+    </p>
+  </aside>
+
+  <pre><code class="language-verilog">// 즉치수 생성기 (파이프라인 전용 — opcode 기반 자동 타입 감지)
+// Ch04 imm_gen과 구별: imm_sel 입력 없이 opcode로 자동 판별
+pipeline_imm_gen u_imm_gen (
+   .instr (if_id_instr),
+   .imm   (imm)
+);
+
+// 제어 유닛 (파이프라인 전용 — opcode/funct3/funct7 분리 입력)
+// Ch06 control_unit과 구별: 분기 비교는 EX 단계 branch_unit이 담당
+pipeline_control_unit u_ctrl (
+   .opcode    (if_id_instr[6:0]),
+   .funct3    (funct3_id),
+   .funct7    (if_id_instr[31:25]),
+   .reg_w_en  (reg_w_en),
+   .mem_read  (mem_read),
+   .mem_write (mem_write),
+   .branch    (branch_id),
+   .a_sel     (a_sel),
+   .b_sel     (b_sel),
+   .alu_sel   (alu_sel),
+   .wb_sel    (wb_sel)
+);
+</code></pre>
+
+  <h3>레지스터 파일 — WB-ID 포워딩 연결</h3>
+
+  <p>
+    Ch12에서 수정된 <code>register_file</code>은 WB-ID 포워딩을 내장하므로,
+    상위 모듈에서는 기존과 동일하게 포트를 연결하면 됩니다. 추가 신호 연결이 필요 없습니다.
+  </p>
+
+  <pre><code class="language-verilog">// register_file 인스턴스 — WB-ID 포워딩은 내부에서 처리
+// Ch11과 동일한 포트 연결 (포워딩 유닛 수정 없음)
+register_file u_rf (
+   .clk      (clk),
+   .rst_n    (rst_n),
+   .rs1_addr (rs1_addr),
+   .rs2_addr (rs2_addr),
+   .rd_addr  (mem_wb_rd),           // WB 스테이지 rd
+   .rd_data  (wb_data),             // WB 스테이지 쓰기 데이터
+   .reg_w_en (mem_wb_reg_w_en),     // WB 스테이지 쓰기 인에이블
+   .rs1_data (rs1_data),
+   .rs2_data (rs2_data)
+);
+</code></pre>
+
+  <h3>중간 최소 검증 — 버블정렬 전에 반드시 수행</h3>
+
+  <p>
+    버블정렬을 실행하기 전에 간단한 시퀀스로 통합 동작을 먼저 확인합니다.
+    이 단계를 통과해야 버블정렬 실패 시 "통합 문제"인지 "버블정렬 코드 문제"인지 빠르게 격리할 수 있습니다.
+  </p>
+
+  <p>최소 검증 시퀀스 (NOP 없음, 포워딩과 Load-Use 스톨 포함):</p>
+
+  <pre><code class="language-verilog">// 최소 검증용 기계어 시퀀스 (테스트벤치에서 직접 초기화)
+dut.u_imem.mem[0] = 32'h00A00093; // ADDI x1, x0, 10   → x1 = 10
+dut.u_imem.mem[1] = 32'h01400113; // ADDI x2, x0, 20   → x2 = 20
+dut.u_imem.mem[2] = 32'h002081B3; // ADD  x3, x1, x2   → x3 = 30 (EX-EX 포워딩)
+dut.u_imem.mem[3] = 32'h00302023; // SW   x3, 0(x0)    → mem[0] = 30
+dut.u_imem.mem[4] = 32'h00002203; // LW   x4, 0(x0)    → x4 = 30 (Load-Use 스톨)
+dut.u_imem.mem[5] = 32'h003202B3; // ADD  x5, x4, x3   → x5 = 60 (MEM-EX 포워딩)
+
+// 검증: x5 == 60, DMEM[0] == 30 이면 최소 검증 통과
+</code></pre>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      통합 단계에서 가장 자주 발생하는 오류 3가지:
+      <ol>
+        <li><strong>포트 이름 불일치</strong>: 하위 모듈의 포트 이름이 수정된 경우 (예: <code>reg_wr_en</code> → <code>reg_w_en</code>). Vivado DRC 경고에서 'undriven' 또는 'width mismatch'로 표시됩니다.</li>
+        <li><strong>flush와 stall 오버라이드 오류</strong>: <code>pc_en = if_id_flush ? 1'b1 : hdu_pc_en</code>에서 flush 조건이 누락되면 분기 후 PC가 홀드되는 버그 발생.</li>
+        <li><strong>WB-ID 포워딩 미적용</strong>: Ch04 register_file을 그대로 사용하면 WB-ID 충돌이 남아 있음. Ch12 버전으로 교체 필요.</li>
+      </ol>
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      통합된 파이프라인에서 <code>LW x5, 0(x1)</code> 다음에 즉시 <code>ADD x6, x5, x2</code>가 온다면,
+      어떤 제어 신호들이 활성화되는지 순서대로 나열해 보십시오.
+      (<code>pc_en</code>, <code>if_id_en</code>, <code>id_ex_flush</code>, <code>fwd_a</code>, <code>fwd_b</code> 중 관련된 것을 모두 나열하고 그 순서를 설명하십시오.)
+    </p>
+  </aside>
+
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12.4 전체 RV32I 프로그램 실행 검증                                          -->
+<!-- ======================================================================== -->
+<section id="sec-12-4">
+  <h2>12.4 전체 RV32I 프로그램 실행 검증</h2>
+
+  <p>
+    Ch09에서 NOP을 삽입하며 첫 파이프라인을 돌렸던 것을 기억하십니까?
+    이제 NOP 없이, 포워딩 유닛과 분기 처리가 완비된 상태에서 <strong>버블정렬 전체</strong>를 실행합니다.
+    버블정렬은 루프, 조건 분기, 메모리 로드-스토어를 모두 포함하는 최소 복잡도 알고리즘입니다.
+  </p>
+
+  <p>
+    이 프로그램이 성공적으로 실행된다면, 여러분의 파이프라인은 RV32I 프로그래머가 실행하는
+    모든 기본 코드를 처리할 수 있다는 의미입니다.
+    루프(JAL), 분기(BGE/BLE), 메모리 접근(LW/SW), 연산(ADD/SUB/SLLI) — 모두 포함됩니다.
+  </p>
+
+  <h3>버블정렬 알고리즘과 어셈블리</h3>
+
+  <figure>
+    <img src="../../figures/ch12_sec04_bubble_sort_flow.svg" alt="버블정렬 알고리즘 순서도">
+    <figcaption>그림 12.5: 버블정렬 알고리즘 순서도. 외부 루프(i)와 내부 루프(j)의 조건, 비교, 교환 흐름과 RISC-V 어셈블리 레이블의 대응 관계</figcaption>
+  </figure>
+
+  <h3>단계 1: 2원소 교환 — 기초 (코드 제공)</h3>
+
+  <p>먼저 메모리의 두 원소를 비교하고 교환하는 가장 단순한 경우를 이해합니다.</p>
+
+  <pre><code class="language-verilog">// 어셈블리: mem[0], mem[1] 두 값 비교 후 교환
+// 레지스터: x1=배열 기저 주소(0), x2=a[0], x3=a[1]
+
+// LW   x2, 0(x1)    # a[0] 읽기
+// LW   x3, 4(x1)    # a[1] 읽기
+// BGE  x2, x3, done # a[0] &lt;= a[1]이면 종료 (오름차순)
+// SW   x3, 0(x1)    # a[0] = a[1]    (교환)
+// SW   x2, 4(x1)    # a[1] = a[0]    (교환)
+// done: NOP
+
+// 기계어 (테스트벤치 직접 초기화):
+// dut.u_imem.mem[0] = 32'h0000A103; // LW  x2, 0(x1)
+// dut.u_imem.mem[1] = 32'h0040A183; // LW  x3, 4(x1)
+// dut.u_imem.mem[2] = 32'h00315463; // BGE x2, x3, +8 (done)
+// dut.u_imem.mem[3] = 32'h0030A023; // SW  x3, 0(x1)
+// dut.u_imem.mem[4] = 32'h0020A223; // SW  x2, 4(x1)
+// dut.u_imem.mem[5] = 32'h00000013; // NOP (done)
+</code></pre>
+
+  <h3>단계 2: 내부 루프 (가이드 후 작성)</h3>
+
+  <p>레지스터 역할 배분을 참고하여 내부 루프를 완성합니다.</p>
+
+  <pre><code class="language-verilog">// 레지스터 역할 배분:
+// x10 (a0) = 배열 베이스 주소 (0)
+// x11 (a1) = 외부 루프 카운터 i
+// x12 (a2) = 내부 루프 카운터 j
+// x13 (a3) = N = 8
+// x14 (a4) = a[j]
+// x15 (a5) = a[j+1]
+// x16 (a6) = N-1
+// x17 (a7) = N-1-i (내부 루프 한계)
+// x18 (s2) = j*4 (바이트 오프셋)
+// x19 (s3) = &amp;a[j] (주소)
+
+// 내부 루프 핵심 부분:
+// slli x18, x12, 2     # x18 = j * 4 (바이트 오프셋)
+// add  x19, x10, x18   # x19 = 배열 기저 + 오프셋 = &amp;a[j]
+// lw   x14, 0(x19)     # x14 = a[j]
+// lw   x15, 4(x19)     # x15 = a[j+1]
+// ble  x14, x15, no_swap  # a[j] &lt;= a[j+1]이면 교환 불필요
+// sw   x15, 0(x19)     # a[j] = a[j+1]
+// sw   x14, 4(x19)     # a[j+1] = a[j]
+</code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — BLE는 가상 명령어</strong>
+    <p>
+      RISC-V에는 <code>BLE</code> 명령어가 없습니다.
+      <code>BLE x14, x15, label</code>은 어셈블러가 <code>BGE x15, x14, label</code>로 변환합니다.
+      기계어로 직접 인코딩할 때는 <code>BGE</code>를 사용하고 rs1과 rs2 순서를 반대로 지정해야 합니다.
+    </p>
+  </aside>
+
+  <h3>단계 3: 완전한 버블정렬 (전체 코드)</h3>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 실행 전 예측</strong>
+    <p>
+      테스트 배열 <strong>[64, 5, 66, 30, 88, 17, 42, 9]</strong>에서 버블정렬이 완료된 후,
+      <code>a[0]</code>과 <code>a[7]</code>의 값은 각각 얼마가 될까요?
+      시뮬레이션을 실행하기 전에 먼저 예측해 보십시오.
+      또한 이 배열에서 버블정렬의 외부 루프(i)는 최대 몇 번 반복될까요?
+    </p>
+  </aside>
+
+  <p>테스트 배열: <strong>[64, 5, 66, 30, 88, 17, 42, 9]</strong> → 정렬 후: <strong>[5, 9, 17, 30, 42, 64, 66, 88]</strong></p>
+
+  <aside class="tip">
+    <strong>💡 도전 — 먼저 직접 작성해 보십시오</strong>
+    <p>
+      단계 1과 단계 2에서 익힌 내용을 바탕으로, 아래 전체 코드를 보기 전에
+      <code>outer_loop</code>와 <code>outer_next</code>라벨을 포함한 외부 루프를 스스로 작성해 보십시오.
+      레지스터 역할 배분(x10~x19)은 단계 2에서 확정되었습니다.
+      <br><br>
+      오프셋 계산 방법: <code>offset = 목적지 PC - 분기 명령어 PC</code>
+      (예: outer_loop(0x00C)로 돌아가는 JAL이 0x048에 위치하면, offset = 0x00C - 0x048 = -0x3C = -60)
+    </p>
+  </aside>
+
+  <pre><code class="language-verilog">// 버블정렬 전체 어셈블리 (레이블 → PC 오프셋 대응 포함)
+// bubble_sort (PC=0x000):
+//   ADDI x13, x0, 8       # N = 8
+//   ADDI x10, x0, 0       # 배열 베이스 = 0
+//   ADDI x11, x0, 0       # i = 0
+//
+// outer_loop (PC=0x00C):
+//   ADDI x16, x13, -1     # N-1
+//   BGE  x11, x16, done   # i &gt;= N-1이면 종료 (PC 0x010 → done 0x04C, +0x3C)
+//   ADDI x12, x0, 0       # j = 0
+//
+// inner_loop (PC=0x018):
+//   SUB  x17, x16, x11    # x17 = N-1-i
+//   BGE  x12, x17, outer_next  # j &gt;= N-1-i이면 외부 루프 (→ outer_next +0x28)
+//   SLLI x18, x12, 2      # j*4
+//   ADD  x19, x10, x18    # &amp;a[j]
+//   LW   x14, 0(x19)      # a[j]
+//   LW   x15, 4(x19)      # a[j+1]
+//   BGE  x15, x14, no_swap # a[j] &lt;= a[j+1]이면 no_swap (+0xC)
+//   SW   x15, 0(x19)      # 교환
+//   SW   x14, 4(x19)      # 교환
+//
+// no_swap (PC=0x03C):
+//   ADDI x12, x12, 1      # j++
+//   JAL  x0, inner_loop   # → 0x018 (-0x28)
+//
+// outer_next (PC=0x044):
+//   ADDI x11, x11, 1      # i++
+//   JAL  x0, outer_loop   # → 0x00C (-0x3C)
+//
+// done (PC=0x04C):
+//   ADDI x0, x0, 0        # NOP (종료 마커)
+</code></pre>
+
+  <h3>테스트벤치에서 메모리 직접 초기화</h3>
+
+  <p>
+    <code>$readmemh</code>를 사용하는 대신, 테스트벤치에서 DUT 내부 메모리를 직접 초기화합니다.
+    이 방식은 헥스 파일 없이도 즉시 시뮬레이션을 실행할 수 있어 디버깅에 유리합니다.
+  </p>
+
+  <pre><code class="language-verilog">// 테스트벤치 (ch12_pipeline_complete_tb.sv) 핵심 초기화 부분
+// IMEM 초기화 — 버블정렬 기계어
+dut.u_imem.mem[0]  = 32'h00800693; // ADDI x13, x0,  8   (N=8)
+dut.u_imem.mem[1]  = 32'h00000513; // ADDI x10, x0,  0   (베이스=0)
+dut.u_imem.mem[2]  = 32'h00000593; // ADDI x11, x0,  0   (i=0)
+// outer_loop:
+dut.u_imem.mem[3]  = 32'hFFF68813; // ADDI x16, x13, -1
+dut.u_imem.mem[4]  = 32'h0305DE63; // BGE  x11, x16, +60 (done)  [funct3=101=BGE]
+dut.u_imem.mem[5]  = 32'h00000613; // ADDI x12, x0,  0   (j=0)
+// inner_loop:
+dut.u_imem.mem[6]  = 32'h40B808B3; // SUB  x17, x16, x11
+// ... (ch12_pipeline_complete_tb.sv 전체 소스 코드 섹션 참조)
+
+// DMEM 초기화 — 정렬 대상 배열 [64, 5, 66, 30, 88, 17, 42, 9]
+dut.u_dmem.mem[0] = 32'd64;
+dut.u_dmem.mem[1] = 32'd5;
+dut.u_dmem.mem[2] = 32'd66;
+dut.u_dmem.mem[3] = 32'd30;
+dut.u_dmem.mem[4] = 32'd88;
+dut.u_dmem.mem[5] = 32'd17;
+dut.u_dmem.mem[6] = 32'd42;
+dut.u_dmem.mem[7] = 32'd9;
+</code></pre>
+
+  <h3>결과 검증과 성취의 순간</h3>
+
+  <p>시뮬레이션을 실행하면 다음과 같은 출력을 확인하게 됩니다:</p>
+
+  <pre><code class="language-bash">--- 버블정렬 결과 ---
+인덱스  실제값   기대값  판정
+a[0]     5       5    OK
+a[1]     9       9    OK
+a[2]    17      17    OK
+a[3]    30      30    OK
+a[4]    42      42    OK
+a[5]    64      64    OK
+a[6]    66      66    OK
+a[7]    88      88    OK
+
+╔══════════════════════════════════════════════╗
+║  [PASS] 버블정렬 완료!                       ║
+║  모든 해저드 처리가 정확히 동작하였습니다.  ║
+║  포워딩 + Load-Use 스톨 + 분기 플러시       ║
+║  + WB-ID 포워딩 모두 검증 완료!             ║
+╚══════════════════════════════════════════════╝
+</code></pre>
+
+  <p>
+    파형에서 [PASS] 메시지를 확인한 순간, 여러분이 느끼는 감정이 무엇인지 저는 알고 있습니다.
+    복잡한 포워딩 경로가 의도대로 동작하고, 분기 명령어가 정확히 플러시를 유발하며,
+    배열이 올바르게 정렬된 결과를 한 번에 얻어냈습니다.
+    이것이 하드웨어 설계자가 경험하는 '검증 성공'의 순간입니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 왜 2000 클럭을 대기합니까?</strong>
+    <p>
+      버블정렬 N=8의 최악 케이스 비교 횟수는 N×(N-1)/2 = 28회입니다.
+      내부 루프 1회당 실행되는 명령어는 약 8개(SUB, BGE, SLLI, ADD, LW, LW, BGE, SW×2 등)이므로
+      총 명령어 수는 약 28×8 = 224개, 여기에 Load-Use 스톨, 분기 페널티(2사이클씩 최대 28회×2=56사이클),
+      초기화 명령어, 파이프라인 드레인(4사이클)을 합산하면 약 400~500 사이클이 됩니다.
+      2000 클럭은 이 최악 케이스에 4배의 마진을 둔 값으로, 무한 루프 여부 확인 전에 충분한 실행 시간을 보장합니다.
+    </p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — 첫 실행 실패 시 3단계 디버깅</strong>
+    <p>
+      첫 실행에서 결과가 틀리는 경우는 정상입니다. 상용 프로세서 개발 팀도 첫 통합 시뮬레이션에서 문제가 없는 경우가 드뭅니다. 아래 순서로 디버깅하십시오:
+      <ol>
+        <li><strong>포워딩 우선</strong>: <code>fwd_a</code>, <code>fwd_b</code> 신호가 올바른 사이클에 활성화되는지 확인 (LW 다음 사이클에 x4를 사용하는 명령어가 있으면 Load-Use 스톨이 선행되어야 함)</li>
+        <li><strong>스톨 확인</strong>: <code>pc_en</code>, <code>if_id_en</code> 신호가 LW 이후 1사이클 비활성화되는지 확인</li>
+        <li><strong>flush 확인</strong>: <code>branch_taken_ex</code> 직후 2사이클 동안 <code>if_id_flush</code>, <code>id_ex_flush</code>가 활성화되는지 확인</li>
+      </ol>
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      버블정렬이 올바르게 동작하기 위해 반드시 정상 동작해야 하는 해저드 처리 기법은 몇 가지입니까?
+      각각이 어떤 명령어 시퀀스에서 활성화되는지 설명해 보십시오.
+      (LW 다음의 연산, BGE/BLE 분기 명령어, SLLI 이후 ADD에서의 의존성을 분석해 보십시오.)
+    </p>
+  </aside>
+
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12.5 단일 사이클 vs 멀티사이클 vs 파이프라인 3종 비교                        -->
+<!-- ======================================================================== -->
+<section id="sec-12-5">
+  <h2>12.5 단일 사이클 vs 멀티사이클 vs 파이프라인 3종 비교</h2>
+
+  <p>
+    버블정렬을 성공적으로 실행했습니다.
+    이제 단일 사이클(Ch06), 멀티사이클(Ch08), 파이프라인(Ch12) 세 가지로 각각 실행한다면
+    어느 것이 가장 빠를까요? 그 이유를 먼저 생각해보십시오.
+  </p>
+
+  <h3>1단계: CPI만 보면 어떻게 보이는가?</h3>
+
+  <p>
+    다음 표는 수치 없이 상대적 관계만 나타낸 것입니다:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>구현</th>
+        <th>CPI (이상적)</th>
+        <th>클럭 주파수</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>단일 사이클</td>
+        <td>1.0 (항상)</td>
+        <td>느림 (임계 경로 = 가장 긴 명령어)</td>
+      </tr>
+      <tr>
+        <td>멀티사이클</td>
+        <td>3~5 (명령어 유형별)</td>
+        <td>중간 (짧은 스테이지 경로)</td>
+      </tr>
+      <tr>
+        <td>파이프라인</td>
+        <td>≈1 + 해저드 페널티</td>
+        <td>빠름 (단계별 분할로 임계 경로 단축)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    CPI만 보면 단일 사이클과 파이프라인이 비슷합니다. 그런데 왜 파이프라인을 쓸까요?
+    잠시 생각해 보십시오. 답은 바로 <strong>클럭 주파수</strong>의 차이에 있습니다.
+  </p>
+
+  <h3>2단계: 실측 데이터 공개 (Vivado 합성 예상치)</h3>
+
+  <figure>
+    <img src="../../figures/ch12_sec05_three_impl_comparison.svg" alt="3종 구현 성능 비교 그래프">
+    <figcaption>그림 12.6: 단일 사이클 / 멀티사이클 / 파이프라인 구현의 Fmax, CPI, 실행 시간 상대값 비교. 실행 시간 상대값이 작을수록 빠른 구현입니다. 파이프라인이 단일 사이클 대비 약 2.2배, 멀티사이클 대비 약 4.4배 빠릅니다.</figcaption>
+  </figure>
+
+  <p style="font-size:0.9em; color:#555; margin-bottom:8px;">
+    <em>(낮을수록 좋은 값: CPI, 실행시간 상대값 &nbsp;|&nbsp; 높을수록 좋은 값: Fmax &nbsp;|&nbsp; LUT 사용량은 면적 비용으로 작을수록 경제적)</em>
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>구현</th>
+        <th>Fmax (MHz)</th>
+        <th>CPI (버블정렬)</th>
+        <th>실행시간 상대값 ↓</th>
+        <th>LUT 사용량</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>단일 사이클 (Ch06)</td>
+        <td>~25</td>
+        <td>1.0</td>
+        <td>1.0 (기준)</td>
+        <td>~1,500</td>
+      </tr>
+      <tr>
+        <td>멀티사이클 (Ch08)</td>
+        <td>~50</td>
+        <td>~4.1</td>
+        <td>~2.05 (느림)</td>
+        <td>~1,200</td>
+      </tr>
+      <tr>
+        <td style="background:#DBEAFE; font-weight:bold;">파이프라인 (Ch12) ★</td>
+        <td style="background:#DBEAFE; font-weight:bold;">~65</td>
+        <td style="background:#DBEAFE; font-weight:bold;">~1.2</td>
+        <td style="background:#DBEAFE; font-weight:bold;">~0.46 (가장 빠름)</td>
+        <td style="background:#DBEAFE; font-weight:bold;">~2,200</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>예측이 맞았습니까? 어디서 틀렸습니까?</p>
+
+  <p>
+    핵심 분석 공식: <strong>실행 시간 = (IC × CPI) / Fmax</strong>
+  </p>
+  <ul>
+    <li>단일 사이클: IC × 1.0 / 25MHz = IC × 40ns/명령어 → 상대값 1.0 (기준)</li>
+    <li>멀티사이클: IC × 4.1 / 50MHz = IC × 82ns/명령어 → 상대값 82/40 = <strong>2.05</strong> (단일 사이클보다 느림!)</li>
+    <li>파이프라인: IC × 1.2 / 65MHz ≈ IC × 18.5ns/명령어 → 상대값 18.5/40 ≈ <strong>0.46</strong></li>
+  </ul>
+
+  <p>
+    파이프라인이 단일 사이클보다 약 <strong>2.2배</strong> 빠르고(40/18.5≈2.16), 멀티사이클보다 약 <strong>4.4배</strong> 빠릅니다(82/18.5≈4.4).
+    파이프라인은 CPI를 낮추는 동시에 Fmax도 높입니다 — 두 이점이 동시에 작용하여 성능이 극대화됩니다.
+  </p>
+  <p>
+    <strong>의외의 결과</strong>: 멀티사이클은 Fmax가 단일 사이클의 2배(~50MHz)이지만, CPI가 4.1로 높아
+    실행 시간은 오히려 단일 사이클보다 2배 이상 느립니다. CPI와 Fmax를 함께 고려해야 하는 이유입니다.
+  </p>
+
+  <h3>3단계: 파이프라인이 항상 최선인가?</h3>
+
+  <p>
+    그렇다면 파이프라인이 항상 최선일까요?
+  </p>
+
+  <ul>
+    <li><strong>면적 제약이 심한 마이크로컨트롤러</strong>: 파이프라인 레지스터 오버헤드(LUT 2,200 vs 1,200)가 부담. 단일 사이클이 유리.</li>
+    <li><strong>결정론적 실행 시간이 필요한 실시간 제어</strong>: 파이프라인의 해저드 스톨은 실행 시간을 예측 불가하게 만듦. 멀티사이클이나 단일 사이클이 유리.</li>
+    <li><strong>저전력 IoT 디바이스</strong>: 클럭 주파수보다 에너지 효율이 중요. 느린 클럭의 단일 사이클이 유리할 수 있음.</li>
+  </ul>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      "파이프라인이 항상 단일 사이클보다 성능이 좋습니까?"라는 질문의 핵심 답변:
+      <br><br>
+      "대부분의 경우 파이프라인이 우수합니다. 그러나 설계 요구사항에 따라 달라집니다.
+      결정론적 실행 시간이 필요한 실시간 제어 시스템에서는 해저드 스톨로 인해 파이프라인의 실행 시간이
+      예측 불가능해지므로 단일 사이클이 더 적합할 수 있습니다.
+      또한 면적 제약이 심한 환경에서는 파이프라인 레지스터 오버헤드가 부담이 됩니다.
+      성능, 면적, 전력, 결정론적 실행 시간 — 이 네 가지 트레이드오프를 고려하여 선택해야 합니다."
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      만약 프로그램의 90%가 R 타입 명령어이고 분기가 거의 없다면,
+      단일 사이클과 파이프라인 중 어느 것이 실제 성능(실행 시간)이 더 빠를까요?
+      표의 수치를 이용하여 계산해 보십시오. (힌트: CPI ≈ 1.0에 가까워짐)
+    </p>
+  </aside>
+
+</section>
+
+<!-- ======================================================================== -->
+<!-- 12.6 본 챕터 요약 및 다음 단계                                              -->
+<!-- ======================================================================== -->
+<section id="sec-12-6">
+  <h2>12.6 본 챕터 요약 및 다음 단계</h2>
+
+  <h3>Part 4 완주 인증</h3>
+
+  <div style="background:#DBEAFE; border:3px solid #2563EB; border-radius:12px; padding:20px; margin:20px 0; text-align:center;">
+    <h3 style="color:#1E40AF; margin-bottom:16px;">Part 4 완주 인증</h3>
+    <table style="margin:0 auto; text-align:left; color:#1E40AF;">
+      <tr><td style="padding:4px 8px;">Ch09</td><td style="padding:4px 8px;">파이프라인 레지스터 설계 (IF/ID/EX/MEM/WB 5단계)</td><td style="padding:4px 8px; color:#16A34A; font-weight:bold;">✅</td></tr>
+      <tr><td style="padding:4px 8px;">Ch10</td><td style="padding:4px 8px;">포워딩 유닛 + Load-Use 스톨 (EX-EX, MEM-EX)</td><td style="padding:4px 8px; color:#16A34A; font-weight:bold;">✅</td></tr>
+      <tr><td style="padding:4px 8px;">Ch11</td><td style="padding:4px 8px;">분기 처리 + Flush 메커니즘 + JAL/JALR</td><td style="padding:4px 8px; color:#16A34A; font-weight:bold;">✅</td></tr>
+      <tr><td style="padding:4px 8px;">Ch12</td><td style="padding:4px 8px;">구조적 해저드 처리 + WB-ID 포워딩 + 전체 통합</td><td style="padding:4px 8px; color:#16A34A; font-weight:bold;">✅</td></tr>
+    </table>
+    <p style="color:#1E40AF; margin-top:16px; font-size:1.05em; font-weight:bold;">
+      여러분은 RV32I 5단계 파이프라인 프로세서를 처음부터 끝까지 설계하고 검증하였습니다.<br>
+      이것은 대학원 수준의 디지털 설계 역량입니다.
+    </p>
+  </div>
+
+  <p>
+    버블정렬 외에도 퀵정렬, 링크드 리스트 순회, 재귀 함수 — 이 모든 프로그램을
+    지금 여러분이 설계한 프로세서 위에서 실행할 수 있습니다.
+    어셈블리로 작성하든, C로 크로스 컴파일하든 방법만 다를 뿐입니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 선택 도전 — FPGA 합성 및 다운로드 (Basys 3)</strong>
+    <p>
+      시뮬레이션 [PASS]를 넘어 실제 FPGA 위에서 버블정렬을 실행해 보고 싶다면:
+      <ol>
+        <li><strong>합성</strong>: Vivado에서 <code>rv32i_pipeline_complete</code>를 최상위로 설정하고 합성 실행. Fmax와 LUT 사용량을 확인하십시오.</li>
+        <li><strong>제약 파일(XDC)</strong>: Basys 3의 100MHz 클럭 핀(W5)을 연결하십시오.</li>
+        <li><strong>초기화</strong>: <code>IMEM_INIT</code> 파라미터에 <code>bubble_sort.hex</code> 파일 경로를 지정하거나,
+            BRAM IP로 교체하여 초기화할 수 있습니다.</li>
+        <li><strong>결과 확인</strong>: ILA(Integrated Logic Analyzer)를 사용하면 FPGA 내부 신호를 직접 관찰할 수 있습니다.</li>
+      </ol>
+      자세한 FPGA 합성 절차는 <strong>부록 A (FPGA 구현 가이드)</strong>를 참조하십시오.
+    </p>
+  </aside>
+
+  <h3>캐시 필요성 — 경이감 자극</h3>
+
+  <p>
+    여러분이 완성한 파이프라인은 이론적으로 CPI ≈ 1에 가깝습니다.
+    그런데 한 가지 가정이 숨어 있습니다: <strong>메모리 접근이 항상 1사이클에 완료된다</strong>는 가정입니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>메모리 종류</th>
+        <th>접근 시간</th>
+        <th>LW 명령어 CPI</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>현재 가정 (BRAM 1사이클)</td>
+        <td>1사이클</td>
+        <td>~1</td>
+      </tr>
+      <tr>
+        <td>실제 SRAM</td>
+        <td>2~4사이클</td>
+        <td>~3</td>
+      </tr>
+      <tr>
+        <td style="background:#FEE2E2;">실제 DRAM</td>
+        <td style="background:#FEE2E2;">100~300사이클</td>
+        <td style="background:#FEE2E2;">~200</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    만약 LW 명령어가 매번 DRAM에 접근해야 한다면, CPI는 1이 아니라 100이 넘을 것입니다.
+    버블정렬에서 LW 명령어가 20% 이상을 차지한다면, 전체 CPI는 40 이상으로 폭등합니다.
+    이 문제를 해결하는 것이 <strong>캐시(Cache)</strong> — Ch13의 주제입니다.
+  </p>
+
+  <p>
+    캐시는 파이프라인을 버리고 새로 만드는 것이 아닙니다.
+    지금까지 완성한 파이프라인 프로세서에 <strong>메모리 가속 장치를 추가</strong>하는 것입니다.
+    새 언어, 새 ISA, 새 개념 체계가 아닙니다 — 여러분이 이미 아는 메모리, 스톨, 제어 신호 위에서 진행됩니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — Part 4 종합</strong>
+    <p>
+      Part 4를 되돌아보며: Ch09~12에서 해결한 세 가지 해저드를 각각 한 문장으로 설명할 수 있습니까?
+      면접 질문 형태로 연습해 보십시오: "파이프라인 해저드의 종류와 각각의 해결 방법을 설명하십시오."
+    </p>
+  </aside>
+
+</section>
+
+<!-- ======================================================================== -->
+<!-- 챕터 마무리                                                                 -->
+<!-- ======================================================================== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>구조적 해저드</strong>: 여러 명령어가 동일 하드웨어 자원을 같은 사이클에 사용할 때 발생. Princeton 구조의 IF+MEM 메모리 충돌이 대표 사례.</li>
+    <li><strong>Harvard 구조(Ch09 채택)</strong>: IMEM과 DMEM 분리로 구조적 해저드의 95% 예방. IF 스테이지(IMEM)와 MEM 스테이지(DMEM)가 독립 포트 사용.</li>
+    <li><strong>WB-ID 포워딩</strong>: WB 스테이지가 레지스터에 쓰는 같은 사이클에 ID 스테이지가 같은 레지스터를 읽을 때 발생하는 충돌. 레지스터 파일 내부 조건부 MUX로 해결.</li>
+    <li><strong>포워딩 우선순위</strong>: EX-EX(1위) &gt; MEM-EX(2위) &gt; WB-ID(3위, 레지스터 파일 내부)</li>
+    <li><strong>rv32i_pipeline_complete</strong>: DATA_WIDTH/ADDR_WIDTH/RF_DEPTH 파라미터 추가. imm_gen과 control_unit 실제 인스턴스화. 모든 해저드 처리 완료.</li>
+    <li><strong>버블정렬 검증</strong>: R/I/S/B/J 타입 명령어 전체를 포함하는 통합 검증. 포워딩, 스톨, 플러시, WB-ID 포워딩 동시 동작 확인.</li>
+    <li><strong>3종 성능 비교</strong>: 실행시간 = IC × CPI / Fmax. 파이프라인은 CPI를 낮추면서 Fmax도 높여 단일 사이클 대비 약 2.2배, 멀티사이클 대비 약 4.4배 빠름. 멀티사이클은 Fmax 향상에도 불구하고 CPI 증가로 오히려 단일 사이클보다 느림.</li>
+    <li><strong>캐시의 필요성</strong>: DRAM 접근 시 200사이클 대기 → CPI 폭발. 캐시는 이 격차를 메우는 메모리 가속 장치.</li>
+  </ul>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 연습문제                                                                    -->
+<!-- ======================================================================== -->
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li>
+      <strong>[기억]</strong> 구조적 해저드(Structural Hazard)의 정의와, 데이터 해저드(Data Hazard), 제어 해저드(Control Hazard)와 구별되는 특징을 각 1문장으로 기술하라.
+    </li>
+    <li>
+      <strong>[이해]</strong> Harvard 구조와 Princeton 구조에서 5단계 파이프라인의 구조적 해저드 발생 여부가 다른 이유를, 사이클 N에서 INSTR-1(LW)의 MEM 스테이지와 INSTR-4의 IF 스테이지가 동시에 실행되는 상황을 예로 들어 설명하라.
+    </li>
+    <li>
+      <strong>[적용]</strong> 다음 명령어 시퀀스에서 WB-ID 포워딩이 필요한 위치를 찾고, <code>register_file</code>의 포워딩 조건 코드를 작성하라.
+      <pre><code class="language-verilog">ADD x1, x2, x3   // WB 스테이지 진입 (x1에 결과 쓰기)
+LW  x4, 0(x1)   // ID 스테이지 (x1 필요)</code></pre>
+    </li>
+    <li>
+      <strong>[분석]</strong> 버블정렬 내부 루프에서 <code>LW x14, 0(x19)</code>, <code>LW x15, 4(x19)</code>, <code>BGE x15, x14, no_swap</code> 시퀀스에서 발생하는 모든 해저드를 찾고, 각 해저드를 처리하는 하드웨어 메커니즘(포워딩/스톨/플러시 중 해당 사항)을 표로 정리하라.
+    </li>
+    <li>
+      <strong>[평가]</strong> FPGA 기반 실시간 제어 시스템을 설계한다고 할 때, 다음 두 시나리오에 따라 단일 사이클, 멀티사이클, 파이프라인 중 어느 구현이 최적인지 근거를 들어 선택하라. (A) 최대 성능 필요, 면적 제약 없음. (B) 결정론적(deterministic) 실행 시간 필수, 매 명령어의 실행 사이클이 정확히 예측되어야 하는 실시간 제어 응용.
+    </li>
+    <li>
+      <strong>[도전]</strong> Ch12 파이프라인에 성능 카운터를 추가하라. <code>cycle_count</code>(총 클럭 사이클)와 <code>instr_count</code>(WB 스테이지를 통과한 명령어 수)를 별도 레지스터로 관리하고, 버블정렬 완료 후 시뮬레이션에서 실제 CPI를 출력하라. (힌트: <code>instr_count</code>는 <code>mem_wb_reg_w_en</code>이 활성화되거나 NOP이 아닌 명령어가 WB에 진입할 때 증가)
+    </li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    다음 챕터(Ch13)에서는 <strong>캐시(Cache)</strong>를 다룹니다.
+    여러분이 완성한 파이프라인 프로세서는 DRAM에 연결되는 순간 CPI가 100 이상으로 폭등합니다.
+    이번 챕터에서 확인한 3종 비교와 DRAM 지연 수치를 기반으로,
+    왜 캐시가 현대 프로세서의 필수 요소인지를 깊이 이해하게 됩니다.
+  </p>
+</section>
+
+<!-- ======================================================================== -->
+<!-- 전체 소스 코드 (연습문제 다음, 스크립트 직전에 위치)                          -->
+<!-- ======================================================================== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+  본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+  이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch12_register_file_with_forwarding.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// ch12_register_file_with_forwarding.sv
+// Chapter 12 — 구조적 해저드와 파이프라인 완성
+// ============================================================================
+// ch04_register_file.sv 기반에 WB-ID 포워딩(Read-During-Write) 추가
+//
+// Ch10의 forwarding_unit은 수정하지 않습니다.
+// WB-ID 포워딩을 레지스터 파일 내부에서 독립적으로 처리합니다.
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module register_file (
+   input  logic        clk,
+   input  logic        rst_n,
+   input  logic [4:0]  rs1_addr,
+   output logic [31:0] rs1_data,
+   input  logic [4:0]  rs2_addr,
+   output logic [31:0] rs2_data,
+   input  logic [4:0]  rd_addr,
+   input  logic [31:0] rd_data,
+   input  logic        reg_w_en
+);
+
+   logic [31:0] rf [0:31];
+
+   // 동기 쓰기 — x0 쓰기 무시, 리셋 시 전체 초기화
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         for (int i = 0; i &lt; 32; i++) rf[i] &lt;= 32'b0;
+      end
+      else if (reg_w_en &amp;&amp; (rd_addr != 5'b0)) begin
+         rf[rd_addr] &lt;= rd_data;
+      end
+   end
+
+   // 비동기 읽기 — WB-ID 포워딩 포함
+   // 포워딩 조건: WB가 현재 사이클에 같은 레지스터를 쓰려 한다면
+   //              레지스터 파일 대신 WB 데이터를 즉시 반환
+   assign rs1_data = (reg_w_en &amp;&amp; (rd_addr != 5'b0) &amp;&amp; (rd_addr == rs1_addr))
+                     ? rd_data : rf[rs1_addr];
+
+   assign rs2_data = (reg_w_en &amp;&amp; (rd_addr != 5'b0) &amp;&amp; (rd_addr == rs2_addr))
+                     ? rd_data : rf[rs2_addr];
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch12_rv32i_pipeline_complete.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// ch12_rv32i_pipeline_complete.sv
+// Chapter 12 — 5단계 파이프라인 최종 완성 top 모듈
+// ch11_pipeline_with_branch.sv 기반 수정:
+//   - 모듈명 변경: rv32i_pipeline_complete
+//   - DATA_WIDTH/ADDR_WIDTH/RF_DEPTH 파라미터 추가
+//   - register_file: WB-ID 포워딩 내장 버전 사용
+//   - imm_gen, control_unit 실제 인스턴스화 (주석 해제)
+// 해저드 처리 완성:
+//   - RAW: EX-EX(2'b10), MEM-EX(2'b01) 포워딩
+//   - Load-Use: hazard_detection_unit 스톨
+//   - 제어: branch_unit + flush 제어 (Flush &gt; Stall)
+//   - 구조적: Harvard 구조 + WB-ID 레지스터 파일 포워딩
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module rv32i_pipeline_complete #(
+   parameter int DATA_WIDTH  = 32,
+   parameter int ADDR_WIDTH  = 32,
+   parameter int RF_DEPTH    = 32,
+   parameter int IMEM_DEPTH  = 1024,
+   parameter int DMEM_DEPTH  = 1024,
+   parameter     IMEM_INIT   = ""
+)(
+   input  logic clk,
+   input  logic rst_n
+);
+
+   // --- PC 관련 ---
+   logic [31:0] pc, pc_plus4, pc_next;
+
+   // --- 해저드/스톨 제어 ---
+   logic        load_use_stall, pc_en, if_id_en, hdu_pc_en;
+   logic        branch_taken_ex, jal_id, jalr_taken_ex;
+   logic        if_id_flush, id_ex_flush;
+   logic [1:0]  fwd_a, fwd_b;
+   logic [31:0] alu_src_a, alu_src_b, fwd_b_data;
+
+   // --- IF/ID 파이프라인 레지스터 ---
+   logic [31:0] if_id_pc, if_id_pc_plus4, if_id_instr;
+
+   // --- ID/EX 파이프라인 레지스터 ---
+   logic [31:0] id_ex_pc, id_ex_pc_plus4, id_ex_rs1_data, id_ex_rs2_data, id_ex_imm;
+   logic [4:0]  id_ex_rs1, id_ex_rs2, id_ex_rd;
+   logic        id_ex_reg_w_en, id_ex_mem_read, id_ex_mem_write;
+   logic        id_ex_a_sel, id_ex_b_sel;
+   logic [3:0]  id_ex_alu_sel;
+   logic [1:0]  id_ex_wb_sel;
+   logic [2:0]  id_ex_funct3;
+   logic        id_ex_branch, id_ex_jalr;
+
+   // --- EX/MEM 파이프라인 레지스터 ---
+   logic [31:0] ex_mem_alu_result, ex_mem_rs2_data, ex_mem_pc_plus4;
+   logic [4:0]  ex_mem_rd;
+   logic        ex_mem_reg_w_en, ex_mem_mem_read, ex_mem_mem_write;
+   logic [1:0]  ex_mem_wb_sel;
+
+   // --- MEM/WB 파이프라인 레지스터 ---
+   logic [31:0] mem_wb_alu_result, mem_wb_mem_data, mem_wb_pc_plus4;
+   logic [4:0]  mem_wb_rd;
+   logic        mem_wb_reg_w_en;
+   logic [1:0]  mem_wb_wb_sel;
+   logic [31:0] wb_data;
+
+   // PC 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) pc &lt;= 32'h0000_0000;
+      else if (pc_en) pc &lt;= pc_next;
+   end
+   assign pc_plus4 = pc + 32'd4;
+
+   // pc_next 4-way MUX
+   logic [31:0] branch_target, jal_target, jalr_target, imm_J;
+   assign imm_J = {{12{if_id_instr[31]}}, if_id_instr[19:12],
+                   if_id_instr[20], if_id_instr[30:21], 1'b0};
+   assign jal_id        = (if_id_instr[6:0] == 7'b1101111);
+   assign jal_target    = if_id_pc + imm_J;
+   assign branch_target = id_ex_pc + id_ex_imm;
+   assign jalr_taken_ex = id_ex_jalr;
+   assign jalr_target   = (alu_src_a + id_ex_imm) &amp; ~32'h1;
+
+   always_comb begin
+      priority if (branch_taken_ex) pc_next = branch_target;
+      else if (jalr_taken_ex)       pc_next = jalr_target;
+      else if (jal_id)              pc_next = jal_target;
+      else                          pc_next = pc_plus4;
+   end
+
+   // Flush / Stall 통합 제어
+   assign if_id_flush = branch_taken_ex | jal_id | jalr_taken_ex;
+   assign id_ex_flush = load_use_stall | branch_taken_ex | jalr_taken_ex;
+   assign pc_en       = if_id_flush ? 1'b1 : hdu_pc_en;
+
+   // IF: IMEM (Harvard 구조 — 명령어 전용)
+   logic [31:0] instr;
+   instruction_memory #(.DEPTH(IMEM_DEPTH), .INIT_FILE(IMEM_INIT)) u_imem (
+      .addr(pc), .rdata(instr)
+   );
+
+   // IF/ID 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n || if_id_flush) begin
+         if_id_pc &lt;= 32'b0; if_id_pc_plus4 &lt;= 32'b0;
+         if_id_instr &lt;= 32'h0000_0013;
+      end else if (if_id_en) begin
+         if_id_pc &lt;= pc; if_id_pc_plus4 &lt;= pc_plus4; if_id_instr &lt;= instr;
+      end
+   end
+
+   // ID: 레지스터 파일, imm_gen, control_unit
+   logic [4:0]  rs1_addr, rs2_addr, rd_addr;
+   logic [31:0] rs1_data, rs2_data, imm;
+   logic        reg_w_en, mem_read, mem_write, a_sel, b_sel;
+   logic [3:0]  alu_sel;
+   logic [1:0]  wb_sel;
+   logic [2:0]  funct3_id;
+   logic        branch_id, jalr_id;
+
+   assign rs1_addr  = if_id_instr[19:15];
+   assign rs2_addr  = if_id_instr[24:20];
+   assign rd_addr   = if_id_instr[11:7];
+   assign funct3_id = if_id_instr[14:12];
+   assign jalr_id   = (if_id_instr[6:0] == 7'b1100111);
+
+   // 레지스터 파일 (WB-ID 포워딩 내장)
+   register_file u_rf (
+      .clk(clk), .rst_n(rst_n),
+      .rs1_addr(rs1_addr), .rs2_addr(rs2_addr),
+      .rd_addr(mem_wb_rd), .rd_data(wb_data), .reg_w_en(mem_wb_reg_w_en),
+      .rs1_data(rs1_data), .rs2_data(rs2_data)
+   );
+
+   imm_gen u_imm_gen (.instr(if_id_instr), .imm(imm));
+   control_unit u_ctrl (
+      .opcode(if_id_instr[6:0]), .funct3(funct3_id), .funct7(if_id_instr[31:25]),
+      .reg_w_en(reg_w_en), .mem_read(mem_read), .mem_write(mem_write),
+      .branch(branch_id), .a_sel(a_sel), .b_sel(b_sel), .alu_sel(alu_sel), .wb_sel(wb_sel)
+   );
+
+   // ID/EX 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n || id_ex_flush) begin
+         id_ex_pc &lt;= '0; id_ex_pc_plus4 &lt;= '0; id_ex_rs1_data &lt;= '0;
+         id_ex_rs2_data &lt;= '0; id_ex_imm &lt;= '0;
+         id_ex_rs1 &lt;= '0; id_ex_rs2 &lt;= '0; id_ex_rd &lt;= '0;
+         id_ex_reg_w_en &lt;= '0; id_ex_mem_read &lt;= '0; id_ex_mem_write &lt;= '0;
+         id_ex_a_sel &lt;= '0; id_ex_b_sel &lt;= '0; id_ex_alu_sel &lt;= '0;
+         id_ex_wb_sel &lt;= '0; id_ex_funct3 &lt;= '0; id_ex_branch &lt;= '0; id_ex_jalr &lt;= '0;
+      end else begin
+         id_ex_pc &lt;= if_id_pc; id_ex_pc_plus4 &lt;= if_id_pc_plus4;
+         id_ex_rs1_data &lt;= rs1_data; id_ex_rs2_data &lt;= rs2_data; id_ex_imm &lt;= imm;
+         id_ex_rs1 &lt;= rs1_addr; id_ex_rs2 &lt;= rs2_addr; id_ex_rd &lt;= rd_addr;
+         id_ex_reg_w_en &lt;= reg_w_en; id_ex_mem_read &lt;= mem_read; id_ex_mem_write &lt;= mem_write;
+         id_ex_a_sel &lt;= a_sel; id_ex_b_sel &lt;= b_sel; id_ex_alu_sel &lt;= alu_sel;
+         id_ex_wb_sel &lt;= wb_sel; id_ex_funct3 &lt;= funct3_id;
+         id_ex_branch &lt;= branch_id; id_ex_jalr &lt;= jalr_id;
+      end
+   end
+
+   // EX: 포워딩 MUX + ALU + branch_unit
+   always_comb begin
+      case (fwd_a)
+         2'b00:   alu_src_a = id_ex_rs1_data;
+         2'b10:   alu_src_a = ex_mem_alu_result;
+         2'b01:   alu_src_a = wb_data;
+         default: alu_src_a = id_ex_rs1_data;
+      endcase
+   end
+   always_comb begin
+      case (fwd_b)
+         2'b00:   fwd_b_data = id_ex_rs2_data;
+         2'b10:   fwd_b_data = ex_mem_alu_result;
+         2'b01:   fwd_b_data = wb_data;
+         default: fwd_b_data = id_ex_rs2_data;
+      endcase
+   end
+   logic [31:0] alu_a, alu_b, alu_result;
+   assign alu_a = id_ex_a_sel ? id_ex_pc : alu_src_a;
+   assign alu_b = id_ex_b_sel ? id_ex_imm : fwd_b_data;
+   alu u_alu (.a(alu_a), .b(alu_b), .alu_sel(id_ex_alu_sel), .result(alu_result));
+   branch_unit u_branch (.rs1_data(alu_src_a), .rs2_data(fwd_b_data),
+      .funct3(id_ex_funct3), .branch(id_ex_branch), .branch_taken(branch_taken_ex));
+
+   // EX/MEM 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         ex_mem_alu_result &lt;= '0; ex_mem_rs2_data &lt;= '0; ex_mem_pc_plus4 &lt;= '0;
+         ex_mem_rd &lt;= '0; ex_mem_reg_w_en &lt;= '0; ex_mem_mem_read &lt;= '0;
+         ex_mem_mem_write &lt;= '0; ex_mem_wb_sel &lt;= '0;
+      end else begin
+         ex_mem_alu_result &lt;= alu_result; ex_mem_rs2_data &lt;= fwd_b_data;
+         ex_mem_rd &lt;= id_ex_rd; ex_mem_reg_w_en &lt;= id_ex_reg_w_en;
+         ex_mem_mem_read &lt;= id_ex_mem_read; ex_mem_mem_write &lt;= id_ex_mem_write;
+         ex_mem_wb_sel &lt;= id_ex_wb_sel; ex_mem_pc_plus4 &lt;= id_ex_pc_plus4;
+      end
+   end
+
+   // MEM: DMEM (Harvard 구조 — 데이터 전용)
+   logic [31:0] mem_rdata;
+   data_memory #(.DEPTH(DMEM_DEPTH)) u_dmem (
+      .clk(clk), .addr(ex_mem_alu_result), .wdata(ex_mem_rs2_data),
+      .we(ex_mem_mem_write), .re(ex_mem_mem_read), .rdata(mem_rdata)
+   );
+
+   // MEM/WB 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         mem_wb_alu_result &lt;= '0; mem_wb_mem_data &lt;= '0; mem_wb_pc_plus4 &lt;= '0;
+         mem_wb_rd &lt;= '0; mem_wb_reg_w_en &lt;= '0; mem_wb_wb_sel &lt;= '0;
+      end else begin
+         mem_wb_alu_result &lt;= ex_mem_alu_result; mem_wb_mem_data &lt;= mem_rdata;
+         mem_wb_rd &lt;= ex_mem_rd; mem_wb_reg_w_en &lt;= ex_mem_reg_w_en;
+         mem_wb_wb_sel &lt;= ex_mem_wb_sel; mem_wb_pc_plus4 &lt;= ex_mem_pc_plus4;
+      end
+   end
+
+   // WB: 데이터 선택
+   always_comb begin
+      case (mem_wb_wb_sel)
+         2'b00:   wb_data = mem_wb_alu_result;
+         2'b01:   wb_data = mem_wb_mem_data;
+         2'b10:   wb_data = mem_wb_pc_plus4;
+         default: wb_data = mem_wb_alu_result;
+      endcase
+   end
+
+   // 포워딩 유닛 (Ch10 — 수정 없음)
+   forwarding_unit u_fwd (
+      .id_ex_rs1(id_ex_rs1), .id_ex_rs2(id_ex_rs2),
+      .ex_mem_reg_w_en(ex_mem_reg_w_en), .ex_mem_rd(ex_mem_rd),
+      .mem_wb_reg_w_en(mem_wb_reg_w_en), .mem_wb_rd(mem_wb_rd),
+      .fwd_a(fwd_a), .fwd_b(fwd_b)
+   );
+
+   // 해저드 감지 유닛 (Ch10 — 수정 없음)
+   hazard_detection_unit u_hazard (
+      .id_ex_mem_read(id_ex_mem_read), .id_ex_rd(id_ex_rd),
+      .if_id_rs1(rs1_addr), .if_id_rs2(rs2_addr),
+      .pc_en(hdu_pc_en), .if_id_en(if_id_en), .id_ex_flush(load_use_stall)
+   );
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>ch12_pipeline_complete_tb.sv (발췌)</h3>
+    <pre><code class="language-verilog">// 버블정렬 테스트 핵심 부분 (전체 코드: code_examples/ch12_pipeline_complete_tb.sv)
+// DMEM 초기화 — 정렬 대상 배열 [64, 5, 66, 30, 88, 17, 42, 9]
+dut.u_dmem.mem[0] = 32'd64;
+dut.u_dmem.mem[1] = 32'd5;
+dut.u_dmem.mem[2] = 32'd66;
+dut.u_dmem.mem[3] = 32'd30;
+dut.u_dmem.mem[4] = 32'd88;
+dut.u_dmem.mem[5] = 32'd17;
+dut.u_dmem.mem[6] = 32'd42;
+dut.u_dmem.mem[7] = 32'd9;
+
+// 2000 클럭 후 결과 확인
+repeat(2000) @(posedge clk);
+// 기대 결과: [5, 9, 17, 30, 42, 64, 66, 88]
+    </code></pre>
+  </div>
+</section>
+
+<!-- Highlight.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 480" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="525" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#1F2937">중간 마일스톤: 1~10 합산 프로그램 파이프라인 실행</text>
+
+  <!-- 프로그램 코드 -->
+  <rect x="20" y="50" width="380" height="260" rx="8" fill="#1F2937"/>
+  <text x="40" y="75" font-size="12" fill="#059669" font-family="monospace">// 1 + 2 + ... + 10 = 55</text>
+  <text x="40" y="98" font-size="12" fill="#93C5FD" font-family="monospace">addi x10, x0, 0    </text>
+  <text x="290" y="98" font-size="10" fill="#6B7280" font-family="monospace"># sum=0</text>
+  <text x="40" y="118" font-size="12" fill="#93C5FD" font-family="monospace">addi x11, x0, 1    </text>
+  <text x="290" y="118" font-size="10" fill="#6B7280" font-family="monospace"># i=1</text>
+  <text x="40" y="138" font-size="12" fill="#93C5FD" font-family="monospace">addi x12, x0, 11   </text>
+  <text x="290" y="138" font-size="10" fill="#6B7280" font-family="monospace"># limit</text>
+  <text x="40" y="168" font-size="12" fill="#D97706" font-family="monospace">loop:</text>
+  <text x="40" y="188" font-size="12" fill="#FEF3C7" font-family="monospace">  add  x10, x10, x11</text>
+  <text x="290" y="188" font-size="10" fill="#6B7280" font-family="monospace"># sum+=i</text>
+  <text x="40" y="208" font-size="12" fill="#FEF3C7" font-family="monospace">  addi x11, x11, 1  </text>
+  <text x="290" y="208" font-size="10" fill="#6B7280" font-family="monospace"># i++</text>
+  <text x="40" y="228" font-size="12" fill="#FEF3C7" font-family="monospace">  bne  x11, x12, loop</text>
+  <text x="290" y="228" font-size="10" fill="#6B7280" font-family="monospace"># if i!=11</text>
+  <text x="40" y="258" font-size="12" fill="#059669" font-family="monospace">// 완료 시 x10 = 55 (0x37)</text>
+  <text x="40" y="278" font-size="12" fill="#059669" font-family="monospace">// 해저드: RAW (x10, x11)</text>
+  <text x="40" y="298" font-size="12" fill="#059669" font-family="monospace">//         포워딩으로 해결</text>
+
+  <!-- 포워딩 동작 시각화 -->
+  <rect x="420" y="50" width="610" height="260" rx="8" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="440" y="78" font-size="13" font-weight="bold" fill="#1F2937">루프 1회차 포워딩 동작 (CC4~CC8)</text>
+
+  <!-- 사이클 헤더 -->
+  <text x="520" y="100" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">CC4</text>
+  <text x="600" y="100" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">CC5</text>
+  <text x="680" y="100" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">CC6</text>
+  <text x="760" y="100" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">CC7</text>
+  <text x="840" y="100" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">CC8</text>
+  <text x="920" y="100" text-anchor="middle" font-size="10" fill="#6B7280" font-weight="bold">CC9</text>
+
+  <!-- add x10, x10, x11 -->
+  <text x="460" y="128" font-size="9" fill="#1F2937" font-family="monospace">add</text>
+  <rect x="483" y="112" width="74" height="24" rx="3" fill="#60A5FA"/>
+  <text x="520" y="129" text-anchor="middle" font-size="9" fill="white" font-weight="bold">EX</text>
+  <rect x="563" y="112" width="74" height="24" rx="3" fill="#93C5FD"/>
+  <text x="600" y="129" text-anchor="middle" font-size="9" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="643" y="112" width="74" height="24" rx="3" fill="#DBEAFE"/>
+  <text x="680" y="129" text-anchor="middle" font-size="9" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- addi x11, x11, 1 -->
+  <text x="460" y="163" font-size="9" fill="#1F2937" font-family="monospace">addi</text>
+  <rect x="563" y="147" width="74" height="24" rx="3" fill="#60A5FA"/>
+  <text x="600" y="164" text-anchor="middle" font-size="9" fill="white" font-weight="bold">EX</text>
+  <rect x="643" y="147" width="74" height="24" rx="3" fill="#93C5FD"/>
+  <text x="680" y="164" text-anchor="middle" font-size="9" fill="#1F2937" font-weight="bold">MEM</text>
+  <rect x="723" y="147" width="74" height="24" rx="3" fill="#DBEAFE"/>
+  <text x="760" y="164" text-anchor="middle" font-size="9" fill="#2563EB" font-weight="bold">WB</text>
+
+  <!-- bne x11, x12, loop -->
+  <text x="460" y="198" font-size="9" fill="#1F2937" font-family="monospace">bne</text>
+  <rect x="643" y="182" width="74" height="24" rx="3" fill="#60A5FA"/>
+  <text x="680" y="199" text-anchor="middle" font-size="9" fill="white" font-weight="bold">EX</text>
+
+  <!-- EX-EX 포워딩: add → addi (x10) — 여기서는 x11이 아니라 addi는 x11을 읽으므로 참조관계 없음, 다음 루프에서 x10 필요 -->
+  <!-- 실제로 addi는 x11을 읽지만 add가 x10을 쓰므로 해당 포워딩 없음. -->
+  <!-- addi → bne: x11 EX-EX 포워딩 -->
+  <path d="M 637 159 Q 640 175, 643 185" stroke="#DC2626" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+  <text x="645" y="215" font-size="9" fill="#DC2626" font-weight="bold">EX-EX: x11 포워딩</text>
+
+  <!-- 다음 루프 add: x10은 MEM-EX 포워딩 -->
+  <text x="460" y="248" font-size="9" fill="#D97706" font-family="monospace">add(2)</text>
+  <rect x="803" y="232" width="74" height="24" rx="3" fill="#60A5FA"/>
+  <text x="840" y="249" text-anchor="middle" font-size="9" fill="white" font-weight="bold">EX</text>
+
+  <path d="M 717 128 Q 750 180, 803 240" stroke="#059669" stroke-width="2" fill="none" stroke-dasharray="4,3" marker-end="url(#arr-green)"/>
+  <text x="760" y="230" font-size="9" fill="#059669" font-weight="bold">MEM-EX: x10</text>
+
+  <!-- 결과 확인 -->
+  <rect x="420" y="270" width="610" height="35" rx="4" fill="#F0FDF4" stroke="#059669"/>
+  <text x="725" y="293" text-anchor="middle" font-size="12" fill="#059669" font-weight="bold">10회 반복 후 x10 = 55 (0x37) — 포워딩이 모든 RAW 해저드를 해결!</text>
+
+  <!-- 성취감 박스 -->
+  <rect x="20" y="330" width="1010" height="140" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="525" y="365" text-anchor="middle" font-size="18" font-weight="bold" fill="#2563EB">중간 마일스톤 달성!</text>
+  <text x="525" y="395" text-anchor="middle" font-size="14" fill="#1F2937">포워딩 파이프라인에서 1~10 합산 프로그램이 정상 동작합니다.</text>
+  <text x="525" y="420" text-anchor="middle" font-size="12" fill="#6B7280">데이터 해저드(RAW)를 포워딩으로 해결하고, 추가 스톨 없이 정확한 결과를 얻었습니다.</text>
+  <text x="525" y="445" text-anchor="middle" font-size="12" fill="#6B7280">이 프로그램은 Load 명령어를 사용하지 않으므로 Load-Use 스톨이 발생하지 않습니다.</text>
+  <text x="525" y="465" text-anchor="middle" font-size="11" fill="#2563EB">다음 단계: Ch11에서 분기 해저드(bne)까지 처리하면 완전한 파이프라인이 됩니다!</text>
+</svg>

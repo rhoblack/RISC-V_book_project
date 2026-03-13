@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .field-bg { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1.5; }
+      .field-bg-alt { fill: #EFF6FF; stroke: #2563EB; stroke-width: 1.5; }
+      .field-bg-special { fill: #FEF3C7; stroke: #D97706; stroke-width: 1.5; }
+      .field-label { font-size: 13px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .field-name { font-size: 11px; fill: #2563EB; font-weight: 600; text-anchor: middle; }
+      .title { font-size: 16px; fill: #1E293B; font-weight: 700; }
+      .bit-range { font-size: 9px; fill: #9CA3AF; text-anchor: middle; font-family: 'JetBrains Mono', monospace; }
+      .note { font-size: 11px; fill: #D97706; font-weight: 600; }
+    </style>
+  </defs>
+
+  <text x="400" y="25" text-anchor="middle" class="title">I 타입 명령어 인코딩 (I-Type Encoding)</text>
+
+  <!-- Standard I-Type -->
+  <text x="30" y="50" style="font-size:12px; fill:#2563EB; font-weight:600;">일반 I 타입 (ADDI, LW 등)</text>
+
+  <text x="145" y="65" class="bit-range">31              20</text>
+  <text x="330" y="65" class="bit-range">19  15</text>
+  <text x="430" y="65" class="bit-range">14  12</text>
+  <text x="540" y="65" class="bit-range">11   7</text>
+  <text x="680" y="65" class="bit-range">6        0</text>
+
+  <rect x="20" y="75" width="250" height="40" rx="4" class="field-bg"/>
+  <rect x="270" y="75" width="100" height="40" rx="4" class="field-bg-alt"/>
+  <rect x="370" y="75" width="100" height="40" rx="4" class="field-bg"/>
+  <rect x="470" y="75" width="120" height="40" rx="4" class="field-bg-alt"/>
+  <rect x="590" y="75" width="190" height="40" rx="4" class="field-bg"/>
+
+  <text x="145" y="100" class="field-label">imm[11:0]</text>
+  <text x="320" y="100" class="field-label">rs1</text>
+  <text x="420" y="100" class="field-label">funct3</text>
+  <text x="530" y="100" class="field-label">rd</text>
+  <text x="685" y="100" class="field-label">opcode</text>
+
+  <text x="145" y="130" class="field-name">12비트 (부호 확장)</text>
+  <text x="320" y="130" class="field-name">5비트</text>
+  <text x="420" y="130" class="field-name">3비트</text>
+  <text x="530" y="130" class="field-name">5비트</text>
+  <text x="685" y="130" class="field-name">7비트</text>
+
+  <!-- Shift variant -->
+  <text x="30" y="155" style="font-size:12px; fill:#D97706; font-weight:600;">시프트 변형 (SLLI, SRLI, SRAI)</text>
+
+  <text x="80" y="170" class="bit-range">31  25</text>
+  <text x="195" y="170" class="bit-range">24    20</text>
+  <text x="330" y="170" class="bit-range">19  15</text>
+  <text x="430" y="170" class="bit-range">14  12</text>
+  <text x="540" y="170" class="bit-range">11   7</text>
+  <text x="680" y="170" class="bit-range">6        0</text>
+
+  <rect x="20" y="178" width="120" height="40" rx="4" class="field-bg-special"/>
+  <rect x="140" y="178" width="130" height="40" rx="4" class="field-bg-alt"/>
+  <rect x="270" y="178" width="100" height="40" rx="4" class="field-bg"/>
+  <rect x="370" y="178" width="100" height="40" rx="4" class="field-bg-alt"/>
+  <rect x="470" y="178" width="120" height="40" rx="4" class="field-bg"/>
+  <rect x="590" y="178" width="190" height="40" rx="4" class="field-bg-alt"/>
+
+  <text x="80" y="203" class="field-label" style="fill:#D97706;">funct7</text>
+  <text x="205" y="203" class="field-label">shamt</text>
+  <text x="320" y="203" class="field-label">rs1</text>
+  <text x="420" y="203" class="field-label">funct3</text>
+  <text x="530" y="203" class="field-label">rd</text>
+  <text x="685" y="203" class="field-label">opcode</text>
+</svg>

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 580" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .block { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; rx: 8; }
+      .type-block { fill: #EFF6FF; stroke: #3B82F6; stroke-width: 1.5; rx: 4; }
+      .bit-hi { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1; }
+      .bit-lo { fill: #FEF3C7; stroke: #D97706; stroke-width: 1; }
+      .bit-sign { fill: #FEE2E2; stroke: #DC2626; stroke-width: 1; }
+      .label { font-size: 12px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .title { font-size: 17px; fill: #1E293B; font-weight: 700; text-anchor: middle; }
+      .subtitle { font-size: 12px; fill: #6B7280; text-anchor: middle; }
+      .bit-text { font-size: 9px; fill: #1E293B; font-family: 'JetBrains Mono', monospace; text-anchor: middle; }
+      .type-label { font-size: 12px; fill: #2563EB; font-weight: 700; }
+      .arrow { stroke: #3B82F6; stroke-width: 2; fill: none; marker-end: url(#ah); }
+      .signal { font-size: 10px; fill: #2563EB; font-family: 'JetBrains Mono', monospace; }
+      .note { font-size: 10px; fill: #6B7280; }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3B82F6"/>
+    </marker>
+  </defs>
+
+  <text x="425" y="28" class="title">즉치수 생성기 — 6가지 타입별 즉치수 추출 (Immediate Generator)</text>
+  <text x="425" y="48" class="subtitle">명령어 비트를 재배열하고 32비트로 부호 확장</text>
+
+  <!-- Legend -->
+  <rect x="30" y="56" width="14" height="14" class="bit-sign"/>
+  <text x="50" y="67" class="note">부호 비트 (inst[31]) 확장</text>
+  <rect x="200" y="56" width="14" height="14" class="bit-hi"/>
+  <text x="220" y="67" class="note">명령어에서 추출한 비트</text>
+  <rect x="380" y="56" width="14" height="14" class="bit-lo"/>
+  <text x="400" y="67" class="note">0으로 채움</text>
+
+  <!-- ===== I-Type ===== -->
+  <text x="50" y="100" class="type-label">I 타입</text>
+  <text x="50" y="115" class="note">(ADDI, LW 등)</text>
+  <!-- Sign extension bits [31:12] -->
+  <rect x="130" y="85" width="260" height="24" class="bit-sign"/>
+  <text x="260" y="101" class="bit-text">부호 확장 (inst[31] x 20비트)</text>
+  <!-- imm[11:0] from inst[31:20] -->
+  <rect x="390" y="85" width="160" height="24" class="bit-hi"/>
+  <text x="470" y="101" class="bit-text">inst[31:20] → imm[11:0]</text>
+  <!-- Result annotation -->
+  <text x="580" y="101" class="signal" style="text-anchor:start;">= 12비트 부호확장</text>
+
+  <!-- ===== S-Type ===== -->
+  <text x="50" y="155" class="type-label">S 타입</text>
+  <text x="50" y="170" class="note">(SW, SH 등)</text>
+  <rect x="130" y="140" width="260" height="24" class="bit-sign"/>
+  <text x="260" y="156" class="bit-text">부호 확장 (inst[31] x 20비트)</text>
+  <rect x="390" y="140" width="90" height="24" class="bit-hi"/>
+  <text x="435" y="156" class="bit-text">inst[31:25]</text>
+  <rect x="480" y="140" width="70" height="24" class="bit-hi"/>
+  <text x="515" y="156" class="bit-text">inst[11:7]</text>
+  <text x="580" y="156" class="signal" style="text-anchor:start;">= 12비트 부호확장</text>
+
+  <!-- ===== B-Type ===== -->
+  <text x="50" y="210" class="type-label">B 타입</text>
+  <text x="50" y="225" class="note">(BEQ, BNE 등)</text>
+  <rect x="130" y="195" width="230" height="24" class="bit-sign"/>
+  <text x="245" y="211" class="bit-text">부호 확장 (inst[31] x 19비트)</text>
+  <rect x="360" y="195" width="20" height="24" class="bit-hi"/>
+  <text x="370" y="211" class="bit-text" style="font-size:7px;">[7]</text>
+  <rect x="380" y="195" width="70" height="24" class="bit-hi"/>
+  <text x="415" y="211" class="bit-text">[30:25]</text>
+  <rect x="450" y="195" width="60" height="24" class="bit-hi"/>
+  <text x="480" y="211" class="bit-text">[11:8]</text>
+  <rect x="510" y="195" width="20" height="24" class="bit-lo"/>
+  <text x="520" y="211" class="bit-text">0</text>
+  <text x="560" y="211" class="signal" style="text-anchor:start;">= 13비트 (LSB=0)</text>
+
+  <!-- ===== U-Type ===== -->
+  <text x="50" y="265" class="type-label">U 타입</text>
+  <text x="50" y="280" class="note">(LUI, AUIPC)</text>
+  <rect x="130" y="250" width="260" height="24" class="bit-hi"/>
+  <text x="260" y="266" class="bit-text">inst[31:12] → imm[31:12]</text>
+  <rect x="390" y="250" width="160" height="24" class="bit-lo"/>
+  <text x="470" y="266" class="bit-text">하위 12비트 = 0</text>
+  <text x="580" y="266" class="signal" style="text-anchor:start;">= 20비트 상위 배치</text>
+
+  <!-- ===== J-Type ===== -->
+  <text x="50" y="320" class="type-label">J 타입</text>
+  <text x="50" y="335" class="note">(JAL)</text>
+  <rect x="130" y="305" width="150" height="24" class="bit-sign"/>
+  <text x="205" y="321" class="bit-text">부호 확장 (inst[31] x 11비트)</text>
+  <rect x="280" y="305" width="100" height="24" class="bit-hi"/>
+  <text x="330" y="321" class="bit-text">[19:12]</text>
+  <rect x="380" y="305" width="20" height="24" class="bit-hi"/>
+  <text x="390" y="321" class="bit-text" style="font-size:7px;">[20]</text>
+  <rect x="400" y="305" width="80" height="24" class="bit-hi"/>
+  <text x="440" y="321" class="bit-text">[30:21]</text>
+  <rect x="480" y="305" width="20" height="24" class="bit-lo"/>
+  <text x="490" y="321" class="bit-text">0</text>
+  <text x="530" y="321" class="signal" style="text-anchor:start;">= 21비트 (LSB=0)</text>
+
+  <!-- ===== R-Type ===== -->
+  <text x="50" y="375" class="type-label">R 타입</text>
+  <text x="50" y="390" class="note">(ADD, SUB 등)</text>
+  <rect x="130" y="360" width="420" height="24" rx="4" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1"/>
+  <text x="340" y="376" class="bit-text" style="fill:#9CA3AF;">즉치수 없음 (imm = 32'b0 또는 don't care)</text>
+
+  <!-- Multiplexer block -->
+  <rect x="150" y="420" width="500" height="70" class="block"/>
+  <text x="400" y="452" class="label" style="font-size:14px; fill:#2563EB;">MUX (ImmSel에 의해 타입 선택)</text>
+  <text x="400" y="470" class="signal">ImmSel [2:0] → 제어 유닛에서 opcode 기반 생성</text>
+
+  <!-- Output -->
+  <line x1="400" y1="490" x2="400" y2="540" class="arrow"/>
+  <text x="400" y="560" class="label" style="font-size:13px;">imm_out [31:0]</text>
+  <text x="400" y="576" class="note" style="text-anchor:middle;">32비트 부호 확장된 즉치수 → ALU 또는 가산기로 전달</text>
+
+  <!-- Input arrows from top -->
+  <line x1="400" y1="55" x2="400" y2="80" class="arrow"/>
+  <text x="400" y="73" class="signal" style="text-anchor:middle;">inst [31:0]</text>
+</svg>

@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr5" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+  <style>
+    .stage    { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1.5; }
+    .commit   { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+    .cancel   { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; }
+    .exc-inst { fill: #FEF3C7; stroke: #D97706; stroke-width: 2; }
+    .header   { font-size: 12px; fill: #1E3A5F; text-anchor: middle; font-weight: bold; }
+    .cell     { font-size: 10px; fill: #475569; text-anchor: middle; }
+    .title    { font-size: 18px; fill: #1E3A5F; font-weight: bold; text-anchor: middle; }
+    .label    { font-size: 13px; fill: #1E3A5F; text-anchor: start; font-weight: bold; }
+    .sub      { font-size: 11px; fill: #6B7280; text-anchor: start; }
+    .cyc      { font-size: 11px; fill: #94A3B8; text-anchor: middle; }
+  </style>
+
+  <text x="450" y="30" class="title">정확한 예외 (Precise Exception) — 파이프라인 타이밍</text>
+
+  <!-- Cycle headers -->
+  <text x="280" y="65" class="cyc">Cycle 1</text>
+  <text x="360" y="65" class="cyc">Cycle 2</text>
+  <text x="440" y="65" class="cyc">Cycle 3</text>
+  <text x="520" y="65" class="cyc">Cycle 4</text>
+  <text x="600" y="65" class="cyc">Cycle 5</text>
+  <text x="680" y="65" class="cyc">Cycle 6</text>
+  <text x="760" y="65" class="cyc">Cycle 7</text>
+
+  <!-- Instruction labels -->
+  <text x="30" y="100" class="label">I(n-2): ADD</text>
+  <text x="30" y="155" class="label">I(n-1): SUB</text>
+  <text x="30" y="210" class="label" style="fill:#D97706;">I(n): LW (예외!)</text>
+  <text x="30" y="265" class="label" style="fill:#DC2626;">I(n+1): AND</text>
+  <text x="30" y="320" class="label" style="fill:#DC2626;">I(n+2): OR</text>
+
+  <!-- I(n-2) - Committed -->
+  <rect x="200" y="80" width="70" height="30" class="commit"/>
+  <text x="235" y="100" class="cell">IF</text>
+  <rect x="280" y="80" width="70" height="30" class="commit"/>
+  <text x="315" y="100" class="cell">ID</text>
+  <rect x="360" y="80" width="70" height="30" class="commit"/>
+  <text x="395" y="100" class="cell">EX</text>
+  <rect x="440" y="80" width="70" height="30" class="commit"/>
+  <text x="475" y="100" class="cell">MEM</text>
+  <rect x="520" y="80" width="70" height="30" class="commit"/>
+  <text x="555" y="100" class="cell" style="fill:#059669; font-weight:bold;">WB ✓</text>
+
+  <!-- I(n-1) - Committed -->
+  <rect x="280" y="135" width="70" height="30" class="commit"/>
+  <text x="315" y="155" class="cell">IF</text>
+  <rect x="360" y="135" width="70" height="30" class="commit"/>
+  <text x="395" y="155" class="cell">ID</text>
+  <rect x="440" y="135" width="70" height="30" class="commit"/>
+  <text x="475" y="155" class="cell">EX</text>
+  <rect x="520" y="135" width="70" height="30" class="commit"/>
+  <text x="555" y="155" class="cell">MEM</text>
+  <rect x="600" y="135" width="70" height="30" class="commit"/>
+  <text x="635" y="155" class="cell" style="fill:#059669; font-weight:bold;">WB ✓</text>
+
+  <!-- I(n) - Exception at MEM stage -->
+  <rect x="360" y="190" width="70" height="30" class="stage"/>
+  <text x="395" y="210" class="cell">IF</text>
+  <rect x="440" y="190" width="70" height="30" class="stage"/>
+  <text x="475" y="210" class="cell">ID</text>
+  <rect x="520" y="190" width="70" height="30" class="stage"/>
+  <text x="555" y="210" class="cell">EX</text>
+  <rect x="600" y="190" width="70" height="30" class="exc-inst"/>
+  <text x="635" y="210" class="cell" style="fill:#D97706; font-weight:bold;">MEM ⚡</text>
+  <rect x="680" y="190" width="70" height="30" class="exc-inst"/>
+  <text x="715" y="210" class="cell" style="fill:#D97706; font-weight:bold;">WB(trap)</text>
+
+  <!-- I(n+1) - Cancelled -->
+  <rect x="440" y="245" width="70" height="30" class="stage"/>
+  <text x="475" y="265" class="cell">IF</text>
+  <rect x="520" y="245" width="70" height="30" class="stage"/>
+  <text x="555" y="265" class="cell">ID</text>
+  <rect x="600" y="245" width="70" height="30" class="stage"/>
+  <text x="635" y="265" class="cell">EX</text>
+  <rect x="680" y="245" width="70" height="30" class="cancel"/>
+  <text x="715" y="265" class="cell" style="fill:#DC2626; font-weight:bold;">취소 ✗</text>
+
+  <!-- I(n+2) - Cancelled -->
+  <rect x="520" y="300" width="70" height="30" class="stage"/>
+  <text x="555" y="320" class="cell">IF</text>
+  <rect x="600" y="300" width="70" height="30" class="stage"/>
+  <text x="635" y="320" class="cell">ID</text>
+  <rect x="680" y="300" width="70" height="30" class="cancel"/>
+  <text x="715" y="320" class="cell" style="fill:#DC2626; font-weight:bold;">취소 ✗</text>
+
+  <!-- Trap handler -->
+  <rect x="760" y="190" width="80" height="30" class="exc-inst"/>
+  <text x="800" y="210" class="cell" style="fill:#D97706; font-weight:bold;">Handler IF</text>
+
+  <!-- Exception detection line -->
+  <line x1="640" y1="175" x2="640" y2="340" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="642" y="360" class="sub" style="fill:#DC2626; font-weight:bold; font-size:12px;">예외 감지 시점</text>
+
+  <!-- Annotations -->
+  <rect x="30" y="370" width="400" height="130" rx="8" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1"/>
+  <text x="50" y="395" class="label">정확한 예외의 3가지 조건</text>
+  <text x="50" y="420" class="sub">1. I(n) 이전의 모든 명령어는 완료(커밋)되어야 한다.</text>
+  <text x="50" y="440" class="sub">2. I(n) 자체는 아키텍처 상태를 변경하지 않아야 한다.</text>
+  <text x="50" y="460" class="sub">3. I(n) 이후의 명령어는 모두 취소(flush)되어야 한다.</text>
+  <text x="50" y="485" class="sub" style="font-weight:bold;">→ mepc = I(n)의 PC, 트랩 핸들러에서 원인 분석 후 재시도 가능</text>
+
+  <!-- Legend -->
+  <rect x="480" y="380" width="20" height="14" class="commit"/>
+  <text x="510" y="393" class="sub">완료 (커밋됨)</text>
+  <rect x="480" y="405" width="20" height="14" class="exc-inst"/>
+  <text x="510" y="418" class="sub">예외 발생 명령어</text>
+  <rect x="480" y="430" width="20" height="14" class="cancel"/>
+  <text x="510" y="443" class="sub">취소 (플러시됨)</text>
+  <rect x="480" y="455" width="20" height="14" class="stage"/>
+  <text x="510" y="468" class="sub">정상 진행</text>
+</svg>

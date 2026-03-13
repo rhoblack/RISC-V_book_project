@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 07 — 멀티사이클 데이터패스</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 07</span>
+  <h1>멀티사이클 데이터패스</h1>
+  <p class="chapter-intro">
+    Ch06에서 완성한 단일 사이클 CPU는 "가장 느린 명령어"의 속도에 모든 명령어가 발목을 잡히는 근본적 한계를 지닙니다.
+    이 챕터에서는 하나의 명령어 실행을 여러 사이클로 분할하고 하드웨어 자원을 공유하는 멀티사이클(Multicycle) 구조를 설계합니다.
+    데이터패스에 IR, MDR, A, B, ALUOut이라는 다섯 개의 중간 레지스터를 추가하여 사이클 경계에서 데이터를 안전하게 보존하는 원리를 배웁니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: 임계 경로(Critical Path)가 클럭 주파수를 결정하는 원리를 논증할 수 있다. (이해)</li>
+    <li><strong>LO-2</strong>: 단계 분할과 자원 공유의 이점을 단일 사이클과 대비하여 설명할 수 있다. (이해)</li>
+    <li><strong>LO-3</strong>: A/B/ALUOut/MDR 레지스터의 역할을 사이클 경계에서 설명할 수 있다. (이해/적용)</li>
+    <li><strong>LO-4</strong>: 중간 결과 레지스터와 공유 MUX를 포함한 멀티사이클 데이터패스를 구현할 수 있다. (적용)</li>
+    <li><strong>LO-5</strong>: 단일 사이클 vs 멀티사이클의 면적·CPI·Fmax 트레이드오프(Tradeoff)를 평가할 수 있다. (분석)</li>
+  </ul>
+</nav>
+
+<!-- 챕터 도입부 서사 -->
+<section id="chapter-intro-narrative">
+  <p>
+    Ch06의 마지막 페이지를 떠올려 보십시오. Vivado의 타이밍 보고서가 화면에 떴을 때,
+    여러분의 CPU는 약 25~30 MHz에서 동작하고 있었습니다.
+    "왜 이렇게 느린가?"라는 의문을 가졌다면, 그 직관은 정확합니다.
+    단일 사이클 CPU의 클럭 주기는 가장 복잡한 명령어 — LW — 가 거치는 모든 단계의 지연을 더한 값으로 결정됩니다.
+    ADD 명령어처럼 빠른 명령어도 LW와 동일한 긴 사이클을 기다려야 합니다.
+  </p>
+  <p>
+    이 챕터에서 우리는 그 비효율을 해결하기 위한 첫 번째 전략, <strong>멀티사이클 구조</strong>를 배웁니다.
+    핵심 아이디어는 두 가지입니다: 명령어 실행을 여러 사이클로 <em>분할</em>하고,
+    각 사이클마다 동일한 하드웨어 자원을 <em>재사용</em>합니다.
+    이를 위해 사이클 경계마다 데이터를 보존하는 중간 레지스터가 추가됩니다.
+    이 다섯 개의 레지스터가 이 챕터의 주인공입니다.
+  </p>
+</section>
+
+<!-- ========== 7.1절 ========== -->
+<section id="sec-07-1">
+  <h2>7.1 단일 사이클의 한계 — 왜 개선이 필요한가</h2>
+
+  <p>
+    여러분이 Ch06에서 측정한 단일 사이클 CPU는 약 25~30 MHz에서 동작했습니다.
+    이론적으로 FPGA 내부 조합 논리 지연만 고려하면 훨씬 높은 주파수가 가능할 것 같지만,
+    실제 타이밍 보고서는 그렇지 않았습니다. 그 이유는 바로 <strong>임계 경로(Critical Path)</strong>에 있습니다.
+  </p>
+
+  <h3>임계 경로란 무엇인가</h3>
+  <p>
+    디지털 회로에서 임계 경로란 조합 논리 블록들을 거쳐 플립플롭에 도달하는 경로 중
+    <strong>전파 지연(Propagation Delay)이 가장 긴 경로</strong>입니다.
+    클럭 주기는 이 임계 경로의 지연보다 반드시 길어야 합니다.
+    즉, 가장 느린 경로 하나가 전체 CPU의 동작 속도를 결정합니다.
+  </p>
+  <p>
+    단일 사이클 CPU에서 임계 경로는 LW 명령어가 지나는 경로입니다:
+    명령어 메모리 → 디코더+레지스터 파일 읽기 → ALU(주소 계산) → 데이터 메모리 → 레지스터 파일 쓰기.
+    이 경로의 총 지연이 T_clk(클럭 주기)의 하한을 결정합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch07_sec01_single_cycle_bottleneck.svg" alt="단일 사이클 임계 경로 병목 시각화">
+    <figcaption>그림 7.1: 단일 사이클 CPU의 임계 경로 — LW 명령어가 모든 사이클의 하한을 결정한다.</figcaption>
+  </figure>
+
+  <h3>명령어 타입별 실제 필요 지연 vs 클럭 주기</h3>
+  <p>
+    아래 표는 RV32I 주요 명령어 타입별로 실제 필요한 하드웨어 단계와 예상 지연을 보여줍니다.
+    단일 사이클에서는 모든 명령어가 LW의 800 ps를 기다려야 합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어 타입</th>
+        <th>거치는 단계</th>
+        <th>실제 필요 지연 (예시)</th>
+        <th>단일 사이클 클럭 (T_clk)</th>
+        <th>낭비 시간</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>R-type (ADD, SUB 등)</td>
+        <td>IMEM → Decode/RegR → ALU → RegW</td>
+        <td>~600 ps</td>
+        <td>800 ps</td>
+        <td><strong>200 ps</strong></td>
+      </tr>
+      <tr>
+        <td>S-type (SW)</td>
+        <td>IMEM → Decode/RegR → ALU → DMEM</td>
+        <td>~700 ps</td>
+        <td>800 ps</td>
+        <td><strong>100 ps</strong></td>
+      </tr>
+      <tr>
+        <td>B-type (BEQ)</td>
+        <td>IMEM → Decode/RegR → ALU(비교)</td>
+        <td>~500 ps</td>
+        <td>800 ps</td>
+        <td><strong>300 ps</strong></td>
+      </tr>
+      <tr>
+        <td><strong>LW (임계 경로)</strong></td>
+        <td>IMEM → Decode/RegR → ALU → DMEM → RegW</td>
+        <td><strong>~800 ps</strong></td>
+        <td>800 ps</td>
+        <td>0 ps</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>두 가지 자원 낭비</h3>
+  <p>
+    단일 사이클 CPU의 비효율은 두 가지 측면에서 발생합니다.
+  </p>
+  <p>
+    <strong>① 클럭 낭비</strong>: ADD 명령어는 600 ps면 충분하지만, 800 ps짜리 클럭을 기다립니다.
+    이 200 ps 동안 ALU, 레지스터 파일 등의 하드웨어는 유휴(idle) 상태입니다.
+    전체 실행 시간의 25%가 허비됩니다.
+  </p>
+  <p>
+    <strong>② 하드웨어 자원 낭비</strong>: 단일 사이클에서는 명령어 메모리(IMEM)와 데이터 메모리(DMEM)가
+    물리적으로 분리되어야 합니다. LW 명령어는 같은 사이클 안에 명령어를 읽고 데이터도 읽어야 하기 때문입니다.
+    그러나 이 두 메모리가 <em>동시에 접근</em>되는 명령어는 LW/SW뿐입니다.
+    나머지 명령어들은 하나의 메모리 포트만 사용합니다. 즉, 한쪽 메모리가 항상 쉬고 있습니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 멀티사이클을 배우는 이유가 뭔가요? 바로 파이프라인으로 넘어가면 안 되나요?</p>
+    <p><strong>A:</strong> 멀티사이클은 파이프라인의 전 단계입니다. 파이프라인은 멀티사이클의 각 단계를 <em>겹쳐서</em> 실행하는 구조입니다.
+    멀티사이클에서 "왜 단계를 나누는가", "중간 레지스터가 왜 필요한가"를 확실히 이해해야
+    파이프라인 해저드(Hazard) 개념이 자연스럽게 이해됩니다.
+    멀티사이클을 건너뛰면 파이프라인 스테이지 레지스터의 존재 이유가 막연하게 느껴집니다.</p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 임계 경로와 클럭 주기</strong>
+    <p>
+      Vivado에서 타이밍 보고서를 열면 <code>Worst Negative Slack (WNS)</code>이 표시됩니다.
+      WNS가 음수라면 타이밍 위반 — 임계 경로가 클럭 주기보다 깁니다.
+      Ch06에서 여러분의 단일 사이클 CPU가 25~30 MHz를 넘기 어려웠던 이유가 바로 LW의 긴 임계 경로입니다.
+      멀티사이클로 전환하면 각 단계의 지연만 고려하면 되므로 동일 하드웨어에서 클럭을 더 높일 수 있습니다.
+    </p>
+  </aside>
+
+</section>
+
+<!-- ========== 7.2절 ========== -->
+<section id="sec-07-2">
+  <h2>7.2 멀티사이클의 핵심 아이디어 — 단계 분할과 자원 공유</h2>
+
+  <p>
+    단일 사이클의 비효율을 해결하는 아이디어는 직관적입니다:
+    <strong>긴 작업을 짧은 단계들로 나누고, 각 단계에서 동일한 도구를 재사용하면 된다</strong>.
+    이를 레스토랑 비유로 시작하여 하드웨어 용어로 전환해 설명하겠습니다.
+  </p>
+
+  <h3>비유: 코스 요리 주방</h3>
+  <div class="analogy">
+    <strong>비유: 코스 요리 주방</strong>
+    <p>
+      단일 사이클 CPU를 "모든 요리를 한 번에 만드는 요리사"로 비유해 봅시다.
+      전채, 수프, 메인, 디저트를 한 접시에 동시에 조리합니다.
+      가장 오래 걸리는 메인 요리가 완성될 때까지 모든 스테이션이 기다려야 합니다.
+    </p>
+    <p>
+      <strong>한계</strong>: 수프 스테이션은 메인 요리가 완성될 때까지 놀고 있고,
+      오븐(디저트용)도 메인 요리가 오기 전까지 비어 있습니다.
+    </p>
+    <p>
+      <strong>멀티사이클 해법</strong>: 이제 요리를 코스별로 순서대로 제공합니다.
+      전채 → 수프 → 메인 → 디저트. 각 코스마다 같은 냄비, 같은 오븐, 같은 칼을 재사용합니다.
+      별도 장비가 필요 없습니다 — 공용 장비 작업실입니다.
+    </p>
+    <p>
+      하드웨어로 돌아오면: 명령어 실행을 IF → ID → EX → MEM → WB 단계로 분할하고,
+      각 단계에서 하나의 ALU, 하나의 메모리를 재사용합니다.
+    </p>
+    <p>
+      <strong>⚠ 파이프라인과의 혼동 주의</strong>:
+      이 비유에는 중요한 한계가 있습니다.
+      코스 요리에서 요리사는 한 번에 한 손님의 요리만 진행합니다.
+      즉, 한 명령어를 완전히 완료한 후에 다음 명령어를 시작합니다.
+      이것이 멀티사이클의 방식입니다.
+      Chapter 09에서 배울 파이프라인(Pipeline)은 다릅니다 — 여러 명령어를 동시에 서로 다른 단계에서 처리합니다.
+      마치 여러 손님의 요리를 각각 다른 조리 단계에서 동시 진행하는 것과 같습니다.
+      지금은 멀티사이클(한 번에 하나의 명령어)에 집중합니다.
+    </p>
+  </div>
+
+  <h3>5단계 분할</h3>
+  <p>
+    멀티사이클 CPU는 명령어 실행을 최대 5단계로 분할합니다.
+    각 단계는 정확히 <strong>1 클럭 사이클</strong>을 소모합니다.
+    명령어 타입에 따라 필요하지 않은 단계는 건너뜁니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>단계</th>
+        <th>약칭</th>
+        <th>수행 작업</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>명령어 인출 (Instruction Fetch)</td>
+        <td>IF</td>
+        <td>PC가 가리키는 메모리 주소에서 명령어를 읽고 IR에 저장, PC ← PC+4</td>
+      </tr>
+      <tr>
+        <td>명령어 해독 / 레지스터 읽기 (Instruction Decode)</td>
+        <td>ID</td>
+        <td>IR에서 opcode/rs1/rs2/rd 추출, 레지스터 파일 읽기, A/B 레지스터 갱신</td>
+      </tr>
+      <tr>
+        <td>실행 (Execution)</td>
+        <td>EX</td>
+        <td>ALU로 연산 또는 주소 계산, 결과를 ALUOut 레지스터에 저장</td>
+      </tr>
+      <tr>
+        <td>메모리 접근 (Memory Access)</td>
+        <td>MEM</td>
+        <td>LW: 메모리 읽기 후 MDR 저장 / SW: 메모리 쓰기 / Branch: PC 갱신</td>
+      </tr>
+      <tr>
+        <td>결과 기록 (Write-Back)</td>
+        <td>WB</td>
+        <td>레지스터 파일에 결과 기록 (ALUOut 또는 MDR)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>명령어 타입별 사이클 수</h3>
+  <p>
+    모든 명령어가 5단계를 모두 거치는 것은 아닙니다.
+    필요한 단계만 실행하므로 빠른 명령어는 사이클을 절약합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어 타입</th>
+        <th>IF</th>
+        <th>ID</th>
+        <th>EX</th>
+        <th>MEM</th>
+        <th>WB</th>
+        <th>총 사이클 수</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>R-type (ADD, SUB, AND 등)</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>—</td>
+        <td>✓</td>
+        <td><strong>4</strong></td>
+      </tr>
+      <tr>
+        <td>I-type 연산 (ADDI, ANDI 등)</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>—</td>
+        <td>✓</td>
+        <td><strong>4</strong></td>
+      </tr>
+      <tr>
+        <td>Load (LW)</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td><strong>5</strong></td>
+      </tr>
+      <tr>
+        <td>Store (SW)</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>—</td>
+        <td><strong>4</strong></td>
+      </tr>
+      <tr>
+        <td>Branch (BEQ, BNE 등)</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>✓</td>
+        <td>—</td>
+        <td>—</td>
+        <td><strong>3</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Princeton 구조: 메모리 통합</h3>
+  <p>
+    단일 사이클은 IF 단계와 MEM 단계가 <em>같은 사이클</em>에 발생하므로 두 개의 분리된 메모리(IMEM/DMEM)가 필요했습니다.
+    멀티사이클에서는 IF와 MEM이 <em>서로 다른 사이클</em>에 발생합니다.
+    따라서 명령어와 데이터를 <strong>하나의 통합 메모리(Unified Memory)</strong>로 처리할 수 있습니다.
+    이를 폰 노이만(Von Neumann) 또는 <strong>프린스턴(Princeton) 구조</strong>라 부릅니다.
+    Ch05에서 배운 하버드(Harvard) 구조(분리 메모리)와 대비됩니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch07_sec02_multicycle_idea.svg" alt="멀티사이클 5단계 분할 개념">
+    <figcaption>그림 7.2: 멀티사이클의 핵심 아이디어 — 단계 분할과 자원 공유.</figcaption>
+  </figure>
+
+  <h3>통합 메모리 구현 예시</h3>
+  <p>
+    아래는 Princeton 구조 통합 메모리의 최소 구현입니다.
+    멀티사이클 데이터패스 전체 코드(<code>ch07_multicycle_datapath.sv</code>)에 인라인으로 포함되어 있지만,
+    개념 이해를 위해 독립 모듈로 분리하여 살펴봅니다.
+  </p>
+
+  <pre><code class="language-verilog">// 통합 메모리 핵심 구조 (ch07_sec02_unified_memory.sv 발췌)
+// 16KB (4K 워드) — 명령어와 데이터를 하나의 배열로 처리
+logic [31:0] mem [0:4095];
+
+initial begin
+   $readmemh("program.hex", mem); // 프로그램 이미지 적재
+end
+
+// 동기 읽기 — IF 단계(명령어)와 MEM 단계(데이터)가 같은 포트 사용
+always_ff @(posedge clk) begin
+   if (mem_read)
+      read_data &lt;= mem[addr[13:2]]; // 워드 정렬: 하위 2비트 무시
+end
+
+// 동기 쓰기 (바이트 인에이블)
+always_ff @(posedge clk) begin
+   if (mem_write) begin
+      if (byte_enable[3]) mem[addr[13:2]][31:24] &lt;= write_data[31:24];
+      if (byte_enable[2]) mem[addr[13:2]][23:16] &lt;= write_data[23:16];
+      if (byte_enable[1]) mem[addr[13:2]][15:8]  &lt;= write_data[15:8];
+      if (byte_enable[0]) mem[addr[13:2]][7:0]   &lt;= write_data[7:0];
+   end
+end</code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> IF와 MEM이 다른 사이클이라면 메모리 하나로 충분한가요? 동시에 두 번 접근하는 경우는 없나요?</p>
+    <p><strong>A:</strong> 맞습니다. 멀티사이클에서 IF(사이클 1)와 MEM(사이클 4 또는 5)은 절대 같은 사이클에 발생하지 않습니다.
+    FSM이 한 번에 하나의 상태만 활성화하기 때문입니다.
+    따라서 단일 포트(single-port) 메모리 하나로 명령어 인출과 데이터 접근을 모두 처리할 수 있습니다.
+    이것이 Princeton 구조의 핵심 이점입니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 멀티사이클이 단일 사이클보다 항상 빠른가요?</p>
+    <p><strong>A:</strong> 클럭 주파수(Fmax)는 더 높아집니다. 그러나 명령어당 평균 사이클 수(CPI, Cycles Per Instruction)가 1보다 크므로,
+    실제 처리량(Throughput = Fmax / CPI)이 항상 증가하지는 않습니다.
+    Branch가 많은 프로그램에서는 CPI가 ~3에 가까워 유리하지만, LW가 많으면 CPI=5가 빈번합니다.
+    멀티사이클의 진정한 가치는 <em>하드웨어 자원 절감</em>과 <em>설계 단순화</em>에 있으며,
+    성능 극대화는 Ch09에서 배울 파이프라인이 담당합니다.</p>
+  </aside>
+</section>
+
+<!-- ========== 7.3절 ========== -->
+<section id="sec-07-3">
+  <h2>7.3 멀티사이클 데이터패스 설계</h2>
+
+  <p>
+    이제 실제 SystemVerilog 구현으로 들어갑니다.
+    멀티사이클 데이터패스는 Ch06의 단일 사이클 데이터패스에서
+    중간 레지스터 5종과 공유 MUX를 추가하고, 분리된 IMEM/DMEM을 하나의 통합 메모리로 교체한 구조입니다.
+  </p>
+
+  <!-- ===== 7.3.1 소절 ===== -->
+  <h3 id="sec-07-3-1">7.3.1 A/B 레지스터, ALUOut, IR — IF/ID/EX 단계</h3>
+
+  <h4>단일 사이클 대비 변경점 요약</h4>
+  <p>
+    아래 표는 Ch06 단일 사이클 데이터패스와 비교하여 무엇이 추가·변경·유지되었는지 요약합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>구분</th>
+        <th>항목</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>추가</strong></td>
+        <td>IR (명령어 레지스터)</td>
+        <td>인출된 명령어를 이후 사이클에서도 유지</td>
+      </tr>
+      <tr>
+        <td><strong>추가</strong></td>
+        <td>MDR (메모리 데이터 레지스터)</td>
+        <td>메모리 읽기 결과를 WB 단계까지 보존</td>
+      </tr>
+      <tr>
+        <td><strong>추가</strong></td>
+        <td>A/B 레지스터</td>
+        <td>레지스터 파일 출력을 EX 단계까지 보존</td>
+      </tr>
+      <tr>
+        <td><strong>추가</strong></td>
+        <td>ALUOut 레지스터</td>
+        <td>ALU 연산 결과를 MEM/WB 단계까지 보존</td>
+      </tr>
+      <tr>
+        <td><strong>변경</strong></td>
+        <td>IMEM + DMEM → 통합 메모리</td>
+        <td>Princeton 구조로 메모리 통합, IorD MUX 추가</td>
+      </tr>
+      <tr>
+        <td><strong>변경</strong></td>
+        <td>ALUSrcA: 1비트 MUX</td>
+        <td>0=PC, 1=A 레지스터 (단일 사이클은 항상 레지스터)</td>
+      </tr>
+      <tr>
+        <td><strong>변경</strong></td>
+        <td>ALUSrcB: 2비트 MUX</td>
+        <td>00=B, 01=4, 10=imm (PC+4와 분기 주소 계산 공유)</td>
+      </tr>
+      <tr>
+        <td><strong>유지</strong></td>
+        <td>레지스터 파일, ALU, 즉치수 생성기</td>
+        <td>구조 동일, 입력 소스만 변경</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>IR (명령어 레지스터, Instruction Register)</h4>
+  <p>
+    단일 사이클에서는 명령어 메모리(IMEM)가 조합 논리로 구현되어 매 사이클 즉시 명령어를 출력했습니다.
+    멀티사이클에서는 통합 메모리가 <em>동기 읽기</em>이므로, 명령어는 IF 사이클이 끝난 후 다음 클럭 에지에 유효해집니다.
+    IF 다음에 오는 ID, EX, WB 단계에서도 동일한 명령어를 사용해야 하므로,
+    <strong>IR 레지스터</strong>에 인출된 명령어를 보존합니다.
+  </p>
+  <p>
+    IR은 <code>ir_write</code> 신호가 1일 때만 갱신됩니다 (IF 단계).
+    이후 사이클에서 <code>ir_write = 0</code>이 되면 IR은 값을 유지합니다.
+    이를 통해 ID~WB 단계에서 <code>ir_reg[19:15]</code>(rs1), <code>ir_reg[24:20]</code>(rs2),
+    <code>ir_reg[11:7]</code>(rd) 등의 명령어 필드를 안전하게 참조할 수 있습니다.
+  </p>
+
+  <h4>A/B 레지스터 — 레지스터 파일 출력 보존</h4>
+  <p>
+    레지스터 파일은 ID 단계에서 읽힙니다. 읽은 결과(rs1, rs2 데이터)는 EX 단계에서 ALU 입력으로 사용됩니다.
+    그런데 EX 단계가 시작되면 FSM이 다른 상태로 전환되어 레지스터 파일 주소가 바뀔 수 있습니다.
+    이를 방지하기 위해 <strong>A 레지스터</strong>(rs1 보존)와 <strong>B 레지스터</strong>(rs2 보존)를 사용합니다.
+  </p>
+
+  <pre><code class="language-verilog">// 중간 레지스터 핵심 구현 (ch07_sec03_intermediate_regs.sv 발췌)
+
+// IR (명령어 레지스터) — ir_write 인에이블, 리셋 시 NOP
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      ir_reg &lt;= 32'h0000_0013;   // NOP (ADDI x0, x0, 0)
+   else if (ir_write)
+      ir_reg &lt;= mem_data_out;    // IF 단계에서만 갱신
+end
+
+// A 레지스터 — ID 단계 rs1 데이터 보존
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      a_reg &lt;= 32'd0;
+   else
+      a_reg &lt;= rs1_data;         // 매 사이클 갱신 (ID → EX 경계에서 사용)
+end
+
+// B 레지스터 — ID 단계 rs2 데이터 보존 (EX ALU 입력 또는 SW 쓰기 데이터)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      b_reg &lt;= 32'd0;
+   else
+      b_reg &lt;= rs2_data;
+end</code></pre>
+
+  <h4>ALUOut 레지스터 — ALU 결과 보존</h4>
+  <p>
+    EX 단계에서 ALU가 계산한 결과(예: 메모리 주소, 연산 결과)는 MEM 또는 WB 단계에서 사용됩니다.
+    EX 단계가 끝나면 ALU 입력 MUX가 변경될 수 있으므로, ALU 결과를 <strong>ALUOut 레지스터</strong>에 보존합니다.
+  </p>
+  <p>
+    PC 소스 MUX(PCSrc)는 <code>pc_src</code> 신호로 세 가지 값 중 하나를 선택합니다:
+  </p>
+  <ul>
+    <li><code>2'b00</code>: <code>alu_result</code> 직접 — IF 단계의 PC+4 계산 시 즉시 사용</li>
+    <li><code>2'b01</code>: <code>alu_out_reg</code> — EX 단계에서 계산된 분기 목표 주소</li>
+    <li><code>2'b10</code>: <strong>[Ch08 검토 예정 — 주의]</strong>
+      RV32I JAL은 PC-relative 주소(PC+imm_J)이므로, EX 단계에서 ALU가 PC+imm_J를 계산하여
+      ALUOut에 저장한 후 <code>pc_src=2'b01</code>을 사용합니다.
+      현재 코드의 <code>2'b10</code> 케이스는 MIPS J-type 방식(<code>{alu_out_reg[31:28], ir_reg[25:0], 2'b00}</code>)으로
+      구현되어 있으며, RV32I JAL 스펙과 일치하지 않습니다.
+      <strong>Ch08 FSM 설계 시 수정 예정</strong>입니다. 이 케이스를 그대로 FSM에 연결하지 마십시오.</li>
+  </ul>
+
+  <figure>
+    <img src="../../figures/ch07_sec03_multicycle_datapath.svg" alt="멀티사이클 전체 데이터패스">
+    <figcaption>그림 7.3: 멀티사이클 데이터패스 — A/B/ALUOut/IR 레지스터와 공유 MUX 구조.</figcaption>
+  </figure>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 중간 결과 레지스터: 사이클 경계의 보초병</strong>
+    <p>
+      각 중간 레지스터의 역할을 한 문장으로 설명할 수 있습니까?
+      다음 빈칸을 채워 보십시오:
+    </p>
+    <ul>
+      <li>IR은 [ _____ ] 단계에서 기록되어 [ _____ ]~[ _____ ] 단계에서 사용된다.</li>
+      <li>A 레지스터는 [ _____ ] 단계에서 기록된 [ _____ ] 데이터를 [ _____ ] 단계까지 보존한다.</li>
+      <li>ALUOut은 [ _____ ] 단계 ALU 결과를 [ _____ ] 또는 [ _____ ] 단계까지 보존한다.</li>
+    </ul>
+    <p>
+      (정답: IR — IF, ID~WB / A — ID, rs1, EX / ALUOut — EX, MEM, WB)
+    </p>
+  </aside>
+
+  <!-- ===== 7.3.2 소절 ===== -->
+  <h3 id="sec-07-3-2">7.3.2 MDR, 공유 MUX — MEM/WB 단계</h3>
+
+  <h4>MDR (메모리 데이터 레지스터, Memory Data Register)</h4>
+  <p>
+    LW 명령어의 MEM 단계에서 통합 메모리가 데이터를 읽어 출력합니다.
+    그러나 메모리 읽기가 동기 방식이므로, 읽기 결과는 MEM 사이클의 클럭 에지 이후에 유효해집니다.
+    즉, WB 단계가 시작될 때 비로소 데이터가 준비됩니다.
+    이 데이터를 WB 단계에서 레지스터 파일에 기록하려면 <strong>MDR(Memory Data Register)</strong>에 한 사이클 동안 보존해야 합니다.
+  </p>
+  <p>
+    MDR는 <code>ir_write</code>처럼 인에이블 신호가 없습니다.
+    매 사이클 <code>mdr_reg &lt;= mem_data_out;</code>으로 무조건 갱신됩니다.
+    이 방식이 올바르게 동작하는 이유를 정확히 이해해야 합니다.
+  </p>
+  <p>
+    <code>mem_data_out</code>은 <code>always_ff</code>로 구동되는 동기 레지스터 출력입니다.
+    <code>mem_read=0</code>인 사이클에서 <code>mem_data_out</code>은 마지막 읽기 결과를 유지합니다.
+    따라서 LW의 MEM 단계(사이클 4) 클럭 에지에서 MDR가 로드 데이터로 갱신되고,
+    WB 단계(사이클 5)에서 <code>mem_read=0</code>이므로 <code>mem_data_out</code>은
+    MEM 단계 결과를 유지하여 MDR가 같은 값으로 재갱신됩니다.
+    결과적으로 WB 단계에서 MDR는 올바른 로드 데이터를 보유하고 있습니다.
+  </p>
+  <p>
+    단, 이 방식은 <strong>FSM이 IF 단계와 MEM 단계를 명확히 분리한다는 전제에 의존합니다</strong>.
+    IF 단계에서 MDR가 명령어 코드로 갱신되더라도, WB 단계에서는 MEM 단계 클럭 에지 이후의
+    <code>mem_data_out</code> 값이 이미 저장되어 있으므로 기능적으로 올바르게 동작합니다.
+    Ch08에서 FSM을 설계할 때 <code>mem_read</code> 제어 신호를 IF와 MEM 단계에만
+    assert하도록 구현해야 이 동작이 보장됩니다.
+  </p>
+
+  <pre><code class="language-verilog">// MDR — 매 사이클 무조건 갱신 (인에이블 불필요)
+// MEM 단계: mem_data_out에 로드 데이터가 유효
+// WB 단계: mdr_reg를 레지스터 파일에 기록
+always_ff @(posedge clk) begin
+   mdr_reg &lt;= mem_data_out;   // 매 클럭 에지에 메모리 출력 래치
+end</code></pre>
+
+  <h4>IorD MUX — 통합 메모리 주소 선택</h4>
+  <p>
+    단일 포트 통합 메모리에 접근할 때 두 가지 주소가 사용됩니다:
+    IF 단계에서는 PC가 명령어 주소를 제공하고,
+    MEM 단계에서는 EX에서 계산된 ALUOut이 데이터 주소를 제공합니다.
+    <strong>IorD MUX</strong>(<code>i_or_d</code> 신호)가 두 주소 중 하나를 선택합니다:
+  </p>
+  <ul>
+    <li><code>i_or_d = 0</code>: <code>pc_reg</code> → 명령어 인출 (IF 단계)</li>
+    <li><code>i_or_d = 1</code>: <code>alu_out_reg</code> → 데이터 접근 (MEM 단계)</li>
+  </ul>
+
+  <pre><code class="language-verilog">// IorD MUX (ch07_multicycle_datapath.sv 발췌)
+assign mem_addr = i_or_d ? alu_out_reg : pc_reg;</code></pre>
+
+  <h4>ALUSrcA/B 확장 — 공유 ALU를 여러 단계에서 사용</h4>
+  <p>
+    멀티사이클에서 단일 ALU가 여러 용도로 재사용됩니다:
+    IF 단계에서는 PC+4를 계산하고, EX 단계에서는 레지스터 연산을 수행하며, 분기 명령어에서는 분기 주소를 계산합니다.
+    이를 위해 ALU 입력 MUX가 단일 사이클보다 더 많은 선택지를 가집니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>신호</th>
+        <th>값</th>
+        <th>ALU 입력 소스</th>
+        <th>사용 단계</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2"><code>alu_src_a</code></td>
+        <td>0</td>
+        <td>PC 레지스터</td>
+        <td>IF (PC+4), EX (분기 주소: PC+offset)</td>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>A 레지스터 (rs1)</td>
+        <td>EX (레지스터 연산)</td>
+      </tr>
+      <tr>
+        <td rowspan="3"><code>alu_src_b[1:0]</code></td>
+        <td>2'b00</td>
+        <td>B 레지스터 (rs2)</td>
+        <td>EX (R-type 연산)</td>
+      </tr>
+      <tr>
+        <td>2'b01</td>
+        <td>상수 4</td>
+        <td>IF (PC ← PC+4)</td>
+      </tr>
+      <tr>
+        <td>2'b10</td>
+        <td>즉치수 (imm_ext)</td>
+        <td>EX (I-type, S-type, 분기 주소)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>LW 명령어 5사이클 실행 추적</h4>
+  <p>
+    LW 명령어 <code>lw rd, imm(rs1)</code>이 어떻게 5사이클을 거치는지 단계별로 추적합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>사이클</th>
+        <th>단계</th>
+        <th>주요 동작</th>
+        <th>핵심 제어 신호</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>IF</td>
+        <td>메모리[PC] → IR, PC ← PC+4</td>
+        <td>ir_write=1, pc_write=1, alu_src_b=01, pc_src=00</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>ID</td>
+        <td>IR 디코딩, 레지스터 읽기 → A(rs1), B(rs2)</td>
+        <td>(레지스터 파일 비동기 읽기, A/B 자동 래치)</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>EX</td>
+        <td>A + imm_ext → ALUOut (로드 주소 계산)</td>
+        <td>alu_src_a=1, alu_src_b=10, alu_op=ADD</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>MEM</td>
+        <td>메모리[ALUOut] 읽기 → MDR</td>
+        <td>i_or_d=1, mem_read=1</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>WB</td>
+        <td>MDR → 레지스터 파일[rd]</td>
+        <td>reg_write=1, mem_to_reg=01</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../figures/ch07_sec03_signal_timeline.svg" alt="R-type 명령어 4사이클 신호 타이밍 다이어그램">
+    <figcaption>그림 7.4: R-type 명령어 4사이클 신호 타이밍 다이어그램 — 각 사이클에 활성화되는 제어 신호를 확인할 수 있다.</figcaption>
+  </figure>
+
+  <h4>전체 멀티사이클 데이터패스 핵심 발췌</h4>
+  <p>
+    아래는 <code>ch07_multicycle_datapath.sv</code>의 주요 부분입니다.
+    포트 선언, PC 로직, 레지스터 파일, ALU만 발췌합니다.
+    완전한 코드는 챕터 말미의 "전체 소스 코드" 절을 참조하십시오.
+  </p>
+
+  <pre><code class="language-verilog">// ===== 모듈 포트 (ch07_multicycle_datapath.sv 발췌) =====
+module multicycle_datapath (
+   input  logic        clk, rst_n,
+   // 제어 신호 (Ch08 FSM에서 공급)
+   input  logic        pc_write, pc_write_cond, i_or_d,
+   input  logic        mem_read, mem_write, ir_write, reg_write,
+   input  logic [1:0]  reg_dst, mem_to_reg,  // reg_dst: 향후 확장 예약 (현재 미사용)
+   input  logic        alu_src_a,
+   input  logic [1:0]  alu_src_b,
+   input  logic [3:0]  alu_op,
+   input  logic [1:0]  pc_src,
+   // 상태 출력 (FSM으로 전달)
+   output logic [6:0]  opcode,
+   output logic [2:0]  funct3,
+   output logic [6:0]  funct7,
+   output logic        alu_zero
+);
+// ⓘ reg_dst는 향후 확장을 위한 예약 신호입니다.
+//   현재 구현에서 rd_addr은 IR에서 직접 추출합니다: rd_addr = ir_reg[11:7]
+//   RV32I에서 쓰기 대상 레지스터는 항상 rd(ir[11:7])이므로 MUX가 불필요합니다.
+//   (MIPS에서는 R-type rd와 I-type rt를 구분하는 reg_dst MUX가 필요했습니다.)
+
+// ===== PC 인에이블 로직 =====
+// 무조건 쓰기 OR (조건부 쓰기 AND ALU Zero)
+assign pc_en = pc_write | (pc_write_cond &amp; alu_zero);
+
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)  pc_reg &lt;= 32'h0000_0000;
+   else if (pc_en) pc_reg &lt;= pc_next;
+end
+
+// PCSrc MUX
+always_comb begin
+   case (pc_src)
+      2'b00: pc_next = alu_result;     // ALU 직접 (PC+4)
+      2'b01: pc_next = alu_out_reg;    // ALUOut (분기 목표)
+      // 2'b10: JAL — Ch08 FSM 설계와 함께 검토
+      default: pc_next = alu_result;
+   endcase
+end
+
+// ===== ALU 입력 MUX =====
+assign alu_a = alu_src_a ? a_reg : pc_reg;
+
+always_comb begin
+   case (alu_src_b)
+      2'b00: alu_b = b_reg;    // R-type: rs2
+      2'b01: alu_b = 32'd4;   // IF: PC+4
+      2'b10: alu_b = imm_ext; // I/S/B-type: 즉치수
+      default: alu_b = b_reg;
+   endcase
+end
+
+// ===== Write-Back MUX =====
+always_comb begin
+   case (mem_to_reg)
+      2'b00: reg_write_data = alu_out_reg; // R/I-type
+      2'b01: reg_write_data = mdr_reg;     // LW
+      2'b10: reg_write_data = pc_reg;      // JAL/JALR 복귀 주소
+      default: reg_write_data = alu_out_reg;
+   endcase
+end</code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> A/B 레지스터 없이 레지스터 파일에서 직접 읽으면 안 되나요?</p>
+    <p><strong>A:</strong> 안 됩니다. 레지스터 파일의 읽기 주소는 IR의 rs1/rs2 필드에서 옵니다.
+    만약 EX 단계에서 IR이 다음 명령어로 바뀌면 (FSM이 잘못 전환된다면), 읽기 주소도 바뀝니다.
+    A/B 레지스터는 ID 단계에서 올바른 rs1/rs2 데이터를 캡처하여,
+    이후 사이클에서 레지스터 파일 상태와 무관하게 안정적인 값을 ALU에 제공합니다.
+    이것이 "사이클 경계의 보초병" 역할입니다.</p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — MUX 입력 방향 혼동 주의</strong>
+    <p>
+      수강생들이 가장 자주 혼동하는 부분은 ALUSrcB MUX입니다.
+      "2'b01이 왜 4인가?"라는 질문이 항상 나옵니다.
+      설명 팁: "IF 단계에서 ALU가 PC+4를 계산합니다. 이때 ALU B 입력으로 '4'라는 상수가 필요합니다.
+      상수 4는 별도 하드웨어 없이 MUX의 고정 입력으로 제공합니다.
+      2'b01이라는 인코딩은 설계자가 임의로 정한 것이고, 이 값은 Ch08 FSM 상태표에 반드시 명기해야 합니다."
+      이렇게 IF 단계의 동작에서 역방향으로 설명하면 이해가 빠릅니다.
+    </p>
+  </aside>
+</section>
+
+<!-- ========== 7.4절 ========== -->
+<section id="sec-07-4">
+  <h2>7.4 단일 사이클 vs 멀티사이클 데이터패스 비교</h2>
+
+  <p>
+    이제 두 구조를 체계적으로 비교하여 설계 트레이드오프를 명확히 합니다.
+    하드웨어 구성, 면적(합성 결과), 성능(Fmax, CPI)의 세 축으로 비교합니다.
+  </p>
+
+  <h3>하드웨어 구성 비교</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>단일 사이클 (Ch06)</th>
+        <th>멀티사이클 (Ch07)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>메모리 구조</td>
+        <td>IMEM + DMEM 분리 (Harvard)</td>
+        <td>통합 메모리 1개 (Princeton)</td>
+      </tr>
+      <tr>
+        <td>ALU 개수</td>
+        <td>메인 ALU 1개 + PC+4 가산기 별도</td>
+        <td>공유 ALU 1개 (PC+4도 이 ALU가 계산)</td>
+      </tr>
+      <tr>
+        <td>레지스터 추가</td>
+        <td>없음</td>
+        <td>IR, MDR, A, B, ALUOut (5개 추가)</td>
+      </tr>
+      <tr>
+        <td>MUX 복잡도</td>
+        <td>단순 (ALUSrcA 없음)</td>
+        <td>증가 (IorD, ALUSrcA, ALUSrcB 2비트, PCSrc 2비트)</td>
+      </tr>
+      <tr>
+        <td>제어 유닛</td>
+        <td>조합 논리 (단일 사이클 디코더)</td>
+        <td>순차 논리 FSM (Ch08에서 구현)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>"제거된 것 vs 추가된 것" 비교</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>제거된 것 (절감)</th>
+        <th>추가된 것 (비용)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>IMEM 또는 DMEM 중 하나 (메모리 통합)</td>
+        <td>IR, MDR, A, B, ALUOut 레지스터 5개</td>
+      </tr>
+      <tr>
+        <td>PC 전용 가산기</td>
+        <td>IorD MUX, ALUSrcA MUX 확장</td>
+      </tr>
+      <tr>
+        <td>명령어 타입별 전용 경로</td>
+        <td>ALUSrcB 2비트 MUX, PCSrc 2비트 MUX</td>
+      </tr>
+      <tr>
+        <td>(클럭 낭비 시간)</td>
+        <td>FSM 제어 유닛 (순차 논리 추가)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>면적 및 성능 비교 (Vivado 합성 예상 수치)</h3>
+  <p>
+    아래 수치는 Xilinx Basys 3 (Artix-7) 기준 예상 합성 결과입니다.
+    실측 후 여러분의 결과로 교체하여 비교해 보십시오.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>지표</th>
+        <th>단일 사이클</th>
+        <th>멀티사이클</th>
+        <th>변화</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>LUT 사용량</td>
+        <td>~1,850개</td>
+        <td>~1,240개</td>
+        <td>약 33% 감소</td>
+      </tr>
+      <tr>
+        <td>FF (플립플롭) 사용량</td>
+        <td>~420개</td>
+        <td>~550개</td>
+        <td>약 31% 증가</td>
+      </tr>
+      <tr>
+        <td>Fmax</td>
+        <td>~28 MHz</td>
+        <td>~62 MHz (예상)</td>
+        <td>약 2.2배 증가</td>
+      </tr>
+      <tr>
+        <td>CPI</td>
+        <td>1 (모든 명령어)</td>
+        <td>평균 ~4 (Branch 3, R/I/SW 4, LW 5)</td>
+        <td>4배 증가</td>
+      </tr>
+      <tr>
+        <td>처리량 (Fmax/CPI)</td>
+        <td>~28 MIPS</td>
+        <td>~15.5 MIPS (예상)</td>
+        <td>단순 성능은 감소</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    처리량 수치만 보면 멀티사이클이 불리해 보입니다.
+    그러나 멀티사이클의 진정한 가치는 <strong>하드웨어 면적 절감(LUT ~33% 감소)</strong>과
+    <strong>설계의 모듈성</strong>에 있습니다.
+    또한, 멀티사이클은 파이프라인의 직접적 선행 구조입니다.
+    파이프라인(Ch09)에서는 CPI를 다시 ~1에 가깝게 낮추면서 높은 Fmax를 유지합니다.
+  </p>
+
+  <h3>설계 관점에서의 시사점</h3>
+  <p>
+    멀티사이클 구조가 의미 있는 또 다른 이유는 <strong>설계의 단계적 검증</strong>이 용이하다는 점입니다.
+    단일 사이클에서는 모든 명령어 경로가 동시에 존재하므로, 버그가 어느 명령어에서 발생했는지 추적하기 어렵습니다.
+    멀티사이클에서는 FSM 상태별로 하나씩 검증할 수 있습니다:
+    "IF 단계에서 PC+4가 올바른가? → ID 단계에서 rs1/rs2가 A/B 레지스터에 정확히 래치되는가? → EX 단계에서 ALU 결과가 ALUOut에 맞게 저장되는가?"
+    이 단계적 검증 방법론은 파이프라인 설계에서도 그대로 적용됩니다.
+  </p>
+  <p>
+    실무 ASIC 또는 FPGA 설계에서 멀티사이클 경로(Multicycle Path)는
+    타이밍 제약(Timing Constraint) 완화를 위해 의도적으로 사용되기도 합니다.
+    Vivado에서 <code>set_multicycle_path</code> 제약을 통해 특정 경로에 여러 사이클을 허용하면,
+    도구가 해당 경로의 타이밍 마진을 N사이클로 검증합니다.
+    이 개념 역시 멀티사이클 데이터패스의 원리에서 직접 파생됩니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch07_sec04_comparison.svg" alt="단일 사이클 vs 멀티사이클 비교">
+    <figcaption>그림 7.5: 단일 사이클과 멀티사이클 데이터패스의 주요 차이점 시각화.</figcaption>
+  </figure>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — MUX 증가가 왜 불가피한가</strong>
+    <p>
+      멀티사이클로 전환하면 MUX 수와 비트 폭이 늘어납니다.
+      IorD(1비트), ALUSrcA(1비트), ALUSrcB(2비트), PCSrc(2비트), MemtoReg(2비트) 등이 추가됩니다.
+      이는 하나의 하드웨어 자원(ALU, 메모리)을 여러 단계에서 <em>다른 용도</em>로 재사용하기 때문에 불가피합니다.
+      자원 공유(Resource Sharing)와 MUX 증가는 상호 보완적 트레이드오프입니다.
+      실제 FPGA에서 MUX는 LUT으로 구현되므로 MUX 증가가 LUT 사용량 일부를 상쇄합니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> IMEM과 DMEM을 통합 메모리로 합치면 보안 문제가 생기지 않나요?
+    코드 영역에 데이터를 쓸 수 있지 않나요?</p>
+    <p><strong>A:</strong> 맞습니다. Princeton 구조는 Von Neumann 병목(Von Neumann Bottleneck)과 함께
+    코드·데이터 영역 구분 없음이라는 보안 취약점을 내포합니다.
+    실제 운영체제는 메모리 보호(Memory Protection Unit, MPU)나 가상 메모리 시스템으로 이를 방지합니다.
+    교재의 구현은 단순화를 위해 보호 기능을 생략했습니다.
+    임베디드 시스템 설계 시에는 코드 영역의 쓰기 보호를 반드시 고려해야 합니다.</p>
+  </aside>
+</section>
+
+<!-- ========== 7.5절 ========== -->
+<section id="sec-07-5">
+  <h2>7.5 본 챕터 요약 및 다음 단계</h2>
+
+  <h3>핵심 개념 정리</h3>
+  <ul>
+    <li><strong>임계 경로와 클럭 주기</strong>: 단일 사이클에서 클럭 주기는 가장 느린 명령어(LW)의 전체 지연으로 결정된다. 이것이 단일 사이클 CPU가 25~30 MHz에 머무는 근본 원인이다.</li>
+    <li><strong>단계 분할</strong>: 명령어 실행을 IF, ID, EX, MEM, WB 최대 5단계로 분할하여 각 단계의 지연만 클럭 주기를 제약한다. Fmax가 약 2배 이상 향상된다.</li>
+    <li><strong>자원 공유</strong>: 단일 ALU와 단일 통합 메모리를 여러 단계에서 재사용한다. LUT 사용량이 약 33% 감소한다. 대신 IorD, ALUSrcA/B 등의 MUX가 추가된다.</li>
+    <li><strong>중간 레지스터 5종</strong>: IR(명령어 보존), A/B(레지스터 파일 출력 보존), ALUOut(ALU 결과 보존), MDR(메모리 읽기 결과 보존). 각 레지스터는 사이클 경계에서 데이터가 유실되지 않도록 보호한다.</li>
+    <li><strong>트레이드오프</strong>: Fmax 향상과 면적 절감이라는 장점이 있지만 CPI 증가(평균 ~4)로 단순 처리량은 단일 사이클보다 낮을 수 있다. 이 한계는 Ch09 파이프라인에서 해결한다.</li>
+  </ul>
+
+  <h3>학습 여정 돌아보기</h3>
+  <p>
+    Ch01에서 FPGA와 개발 환경을 갖추고, Ch02~Ch03에서 SystemVerilog 기초와 RISC-V 어셈블리를 익혔습니다.
+    Ch04에서는 ALU와 레지스터 파일이라는 데이터패스의 핵심 빌딩 블록을 만들었고,
+    Ch05에서는 메모리를, Ch06에서는 37개 명령어를 지원하는 단일 사이클 CPU를 완성했습니다.
+    그리고 이 챕터에서 우리는 처음으로 "시간(사이클)"을 의식하며 설계했습니다.
+    중간 레지스터들 — IR, A, B, ALUOut, MDR — 은 사이클 경계에서 데이터를 보호하는 역할을 맡았습니다.
+    이것이 바로 <strong>순차 설계(Sequential Design)의 핵심 사고방식</strong>입니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> 멀티사이클 CPU의 제어 유닛 구현 방식으로는 무엇이 있습니까?</p>
+    <p>
+      멀티사이클 제어 유닛은 크게 두 가지 방식으로 구현합니다.
+      <strong>하드와이어드(Hardwired)</strong> 방식은 FSM(유한 상태 기계)을 게이트 논리로 직접 구현하여 속도가 빠르지만 설계 변경이 어렵습니다.
+      <strong>마이크로프로그래밍(Microprogramming)</strong> 방식은 각 상태의 제어 신호를 ROM에 저장하여 유연하지만 속도가 느립니다.
+      Ch08에서는 SystemVerilog의 <code>always_ff</code>와 <code>case</code>문으로 FSM 기반 하드와이어드 제어 유닛을 구현합니다.
+    </p>
+  </aside>
+
+  <h3>Ch08 예고 — FSM 제어 유닛</h3>
+  <p>
+    이 챕터에서 설계한 데이터패스는 아직 "두뇌" 없이 배선만 완성된 상태입니다.
+    Ch07의 데이터패스가 올바르게 동작하려면, 각 사이클마다 적절한 제어 신호를
+    (<code>ir_write</code>, <code>pc_write</code>, <code>mem_read</code>, <code>alu_src_a</code> 등)
+    FSM이 생성해야 합니다.
+    Ch08에서는 SystemVerilog의 <code>always_ff</code>로 유한 상태 기계(FSM, Finite State Machine)를 구현하여
+    이 데이터패스에 연결합니다.
+    LW 명령어 하나만 해도 5개 상태, 5세트의 제어 신호가 필요합니다.
+    FSM 상태 다이어그램을 그리고 코드로 옮기는 과정이 Ch08의 핵심입니다.
+  </p>
+  <p>
+    Ch08을 시작하기 전에 한 가지 예상 질문을 생각해 보십시오:
+    "R-type 명령어는 MEM 단계가 없는데, FSM은 어떻게 EX 다음 바로 WB로 건너뛰는가?"
+    이 질문의 답이 FSM 상태 전이(State Transition) 로직의 핵심입니다.
+    opcode에 따라 다음 상태가 달라지고, 이것이 명령어별로 사이클 수가 다른 멀티사이클의 동적 제어를 실현합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — Ch08 FSM에 필요한 제어 신호 목록</strong>
+    <p>Ch08을 시작하기 전에 아래 신호들의 역할을 확실히 숙지하십시오:</p>
+    <ul>
+      <li><code>pc_write</code>: PC 무조건 갱신 (IF 단계)</li>
+      <li><code>pc_write_cond</code>: 조건부 PC 갱신 (Branch 단계)</li>
+      <li><code>i_or_d</code>: 메모리 주소 소스 선택 (IF=PC, MEM=ALUOut)</li>
+      <li><code>mem_read</code>: 메모리 읽기 인에이블 (IF, LW MEM 단계)</li>
+      <li><code>mem_write</code>: 메모리 쓰기 인에이블 (SW MEM 단계)</li>
+      <li><code>ir_write</code>: IR 갱신 인에이블 (IF 단계만)</li>
+      <li><code>reg_write</code>: 레지스터 파일 쓰기 (WB 단계)</li>
+      <li><code>alu_src_a</code>: ALU A 입력 선택</li>
+      <li><code>alu_src_b[1:0]</code>: ALU B 입력 선택</li>
+      <li><code>alu_op[3:0]</code>: ALU 연산 종류</li>
+      <li><code>mem_to_reg[1:0]</code>: WB 데이터 선택</li>
+      <li><code>pc_src[1:0]</code>: PC 갱신 소스 선택</li>
+    </ul>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>아래 질문에 답할 수 있으면 이 챕터를 충분히 이해한 것입니다:</p>
+    <ol>
+      <li>단일 사이클 CPU의 클럭 주기가 LW 명령어의 지연으로 결정되는 이유는 무엇인가?</li>
+      <li>IF 단계와 MEM 단계가 같은 메모리를 공유할 수 있는 이유는 무엇인가?</li>
+      <li>A/B 레지스터가 없다면 EX 단계에서 어떤 문제가 발생하는가?</li>
+      <li>MDR 레지스터에 인에이블 신호가 없는데도 올바르게 동작하는 이유는 무엇인가?</li>
+      <li>멀티사이클의 Fmax가 단일 사이클보다 높아도 처리량이 더 낮을 수 있는 이유는 무엇인가?</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>
+    이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+    지금 당장 한 줄씩 전부 이해하려 하지 않아도 됩니다 — 본문에서 각 블록의 역할을 이미 설명했습니다.
+    이 코드는 Ch08 FSM 제어 유닛과 연결하여 그대로 재사용합니다.
+    실습 시 참고용으로 활용하십시오.
+  </p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch07_multicycle_datapath.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 멀티사이클 데이터패스 (Multicycle Datapath)
+// Chapter 07 — 멀티사이클 데이터패스
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// RV32I 멀티사이클 프로세서의 데이터패스 모듈
+// 핵심 구성: 통합 메모리, 공유 ALU, 중간 레지스터 (IR, MDR, A, B, ALUOut)
+// 제어 유닛(FSM)은 Ch08에서 별도 설계
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module multicycle_datapath (
+   // --- 클럭 및 리셋 ---
+   input  logic        clk,           // 시스템 클럭
+   input  logic        rst_n,         // 비동기 리셋 (액티브 로우)
+
+   // --- 제어 신호 입력 (FSM 제어 유닛에서 공급) ---
+   input  logic        pc_write,      // PC 레지스터 쓰기 인에이블
+   input  logic        pc_write_cond, // 조건부 PC 쓰기 (분기 시)
+   input  logic        i_or_d,        // 메모리 주소 선택 (0: PC, 1: ALUOut)
+   input  logic        mem_read,      // 메모리 읽기 인에이블
+   input  logic        mem_write,     // 메모리 쓰기 인에이블
+   input  logic        ir_write,      // 명령어 레지스터 쓰기 인에이블
+   input  logic        reg_write,     // 레지스터 파일 쓰기 인에이블
+   input  logic [1:0]  reg_dst,       // 향후 확장 예약 신호 (현재 미사용 — 아래 설명 참조)
+   input  logic [1:0]  mem_to_reg,    // Write-Back 데이터 선택
+   input  logic        alu_src_a,     // ALU A 입력 선택 (0: PC, 1: A 레지스터)
+   input  logic [1:0]  alu_src_b,     // ALU B 입력 선택
+   input  logic [3:0]  alu_op,        // ALU 연산 코드
+   input  logic [1:0]  pc_src,        // PC 소스 선택
+
+   // --- 상태 출력 (제어 유닛으로 전달) ---
+   output logic [6:0]  opcode,        // 명령어 opcode 필드
+   output logic [2:0]  funct3,        // 명령어 funct3 필드
+   output logic [6:0]  funct7,        // 명령어 funct7 필드
+   output logic        alu_zero       // ALU Zero 플래그
+);
+
+   // =====================================================================
+   // 내부 신호 선언
+   // =====================================================================
+
+   // --- PC 관련 ---
+   logic [31:0] pc_reg;          // 프로그램 카운터 레지스터
+   logic [31:0] pc_next;         // 다음 PC 값
+   logic        pc_en;           // PC 실제 인에이블 (pc_write OR 조건부)
+
+   // --- 메모리 관련 ---
+   logic [31:0] mem_addr;        // 메모리 주소 (IorD MUX 출력)
+   logic [31:0] mem_data_out;    // 메모리 읽기 데이터
+
+   // --- 중간 레지스터 ---
+   logic [31:0] ir_reg;          // 명령어 레지스터 (Instruction Register)
+   logic [31:0] mdr_reg;         // 메모리 데이터 레지스터 (Memory Data Register)
+   logic [31:0] a_reg;           // A 레지스터 (rs1 데이터 임시 저장)
+   logic [31:0] b_reg;           // B 레지스터 (rs2 데이터 임시 저장)
+   logic [31:0] alu_out_reg;     // ALU 결과 레지스터
+
+   // --- 레지스터 파일 관련 ---
+   logic [4:0]  rs1_addr;        // rs1 주소
+   logic [4:0]  rs2_addr;        // rs2 주소
+   logic [4:0]  rd_addr;         // rd 주소
+   logic [31:0] rs1_data;        // rs1 읽기 데이터
+   logic [31:0] rs2_data;        // rs2 읽기 데이터
+   logic [31:0] reg_write_data;  // 레지스터 파일 쓰기 데이터
+
+   // --- ALU 관련 ---
+   logic [31:0] alu_a;           // ALU A 입력
+   logic [31:0] alu_b;           // ALU B 입력
+   logic [31:0] alu_result;      // ALU 연산 결과
+
+   // --- 즉치수 생성기 ---
+   logic [31:0] imm_ext;         // 부호 확장된 즉치수
+
+   // =====================================================================
+   // 명령어 필드 추출
+   // =====================================================================
+   assign opcode   = ir_reg[6:0];
+   assign funct3   = ir_reg[14:12];
+   assign funct7   = ir_reg[31:25];
+   assign rs1_addr = ir_reg[19:15];
+   assign rs2_addr = ir_reg[24:20];
+   assign rd_addr  = ir_reg[11:7];
+
+   // =====================================================================
+   // 1. 프로그램 카운터 (PC)
+   // =====================================================================
+   assign pc_en = pc_write | (pc_write_cond &amp; alu_zero);
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         pc_reg &lt;= 32'h0000_0000;
+      else if (pc_en)
+         pc_reg &lt;= pc_next;
+   end
+
+   always_comb begin
+      case (pc_src)
+         2'b00:   pc_next = alu_result;
+         2'b01:   pc_next = alu_out_reg;
+         2'b10:   pc_next = {alu_out_reg[31:28], ir_reg[25:0], 2'b00}; // JAL — Ch08 검토
+         default: pc_next = alu_result;
+      endcase
+   end
+
+   // =====================================================================
+   // 2. 메모리 주소 MUX (IorD)
+   // =====================================================================
+   assign mem_addr = i_or_d ? alu_out_reg : pc_reg;
+
+   // =====================================================================
+   // 3. 통합 메모리 (Unified Memory — Princeton 구조)
+   // =====================================================================
+   logic [31:0] memory [0:4095]; // 16KB (4K 워드)
+
+   always_ff @(posedge clk) begin
+      if (mem_read)
+         mem_data_out &lt;= memory[mem_addr[13:2]];
+   end
+
+   always_ff @(posedge clk) begin
+      if (mem_write)
+         memory[mem_addr[13:2]] &lt;= b_reg;
+   end
+
+   // =====================================================================
+   // 4. 명령어 레지스터 (IR)
+   // =====================================================================
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         ir_reg &lt;= 32'h0000_0013;  // NOP
+      else if (ir_write)
+         ir_reg &lt;= mem_data_out;
+   end
+
+   // =====================================================================
+   // 5. 메모리 데이터 레지스터 (MDR)
+   // =====================================================================
+   always_ff @(posedge clk) begin
+      mdr_reg &lt;= mem_data_out;
+   end
+
+   // =====================================================================
+   // 6. 레지스터 파일 (Register File)
+   // =====================================================================
+   logic [31:0] reg_file [0:31];
+
+   assign rs1_data = (rs1_addr == 5'd0) ? 32'd0 : reg_file[rs1_addr];
+   assign rs2_data = (rs2_addr == 5'd0) ? 32'd0 : reg_file[rs2_addr];
+
+   always_ff @(posedge clk) begin
+      if (reg_write &amp;&amp; (rd_addr != 5'd0))
+         reg_file[rd_addr] &lt;= reg_write_data;
+   end
+
+   always_comb begin
+      case (mem_to_reg)
+         2'b00:   reg_write_data = alu_out_reg;
+         2'b01:   reg_write_data = mdr_reg;
+         2'b10:   reg_write_data = pc_reg;
+         default: reg_write_data = alu_out_reg;
+      endcase
+   end
+
+   // =====================================================================
+   // 7. A/B 레지스터
+   // =====================================================================
+   always_ff @(posedge clk) begin
+      a_reg &lt;= rs1_data;
+      b_reg &lt;= rs2_data;
+   end
+
+   // =====================================================================
+   // 8. 즉치수 생성기 (Immediate Generator)
+   // =====================================================================
+   always_comb begin
+      case (opcode)
+         7'b0010011, 7'b0000011, 7'b1100111:
+            imm_ext = {{20{ir_reg[31]}}, ir_reg[31:20]};
+         7'b0100011:
+            imm_ext = {{20{ir_reg[31]}}, ir_reg[31:25], ir_reg[11:7]};
+         7'b1100011:
+            imm_ext = {{19{ir_reg[31]}}, ir_reg[31], ir_reg[7],
+                        ir_reg[30:25], ir_reg[11:8], 1'b0};
+         7'b0110111, 7'b0010111:
+            imm_ext = {ir_reg[31:12], 12'd0};
+         7'b1101111:
+            imm_ext = {{11{ir_reg[31]}}, ir_reg[31], ir_reg[19:12],
+                        ir_reg[20], ir_reg[30:21], 1'b0};
+         default:
+            imm_ext = 32'd0;
+      endcase
+   end
+
+   // =====================================================================
+   // 9. ALU 입력 MUX
+   // =====================================================================
+   assign alu_a = alu_src_a ? a_reg : pc_reg;
+
+   always_comb begin
+      case (alu_src_b)
+         2'b00:   alu_b = b_reg;
+         2'b01:   alu_b = 32'd4;
+         2'b10:   alu_b = imm_ext;
+         2'b11:   alu_b = imm_ext;
+         default: alu_b = b_reg;
+      endcase
+   end
+
+   // =====================================================================
+   // 10. ALU (공유 — 모든 단계에서 재사용)
+   // =====================================================================
+   always_comb begin
+      case (alu_op)
+         4'b0000: alu_result = alu_a + alu_b;
+         4'b0001: alu_result = alu_a - alu_b;
+         4'b0010: alu_result = alu_a &amp; alu_b;
+         4'b0011: alu_result = alu_a | alu_b;
+         4'b0100: alu_result = alu_a ^ alu_b;
+         4'b0101: alu_result = {31'd0, $signed(alu_a) &lt; $signed(alu_b)};
+         4'b0110: alu_result = {31'd0, alu_a &lt; alu_b};
+         4'b0111: alu_result = alu_a &lt;&lt; alu_b[4:0];
+         4'b1000: alu_result = alu_a &gt;&gt; alu_b[4:0];
+         4'b1001: alu_result = $signed(alu_a) &gt;&gt;&gt; alu_b[4:0];
+         default: alu_result = alu_a + alu_b;
+      endcase
+      alu_zero = (alu_result == 32'd0);   // case 이후 단 한 번 할당 (다중 드라이브 방지)
+   end
+
+   // =====================================================================
+   // 11. ALUOut 레지스터
+   // =====================================================================
+   always_ff @(posedge clk) begin
+      alu_out_reg &lt;= alu_result;
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch07_sec02_unified_memory.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// Princeton 구조 통합 메모리 (Unified Memory — Princeton Architecture)
+// Chapter 07 — 멀티사이클 데이터패스
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// 목적: 명령어와 데이터를 하나의 메모리로 처리 (Harvard 구조와 대비)
+// 크기: 16KB (4K 워드 × 32비트)
+// 읽기: 동기 읽기 (mem_read 인에이블)
+// 쓰기: 동기 쓰기 (mem_write 인에이블, 바이트 인에이블 지원)
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module unified_memory (
+   input  logic        clk,            // 시스템 클럭
+   input  logic        mem_read,       // 메모리 읽기 인에이블
+   input  logic        mem_write,      // 메모리 쓰기 인에이블
+   input  logic [3:0]  byte_enable,    // 바이트 인에이블 (1111: 워드, 0011: 하프, 0001: 바이트)
+   input  logic [31:0] addr,           // 주소 (바이트 주소)
+   input  logic [31:0] write_data,     // 쓰기 데이터
+   output logic [31:0] read_data       // 읽기 데이터 (동기 출력)
+);
+
+   // =========================================================================
+   // 메모리 배열 선언
+   // 16KB = 4096 워드 × 4바이트/워드
+   // 주소 범위: 0x0000_0000 ~ 0x0000_3FFF
+   // =========================================================================
+   logic [31:0] mem [0:4095];
+
+   // =========================================================================
+   // 초기화: $readmemh로 프로그램 이미지 적재
+   // =========================================================================
+   initial begin
+      $readmemh("program.hex", mem);
+   end
+
+   // =========================================================================
+   // 동기 읽기
+   // =========================================================================
+   always_ff @(posedge clk) begin
+      if (mem_read)
+         read_data &lt;= mem[addr[13:2]];   // 워드 정렬: 하위 2비트 무시
+   end
+
+   // =========================================================================
+   // 동기 쓰기 (바이트 인에이블 지원)
+   // =========================================================================
+   always_ff @(posedge clk) begin
+      if (mem_write) begin
+         if (byte_enable[3]) mem[addr[13:2]][31:24] &lt;= write_data[31:24];
+         if (byte_enable[2]) mem[addr[13:2]][23:16] &lt;= write_data[23:16];
+         if (byte_enable[1]) mem[addr[13:2]][15:8]  &lt;= write_data[15:8];
+         if (byte_enable[0]) mem[addr[13:2]][7:0]   &lt;= write_data[7:0];
+      end
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch07_sec03_intermediate_regs.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 중간 레지스터 4종 (Intermediate Pipeline Registers)
+// Chapter 07 — 멀티사이클 데이터패스
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// 포함: IR, MDR, A 레지스터, B 레지스터 (독립 모듈)
+// 비동기 리셋(rst_n) 포함
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module intermediate_regs (
+   input  logic        clk,            // 시스템 클럭
+   input  logic        rst_n,          // 비동기 리셋 (액티브 로우)
+   input  logic        ir_write,       // IR 쓰기 인에이블 (IF 단계에서만 1)
+   input  logic [31:0] mem_data_out,   // 메모리에서 읽은 원시 데이터
+   input  logic [31:0] rs1_data,       // 레지스터 파일에서 읽은 rs1 데이터
+   input  logic [31:0] rs2_data,       // 레지스터 파일에서 읽은 rs2 데이터
+   output logic [31:0] ir_reg,         // 명령어 레지스터 출력
+   output logic [31:0] mdr_reg,        // 메모리 데이터 레지스터 출력
+   output logic [31:0] a_reg,          // A 레지스터 출력 (ALU 입력 A)
+   output logic [31:0] b_reg           // B 레지스터 출력 (ALU 입력 B)
+);
+
+   // =========================================================================
+   // 1. 명령어 레지스터 (IR)
+   // 역할: IF 단계 명령어를 ID~WB 단계에서 안정적으로 사용하기 위해 보존
+   // =========================================================================
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         ir_reg &lt;= 32'h0000_0013;      // 리셋 시 NOP
+      else if (ir_write)
+         ir_reg &lt;= mem_data_out;
+   end
+
+   // =========================================================================
+   // 2. 메모리 데이터 레지스터 (MDR)
+   // 역할: MEM 단계 메모리 읽기 결과를 WB 단계까지 보존
+   // =========================================================================
+   always_ff @(posedge clk) begin
+      mdr_reg &lt;= mem_data_out;
+   end
+
+   // =========================================================================
+   // 3. A 레지스터 (rs1 임시 저장)
+   // 역할: ID 단계 rs1 데이터를 EX 단계 ALU 입력 A로 안전하게 전달
+   // =========================================================================
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         a_reg &lt;= 32'd0;
+      else
+         a_reg &lt;= rs1_data;
+   end
+
+   // =========================================================================
+   // 4. B 레지스터 (rs2 임시 저장)
+   // 역할: ID 단계 rs2 데이터를 EX ALU 입력 B 또는 SW 쓰기 데이터로 전달
+   // =========================================================================
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         b_reg &lt;= 32'd0;
+      else
+         b_reg &lt;= rs2_data;
+   end
+
+endmodule</code></pre>
+  </div>
+</section>
+
+<!-- ========== 연습문제 ========== -->
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li>
+      <strong>[기억]</strong> 멀티사이클 데이터패스의 중간 레지스터 네 종류(IR, MDR, A, B)의 역할을 각각 한 문장으로 서술하시오.
+    </li>
+    <li>
+      <strong>[기억]</strong> 단일 사이클 CPU와 멀티사이클 CPU의 메모리 구조 차이를 설명하고,
+      멀티사이클에서 메모리 통합이 가능한 이유를 기술하시오.
+    </li>
+    <li>
+      <strong>[이해]</strong> LW 명령어(<code>lw rd, imm(rs1)</code>)가 멀티사이클 CPU에서 실행될 때
+      IF → ID → EX → MEM → WB 각 단계에서 어떤 데이터가 어떤 레지스터를 거쳐 전달되는지
+      흐름을 서술하시오. 각 단계에서 활성화되는 주요 제어 신호를 2개 이상 포함하시오.
+    </li>
+    <li>
+      <strong>[적용]</strong> 아래 빈칸을 채워 A/B 레지스터의 올바른 SystemVerilog 코드를 완성하시오.
+      <pre><code class="language-verilog">always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n) begin
+      a_reg &lt;= _______;   // (① 리셋 값)
+      b_reg &lt;= _______;
+   end else begin
+      a_reg &lt;= _______;   // (② ID 단계 rs1 데이터)
+      b_reg &lt;= _______;   // (③ ID 단계 rs2 데이터)
+   end
+end</code></pre>
+    </li>
+    <li>
+      <strong>[적용]</strong> 아래 빈칸을 채워 MDR과 WB MUX(MemtoReg)를 완성하시오.
+      <pre><code class="language-verilog">// MDR
+always_ff @(posedge clk) begin
+   mdr_reg &lt;= _______;   // (① 메모리 읽기 결과)
+end
+
+// WB MUX
+always_comb begin
+   case (mem_to_reg)
+      2'b00: reg_write_data = _______;  // (② ALU 결과 — R/I-type)
+      2'b01: reg_write_data = _______;  // (③ LW 로드 데이터)
+      2'b10: reg_write_data = _______;  // (④ JAL/JALR 복귀 주소)
+      default: reg_write_data = alu_out_reg;
+   endcase
+end</code></pre>
+    </li>
+    <li>
+      <strong>[분석]</strong> 아래 Vivado 합성 결과를 바탕으로 단일 사이클과 멀티사이클의 트레이드오프를 분석하시오.
+      <ul>
+        <li>단일 사이클: LUT 1,850개, FF 420개, Fmax 28 MHz, CPI = 1</li>
+        <li>멀티사이클: LUT 1,240개, FF 550개, Fmax 62 MHz (측정 후 기입), CPI = 평균 4</li>
+      </ul>
+      (a) LUT 사용량 감소율은 얼마인가? (b) 두 CPU의 예상 처리량(MIPS)을 계산하시오.
+      (c) FF 사용량이 증가한 이유를 설명하시오.
+    </li>
+  </ol>
+</section>
+
+<!-- ========== Highlight.js 스크립트 ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  document.querySelectorAll('code.language-systemverilog').forEach(el => {
+    el.classList.remove('language-systemverilog');
+    el.classList.add('language-verilog');
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460" font-family="Pretendard, sans-serif">
+  <rect width="820" height="460" fill="#F8FAFC" rx="12"/>
+  <text x="410" y="34" text-anchor="middle" font-size="17" font-weight="700" fill="#1E3A5F">캐시 히트 vs 캐시 미스 (Cache Hit vs Cache Miss)</text>
+
+  <defs>
+    <marker id="arHM" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#2563EB"/>
+    </marker>
+    <marker id="arHMg" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#10B981"/>
+    </marker>
+    <marker id="arHMr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="#EF4444"/>
+    </marker>
+  </defs>
+
+  <!-- 히트 경로 (위쪽) -->
+  <rect x="30" y="60" width="760" height="160" fill="white" rx="10" stroke="#10B981" stroke-width="2"/>
+  <rect x="30" y="60" width="760" height="32" fill="#10B981" rx="10"/>
+  <rect x="30" y="78" width="760" height="14" fill="#10B981"/>
+  <text x="410" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="white">캐시 히트 (Cache Hit) — 1사이클</text>
+
+  <!-- CPU -->
+  <rect x="55" y="105" width="80" height="50" fill="#1D4ED8" rx="6"/>
+  <text x="95" y="127" text-anchor="middle" font-size="12" font-weight="700" fill="white">CPU</text>
+  <text x="95" y="143" text-anchor="middle" font-size="10" fill="#BFDBFE">(IF Stage)</text>
+
+  <!-- 캐시 -->
+  <rect x="220" y="100" width="120" height="60" fill="#DBEAFE" rx="6" stroke="#2563EB" stroke-width="2"/>
+  <text x="280" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#1D4ED8">L1 캐시</text>
+  <text x="280" y="140" text-anchor="middle" font-size="10" fill="#2563EB">Tag 일치!</text>
+  <text x="280" y="154" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">HIT</text>
+
+  <line x1="135" y1="130" x2="218" y2="130" stroke="#2563EB" stroke-width="2" marker-end="url(#arHM)"/>
+  <text x="176" y="122" text-anchor="middle" font-size="10" fill="#2563EB">PC 주소</text>
+
+  <!-- 히트 응답 -->
+  <line x1="340" y1="118" x2="455" y2="118" stroke="#10B981" stroke-width="2.5" marker-end="url(#arHMg)"/>
+  <text x="398" y="110" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">명령어 즉시 반환</text>
+
+  <rect x="455" y="100" width="120" height="60" fill="#D1FAE5" rx="6" stroke="#10B981" stroke-width="2"/>
+  <text x="515" y="127" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">데이터 즉시</text>
+  <text x="515" y="145" text-anchor="middle" font-size="11" fill="#065F46" font-weight="700">1사이클</text>
+
+  <line x1="575" y1="130" x2="690" y2="130" stroke="#10B981" stroke-width="2.5" marker-end="url(#arHMg)"/>
+  <rect x="690" y="105" width="80" height="50" fill="#1D4ED8" rx="6"/>
+  <text x="730" y="127" text-anchor="middle" font-size="12" font-weight="700" fill="white">CPU</text>
+  <text x="730" y="143" text-anchor="middle" font-size="10" fill="#BFDBFE">계속 실행</text>
+
+  <!-- DRAM (히트 경우 비활성) -->
+  <rect x="220" y="170" width="360" height="30" fill="#F3F4F6" rx="4" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="400" y="189" text-anchor="middle" font-size="11" fill="#9CA3AF">DRAM 접근 없음 — 파이프라인 정상 진행</text>
+
+  <!-- 미스 경로 (아래쪽) -->
+  <rect x="30" y="245" width="760" height="185" fill="white" rx="10" stroke="#EF4444" stroke-width="2"/>
+  <rect x="30" y="245" width="760" height="32" fill="#EF4444" rx="10"/>
+  <rect x="30" y="263" width="760" height="14" fill="#EF4444"/>
+  <text x="410" y="265" text-anchor="middle" font-size="13" font-weight="700" fill="white">캐시 미스 (Cache Miss) — 5사이클 stall</text>
+
+  <!-- CPU -->
+  <rect x="55" y="292" width="80" height="50" fill="#1D4ED8" rx="6"/>
+  <text x="95" y="314" text-anchor="middle" font-size="12" font-weight="700" fill="white">CPU</text>
+  <text x="95" y="330" text-anchor="middle" font-size="10" fill="#BFDBFE">(stall중)</text>
+
+  <!-- 캐시 (미스) -->
+  <rect x="200" y="287" width="120" height="60" fill="#FEE2E2" rx="6" stroke="#EF4444" stroke-width="2"/>
+  <text x="260" y="309" text-anchor="middle" font-size="12" font-weight="700" fill="#991B1B">L1 캐시</text>
+  <text x="260" y="327" text-anchor="middle" font-size="10" fill="#EF4444">Tag 불일치</text>
+  <text x="260" y="341" text-anchor="middle" font-size="10" fill="#EF4444" font-weight="700">MISS</text>
+
+  <line x1="135" y1="317" x2="198" y2="317" stroke="#2563EB" stroke-width="2" marker-end="url(#arHM)"/>
+  <text x="166" y="309" text-anchor="middle" font-size="10" fill="#2563EB">PC 주소</text>
+
+  <!-- DRAM 접근 -->
+  <line x1="320" y1="317" x2="418" y2="317" stroke="#EF4444" stroke-width="2" marker-end="url(#arHMr)"/>
+  <text x="368" y="309" text-anchor="middle" font-size="10" fill="#EF4444">메모리 요청</text>
+
+  <rect x="418" y="287" width="120" height="60" fill="#FEF3C7" rx="6" stroke="#F59E0B" stroke-width="2"/>
+  <text x="478" y="309" text-anchor="middle" font-size="12" font-weight="700" fill="#92400E">DRAM</text>
+  <text x="478" y="327" text-anchor="middle" font-size="10" fill="#92400E">데이터 로드</text>
+  <text x="478" y="341" text-anchor="middle" font-size="10" fill="#F59E0B" font-weight="700">5사이클</text>
+
+  <!-- 캐시 채움 -->
+  <line x1="420" y1="330" x2="322" y2="330" stroke="#F59E0B" stroke-width="2" marker-end="url(#arHMr)" stroke-dasharray="5,3"/>
+  <text x="368" y="348" text-anchor="middle" font-size="9" fill="#F59E0B">블록 채움</text>
+
+  <!-- 최종 응답 -->
+  <line x1="538" y1="317" x2="650" y2="317" stroke="#10B981" stroke-width="2.5" marker-end="url(#arHMg)"/>
+  <text x="594" y="309" text-anchor="middle" font-size="10" fill="#10B981" font-weight="700">명령어 반환</text>
+
+  <rect x="650" y="292" width="120" height="60" fill="#D1FAE5" rx="6" stroke="#10B981" stroke-width="2"/>
+  <text x="710" y="315" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">데이터 반환</text>
+  <text x="710" y="333" text-anchor="middle" font-size="11" fill="#065F46">5사이클 후</text>
+
+  <!-- 스톨 표시 -->
+  <rect x="55" y="368" width="730" height="44" fill="#FEF3C7" rx="6" stroke="#F59E0B" stroke-width="1.5"/>
+  <text x="420" y="387" text-anchor="middle" font-size="12" fill="#92400E" font-weight="700">icache_stall = 1: pc_en=0, if_id_en=0, id_ex_flush=0 (파이프라인 전체 홀드)</text>
+  <text x="420" y="404" text-anchor="middle" font-size="11" fill="#92400E">DRAM 응답 후 캐시 채움 완료 -&gt; icache_stall=0 -&gt; 파이프라인 재개</text>
+</svg>

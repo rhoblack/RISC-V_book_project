@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="840" height="460" viewBox="0 0 840 460" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="840" height="460" fill="#F8FAFC" rx="8"/>
+  <text x="420" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">Predict-Not-Taken 전략 — 분기 예측 타이밍 비교</text>
+  <text x="420" y="44" text-anchor="middle" font-size="11" fill="#64748B">not-taken: 페널티 0 | taken: 2사이클 페널티 후 올바른 경로 재개</text>
+
+  <!-- 섹션 제목 배경 -->
+  <rect x="10" y="58" width="820" height="28" fill="#DBEAFE" rx="4"/>
+  <text x="420" y="77" text-anchor="middle" font-size="12" font-weight="700" fill="#1E40AF">Case A: 분기 Not-Taken — 예측 성공, 페널티 없음</text>
+
+  <!-- 헤더 A -->
+  <rect x="185" y="90" width="640" height="24" fill="#3B82F6" rx="3"/>
+  <text x="240" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C1</text>
+  <text x="305" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C2</text>
+  <text x="370" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C3</text>
+  <text x="435" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C4</text>
+  <text x="500" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C5</text>
+  <text x="565" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C6</text>
+  <text x="630" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C7</text>
+  <text x="695" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C8</text>
+  <text x="760" y="107" text-anchor="middle" font-size="11" font-weight="600" fill="white">C9</text>
+
+  <!-- Case A rows -->
+  <text x="92" y="131" text-anchor="middle" font-size="9" fill="#1E40AF">BEQ (not taken)</text>
+  <rect x="185" y="118" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="217" y="137" text-anchor="middle" font-size="10" font-weight="600" fill="#7C3AED">IF</text>
+  <rect x="250" y="118" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="282" y="137" text-anchor="middle" font-size="10" font-weight="600" fill="#7C3AED">ID</text>
+  <rect x="315" y="118" width="65" height="30" fill="#8B5CF6" stroke="#6D28D9" stroke-width="2" rx="3"/>
+  <text x="347" y="133" text-anchor="middle" font-size="10" font-weight="700" fill="white">EX</text>
+  <text x="347" y="145" text-anchor="middle" font-size="7" fill="#FDE68A">not taken!</text>
+  <rect x="380" y="118" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="412" y="137" text-anchor="middle" font-size="10" font-weight="600" fill="#7C3AED">MEM</text>
+  <rect x="445" y="118" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="477" y="137" text-anchor="middle" font-size="10" font-weight="600" fill="#7C3AED">WB</text>
+
+  <text x="92" y="168" text-anchor="middle" font-size="9" fill="#1E40AF">PC+4 명령어</text>
+  <rect x="250" y="155" width="65" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="282" y="174" text-anchor="middle" font-size="10" fill="#1D4ED8">IF</text>
+  <rect x="315" y="155" width="65" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="347" y="174" text-anchor="middle" font-size="10" fill="#1D4ED8">ID</text>
+  <rect x="380" y="155" width="65" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="412" y="174" text-anchor="middle" font-size="10" fill="#1D4ED8">EX</text>
+  <rect x="445" y="155" width="65" height="30" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="477" y="174" text-anchor="middle" font-size="10" fill="#1D4ED8">MEM</text>
+
+  <!-- 성능 0 표시 -->
+  <rect x="510" y="120" width="140" height="28" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="4"/>
+  <text x="580" y="138" text-anchor="middle" font-size="11" font-weight="700" fill="#15803D">페널티 0사이클 ✓</text>
+
+  <!-- 구분선 -->
+  <line x1="10" y1="200" x2="830" y2="200" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- 섹션 B -->
+  <rect x="10" y="210" width="820" height="28" fill="#FEE2E2" rx="4"/>
+  <text x="420" y="229" text-anchor="middle" font-size="12" font-weight="700" fill="#DC2626">Case B: 분기 Taken — 예측 실패, 2사이클 페널티 발생</text>
+
+  <!-- 헤더 B -->
+  <rect x="185" y="242" width="640" height="24" fill="#DC2626" rx="3"/>
+  <text x="240" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C1</text>
+  <text x="305" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C2</text>
+  <text x="370" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C3</text>
+  <text x="435" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C4</text>
+  <text x="500" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C5</text>
+  <text x="565" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C6</text>
+  <text x="630" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C7</text>
+  <text x="695" y="259" text-anchor="middle" font-size="11" font-weight="600" fill="white">C8</text>
+
+  <!-- Case B rows -->
+  <text x="92" y="283" text-anchor="middle" font-size="9" fill="#DC2626">BEQ (taken)</text>
+  <rect x="185" y="270" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="217" y="289" text-anchor="middle" font-size="10" font-weight="600" fill="#7C3AED">IF</text>
+  <rect x="250" y="270" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="282" y="289" text-anchor="middle" font-size="10" font-weight="600" fill="#7C3AED">ID</text>
+  <rect x="315" y="270" width="65" height="30" fill="#B91C1C" stroke="#991B1B" stroke-width="2" rx="3"/>
+  <text x="347" y="284" text-anchor="middle" font-size="10" font-weight="700" fill="white">EX</text>
+  <text x="347" y="296" text-anchor="middle" font-size="7" fill="#FDE68A">taken!</text>
+  <rect x="380" y="270" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="412" y="289" text-anchor="middle" font-size="10" fill="#7C3AED">MEM</text>
+  <rect x="445" y="270" width="65" height="30" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5" rx="3"/>
+  <text x="477" y="289" text-anchor="middle" font-size="10" fill="#7C3AED">WB</text>
+
+  <text x="92" y="318" text-anchor="middle" font-size="9" fill="#DC2626">wrong-path 1</text>
+  <rect x="250" y="307" width="65" height="30" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="282" y="326" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">IF❌</text>
+  <rect x="315" y="307" width="65" height="30" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="347" y="326" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">ID❌</text>
+  <rect x="380" y="307" width="65" height="30" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="412" y="326" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">NOP</text>
+
+  <text x="92" y="353" text-anchor="middle" font-size="9" fill="#DC2626">wrong-path 2</text>
+  <rect x="315" y="342" width="65" height="30" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="347" y="361" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">IF❌</text>
+  <rect x="380" y="342" width="65" height="30" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="412" y="361" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">NOP</text>
+
+  <text x="92" y="393" text-anchor="middle" font-size="9" fill="#16A34A">label: 올바름</text>
+  <rect x="380" y="378" width="65" height="30" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="3"/>
+  <text x="412" y="397" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">IF✓</text>
+  <rect x="445" y="378" width="65" height="30" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="477" y="397" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">ID✓</text>
+
+  <!-- 2사이클 페널티 표시 -->
+  <line x1="250" y1="418" x2="380" y2="418" stroke="#DC2626" stroke-width="2.5"/>
+  <line x1="250" y1="412" x2="250" y2="424" stroke="#DC2626" stroke-width="2.5"/>
+  <line x1="380" y1="412" x2="380" y2="424" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="315" y="440" text-anchor="middle" font-size="12" font-weight="700" fill="#DC2626">2사이클 페널티</text>
+
+  <!-- CPI 공식 -->
+  <rect x="500" y="360" width="320" height="72" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" rx="6"/>
+  <text x="660" y="380" text-anchor="middle" font-size="10" font-weight="700" fill="#92400E">CPI 영향 계산</text>
+  <text x="660" y="398" text-anchor="middle" font-size="10" fill="#78350F">CPI = 1 + (분기비율 × taken비율 × 2)</text>
+  <text x="660" y="414" text-anchor="middle" font-size="10" fill="#78350F">예: 분기20%, taken60%</text>
+  <text x="660" y="430" text-anchor="middle" font-size="11" font-weight="700" fill="#DC2626">→ CPI = 1 + 0.2×0.6×2 = 1.24</text>
+</svg>

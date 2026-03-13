@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 01 — 프로젝트 소개와 개발 환경 구축</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 01</span>
+  <h1>프로젝트 소개와 개발 환경 구축</h1>
+  <p class="chapter-intro">이 챕터에서는 앞으로 25개의 챕터에 걸쳐 완성할 RISC-V 프로세서의 전체 모습을 조감하고, 개발 환경을 구축하며, SystemVerilog의 핵심 문법을 복습한 뒤, LED 점멸 회로를 통해 첫 번째 합성 경험을 쌓는다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1:</strong> 최종 산출물(RV32I 파이프라인 프로세서)의 전체 구조와 학습 로드맵을 열거할 수 있다.</li>
+    <li><strong>LO-2:</strong> Vivado 개발 환경을 설치하고 정상 동작을 확인할 수 있다.</li>
+    <li><strong>LO-3:</strong> SystemVerilog 핵심 문법을 Verilog와 대비하여 설명할 수 있다.</li>
+    <li><strong>LO-4:</strong> Basys 3에서 LED 점멸 회로를 합성하고 비트스트림(Bitstream)을 생성할 수 있다.</li>
+    <li><strong>LO-5:</strong> 테스트벤치를 작성하고 시뮬레이션 파형을 해석할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 1.1 이 책으로 무엇을 만드는가 ========== -->
+<section id="sec-01-1">
+  <h2>1.1 이 책으로 무엇을 만드는가</h2>
+
+  <p>이 교재의 목표는 명확하다. <strong>RISC-V RV32I 명령어 집합 구조(Instruction Set Architecture, ISA)를 완전하게 지원하는 5단계 파이프라인 프로세서를 설계하고, Xilinx Basys 3 FPGA 보드에서 실제로 동작시키는 것</strong>이다. 단순히 시뮬레이션에서 파형을 확인하는 수준에 그치지 않고, C 언어로 작성한 프로그램을 우리가 만든 프로세서에서 실행하고, UART를 통해 PC 화면에 "Hello RISC-V"를 출력하는 순간까지 함께 도달할 것이다.</p>
+
+  <p>지금 이 순간, "정말 그것이 가능한가?"라는 의문이 들 수 있다. 프로세서라는 단어가 주는 무게감 때문이다. 그러나 이 교재는 여러분이 이미 Verilog를 다룰 줄 아는 대학원생이라는 전제에서 출발한다. <strong>Verilog를 아는 당신은 이미 절반을 안다.</strong> 나머지 절반은 이 교재가 단계별로 안내할 것이다.</p>
+
+  <div class="analogy">
+    <strong>비유: 25개의 레고 세트</strong>
+    <p>이 교재를 레고 조립에 비유해 보자. 우리가 만들 프로세서는 거대한 성이지만, 한 번에 성 전체를 조립하지는 않는다. 각 챕터는 하나의 레고 세트다. 첫 번째 세트에서는 성문 앞의 작은 탑(LED 점멸)을 만들고, 다음 세트에서는 성벽(ALU), 그 다음에는 감시탑(레지스터 파일)을 만든다. 25개의 세트를 모두 조립하면 비로소 완전한 성이 완성된다. 각 세트는 독립적으로 동작을 검증할 수 있으며, 이전 세트의 결과물 위에 다음 세트를 쌓는 구조다. 다만, 레고와 달리 순서를 뒤바꿔 조립할 수는 없다. 후반부의 일부 모듈(예: 해저드 처리 유닛)은 이전 단계의 결과물에 강하게 의존하므로, 각 챕터를 순서대로 진행하는 것이 중요하다.</p>
+  </div>
+
+  <h3>최종 산출물: RV32I 파이프라인 프로세서 SoC</h3>
+
+  <p>최종적으로 완성할 시스템은 단순한 프로세서 코어(Core)가 아니다. 다음과 같은 구성 요소를 포함하는 시스템 온 칩(System on Chip, SoC)이다.</p>
+
+  <ul>
+    <li><strong>프로세서 코어</strong>: IF(명령어 인출) → ID(명령어 해독) → EX(실행) → MEM(메모리 접근) → WB(쓰기 되돌림) 5단계 파이프라인</li>
+    <li><strong>해저드 처리 유닛</strong>: 데이터 포워딩(Data Forwarding), 스톨(Stall), 분기 예측(Branch Prediction)</li>
+    <li><strong>캐시 계층</strong>: L1 명령어 캐시(I-Cache)와 L1 데이터 캐시(D-Cache)</li>
+    <li><strong>버스 인터커넥트</strong>: AMBA AHB-Lite 고속 버스와 APB 주변 장치 버스</li>
+    <li><strong>주변 장치</strong>: UART 통신 모듈, GPIO 컨트롤러, 타이머/카운터</li>
+    <li><strong>예외/인터럽트 처리</strong>: CSR(Control and Status Register) 레지스터와 트랩 핸들러(Trap Handler)</li>
+  </ul>
+
+  <p>위 목록에서 모르는 용어가 있더라도 전혀 문제없다. 이 목록은 20주 후의 완성 그림을 미리 보여주는 것일 뿐이다. 각 항목은 해당 챕터에서 하나씩 자세히 배우게 되므로, 지금은 "최종적으로 이런 것들을 만들게 되는구나" 하는 전체 윤곽만 파악하면 충분하다.</p>
+
+  <figure>
+    <img src="../../figures/ch01_sec01_processor_overview.svg" alt="RV32I 5단계 파이프라인 프로세서 SoC 전체 조감도">
+    <figcaption>그림 1.1: 이 교재에서 완성할 RV32I 파이프라인 프로세서 SoC의 전체 구조. 각 블록 옆에 해당 챕터 번호가 표기되어 있다.</figcaption>
+  </figure>
+
+  <h3>학습 로드맵</h3>
+
+  <p>전체 학습 과정은 9개의 파트(Part)로 구성되며, 각 파트는 명확한 마일스톤(Milestone)을 가진다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>파트</th>
+        <th>주제</th>
+        <th>마일스톤</th>
+        <th>주차</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Part 0</td>
+        <td>시작하기 전에</td>
+        <td>LED 점멸 성공</td>
+        <td>1주</td>
+      </tr>
+      <tr>
+        <td>Part 1</td>
+        <td>RISC-V ISA 이해</td>
+        <td>명령어 비트 패턴 해독</td>
+        <td>2~3주</td>
+      </tr>
+      <tr>
+        <td>Part 2</td>
+        <td>단일 사이클 프로세서</td>
+        <td>피보나치 수열 실행</td>
+        <td>4~6주</td>
+      </tr>
+      <tr>
+        <td>Part 3</td>
+        <td>멀티사이클 프로세서</td>
+        <td>FSM CPU 동작 검증</td>
+        <td>7~8주</td>
+      </tr>
+      <tr>
+        <td>Part 4</td>
+        <td>5단계 파이프라인</td>
+        <td>버블정렬 FPGA 실행</td>
+        <td>9~13주</td>
+      </tr>
+      <tr>
+        <td>Part 5</td>
+        <td>메모리 계층과 캐시</td>
+        <td>캐시 히트율 측정</td>
+        <td>14~15주</td>
+      </tr>
+      <tr>
+        <td>Part 6</td>
+        <td>AMBA 버스 인터커넥트</td>
+        <td>UART "Hello RISC-V" 전송</td>
+        <td>16주</td>
+      </tr>
+      <tr>
+        <td>Part 7</td>
+        <td>예외와 인터럽트</td>
+        <td>타이머 인터럽트 처리</td>
+        <td>17~18주</td>
+      </tr>
+      <tr>
+        <td>Part 8</td>
+        <td>FPGA 구현과 검증</td>
+        <td>최종 SoC 데모</td>
+        <td>19~20주</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Part 0에 해당하는 이 챕터는 전체 여정의 출발선이다. 개발 환경을 설정하고, 앞으로 사용할 SystemVerilog 문법을 점검하며, LED 점멸이라는 작은 성공 경험으로 자신감을 쌓는 것이 이 챕터의 역할이다. 작은 탑 하나를 세우는 것에서 시작하여, 20주 후에는 완전한 프로세서 SoC를 완성하게 될 것이다.</p>
+
+</section>
+
+<!-- ========== 1.2 개발 환경 설치 및 검증 ========== -->
+<section id="sec-01-2">
+  <h2>1.2 개발 환경 설치 및 검증</h2>
+
+  <p>프로세서를 설계하기 위해서는 적절한 도구가 필요하다. 목수가 좋은 도구 없이 집을 지을 수 없듯이, 디지털 설계자(Digital Designer)도 검증된 개발 환경 없이는 프로세서를 만들 수 없다. 이 절에서는 Xilinx Vivado를 중심으로 개발 환경을 구축하고, 정상 동작을 확인하는 과정을 단계별로 안내한다.</p>
+
+  <h3>필요한 도구 목록</h3>
+
+  <p>이 교재에서 사용하는 주요 개발 도구는 다음과 같다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>도구</th>
+        <th>용도</th>
+        <th>설치 필수 여부</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Vivado 2024.x</td>
+        <td>합성, 구현, 비트스트림 생성, 시뮬레이션</td>
+        <td>필수</td>
+      </tr>
+      <tr>
+        <td>Basys 3 보드 드라이버</td>
+        <td>FPGA 보드 프로그래밍</td>
+        <td>필수 (보드 사용 시)</td>
+      </tr>
+      <tr>
+        <td>VCS + Verdi</td>
+        <td>고속 시뮬레이션 및 파형 분석</td>
+        <td>선택 (대학원 환경)</td>
+      </tr>
+      <tr>
+        <td>RARS (RISC-V Assembler)</td>
+        <td>RISC-V 어셈블리 프로그램 실행</td>
+        <td>선택 (Ch03부터)</td>
+      </tr>
+      <tr>
+        <td>riscv-gnu-toolchain</td>
+        <td>C 프로그램 크로스 컴파일</td>
+        <td>선택 (Ch22부터)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>이 챕터에서는 Vivado 설치만으로 충분하다. VCS/Verdi는 대학원 환경에서 라이선스가 제공되는 경우에 사용하며, 해당 환경이 없더라도 Vivado의 내장 시뮬레이터(Vivado Simulator)로 모든 실습을 수행할 수 있다.</p>
+
+  <h3>Vivado 설치 절차</h3>
+
+  <p>Vivado는 Xilinx(현 AMD)에서 제공하는 FPGA 개발 통합 환경(IDE)이다. 다음 절차에 따라 설치한다.</p>
+
+  <ol>
+    <li><strong>다운로드</strong>: <a href="https://www.xilinx.com/support/download.html">AMD/Xilinx 공식 다운로드 페이지</a>에서 Vivado ML Edition을 선택한다. 무료 라이선스인 Standard Edition으로 Basys 3(Artix-7 XC7A35T)를 지원한다.</li>
+    <li><strong>설치 경로 설정</strong>: 설치 경로를 지정할 때 <strong>공백이 포함되지 않은 경로</strong>를 선택한다. 예를 들어 <code>C:\Xilinx\Vivado\2024.1</code>처럼 설정하며, <code>C:\Program Files\Xilinx</code>는 피한다.</li>
+    <li><strong>디바이스 선택</strong>: 전체 디바이스를 설치하면 디스크 공간이 100GB 이상 필요하다. "Artix-7" 계열만 선택하면 설치 용량을 약 30~40GB로 줄일 수 있다.</li>
+  </ol>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 설치 중 오류가 나도 당황하지 말 것</strong>
+    <p>Vivado 설치 과정에서 경고 메시지나 오류 팝업이 나타나는 것은 흔한 일이다. 네트워크 설정, 경로 문제, 디스크 공간 부족 등이 주된 원인이며, 대부분은 아래 FAQ나 부록 E의 안내로 해결할 수 있다. 설치에 30분 이상 소요되는 것도 정상이다. 설치 과정의 어려움은 여러분의 능력과 무관하며, 누구나 한 번쯤 겪는 절차적 문제이다.</p>
+  </aside>
+
+  <ol start="4">
+    <li><strong>라이선스 활성화</strong>: 설치 완료 후 Vivado License Manager에서 무료 Standard Edition 라이선스를 활성화한다.</li>
+    <li><strong>설치 검증</strong>: Vivado를 실행하고 "Create Project"에서 Artix-7 XC7A35TCPG236-1 디바이스를 선택하여 프로젝트가 정상 생성되는지 확인한다.</li>
+  </ol>
+
+  <h3>Basys 3 보드 드라이버 설치</h3>
+
+  <p>Basys 3 보드를 USB로 PC에 연결하기 위해서는 Digilent Adept 런타임(Runtime) 드라이버가 필요하다. 다음 절차를 따른다.</p>
+
+  <ol>
+    <li><a href="https://digilent.com/reference/software/adept/start">Digilent 공식 사이트</a>에서 Adept Runtime과 Adept Utilities를 다운로드하여 설치한다.</li>
+    <li>Basys 3 보드를 USB 케이블로 PC에 연결한다.</li>
+    <li>Windows의 장치 관리자에서 "USB Serial Converter" 항목이 정상적으로 표시되는지 확인한다.</li>
+    <li>Vivado의 Hardware Manager에서 "Open Target → Auto Connect"를 실행하여 보드가 인식되는지 검증한다.</li>
+  </ol>
+
+  <h3>VCS/Verdi 설정 (선택 사항)</h3>
+
+  <p>VCS는 Synopsys에서 제공하는 고속 시뮬레이터이며, Verdi는 파형 분석(Waveform Analysis) 도구이다. 대학원 연구실에서 라이선스를 보유한 경우, 대규모 시뮬레이션에서 Vivado Simulator보다 빠른 실행 속도를 제공한다. 설치 및 라이선스 설정 방법은 부록 E에서 상세히 다루므로, 해당 환경이 갖춰진 독자는 부록을 참조하기 바란다.</p>
+
+  <h3>설치 검증 체크리스트</h3>
+
+  <p>모든 설치가 완료되었다면, 다음 항목을 하나씩 확인한다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>확인 방법</th>
+        <th>예상 결과</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Vivado 실행</td>
+        <td>시작 메뉴에서 Vivado 실행</td>
+        <td>Welcome 화면 표시</td>
+      </tr>
+      <tr>
+        <td>프로젝트 생성</td>
+        <td>Create Project → RTL Project</td>
+        <td>XC7A35TCPG236-1 선택 가능</td>
+      </tr>
+      <tr>
+        <td>시뮬레이션 실행</td>
+        <td>Run Simulation → Run Behavioral</td>
+        <td>파형 뷰어 표시</td>
+      </tr>
+      <tr>
+        <td>보드 연결</td>
+        <td>Hardware Manager → Auto Connect</td>
+        <td>xc7a35t 디바이스 인식</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 설치 오류 FAQ</strong>
+    <p><strong>Q: Vivado 설치 후 실행이 되지 않습니다.</strong><br>
+    A: 설치 경로에 한글이나 공백이 포함되어 있지 않은지 확인한다. <code>C:\Users\홍길동\Xilinx</code>처럼 한글 사용자 이름이 경로에 포함된 경우, <code>C:\Xilinx</code>에 재설치하는 것이 가장 확실한 해결책이다.</p>
+    <p><strong>Q: Hardware Manager에서 보드가 인식되지 않습니다.</strong><br>
+    A: (1) USB 케이블이 데이터 전송을 지원하는 케이블인지 확인한다(충전 전용 케이블은 동작하지 않는다). (2) Digilent Adept 런타임이 설치되어 있는지 확인한다. (3) Windows 장치 관리자에서 드라이버를 수동으로 업데이트한다.</p>
+    <p><strong>Q: 라이선스 오류가 발생합니다.</strong><br>
+    A: Vivado Standard Edition(무료)은 Artix-7을 지원한다. Vivado License Manager에서 "Obtain License → Get Free Vivado Standard Edition License"를 선택하여 라이선스 파일(.lic)을 다운로드하고 설치한다.</p>
+    <p><strong>Q: Vivado 합성 시 메모리 부족 오류가 발생합니다.</strong><br>
+    A: Vivado는 최소 8GB RAM을 요구하며, 16GB 이상을 권장한다. 메모리가 부족한 경우, 가상 메모리(페이지 파일) 크기를 늘리거나 불필요한 프로그램을 종료한 후 다시 시도한다.</p>
+  </aside>
+
+  <p>환경 설치 과정에서 문제가 발생하더라도 당황하지 않아도 된다. 위의 FAQ에서 해결되지 않는 경우, 부록 E의 상세 가이드를 참조하면 대부분의 문제를 해결할 수 있다. 환경 설정은 한 번만 제대로 완료하면, 이후 챕터에서는 설계와 검증에만 집중할 수 있다.</p>
+
+</section>
+
+<!-- ========== 1.3 SystemVerilog 필수 문법 복습 ========== -->
+<section id="sec-01-3">
+  <h2>1.3 SystemVerilog 필수 문법 복습</h2>
+
+  <p>이 교재의 모든 RTL 코드는 SystemVerilog(IEEE 1800-2017)로 작성한다. Verilog(IEEE 1364-2005)를 이미 다룰 줄 아는 독자라면, SystemVerilog로의 전환은 어렵지 않다. 핵심적인 차이점 몇 가지만 이해하면 충분하다.</p>
+
+  <div class="analogy">
+    <strong>비유: 수동 변속기에서 자동 변속기로</strong>
+    <p>Verilog에서 SystemVerilog로 전환하는 것은 수동 변속기 자동차에서 자동 변속기 자동차로 바꾸는 것과 비슷하다. 운전(설계)의 기본 원리는 동일하지만, 변속(타입 선언, 블록 구분)이 더 편리하고 실수할 가능성이 줄어든다. 수동 변속기를 능숙하게 다루던 운전자라면, 자동 변속기는 금방 적응할 수 있다. 다만, 자동 변속기에도 고유한 규칙이 있듯이, SystemVerilog의 새로운 문법 규칙을 정확히 숙지해야 한다. 이 비유에는 한계도 있다. 자동 변속기는 수동 변속기보다 제어 범위가 좁아지지만, SystemVerilog는 Verilog의 상위 집합(Superset)이므로 표현 범위가 오히려 넓어진다. 따라서 "더 편리해진다"는 측면에서만 이 비유가 유효하다.</p>
+  </div>
+
+  <figure>
+    <img src="../../figures/ch01_sec03_sv_vs_verilog.svg" alt="SystemVerilog와 Verilog 주요 차이점 비교">
+    <figcaption>그림 1.2: SystemVerilog와 Verilog의 핵심 차이점 요약. 왼쪽은 Verilog 문법, 오른쪽은 이에 대응하는 SystemVerilog 문법을 보여준다.</figcaption>
+  </figure>
+
+  <h3>logic 타입: reg와 wire의 통합</h3>
+
+  <p>Verilog에서 가장 혼란스러운 부분 중 하나는 <code>reg</code>와 <code>wire</code>의 구분이다. <code>reg</code>라는 이름이 레지스터(Register)를 의미한다고 오해하기 쉽지만, 실제로는 절차적 블록(Procedural Block) 내에서 할당되는 변수를 선언할 때 사용하는 키워드일 뿐이다. SystemVerilog는 이 혼란을 <code>logic</code>이라는 단일 타입으로 해소한다.</p>
+
+  <pre><code class="language-systemverilog">// ======================================================
+// Verilog 스타일: reg와 wire를 구분해야 한다
+// ======================================================
+module mux_verilog (
+   input  wire        sel,      // 입력은 wire
+   input  wire [31:0] a, b,
+   output reg  [31:0] y         // always 블록 출력은 reg
+);
+   always @(*) begin
+      if (sel)
+         y = a;
+      else
+         y = b;
+   end
+endmodule
+
+// ======================================================
+// SystemVerilog 스타일: logic으로 통합
+// ======================================================
+module mux_sv (
+   input  logic        sel,     // 모두 logic으로 선언
+   input  logic [31:0] a, b,
+   output logic [31:0] y        // always 블록 출력도 logic
+);
+   always_comb begin
+      if (sel)
+         y = a;
+      else
+         y = b;
+   end
+endmodule</code></pre>
+
+  <p><code>logic</code> 타입은 4상태(4-state) 값(<code>0</code>, <code>1</code>, <code>x</code>, <code>z</code>)을 표현하며, <code>reg</code>와 <code>wire</code>를 대체한다. 다만, 양방향(bidirectional) 신호나 다중 드라이버(multiple driver) 신호에는 여전히 <code>wire</code>를 사용해야 한다. 이 교재에서 다루는 범위 내에서는 거의 모든 신호를 <code>logic</code>으로 선언한다.</p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문 — logic vs reg/wire</strong>
+    <p><strong>Q:</strong> <code>logic</code>을 쓰면 <code>reg</code>와 <code>wire</code>는 아예 사용하지 않나요?</p>
+    <p><strong>A:</strong> 대부분의 경우 그렇다. <code>logic</code>은 단일 드라이버(single driver) 신호에 사용한다. 그러나 양방향 버스(I2C의 SDA 라인 등)처럼 다중 드라이버가 필요한 경우에는 <code>wire</code>를 사용해야 한다. 또한, <code>tri</code> 타입이 필요한 3상태 버퍼(tri-state buffer) 출력에도 <code>wire</code>가 적절하다. 이 교재에서는 양방향 신호를 다루지 않으므로, <code>logic</code>만으로 충분하다.</p>
+  </aside>
+
+  <h3>always_comb: 조합 논리 전용 블록</h3>
+
+  <p>Verilog의 <code>always @(*)</code> 블록은 조합 논리(Combinational Logic)와 순차 논리(Sequential Logic) 모두에 사용할 수 있어서, 설계자의 의도가 코드만으로는 명확히 드러나지 않는 경우가 있다. SystemVerilog는 <code>always_comb</code> 블록을 도입하여 "이 블록은 조합 논리를 기술한다"는 설계자의 의도를 명시적으로 선언한다.</p>
+
+  <pre><code class="language-systemverilog">// 조합 논리: ALU 연산 선택
+module alu_example (
+   input  logic [31:0] a, b,
+   input  logic [3:0]  alu_op,
+   output logic [31:0] result
+);
+   always_comb begin
+      case (alu_op)
+         4'b0000: result = a + b;       // 덧셈
+         4'b0001: result = a - b;       // 뺄셈
+         4'b0010: result = a &amp; b;       // AND
+         4'b0011: result = a | b;       // OR
+         4'b0100: result = a ^ b;       // XOR
+         default: result = 32'h0;       // 기본값
+      endcase
+   end
+endmodule</code></pre>
+
+  <p><code>always_comb</code>는 다음과 같은 이점을 제공한다.</p>
+
+  <ul>
+    <li>민감도 목록(Sensitivity List)을 자동으로 추론한다. <code>@(*)</code>을 빠뜨리는 실수를 방지한다.</li>
+    <li>합성 도구와 시뮬레이터가 이 블록이 조합 논리임을 인지하므로, 의도치 않은 래치(Latch)가 생성되면 경고를 발생시킨다. 래치는 타이밍 분석을 복잡하게 만들고 글리치(Glitch)에 취약하므로, 조합 논리 블록에서의 래치 생성은 거의 항상 설계 실수를 의미한다.</li>
+    <li>시뮬레이션 시작 시(time 0) 자동으로 한 번 실행된다.</li>
+  </ul>
+
+  <h3>always_ff: 순차 논리 전용 블록</h3>
+
+  <p>순차 논리, 즉 클록 에지(Clock Edge)에 동기화되어 동작하는 플립플롭(Flip-Flop)은 <code>always_ff</code> 블록으로 기술한다.</p>
+
+  <pre><code class="language-systemverilog">// 순차 논리: 비동기 리셋을 가진 32비트 레지스터
+module register_example (
+   input  logic        clk,
+   input  logic        rst_n,    // 액티브 로우 비동기 리셋
+   input  logic [31:0] d,
+   input  logic        en,       // 인에이블 신호
+   output logic [31:0] q
+);
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         q &lt;= 32'h0;             // 리셋 시 0으로 초기화
+      else if (en)
+         q &lt;= d;                 // 인에이블 활성 시 데이터 래치
+      // en이 비활성이면 현재 값 유지 (명시적 else 불필요)
+   end
+endmodule</code></pre>
+
+  <p><code>always_ff</code> 블록 내에서는 반드시 <strong>비블로킹 할당(Non-blocking Assignment, <code>&lt;=</code>)</strong>을 사용한다. 블로킹 할당(Blocking Assignment, <code>=</code>)을 사용하면 합성 도구가 경고를 발생시킨다.</p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트 — always_ff vs always_comb</strong>
+    <p>반도체 설계 직군 면접에서 빈출되는 질문 중 하나가 <code>always_ff</code>와 <code>always_comb</code>의 차이다. 핵심 답변 요소는 다음과 같다.</p>
+    <ul>
+      <li><code>always_comb</code>: 조합 논리 전용. 블로킹 할당(<code>=</code>) 사용. 민감도 목록 자동 추론. 래치 생성 시 경고.</li>
+      <li><code>always_ff</code>: 순차 논리 전용. 비블로킹 할당(<code>&lt;=</code>) 사용. 클록/리셋 에지를 명시적으로 선언.</li>
+      <li>Verilog의 <code>always @(*)</code>와 <code>always @(posedge clk)</code>에 대응하지만, 설계 의도를 명시적으로 드러내어 합성 결과의 예측 가능성을 높인다.</li>
+    </ul>
+    <p>면접관이 기대하는 추가 답변: "두 블록을 혼용하면 합성 도구가 의도와 다른 회로를 생성할 수 있으므로, 코딩 가이드라인에서 엄격히 분리하는 것이 산업계 표준이다."</p>
+  </aside>
+
+  <p>여기까지의 내용이 대부분 익숙하게 느껴진다면, 여러분은 이미 SystemVerilog로 프로세서를 설계할 준비가 된 것이다. 나머지는 이러한 기본 블록의 조합이다. 조금 낯선 부분이 있더라도 괜찮다. 앞으로 코드를 작성하면서 자연스럽게 체득하게 될 것이다.</p>
+
+  <h3>블로킹 할당 vs 비블로킹 할당</h3>
+
+  <p>할당 방식의 선택은 합성 결과에 직접적인 영향을 미친다. 규칙은 단순하다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>블록 유형</th>
+        <th>할당 방식</th>
+        <th>기호</th>
+        <th>합성 결과</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>always_comb</code></td>
+        <td>블로킹(Blocking)</td>
+        <td><code>=</code></td>
+        <td>조합 논리 게이트</td>
+      </tr>
+      <tr>
+        <td><code>always_ff</code></td>
+        <td>비블로킹(Non-blocking)</td>
+        <td><code>&lt;=</code></td>
+        <td>플립플롭</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-systemverilog">// 블로킹 vs 비블로킹 할당 비교
+// 조합 논리에서의 블로킹 할당 — 순서대로 즉시 반영
+always_comb begin
+   temp = a &amp; b;       // temp에 a &amp; b 결과를 즉시 반영
+   result = temp | c;  // temp의 최신 값을 사용
+end
+
+// 순차 논리에서의 비블로킹 할당 — 사이클 끝에 동시 반영
+always_ff @(posedge clk) begin
+   q1 &lt;= d;            // 모든 비블로킹 할당이
+   q2 &lt;= q1;           // 사이클 끝에 동시에 반영된다
+   q3 &lt;= q2;           // → 3단 시프트 레지스터 생성
+end</code></pre>
+
+  <h3>typedef enum: 상태 머신 정의</h3>
+
+  <p>유한 상태 기계(Finite State Machine, FSM)를 설계할 때, Verilog에서는 <code>parameter</code>로 상태를 정의하는 것이 일반적이다. SystemVerilog의 <code>typedef enum</code>은 상태를 열거형(Enumeration)으로 선언하여, 코드의 가독성과 안전성을 크게 향상시킨다.</p>
+
+  <pre><code class="language-systemverilog">// typedef enum을 활용한 FSM 설계
+module fsm_example (
+   input  logic clk,
+   input  logic rst_n,
+   input  logic start,
+   input  logic done,
+   output logic busy
+);
+   // 상태 열거형 정의
+   typedef enum logic [1:0] {
+      IDLE  = 2'b00,
+      RUN   = 2'b01,
+      WAIT  = 2'b10,
+      DONE  = 2'b11
+   } state_t;
+
+   state_t curr_state, next_state;
+
+   // 상태 레지스터: always_ff
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         curr_state &lt;= IDLE;
+      else
+         curr_state &lt;= next_state;
+   end
+
+   // 다음 상태 논리: always_comb
+   always_comb begin
+      next_state = curr_state;  // 기본값: 현재 상태 유지
+      case (curr_state)
+         IDLE: if (start) next_state = RUN;
+         RUN:  if (done)  next_state = WAIT;
+         WAIT:             next_state = DONE;  // 1 사이클 대기
+         DONE:             next_state = IDLE;
+         default:          next_state = IDLE;
+      endcase
+   end
+
+   // 출력 논리
+   assign busy = (curr_state == RUN) || (curr_state == WAIT);
+endmodule</code></pre>
+
+  <p><code>typedef enum</code>의 장점은 시뮬레이터 파형 뷰어에서 상태 이름(IDLE, RUN 등)이 그대로 표시된다는 것이다. 숫자 <code>2'b01</code> 대신 <code>RUN</code>이 표시되므로, 디버깅 효율이 크게 향상된다.</p>
+
+  <h3>assign vs always_comb</h3>
+
+  <p>단순한 조합 논리는 <code>assign</code> 문으로도 표현할 수 있다. 그렇다면 <code>assign</code>과 <code>always_comb</code> 중 어느 것을 사용해야 하는가?</p>
+
+  <pre><code class="language-systemverilog">// 방법 1: assign 문 — 단일 조건식에 적합
+assign mux_out = sel ? a : b;
+
+// 방법 2: always_comb — 복잡한 조건 분기에 적합
+always_comb begin
+   case (sel)
+      2'b00:   mux_out = a;
+      2'b01:   mux_out = b;
+      2'b10:   mux_out = c;
+      default: mux_out = d;
+   endcase
+end</code></pre>
+
+  <p>일반적인 가이드라인은 다음과 같다. 단순한 MUX나 게이트 수준 연결은 <code>assign</code>으로, <code>case</code>/<code>if-else</code> 구조가 필요한 복잡한 조합 논리는 <code>always_comb</code>으로 기술한다. 이 교재에서도 이 원칙을 일관되게 적용한다.</p>
+
+  <h3>이 교재의 코딩 규칙</h3>
+
+  <p>앞으로 모든 코드는 다음 규칙을 따른다.</p>
+
+  <ul>
+    <li><strong>들여쓰기</strong>: 3칸 스페이스 (탭 사용 금지)</li>
+    <li><strong>명명 규칙</strong>: <code>snake_case</code> (예: <code>alu_result</code>, <code>reg_write_en</code>)</li>
+    <li><strong>주석</strong>: 한국어로 작성</li>
+    <li><strong>타입</strong>: <code>logic</code> 사용 (<code>reg</code>/<code>wire</code> 사용 금지)</li>
+    <li><strong>조합 논리</strong>: <code>always_comb</code> 또는 <code>assign</code></li>
+    <li><strong>순차 논리</strong>: <code>always_ff</code></li>
+    <li><strong>리셋</strong>: 비동기 액티브 로우 (<code>rst_n</code>)</li>
+  </ul>
+
+  <p>이제 문법 도구가 준비되었으니, 이를 실제 설계에 적용해 보자. 다음 절에서는 지금까지 배운 SystemVerilog 문법을 모두 활용하여 LED 점멸 회로를 설계하고, 실제 FPGA 보드에서 동작시키는 첫 번째 합성 실습을 진행한다.</p>
+
+</section>
+
+<!-- ========== 1.4 첫 번째 합성 실습: LED 점멸 ========== -->
+<section id="sec-01-4">
+  <h2>1.4 첫 번째 합성 실습: LED 점멸</h2>
+
+  <p>소프트웨어 개발에서 가장 먼저 작성하는 프로그램이 "Hello, World!"이듯, 하드웨어 설계에서 가장 먼저 만드는 회로는 LED 점멸(LED Blinker)이다. 이 실습은 단순하지만, Vivado의 전체 설계 흐름을 한 번에 경험할 수 있다는 점에서 의미가 크다.</p>
+
+  <div class="analogy">
+    <strong>비유: 하드웨어의 "Hello, World!"</strong>
+    <p>소프트웨어에서 "Hello, World!"를 출력하는 것은 컴파일러가 제대로 설치되었는지, 프로그램이 정상적으로 실행되는지를 확인하는 최소한의 검증이다. LED 점멸도 마찬가지다. Vivado 설치가 올바른지, 합성과 구현이 정상적으로 수행되는지, FPGA 보드와의 통신이 작동하는지를 한 번에 검증하는 최소한의 설계다.</p>
+  </div>
+
+  <h3>LED 점멸기 설계</h3>
+
+  <p>Basys 3 보드의 100MHz 시스템 클록을 분주(Frequency Division)하여 사람의 눈으로 인식할 수 있는 속도로 LED를 점멸시키는 회로를 설계한다. 100MHz 클록은 1초에 1억 번 상승 에지가 발생한다. 카운터가 50,000,000번째 상승 에지에 도달할 때마다 LED 패턴을 전환하면, 약 0.5초마다 LED가 한 칸씩 이동하는 효과를 얻는다.</p>
+
+  <pre><code class="language-systemverilog">// ======================================================
+// 파일명: led_blinker.sv
+// 설  명: 100MHz 클록을 분주하여 약 1Hz로 LED를 점멸
+// 대상 보드: Xilinx Basys 3 (XC7A35T)
+// ======================================================
+module led_blinker (
+   input  logic clk,          // 100MHz 시스템 클록
+   input  logic rst_btn,      // 리셋 버튼 (Basys 3: 액티브 하이)
+   output logic [15:0] led    // 16개 LED 출력
+);
+
+   // Basys 3 버튼은 액티브 하이이므로, 내부에서 반전하여
+   // 액티브 로우 리셋 신호(rst_n)를 생성한다.
+   logic rst_n;
+   assign rst_n = ~rst_btn;
+
+   // 내부 신호 선언
+   logic [25:0] counter;      // 26비트 카운터 (최대 67,108,863)
+   logic        tick;          // 펄스 신호
+
+   // -------------------------------------------------
+   // 카운터: 0 ~ 49,999,999 반복
+   // -------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         counter &lt;= 26'd0;
+      else if (counter == 26'd49_999_999)
+         counter &lt;= 26'd0;
+      else
+         counter &lt;= counter + 1'b1;
+   end
+
+   // 0.5초마다 1 사이클 동안 활성화되는 틱 신호
+   assign tick = (counter == 26'd49_999_999);
+
+   // -------------------------------------------------
+   // LED 패턴 시프트 레지스터
+   // -------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         led &lt;= 16'h0001;     // 리셋 시 첫 번째 LED만 점등
+      else if (tick)
+         led &lt;= {led[14:0], led[15]};  // 좌측 순환 시프트
+   end
+
+endmodule</code></pre>
+
+  <p>이 코드에서 주목할 점은 다음과 같다. 첫째, 1.3절에서 배운 문법이 그대로 적용되었다. 모든 신호는 <code>logic</code>으로 선언하였고, 순차 논리는 <code>always_ff</code>로 기술하였으며, 조합 논리(<code>tick</code> 생성)는 <code>assign</code>으로 기술하였다. 둘째, 보드의 버튼 극성(액티브 하이)과 내부 리셋 관행(액티브 로우)의 차이를 <code>assign rst_n = ~rst_btn;</code> 한 줄로 해소하였다. 산업계에서 액티브 로우 리셋이 관행으로 자리 잡은 이유는, 전원 투입 시 핀이 자연스럽게 LOW 상태로 시작하여 안전한 초기화를 보장하기 때문이다.</p>
+
+  <h3>XDC 제약 파일</h3>
+
+  <p>FPGA 설계에서 제약 파일(Constraint File)은 설계와 물리적 하드웨어를 연결하는 다리 역할을 한다. Vivado에서는 XDC(Xilinx Design Constraints) 형식을 사용하며, 이 파일은 Tcl 스크립트 기반으로 작성한다. 이 파일은 "설계의 <code>clk</code> 신호를 FPGA의 어느 핀에 연결할 것인가", "클록의 주파수는 얼마인가"를 정의한다. 각 핀에 지정하는 <code>IOSTANDARD LVCMOS33</code>은 해당 I/O 핀이 3.3V 전압 레벨의 CMOS 표준을 사용한다는 의미이며, Basys 3 보드의 I/O 전압에 맞추어 설정한 것이다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — Basys 3 버튼의 극성과 리셋 설계</strong>
+    <p>Basys 3 보드의 푸시 버튼(BTNC, BTNU 등)은 <strong>누르면 '1'(HIGH), 놓으면 '0'(LOW)</strong>을 출력하는 <strong>액티브 하이(Active-High)</strong> 구조이다. 반면, 산업계의 관행에 따라 이 교재의 RTL 코드는 액티브 로우 리셋(<code>rst_n</code>)을 사용한다. 이 극성 차이를 해소하기 위해, 아래 코드에서는 XDC에서 버튼을 <code>rst_btn</code>이라는 별도 입력으로 받고, RTL 내부에서 이를 반전하여 <code>rst_n</code>으로 사용한다. 보드의 물리적 특성과 RTL 설계 관행이 다를 때 이러한 극성 변환이 필요하다는 것은 실무에서도 자주 마주치는 상황이다.</p>
+  </aside>
+
+  <pre><code class="language-tcl">## ======================================================
+## 파일명: basys3_led_blinker.xdc
+## 설  명: LED 점멸기용 Basys 3 제약 파일
+## ======================================================
+
+## 시스템 클록: 100MHz
+set_property -dict { PACKAGE_PIN W5 IOSTANDARD LVCMOS33 } [get_ports clk]
+create_clock -period 10.000 -name sys_clk [get_ports clk]
+
+## 리셋 버튼: BTNC (Center Button) — 액티브 하이 (누르면 '1')
+set_property -dict { PACKAGE_PIN U18 IOSTANDARD LVCMOS33 } [get_ports rst_btn]
+
+## LED[0] ~ LED[15]
+set_property -dict { PACKAGE_PIN U16 IOSTANDARD LVCMOS33 } [get_ports {led[0]}]
+set_property -dict { PACKAGE_PIN E19 IOSTANDARD LVCMOS33 } [get_ports {led[1]}]
+set_property -dict { PACKAGE_PIN U19 IOSTANDARD LVCMOS33 } [get_ports {led[2]}]
+set_property -dict { PACKAGE_PIN V19 IOSTANDARD LVCMOS33 } [get_ports {led[3]}]
+set_property -dict { PACKAGE_PIN W18 IOSTANDARD LVCMOS33 } [get_ports {led[4]}]
+set_property -dict { PACKAGE_PIN U15 IOSTANDARD LVCMOS33 } [get_ports {led[5]}]
+set_property -dict { PACKAGE_PIN U14 IOSTANDARD LVCMOS33 } [get_ports {led[6]}]
+set_property -dict { PACKAGE_PIN V14 IOSTANDARD LVCMOS33 } [get_ports {led[7]}]
+set_property -dict { PACKAGE_PIN V13 IOSTANDARD LVCMOS33 } [get_ports {led[8]}]
+set_property -dict { PACKAGE_PIN V3  IOSTANDARD LVCMOS33 } [get_ports {led[9]}]
+set_property -dict { PACKAGE_PIN W3  IOSTANDARD LVCMOS33 } [get_ports {led[10]}]
+set_property -dict { PACKAGE_PIN U3  IOSTANDARD LVCMOS33 } [get_ports {led[11]}]
+set_property -dict { PACKAGE_PIN P3  IOSTANDARD LVCMOS33 } [get_ports {led[12]}]
+set_property -dict { PACKAGE_PIN N3  IOSTANDARD LVCMOS33 } [get_ports {led[13]}]
+set_property -dict { PACKAGE_PIN P1  IOSTANDARD LVCMOS33 } [get_ports {led[14]}]
+set_property -dict { PACKAGE_PIN L1  IOSTANDARD LVCMOS33 } [get_ports {led[15]}]</code></pre>
+
+  <h3>Vivado 설계 흐름</h3>
+
+  <p>LED 점멸기를 FPGA에 구현하기까지의 전체 과정은 다음과 같다.</p>
+
+  <figure>
+    <img src="../../figures/ch01_sec04_vivado_flow.svg" alt="Vivado 설계 흐름: RTL 설계 → 합성 → 구현 → 비트스트림 생성 → 프로그래밍">
+    <figcaption>그림 1.3: Vivado의 전체 설계 흐름. RTL 코드 작성부터 FPGA 프로그래밍까지의 5단계를 보여준다.</figcaption>
+  </figure>
+
+  <ol>
+    <li><strong>프로젝트 생성</strong>: Vivado에서 "Create Project"를 선택하고, RTL Project를 생성한다. 대상 디바이스로 XC7A35TCPG236-1을 선택한다.</li>
+    <li><strong>소스 파일 추가</strong>: <code>led_blinker.sv</code>를 Design Source로, <code>basys3_led_blinker.xdc</code>를 Constraints로 추가한다.</li>
+    <li><strong>합성(Synthesis)</strong>: "Run Synthesis"를 실행한다. RTL 코드가 게이트 수준의 넷리스트(Netlist, 논리 게이트와 그 연결 정보를 기술한 데이터)로 변환된다. 합성이 완료되면 리소스 사용량을 확인할 수 있다. 여기서 LUT(Look-Up Table)는 FPGA의 기본 논리 블록으로 조합 논리를 구현하며, FF(Flip-Flop)는 1비트의 순차 논리를 저장하는 소자이다.</li>
+    <li><strong>구현(Implementation)</strong>: "Run Implementation"을 실행한다. 넷리스트가 FPGA의 물리적 자원에 배치(Place, 각 논리 블록을 FPGA 칩 내의 구체적 위치에 할당)되고 배선(Route, 블록 간 전기적 연결 경로를 결정)된다. 이 단계에서 타이밍 분석이 수행된다.</li>
+    <li><strong>비트스트림 생성</strong>: "Generate Bitstream"을 실행한다. FPGA를 구성할 바이너리 파일(.bit)이 생성된다.</li>
+    <li><strong>프로그래밍</strong>: "Open Hardware Manager → Program Device"를 통해 비트스트림을 Basys 3 보드에 다운로드한다.</li>
+  </ol>
+
+  <p>프로그래밍이 성공하면, Basys 3 보드의 16개 LED가 약 1초 간격으로 순환하며 점등되는 모습을 확인할 수 있다. 이 작은 성공이 앞으로 20주간의 여정을 지탱하는 첫 번째 마일스톤이다.</p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — 미리 합성한 비트스트림 제공</strong>
+    <p>강의 현장에서 Vivado 설치 문제로 실습이 지연되는 경우가 빈번하다. 이를 대비하여 미리 합성한 비트스트림 파일(<code>led_blinker.bit</code>)을 수업 자료로 제공하면, Vivado 설치를 마치지 못한 수강생도 Hardware Manager만으로 FPGA 프로그래밍을 체험할 수 있다. Vivado 설치는 수업 후 개인 시간에 완료하도록 안내하면 된다. 이 방식은 "첫 수업에서 LED가 켜지는 성취감"을 보장하여 이탈률을 크게 낮춘다.</p>
+  </aside>
+
+  <h3>LED 점멸기 테스트벤치</h3>
+
+  <p>FPGA 보드가 없더라도 시뮬레이션으로 동작을 검증할 수 있다. 다음은 LED 점멸기의 테스트벤치이다.</p>
+
+  <pre><code class="language-systemverilog">// ======================================================
+// 파일명: led_blinker_tb.sv
+// 설  명: led_blinker 모듈의 테스트벤치
+// ======================================================
+`timescale 1ns / 1ps
+
+module led_blinker_tb;
+
+   // 테스트벤치 신호
+   logic        clk;
+   logic        rst_btn;
+   logic [15:0] led;
+
+   // DUT (Design Under Test) 인스턴스
+   led_blinker u_dut (
+      .clk     (clk),
+      .rst_btn (rst_btn),
+      .led     (led)
+   );
+
+   // 클록 생성: 100MHz → 주기 10ns
+   initial clk = 1'b0;
+   always #5 clk = ~clk;     // 5ns마다 토글 → 10ns 주기
+
+   // 테스트 시나리오
+   initial begin
+      // 리셋 인가 (버튼 누름 = '1' = 리셋 활성)
+      rst_btn = 1'b1;
+      #100;                   // 100ns 동안 리셋 유지
+
+      // 리셋 해제 (버튼 놓음 = '0' = 정상 동작)
+      rst_btn = 1'b0;
+      @(posedge clk);         // 1 클록 대기하여 리셋 해제 반영
+      #1;                     // 조합 논리 안정화 대기
+
+      // 자동 검증: 리셋 직후 LED 초기값 확인
+      assert (led === 16'h0001)
+         $display("[%0t] PASS: 리셋 후 LED 초기값 = %h", $time, led);
+      else
+         $error("[%0t] FAIL: 리셋 후 LED 초기값이 16'h0001이 아닙니다: %h", $time, led);
+
+      // 시뮬레이션 시간 단축을 위해 짧은 구간만 관찰
+      // 실제 0.5초 주기는 시뮬레이션에 너무 길다
+      // DUT 내부 counter가 정상 동작하는지 확인
+      repeat (100) @(posedge clk);
+      $display("[%0t] 100 사이클 후 LED: %b", $time, led);
+
+      $display("[%0t] 시뮬레이션 완료", $time);
+      $finish;
+   end
+
+   // 파형 덤프 (VCS/Verdi용)
+   initial begin
+      $dumpfile("led_blinker_tb.vcd");
+      $dumpvars(0, led_blinker_tb);
+   end
+
+endmodule</code></pre>
+
+  <p>테스트벤치에서 주의할 점은 실제 1Hz 동작을 시뮬레이션하려면 10억 나노초(= 1초)를 실행해야 하므로, 시뮬레이션 시간이 매우 길어진다는 것이다. 실무에서는 시뮬레이션 전용 파라미터로 카운터 값을 줄여 검증 시간을 단축하는 기법을 사용한다. 이 기법은 1.5절에서 자세히 다룬다.</p>
+
+</section>
+
+<!-- ========== 1.5 시뮬레이션 환경 설정 ========== -->
+<section id="sec-01-5">
+  <h2>1.5 시뮬레이션 환경 설정</h2>
+
+  <p>합성과 FPGA 구현이 하드웨어 설계의 "배포"라면, 시뮬레이션은 "테스트"에 해당한다. 소프트웨어 개발에서 단위 테스트(Unit Test) 없이 코드를 배포하는 것이 위험하듯, 시뮬레이션 없이 합성을 진행하는 것은 비효율적이고 위험하다. 이 절에서는 Vivado Simulator와 VCS를 이용한 시뮬레이션 환경을 설정하고, 파형 분석의 기초를 익힌다.</p>
+
+  <h3>간단한 가산기 설계와 테스트</h3>
+
+  <p>시뮬레이션 환경을 검증하기 위해, LED 점멸기보다 더 단순한 가산기(Adder) 모듈과 그 테스트벤치를 작성한다.</p>
+
+  <pre><code class="language-systemverilog">// ======================================================
+// 파일명: simple_adder.sv
+// 설  명: 32비트 가산기 — 시뮬레이션 환경 검증용
+// ======================================================
+module simple_adder (
+   input  logic [31:0] a,
+   input  logic [31:0] b,
+   input  logic        cin,     // 캐리 입력
+   output logic [31:0] sum,
+   output logic        cout     // 캐리 출력
+);
+   assign {cout, sum} = a + b + cin;
+endmodule</code></pre>
+
+  <pre><code class="language-systemverilog">// ======================================================
+// 파일명: simple_adder_tb.sv
+// 설  명: simple_adder 모듈의 테스트벤치
+// ======================================================
+`timescale 1ns / 1ps
+
+module simple_adder_tb;
+
+   // 테스트벤치 신호
+   logic [31:0] a, b;
+   logic        cin;
+   logic [31:0] sum;
+   logic        cout;
+
+   // 테스트 통과/실패 카운터
+   int pass_count = 0;
+   int fail_count = 0;
+
+   // DUT 인스턴스
+   simple_adder u_dut (
+      .a    (a),
+      .b    (b),
+      .cin  (cin),
+      .sum  (sum),
+      .cout (cout)
+   );
+
+   // 검증 태스크 — task는 반복되는 검증 코드를 함수처럼 묶는 구문이며,
+   // automatic 키워드는 호출 시마다 독립적인 변수 공간을 생성한다.
+   // 이 둘은 합성 불가능한(시뮬레이션 전용) 문법이다.
+   task automatic check(
+      input logic [31:0] exp_sum,
+      input logic        exp_cout
+   );
+      #1;  // 조합 논리 안정화 대기
+      if (sum === exp_sum &amp;&amp; cout === exp_cout) begin
+         pass_count++;
+      end else begin
+         $display("[FAIL] a=%h, b=%h, cin=%b → sum=%h (기대:%h), cout=%b (기대:%b)",
+                  a, b, cin, sum, exp_sum, cout, exp_cout);
+         fail_count++;
+      end
+   endtask
+
+   // 테스트 시나리오
+   initial begin
+      $display("===== simple_adder 테스트 시작 =====");
+
+      // 테스트 1: 기본 덧셈
+      a = 32'h0000_0001; b = 32'h0000_0002; cin = 1'b0;
+      check(32'h0000_0003, 1'b0);
+
+      // 테스트 2: 캐리 입력 포함
+      a = 32'h0000_0001; b = 32'h0000_0002; cin = 1'b1;
+      check(32'h0000_0004, 1'b0);
+
+      // 테스트 3: 오버플로우 발생
+      a = 32'hFFFF_FFFF; b = 32'h0000_0001; cin = 1'b0;
+      check(32'h0000_0000, 1'b1);
+
+      // 테스트 4: 양쪽 모두 최대값
+      a = 32'hFFFF_FFFF; b = 32'hFFFF_FFFF; cin = 1'b0;
+      check(32'hFFFF_FFFE, 1'b1);
+
+      // 테스트 5: 0 + 0
+      a = 32'h0000_0000; b = 32'h0000_0000; cin = 1'b0;
+      check(32'h0000_0000, 1'b0);
+
+      // 테스트 6: 랜덤 값 검증
+      // $urandom은 부호 없는 32비트 난수를 반환하는 SystemVerilog 시스템 함수이다.
+      // Verilog의 $random(부호 있는 정수 반환)과 달리 항상 양수를 반환한다.
+      // $urandom_range(min, max)는 지정 범위 내의 난수를 반환한다.
+      repeat (10) begin
+         a = $urandom;
+         b = $urandom;
+         cin = $urandom_range(0, 1);
+         check(a + b + cin,
+               ({1'b0, a} + {1'b0, b} + {32'b0, cin})[32]);
+      end
+
+      // 결과 출력
+      $display("===== 테스트 완료 =====");
+      $display("통과: %0d건, 실패: %0d건", pass_count, fail_count);
+
+      if (fail_count == 0)
+         $display("★ 모든 테스트를 통과하였습니다.");
+      else
+         $display("✗ 실패한 테스트가 있습니다. 위의 로그를 확인하십시오.");
+
+      $finish;
+   end
+
+   // 파형 덤프
+   initial begin
+      $dumpfile("simple_adder_tb.vcd");
+      $dumpvars(0, simple_adder_tb);
+   end
+
+endmodule</code></pre>
+
+  <h3>Vivado Simulator 사용법</h3>
+
+  <p>Vivado에 내장된 시뮬레이터는 별도의 라이선스 없이 사용할 수 있으며, 다음과 같은 절차로 실행한다.</p>
+
+  <ol>
+    <li><strong>Simulation Source 추가</strong>: Vivado 프로젝트의 Sources 패널에서 "Add Sources → Add or create simulation sources"를 선택하고, 테스트벤치 파일(<code>simple_adder_tb.sv</code>)을 추가한다.</li>
+    <li><strong>시뮬레이션 실행</strong>: Flow Navigator에서 "Run Simulation → Run Behavioral Simulation"을 클릭한다.</li>
+    <li><strong>파형 관찰</strong>: 시뮬레이션이 완료되면 파형 뷰어가 자동으로 열린다. 신호를 드래그 앤 드롭하여 관찰할 수 있다.</li>
+    <li><strong>시간 축 조정</strong>: 파형 뷰어의 줌 도구를 사용하여 원하는 구간을 확대/축소한다.</li>
+  </ol>
+
+  <p>Vivado Simulator의 장점은 Vivado 프로젝트에 통합되어 있어 별도의 설정 없이 즉시 사용할 수 있다는 것이다. 그러나 대규모 설계에서는 VCS에 비해 시뮬레이션 속도가 느릴 수 있다.</p>
+
+  <h3>VCS 컴파일 및 시뮬레이션 (선택)</h3>
+
+  <p>VCS(Verilog Compiler Simulator)는 Synopsys에서 개발한 산업 표준 시뮬레이터로, 대규모 설계에서 빠른 시뮬레이션 속도를 제공한다. 대학원 환경에서 VCS 라이선스가 있는 경우, 다음 명령어로 시뮬레이션을 실행한다.</p>
+
+  <pre><code class="language-bash">## VCS 컴파일 및 시뮬레이션 명령어 (Linux 환경)
+
+# 1단계: 컴파일
+vcs -sverilog -full64 -debug_access+all \
+    simple_adder.sv simple_adder_tb.sv \
+    -o simv
+
+# 2단계: 시뮬레이션 실행
+./simv
+
+# 3단계: Verdi로 파형 분석 (선택)
+verdi -sv simple_adder.sv simple_adder_tb.sv \
+      -ssf simple_adder_tb.fsdb &amp;</code></pre>
+
+  <p><code>-sverilog</code> 옵션은 SystemVerilog 문법을 활성화하며, <code>-debug_access+all</code>은 Verdi에서 모든 신호에 접근할 수 있도록 한다. 위 명령에서 <code>.fsdb</code>는 Synopsys 고유의 파형 데이터베이스 형식(Fast Signal DataBase)으로, Verdi에서 사용한다. 앞서 사용한 <code>.vcd</code>(Value Change Dump)는 표준 형식으로 호환성이 높지만, FSDB가 더 빠르고 파일 크기가 작다. VCS는 Linux 환경에서 동작하므로, Windows 환경에서는 WSL(Windows Subsystem for Linux)이나 원격 서버를 활용한다.</p>
+
+  <h3>파형 분석 기초</h3>
+
+  <p>시뮬레이션 결과를 파형 뷰어에서 확인하는 것은 하드웨어 디버깅의 핵심 기술이다. 파형을 올바르게 해석하기 위해 다음 사항을 숙지한다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>파형 요소</th>
+        <th>의미</th>
+        <th>확인 포인트</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>가로축</td>
+        <td>시간 (ns)</td>
+        <td>이벤트 발생 시점</td>
+      </tr>
+      <tr>
+        <td>세로축</td>
+        <td>신호 목록</td>
+        <td>관찰하고자 하는 신호를 추가</td>
+      </tr>
+      <tr>
+        <td>높은 레벨 (1)</td>
+        <td>논리 '1'</td>
+        <td>신호가 활성 상태</td>
+      </tr>
+      <tr>
+        <td>낮은 레벨 (0)</td>
+        <td>논리 '0'</td>
+        <td>신호가 비활성 상태</td>
+      </tr>
+      <tr>
+        <td>빨간색 (X)</td>
+        <td>미정(Unknown)</td>
+        <td>초기화되지 않은 신호. 리셋 누락 가능성</td>
+      </tr>
+      <tr>
+        <td>파란색 (Z)</td>
+        <td>고임피던스(High-Z)</td>
+        <td>드라이버가 없는 신호. 연결 누락 가능성</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>파형 분석에서 가장 흔한 오류는 리셋 이전 구간에서 신호가 <code>X</code>(미정)로 표시되는 것이다. 이는 정상적인 동작이다. 리셋이 인가된 이후부터 모든 신호가 <code>0</code> 또는 <code>1</code>로 확정되어야 한다. 만약 리셋 이후에도 <code>X</code>가 남아 있다면, 리셋 로직이 누락된 신호가 있는 것이므로 확인이 필요하다.</p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 파형 해석</strong>
+    <p>여기까지 읽었다면, 다음 질문에 스스로 답해 보십시오.</p>
+    <ul>
+      <li>시뮬레이션 파형에서 <code>X</code>(빨간색)가 리셋 해제 후에도 남아 있다면, 어떤 원인을 의심해야 하는가?</li>
+      <li><code>always_ff</code> 블록에서 비블로킹 할당(<code>&lt;=</code>) 대신 블로킹 할당(<code>=</code>)을 사용하면, 시뮬레이션 결과가 어떻게 달라지는가?</li>
+      <li>테스트벤치에서 <code>#1</code>은 어떤 역할을 하는가? 이 지연 시간을 0으로 바꾸면 어떤 문제가 발생할 수 있는가?</li>
+    </ul>
+    <p>위 질문에 즉시 답할 수 없다면 1.3절의 할당 규칙과 이 절의 파형 해석 표를 다시 확인하기 바란다.</p>
+  </aside>
+
+  <h3>시뮬레이션 속도 최적화 기법</h3>
+
+  <p>1.4절에서 언급했듯이, LED 점멸기의 1Hz 동작을 그대로 시뮬레이션하면 지나치게 오래 걸린다. 이를 해결하는 실무적 기법은 <strong>파라미터화(Parameterization)</strong>이다.</p>
+
+  <p>아래 코드에서 사용하는 <code>$clog2</code>는 "ceiling of log base 2", 즉 주어진 값을 표현하는 데 필요한 최소 비트 수를 반환하는 SystemVerilog 시스템 함수이다. 예를 들어, <code>$clog2(50_000_000)</code>은 26을 반환한다(2<sup>26</sup> = 67,108,864 &ge; 50,000,000). 이 함수는 합성 시 상수(elaboration time constant)로 평가되므로 합성 가능하다. 또한, <code>'0</code>은 대상 변수의 모든 비트를 0으로 채우는 SystemVerilog 축약 표현(Fill Literal)이다. <code>26'd0</code>처럼 비트 폭을 명시하지 않아도 자동으로 맞춰지므로, 파라미터화된 코드에서 특히 유용하다.</p>
+
+  <pre><code class="language-systemverilog">// 파라미터화된 LED 점멸기
+module led_blinker #(
+   parameter int COUNT_MAX = 49_999_999  // 기본값: 약 0.5초 (합성용)
+)(
+   input  logic        clk,
+   input  logic        rst_n,
+   output logic [15:0] led
+);
+   // $clog2(COUNT_MAX+1): COUNT_MAX를 표현하는 데 필요한 비트 수
+   localparam int CNT_W = $clog2(COUNT_MAX + 1);
+
+   logic [CNT_W-1:0] counter;
+   logic tick;
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         counter &lt;= '0;                  // 모든 비트를 0으로 (fill literal)
+      else if (counter == CNT_W'(COUNT_MAX))  // 비트 폭 명시적 캐스팅
+         counter &lt;= '0;
+      else
+         counter &lt;= counter + 1'b1;
+   end
+
+   assign tick = (counter == CNT_W'(COUNT_MAX));
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         led &lt;= 16'h0001;
+      else if (tick)
+         led &lt;= {led[14:0], led[15]};
+   end
+endmodule</code></pre>
+
+  <p>테스트벤치에서 인스턴스를 생성할 때, <code>COUNT_MAX</code> 값을 작게 설정하면 시뮬레이션 시간을 대폭 줄일 수 있다.</p>
+
+  <pre><code class="language-systemverilog">// 시뮬레이션에서는 COUNT_MAX를 작은 값으로 오버라이드
+led_blinker #(
+   .COUNT_MAX(9)  // 10 사이클마다 LED 전환 (시뮬레이션 전용)
+) u_dut (
+   .clk   (clk),
+   .rst_n (rst_n),
+   .led   (led)
+);</code></pre>
+
+  <p>이처럼 파라미터를 활용하면, 합성 시에는 실제 동작 주파수에 맞는 값을 사용하고, 시뮬레이션 시에는 작은 값으로 대체하여 검증 효율을 높일 수 있다. 이 기법은 앞으로의 모든 챕터에서 반복적으로 활용되므로 반드시 숙지하기 바란다.</p>
+
+</section>
+
+<!-- ========== 1.6 본 챕터 요약 및 다음 단계 ========== -->
+<section id="sec-01-6">
+  <h2>1.6 본 챕터 요약 및 다음 단계</h2>
+
+  <p>이 챕터에서는 앞으로의 여정을 위한 기반을 다졌다. 최종 목표인 RV32I 파이프라인 프로세서 SoC의 전체 구조를 조감하였고, 개발 환경을 설치하였으며, SystemVerilog의 핵심 문법을 복습하였다. 그리고 LED 점멸 회로를 통해 Vivado의 전체 설계 흐름을 한 번 순회하였다.</p>
+
+  <p>가장 중요한 것은, 이 챕터를 통해 <strong>첫 번째 성공 경험</strong>을 얻었다는 것이다. LED가 점멸하는 그 작은 빛이, 20주 후에 C 프로그램을 실행하는 프로세서의 출발점이다.</p>
+
+</section>
+
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>최종 산출물</strong>: RV32I 5단계 파이프라인 프로세서 SoC (캐시, AMBA 버스, 주변 장치, 예외/인터럽트 포함)</li>
+    <li><strong>개발 환경</strong>: Vivado 2024.x (필수) + VCS/Verdi (선택). 설치 경로에 한글과 공백을 피할 것.</li>
+    <li><strong>SystemVerilog 핵심</strong>: <code>logic</code> 타입으로 <code>reg</code>/<code>wire</code> 통합, <code>always_comb</code>(조합 논리, 블로킹 할당), <code>always_ff</code>(순차 논리, 비블로킹 할당)</li>
+    <li><strong>코딩 규칙</strong>: 3칸 들여쓰기, <code>snake_case</code> 명명, 한국어 주석, 비동기 액티브 로우 리셋(<code>rst_n</code>)</li>
+    <li><strong>설계 흐름</strong>: RTL 작성 → 합성 → 구현 → 비트스트림 생성 → FPGA 프로그래밍</li>
+    <li><strong>시뮬레이션</strong>: 파라미터화를 통한 시뮬레이션 속도 최적화, 파형 분석에서 <code>X</code>/<code>Z</code> 값의 의미 이해</li>
+  </ul>
+</section>
+
+<aside class="metacognition">
+  <strong>🔍 스스로 점검 — 자가 점검 질문</strong>
+  <p>다음 질문에 스스로 답해 보십시오. 답할 수 없는 항목이 있다면 해당 절을 다시 읽기 바란다.</p>
+  <ol>
+    <li>이 교재에서 완성할 프로세서의 5단계 파이프라인 각 스테이지의 이름과 역할을 열거할 수 있는가? (→ 1.1절)</li>
+    <li>Vivado 설치 시 경로에 한글이나 공백이 포함되면 어떤 문제가 발생하는가? (→ 1.2절)</li>
+    <li><code>always_comb</code>와 <code>always_ff</code>의 차이를 면접관에게 1분 이내로 설명할 수 있는가? (→ 1.3절)</li>
+    <li>LED 점멸기에서 카운터의 최대값이 49,999,999이면 LED 패턴이 몇 초마다 전환되는지 설명할 수 있는가? (→ 1.4절)</li>
+    <li>시뮬레이션 파형에서 리셋 해제 후에도 <code>X</code> 값이 남아 있다면, 어떤 조치를 취해야 하는가? (→ 1.5절)</li>
+  </ol>
+</aside>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> SystemVerilog에서 <code>always_comb</code> 블록 내부에서 사용해야 하는 할당 연산자는 무엇이며, <code>always_ff</code> 블록에서 사용해야 하는 할당 연산자는 무엇인가?</li>
+    <li><strong>[이해]</strong> Verilog의 <code>reg</code> 타입이 실제 하드웨어 레지스터를 의미하지 않는 이유를 설명하고, SystemVerilog의 <code>logic</code> 타입이 이 혼란을 어떻게 해소하는지 서술하시오.</li>
+    <li><strong>[적용]</strong> LED 점멸기를 수정하여, 16개 LED가 좌측 순환 시프트 대신 <strong>우측 순환 시프트</strong>를 수행하도록 코드를 변경하시오. 변경이 필요한 부분은 어디인가?</li>
+    <li><strong>[분석]</strong> LED 점멸기의 카운터가 26비트인 이유를 수학적으로 분석하시오. 만약 2Hz로 점멸시키려면 <code>COUNT_MAX</code>를 얼마로 설정해야 하는가?</li>
+    <li><strong>[평가]</strong> 다음 코드에서 의도하지 않은 래치(Latch)가 생성될 수 있는 원인을 지적하고, 이를 수정하시오.
+      <pre><code class="language-systemverilog">always_comb begin
+   case (sel)
+      2'b00: y = a;
+      2'b01: y = b;
+      2'b10: y = c;
+      // default 절 누락
+   endcase
+end</code></pre>
+    </li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>다음 Chapter 02에서는 RISC-V 아키텍처의 설계 철학과 RV32I 명령어 집합 구조의 전체 모습을 학습한다. 모듈형 ISA(Modular ISA)라는 RISC-V만의 독특한 설계 철학이 왜 혁신적인지, 32개의 범용 레지스터(x0~x31)가 어떤 역할을 하는지, 그리고 6가지 명령어 형식(R/I/S/B/U/J 타입)이 어떤 패턴으로 구성되는지를 배우게 된다. 이번 챕터에서 설치한 개발 환경과 SystemVerilog 문법이 Chapter 02의 이해를 위한 기반이 된다.</p>
+</section>
+
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch01_led_blinker.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 모듈명  : led_blinker
+// 파일명  : ch01_led_blinker.sv
+// 설명    : Basys 3 FPGA 보드에서 LED를 1Hz 주기로 점멸하는 모듈
+//           100MHz 시스템 클록을 분주하여 사람이 인식할 수 있는 속도로 LED 제어
+// 대상 보드: Digilent Basys 3 (Artix-7 XC7A35T)
+// 작성 기준: SystemVerilog IEEE 1800-2017
+// ============================================================================
+
+module led_blinker (
+   input  logic       clk,      // 100MHz 시스템 클록 (Basys 3 W5 핀)
+   input  logic       rst_n,    // 능동 저(Active-Low) 리셋 (Basys 3 센터 버튼)
+   output logic [3:0] led       // LED 출력 (Basys 3 U16, E19, U19, V19 핀)
+);
+
+   // -----------------------------------------------------------------------
+   // 파라미터 정의
+   // -----------------------------------------------------------------------
+   // 100MHz 클록에서 1초 = 100,000,000 사이클
+   // 0.5초마다 토글하려면 50,000,000 사이클 카운트
+   localparam int unsigned MAX_COUNT = 50_000_000 - 1;
+
+   // 시뮬레이션 시 빠른 확인을 위한 조건부 파라미터
+   // synthesis translate_off
+   // localparam int unsigned MAX_COUNT = 5 - 1;  // 시뮬레이션용
+   // synthesis translate_on
+
+   // -----------------------------------------------------------------------
+   // 내부 신호 선언
+   // -----------------------------------------------------------------------
+   logic [25:0] counter;     // 26비트 카운터 (최대 67,108,863까지 카운트 가능)
+   logic        tick;        // 0.5초마다 발생하는 틱 신호
+   logic [3:0]  led_pattern; // LED 패턴 레지스터
+
+   // -----------------------------------------------------------------------
+   // 카운터 로직: 0.5초마다 틱 신호 생성
+   // -----------------------------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         counter &lt;= '0;
+      end else if (counter == MAX_COUNT[25:0]) begin
+         counter &lt;= '0;
+      end else begin
+         counter &lt;= counter + 1'b1;
+      end
+   end
+
+   // 틱 신호 생성 (조합 논리)
+   always_comb begin
+      tick = (counter == MAX_COUNT[25:0]);
+   end
+
+   // -----------------------------------------------------------------------
+   // LED 패턴 생성: 틱마다 패턴 순환
+   // -----------------------------------------------------------------------
+   // 패턴 순서: 0001 → 0010 → 0100 → 1000 → 0001 (시프트 레지스터)
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         led_pattern &lt;= 4'b0001;  // 초기값: 첫 번째 LED만 점등
+      end else if (tick) begin
+         led_pattern &lt;= {led_pattern[2:0], led_pattern[3]};  // 좌측 순환 시프트
+      end
+   end
+
+   // -----------------------------------------------------------------------
+   // 출력 연결
+   // -----------------------------------------------------------------------
+   assign led = led_pattern;
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch01_led_blinker_tb.sv</h3>
+    <pre><code class="language-verilog">// ============================================================================
+// 모듈명  : led_blinker_tb
+// 파일명  : ch01_led_blinker_tb.sv
+// 설명    : led_blinker 모듈의 테스트벤치
+//           시뮬레이션에서 LED 패턴 순환과 리셋 동작을 검증
+// 작성 기준: SystemVerilog IEEE 1800-2017
+// ============================================================================
+
+`timescale 1ns / 1ps
+
+module led_blinker_tb;
+
+   // -----------------------------------------------------------------------
+   // 테스트벤치 신호 선언
+   // -----------------------------------------------------------------------
+   logic       clk;
+   logic       rst_n;
+   logic [3:0] led;
+
+   // -----------------------------------------------------------------------
+   // 시뮬레이션용 파라미터 (빠른 검증을 위해 카운터 최대값을 작게 설정)
+   // -----------------------------------------------------------------------
+   localparam int unsigned SIM_MAX_COUNT = 5;  // 5 사이클마다 틱 발생
+
+   // -----------------------------------------------------------------------
+   // DUT (Design Under Test) 인스턴스화
+   // -----------------------------------------------------------------------
+   led_blinker dut (
+      .clk   (clk),
+      .rst_n (rst_n),
+      .led   (led)
+   );
+
+   // -----------------------------------------------------------------------
+   // 클록 생성: 100MHz (주기 10ns)
+   // -----------------------------------------------------------------------
+   initial begin
+      clk = 1'b0;
+      forever #5 clk = ~clk;  // 5ns 반주기 → 10ns 주기 → 100MHz
+   end
+
+   // -----------------------------------------------------------------------
+   // 테스트 시나리오
+   // -----------------------------------------------------------------------
+   initial begin
+      $dumpfile("led_blinker_tb.vcd");
+      $dumpvars(0, led_blinker_tb);
+
+      // ---- 테스트 1: 리셋 동작 확인 ----
+      $display("=== 테스트 1: 리셋 동작 확인 ===");
+      rst_n = 1'b0;
+      #100;
+
+      assert (led == 4'b0001)
+         $display("[PASS] 리셋 중 LED 초기값 = %b", led);
+      else
+         $error("[FAIL] 리셋 중 LED 값 = %b, 기대값 = 0001", led);
+
+      // ---- 테스트 2: 리셋 해제 후 정상 동작 ----
+      $display("\n=== 테스트 2: 리셋 해제 후 정상 동작 ===");
+      rst_n = 1'b1;
+      $display("리셋 해제 시각: %0t ns", $time);
+      #1000;
+
+      // ---- 테스트 3: 리셋 재인가 ----
+      $display("\n=== 테스트 3: 리셋 재인가 ===");
+      rst_n = 1'b0;
+      #50;
+
+      assert (led == 4'b0001)
+         $display("[PASS] 재리셋 후 LED 초기값 = %b", led);
+      else
+         $error("[FAIL] 재리셋 후 LED 값 = %b, 기대값 = 0001", led);
+
+      rst_n = 1'b1;
+      #500;
+
+      $display("\n=== 테스트 완료 ===");
+      $display("파형 파일: led_blinker_tb.vcd 에서 상세 동작을 확인하십시오.");
+      $finish;
+   end
+
+   // -----------------------------------------------------------------------
+   // LED 변화 모니터링
+   // -----------------------------------------------------------------------
+   always @(led) begin
+      $display("[%0t ns] LED 변화 감지: led = %b", $time, led);
+   end
+
+   initial begin
+      #10_000_000;
+      $display("[TIMEOUT] 시뮬레이션 시간 초과 — 강제 종료");
+      $finish;
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">XDC</span>ch01_basys3.xdc</h3>
+    <pre><code class="language-tcl">## ============================================================================
+## 파일명  : ch01_basys3.xdc
+## 설명    : Basys 3 FPGA 보드용 XDC 제약 파일 (LED 점멸 실습)
+## 대상 보드: Digilent Basys 3 (Artix-7 XC7A35TCPG236-1)
+## ============================================================================
+
+## 클록 신호 (100MHz 온보드 오실레이터)
+set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports {clk}]
+create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports {clk}]
+
+## 리셋 신호 (센터 푸시 버튼 — 능동 저 리셋)
+set_property -dict { PACKAGE_PIN U18  IOSTANDARD LVCMOS33 } [get_ports {rst_n}]
+
+## LED 출력 (4개)
+set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]
+set_property -dict { PACKAGE_PIN E19  IOSTANDARD LVCMOS33 } [get_ports {led[1]}]
+set_property -dict { PACKAGE_PIN U19  IOSTANDARD LVCMOS33 } [get_ports {led[2]}]
+set_property -dict { PACKAGE_PIN V19  IOSTANDARD LVCMOS33 } [get_ports {led[3]}]
+
+## 비트스트림 설정
+set_property CFGBVS VCCO [current_design]
+set_property CONFIG_VOLTAGE 3.3 [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]</code></pre>
+  </div>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
+</body>
+</html>

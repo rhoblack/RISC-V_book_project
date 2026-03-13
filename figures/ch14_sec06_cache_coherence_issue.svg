@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 420" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow6" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow6r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#E11D48"/>
+    </marker>
+  </defs>
+
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E3A5F">단일 코어 I-Cache / D-Cache 일관성 이슈</text>
+
+  <!-- CPU -->
+  <rect x="300" y="55" width="250" height="50" rx="10" fill="#2563EB" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="425" y="85" text-anchor="middle" font-size="15" fill="white" font-weight="bold">CPU Pipeline</text>
+
+  <!-- I-Cache -->
+  <rect x="80" y="150" width="200" height="80" rx="10" fill="#3B82F6" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="180" y="182" text-anchor="middle" font-size="14" fill="white" font-weight="bold">I-Cache (Read Only)</text>
+  <text x="180" y="202" text-anchor="middle" font-size="11" fill="#BFDBFE">명령어: addr=0x1000</text>
+  <text x="180" y="218" text-anchor="middle" font-size="11" fill="#BFDBFE">data: ADD x1, x2, x3</text>
+
+  <!-- D-Cache -->
+  <rect x="570" y="150" width="200" height="80" rx="10" fill="#3B82F6" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="670" y="182" text-anchor="middle" font-size="14" fill="white" font-weight="bold">D-Cache (R/W)</text>
+  <text x="670" y="202" text-anchor="middle" font-size="11" fill="#FDE68A">SW addr=0x1000</text>
+  <text x="670" y="218" text-anchor="middle" font-size="11" fill="#FDE68A">data: SUB x4, x5, x6</text>
+
+  <!-- Arrows to caches -->
+  <line x1="360" y1="105" x2="220" y2="148" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow6)"/>
+  <text x="250" y="122" font-size="11" fill="#2563EB">IF Stage</text>
+
+  <line x1="490" y1="105" x2="630" y2="148" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow6)"/>
+  <text x="580" y="122" font-size="11" fill="#2563EB">MEM Stage</text>
+
+  <!-- Main Memory -->
+  <rect x="275" y="300" width="300" height="60" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="425" y="328" text-anchor="middle" font-size="14" fill="#1E3A5F" font-weight="bold">Main Memory</text>
+  <text x="425" y="348" text-anchor="middle" font-size="11" fill="#6B7280">addr=0x1000: ADD x1, x2, x3 (원본)</text>
+
+  <line x1="180" y1="230" x2="320" y2="298" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow6)"/>
+  <line x1="670" y1="230" x2="530" y2="298" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow6)"/>
+
+  <!-- 경고 박스 -->
+  <rect x="30" y="380" width="790" height="35" rx="6" fill="#FEF2F2" stroke="#E11D48" stroke-width="1.5"/>
+  <text x="425" y="403" text-anchor="middle" font-size="13" fill="#E11D48" font-weight="bold">
+    자기 수정 코드(Self-Modifying Code): D-Cache가 0x1000에 새 명령어를 썼지만, I-Cache는 여전히 옛 명령어를 보유 --> FENCE.I 필요!
+  </text>
+</svg>

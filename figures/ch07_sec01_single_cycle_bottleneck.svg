@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+    <marker id="arrR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="520" fill="#F8FAFC" rx="12"/>
+  <text x="500" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">단일 사이클 임계 경로 병목 (Single-Cycle Critical Path Bottleneck)</text>
+
+  <!-- 클럭 주기 표시 -->
+  <rect x="40" y="55" width="920" height="40" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="500" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="#DC2626">1 클럭 주기 (T_clk) = 가장 느린 명령어(LW)의 전체 지연에 맞춰야 함</text>
+
+  <!-- 파이프라인 스테이지 블록들 -->
+  <!-- IF: IMEM -->
+  <rect x="40" y="120" width="160" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="120" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">IMEM</text>
+  <text x="120" y="172" text-anchor="middle" font-size="11" fill="#6B7280">명령어 인출</text>
+  <text x="120" y="215" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">200 ps</text>
+
+  <!-- 화살표 -->
+  <line x1="200" y1="160" x2="228" y2="160" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ID: Decode + RegFile -->
+  <rect x="230" y="120" width="160" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="310" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Decode +</text>
+  <text x="310" y="167" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Reg Read</text>
+  <text x="310" y="186" text-anchor="middle" font-size="11" fill="#6B7280">디코딩 + 레지스터 읽기</text>
+  <text x="310" y="215" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">100 ps</text>
+
+  <line x1="390" y1="160" x2="418" y2="160" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- EX: ALU -->
+  <rect x="420" y="120" width="160" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="500" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">ALU</text>
+  <text x="500" y="172" text-anchor="middle" font-size="11" fill="#6B7280">주소 계산/연산</text>
+  <text x="500" y="215" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">200 ps</text>
+
+  <line x1="580" y1="160" x2="608" y2="160" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- MEM: DMEM -->
+  <rect x="610" y="120" width="160" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="690" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">DMEM</text>
+  <text x="690" y="172" text-anchor="middle" font-size="11" fill="#6B7280">데이터 메모리</text>
+  <text x="690" y="215" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">200 ps</text>
+
+  <line x1="770" y1="160" x2="798" y2="160" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- WB: Reg Write -->
+  <rect x="800" y="120" width="160" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="880" y="152" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Reg Write</text>
+  <text x="880" y="172" text-anchor="middle" font-size="11" fill="#6B7280">결과 기록</text>
+  <text x="880" y="215" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">100 ps</text>
+
+  <!-- 임계 경로 (LW) 강조 -->
+  <rect x="38" y="118" width="924" height="84" rx="8" fill="none" stroke="#DC2626" stroke-width="3" stroke-dasharray="8,4"/>
+  <text x="500" y="240" text-anchor="middle" font-size="13" font-weight="700" fill="#DC2626">LW 임계 경로: 200 + 100 + 200 + 200 + 100 = 800 ps (전체 모듈 순차 통과)</text>
+
+  <!-- 명령어별 실제 사용 시간 비교표 -->
+  <text x="500" y="280" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">명령어별 실제 소요 시간 vs 클럭 주기</text>
+
+  <!-- R-type -->
+  <rect x="60" y="300" width="380" height="28" rx="4" fill="#3B82F6" opacity="0.8"/>
+  <text x="70" y="319" font-size="12" font-weight="600" fill="#FFFFFF">R-type (ADD 등): 600 ps</text>
+  <rect x="440" y="300" width="180" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="530" y="319" text-anchor="middle" font-size="11" fill="#DC2626">200 ps 낭비</text>
+
+  <!-- S-type -->
+  <rect x="60" y="336" width="430" height="28" rx="4" fill="#3B82F6" opacity="0.7"/>
+  <text x="70" y="355" font-size="12" font-weight="600" fill="#FFFFFF">S-type (SW 등): 700 ps</text>
+  <rect x="490" y="336" width="130" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="555" y="355" text-anchor="middle" font-size="11" fill="#DC2626">100 ps 낭비</text>
+
+  <!-- B-type -->
+  <rect x="60" y="372" width="310" height="28" rx="4" fill="#3B82F6" opacity="0.6"/>
+  <text x="70" y="391" font-size="12" font-weight="600" fill="#FFFFFF">B-type (BEQ 등): 500 ps</text>
+  <rect x="370" y="372" width="250" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="495" y="391" text-anchor="middle" font-size="11" fill="#DC2626">300 ps 낭비</text>
+
+  <!-- LW (기준) -->
+  <rect x="60" y="408" width="560" height="28" rx="4" fill="#DC2626" opacity="0.9"/>
+  <text x="70" y="427" font-size="12" font-weight="700" fill="#FFFFFF">LW (임계 경로): 800 ps -- 클럭 주기 결정 기준</text>
+
+  <!-- 클럭 기준선 -->
+  <line x1="620" y1="295" x2="620" y2="444" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="630" y="455" font-size="11" fill="#DC2626" font-weight="700">T_clk = 800 ps</text>
+  <text x="630" y="470" font-size="11" fill="#DC2626">(f_max = 1.25 GHz 이상적)</text>
+
+  <!-- 결론 박스 -->
+  <rect x="60" y="480" width="880" height="30" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="500" y="500" text-anchor="middle" font-size="12" font-weight="600" fill="#92400E">문제: 모든 명령어가 LW의 800 ps를 기다려야 함 --> 빠른 명령어도 느려지고, 하드웨어 자원도 유휴 상태로 낭비됨</text>
+</svg>

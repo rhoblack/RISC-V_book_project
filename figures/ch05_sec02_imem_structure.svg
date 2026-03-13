@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="800" height="480" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="400" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">명령어 메모리 (IMEM) 내부 구조</text>
+  <text x="400" y="52" text-anchor="middle" font-size="12" fill="#64748B">PC 주소로 32비트 명령어를 읽는 읽기 전용 메모리</text>
+
+  <!-- PC 입력 -->
+  <rect x="30" y="160" width="80" height="50" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="70" y="183" text-anchor="middle" font-size="12" font-weight="600" fill="#92400E">PC</text>
+  <text x="70" y="198" text-anchor="middle" font-size="9" fill="#92400E">[31:0]</text>
+
+  <!-- 주소 변환 블록 -->
+  <rect x="150" y="145" width="110" height="80" rx="6" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="205" y="170" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">주소 변환</text>
+  <text x="205" y="188" text-anchor="middle" font-size="10" fill="#2563EB">PC[13:2]</text>
+  <text x="205" y="205" text-anchor="middle" font-size="9" fill="#64748B">워드 정렬 주소</text>
+  <text x="205" y="218" text-anchor="middle" font-size="9" fill="#64748B">÷4 (하위 2비트 제거)</text>
+
+  <!-- 화살표: PC → 주소변환 -->
+  <line x1="110" y1="185" x2="145" y2="185" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- BRAM / ROM 블록 (메인 메모리) -->
+  <rect x="310" y="90" width="220" height="200" rx="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" filter="url(#shadow)"/>
+  <text x="420" y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#2563EB">명령어 메모리 배열</text>
+  <text x="420" y="138" text-anchor="middle" font-size="11" fill="#1E293B">logic [31:0] mem [0:4095]</text>
+
+  <!-- 메모리 셀 표현 -->
+  <rect x="335" y="155" width="170" height="22" rx="3" fill="white" stroke="#3B82F6" stroke-width="1"/>
+  <text x="345" y="170" font-size="9" font-family="monospace" fill="#64748B">0x000:</text>
+  <text x="400" y="170" font-size="9" font-family="monospace" fill="#1E293B">0x00500093</text>
+  <text x="490" y="170" font-size="8" fill="#94A3B8">addi x1, x0, 5</text>
+
+  <rect x="335" y="180" width="170" height="22" rx="3" fill="#F8FAFC" stroke="#3B82F6" stroke-width="1"/>
+  <text x="345" y="195" font-size="9" font-family="monospace" fill="#64748B">0x001:</text>
+  <text x="400" y="195" font-size="9" font-family="monospace" fill="#1E293B">0x00A00113</text>
+  <text x="490" y="195" font-size="8" fill="#94A3B8">addi x2, x0, 10</text>
+
+  <rect x="335" y="205" width="170" height="22" rx="3" fill="white" stroke="#3B82F6" stroke-width="1"/>
+  <text x="345" y="220" font-size="9" font-family="monospace" fill="#64748B">0x002:</text>
+  <text x="400" y="220" font-size="9" font-family="monospace" fill="#1E293B">0x002081B3</text>
+  <text x="490" y="220" font-size="8" fill="#94A3B8">add x3, x1, x2</text>
+
+  <text x="420" y="252" text-anchor="middle" font-size="10" fill="#64748B">... (최대 4096 워드 = 16 KB)</text>
+  <rect x="335" y="258" width="170" height="22" rx="3" fill="#F8FAFC" stroke="#3B82F6" stroke-width="1"/>
+  <text x="345" y="273" font-size="9" font-family="monospace" fill="#64748B">0xFFF:</text>
+  <text x="400" y="273" font-size="9" font-family="monospace" fill="#1E293B">0x00000000</text>
+
+  <!-- 화살표: 주소변환 → 메모리 -->
+  <line x1="260" y1="185" x2="305" y2="185" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="283" y="178" text-anchor="middle" font-size="9" fill="#2563EB">addr</text>
+
+  <!-- 출력: 명령어 -->
+  <rect x="580" y="160" width="100" height="50" rx="6" fill="#F0FDF4" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="630" y="183" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">instr</text>
+  <text x="630" y="198" text-anchor="middle" font-size="9" fill="#059669">[31:0]</text>
+
+  <!-- 화살표: 메모리 → 출력 -->
+  <line x1="530" y1="185" x2="575" y2="185" stroke="#059669" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 초기화 방법 비교 (하단) -->
+  <rect x="50" y="330" width="320" height="130" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="210" y="355" text-anchor="middle" font-size="13" font-weight="700" fill="#059669">시뮬레이션 초기화</text>
+  <text x="210" y="378" text-anchor="middle" font-size="11" fill="#1E293B" font-family="monospace">$readmemh("program.hex", mem);</text>
+  <text x="210" y="398" text-anchor="middle" font-size="10" fill="#64748B">initial 블록에서 .hex 파일 로드</text>
+  <text x="210" y="418" text-anchor="middle" font-size="10" fill="#64748B">VCS, Vivado Simulator 호환</text>
+  <text x="210" y="440" text-anchor="middle" font-size="10" fill="#059669">RARS → riscv-gnu-toolchain → .hex</text>
+
+  <rect x="430" y="330" width="320" height="130" rx="8" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="590" y="355" text-anchor="middle" font-size="13" font-weight="700" fill="#2563EB">FPGA 합성 초기화</text>
+  <text x="590" y="378" text-anchor="middle" font-size="11" fill="#1E293B" font-family="monospace">Block Memory Generator IP</text>
+  <text x="590" y="398" text-anchor="middle" font-size="10" fill="#64748B">.coe 파일로 BRAM 초기값 설정</text>
+  <text x="590" y="418" text-anchor="middle" font-size="10" fill="#64748B">Vivado IP Catalog 사용</text>
+  <text x="590" y="440" text-anchor="middle" font-size="10" fill="#2563EB">memory_initialization_radix=16;</text>
+
+  <!-- vs 표시 -->
+  <rect x="382" y="380" width="36" height="24" rx="12" fill="#D97706"/>
+  <text x="400" y="397" text-anchor="middle" font-size="11" font-weight="700" fill="white">vs</text>
+
+  <!-- 비동기 읽기 라벨 -->
+  <rect x="600" y="90" width="160" height="45" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="680" y="108" text-anchor="middle" font-size="10" font-weight="600" fill="#DC2626">조합 논리 읽기 (비동기)</text>
+  <text x="680" y="125" text-anchor="middle" font-size="9" fill="#64748B">assign instr = mem[addr];</text>
+</svg>

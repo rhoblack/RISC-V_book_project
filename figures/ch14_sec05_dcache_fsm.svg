@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 500" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow5" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow5r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#E11D48"/>
+    </marker>
+    <marker id="arrow5g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E3A5F">D-Cache 제어 FSM 상태 전이도</text>
+
+  <!-- IDLE -->
+  <circle cx="150" cy="120" r="50" fill="#DBEAFE" stroke="#2563EB" stroke-width="3"/>
+  <text x="150" y="116" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E3A5F">IDLE</text>
+  <text x="150" y="134" text-anchor="middle" font-size="10" fill="#6B7280">stall=0</text>
+
+  <!-- TAG_CHECK -->
+  <circle cx="420" cy="120" r="55" fill="#3B82F6" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="420" y="112" text-anchor="middle" font-size="13" font-weight="bold" fill="white">TAG</text>
+  <text x="420" y="130" text-anchor="middle" font-size="13" font-weight="bold" fill="white">CHECK</text>
+
+  <!-- WRITE_BACK -->
+  <circle cx="700" cy="120" r="55" fill="#E11D48" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="700" y="112" text-anchor="middle" font-size="13" font-weight="bold" fill="white">WRITE</text>
+  <text x="700" y="130" text-anchor="middle" font-size="13" font-weight="bold" fill="white">BACK</text>
+
+  <!-- REFILL -->
+  <circle cx="700" cy="320" r="55" fill="#F59E0B" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="700" y="316" text-anchor="middle" font-size="14" font-weight="bold" fill="white">REFILL</text>
+  <text x="700" y="336" text-anchor="middle" font-size="10" fill="white">stall=1</text>
+
+  <!-- UPDATE -->
+  <circle cx="420" cy="320" r="50" fill="#059669" stroke="#1E3A5F" stroke-width="2"/>
+  <text x="420" y="316" text-anchor="middle" font-size="14" font-weight="bold" fill="white">UPDATE</text>
+  <text x="420" y="334" text-anchor="middle" font-size="10" fill="white">캐시 갱신</text>
+
+  <!-- Transitions -->
+  <!-- IDLE -> TAG_CHECK -->
+  <line x1="200" y1="120" x2="363" y2="120" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow5)"/>
+  <text x="280" y="110" text-anchor="middle" font-size="11" fill="#2563EB">요청 발생</text>
+
+  <!-- TAG_CHECK -> IDLE (hit) -->
+  <path d="M 380 80 Q 280 40 200 80" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arrow5g)"/>
+  <text x="280" y="50" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">Hit (1 cycle)</text>
+
+  <!-- TAG_CHECK -> WRITE_BACK (miss + dirty) -->
+  <line x1="475" y1="120" x2="643" y2="120" stroke="#E11D48" stroke-width="2" marker-end="url(#arrow5r)"/>
+  <text x="560" y="110" text-anchor="middle" font-size="11" fill="#E11D48">Miss + Dirty</text>
+
+  <!-- TAG_CHECK -> REFILL (miss + clean) -->
+  <line x1="460" y1="160" x2="660" y2="280" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrow5)"/>
+  <text x="530" y="240" text-anchor="middle" font-size="11" fill="#F59E0B" font-weight="bold">Miss + Clean</text>
+
+  <!-- WRITE_BACK -> REFILL -->
+  <line x1="700" y1="175" x2="700" y2="263" stroke="#E11D48" stroke-width="2" marker-end="url(#arrow5r)"/>
+  <text x="750" y="220" font-size="11" fill="#E11D48">WB 완료</text>
+
+  <!-- REFILL -> UPDATE -->
+  <line x1="645" y1="320" x2="472" y2="320" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrow5)"/>
+  <text x="560" y="310" text-anchor="middle" font-size="11" fill="#F59E0B">Refill 완료</text>
+
+  <!-- UPDATE -> IDLE -->
+  <line x1="380" y1="290" x2="170" y2="165" stroke="#059669" stroke-width="2" marker-end="url(#arrow5g)"/>
+  <text x="250" y="225" text-anchor="middle" font-size="11" fill="#059669">갱신 완료</text>
+
+  <!-- 사이클 카운트 -->
+  <rect x="30" y="400" width="790" height="85" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1"/>
+  <text x="50" y="425" font-size="13" font-weight="bold" fill="#92400E">사이클 분석 (캐시 라인 8 워드, 메모리 지연 2 사이클/워드 가정):</text>
+  <text x="50" y="450" font-size="12" fill="#059669">Hit: 1 사이클 (TAG_CHECK에서 즉시 반환)</text>
+  <text x="50" y="470" font-size="12" fill="#F59E0B">Clean Miss: 1 + 16 + 1 = 18 사이클 (TAG_CHECK + REFILL + UPDATE)</text>
+  <text x="50" y="490" font-size="12" fill="#E11D48">Dirty Miss: 1 + 16 + 16 + 1 = 34 사이클 (TAG_CHECK + WRITE_BACK + REFILL + UPDATE)</text>
+</svg>

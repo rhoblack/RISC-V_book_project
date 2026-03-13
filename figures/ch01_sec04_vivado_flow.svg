@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 480" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="#00000020"/>
+    </filter>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="850" height="480" rx="12" fill="#F8FAFC"/>
+
+  <!-- 제목 -->
+  <text x="425" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E293B">Vivado FPGA 설계 플로우</text>
+  <text x="425" y="55" text-anchor="middle" font-size="12" fill="#64748B">SystemVerilog 소스 코드에서 FPGA 비트스트림까지의 과정</text>
+
+  <!-- 단계 1: 소스 코드 입력 -->
+  <rect x="30" y="80" width="160" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="110" y="110" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">소스 입력</text>
+  <text x="110" y="130" text-anchor="middle" font-size="10" fill="#3B82F6">.sv 파일</text>
+  <text x="110" y="145" text-anchor="middle" font-size="10" fill="#3B82F6">.xdc 제약 파일</text>
+
+  <line x1="190" y1="120" x2="230" y2="120" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 단계 2: 합성 -->
+  <rect x="230" y="80" width="160" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="310" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">합성 (Synthesis)</text>
+  <text x="310" y="125" text-anchor="middle" font-size="10" fill="#3B82F6">RTL → 게이트 수준</text>
+  <text x="310" y="140" text-anchor="middle" font-size="10" fill="#3B82F6">넷리스트 생성</text>
+  <text x="310" y="155" text-anchor="middle" font-size="9" fill="#94A3B8">run_synthesis</text>
+
+  <line x1="390" y1="120" x2="430" y2="120" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 단계 3: 구현 -->
+  <rect x="430" y="80" width="160" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="510" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">구현 (Implementation)</text>
+  <text x="510" y="125" text-anchor="middle" font-size="10" fill="#3B82F6">배치 (Place)</text>
+  <text x="510" y="140" text-anchor="middle" font-size="10" fill="#3B82F6">배선 (Route)</text>
+  <text x="510" y="155" text-anchor="middle" font-size="9" fill="#94A3B8">run_implementation</text>
+
+  <line x1="590" y1="120" x2="630" y2="120" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 단계 4: 비트스트림 생성 -->
+  <rect x="630" y="80" width="180" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="720" y="105" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">비트스트림 생성</text>
+  <text x="720" y="125" text-anchor="middle" font-size="10" fill="#3B82F6">.bit 파일 생성</text>
+  <text x="720" y="140" text-anchor="middle" font-size="10" fill="#3B82F6">FPGA 구성 데이터</text>
+  <text x="720" y="155" text-anchor="middle" font-size="9" fill="#94A3B8">write_bitstream</text>
+
+  <!-- 다운로드 화살표 -->
+  <line x1="720" y1="160" x2="720" y2="200" stroke="#059669" stroke-width="2" marker-end="url(#arrow-green)"/>
+
+  <!-- FPGA 보드 -->
+  <rect x="620" y="200" width="200" height="70" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="720" y="228" text-anchor="middle" font-size="13" font-weight="bold" fill="#065F46">Basys 3 FPGA</text>
+  <text x="720" y="248" text-anchor="middle" font-size="10" fill="#059669">Artix-7 XC7A35T</text>
+  <text x="720" y="263" text-anchor="middle" font-size="9" fill="#94A3B8">USB 케이블로 프로그래밍</text>
+
+  <!-- 시뮬레이션 분기 (합성 전) -->
+  <line x1="310" y1="80" x2="310" y2="50" stroke="#D97706" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="310" y1="50" x2="310" y2="50" stroke="#D97706" stroke-width="1.5"/>
+
+  <!-- 시뮬레이션 영역 -->
+  <rect x="100" y="300" width="500" height="160" rx="10" fill="white" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="100" y="300" width="500" height="32" rx="10" fill="#FEF3C7"/>
+  <text x="350" y="322" text-anchor="middle" font-size="13" font-weight="bold" fill="#92400E">시뮬레이션 플로우 (합성 전 검증)</text>
+
+  <!-- 시뮬레이션 단계들 -->
+  <rect x="120" y="350" width="130" height="50" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+  <text x="185" y="372" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">테스트벤치</text>
+  <text x="185" y="390" text-anchor="middle" font-size="10" fill="#B45309">*_tb.sv</text>
+
+  <line x1="250" y1="375" x2="280" y2="375" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="280" y="350" width="130" height="50" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+  <text x="345" y="372" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">Vivado Sim</text>
+  <text x="345" y="390" text-anchor="middle" font-size="10" fill="#B45309">또는 VCS</text>
+
+  <line x1="410" y1="375" x2="440" y2="375" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="440" y="350" width="140" height="50" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+  <text x="510" y="372" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">파형 분석</text>
+  <text x="510" y="390" text-anchor="middle" font-size="10" fill="#B45309">Vivado / Verdi</text>
+
+  <!-- 연결선 (소스→시뮬레이션) -->
+  <path d="M 110 160 L 110 250 L 185 250 L 185 300" stroke="#D97706" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="80" y="240" font-size="10" fill="#D97706">소스 코드</text>
+
+  <!-- 리포트 영역 -->
+  <rect x="630" y="300" width="190" height="160" rx="10" fill="white" stroke="#7C3AED" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="630" y="300" width="190" height="32" rx="10" fill="#F5F3FF"/>
+  <text x="725" y="322" text-anchor="middle" font-size="12" font-weight="bold" fill="#5B21B6">분석 리포트</text>
+
+  <text x="650" y="352" font-size="11" fill="#6D28D9">&#x2022; 타이밍 분석</text>
+  <text x="660" y="370" font-size="10" fill="#7C3AED">WNS / TNS</text>
+  <text x="650" y="395" font-size="11" fill="#6D28D9">&#x2022; 리소스 사용량</text>
+  <text x="660" y="413" font-size="10" fill="#7C3AED">LUT / BRAM / FF</text>
+  <text x="650" y="438" font-size="11" fill="#6D28D9">&#x2022; 전력 추정</text>
+  <text x="660" y="453" font-size="10" fill="#7C3AED">Power Report</text>
+
+  <!-- 연결선 (구현→리포트) -->
+  <path d="M 510 160 L 510 280 L 725 280 L 725 300" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- 하단 캡션 -->
+  <text x="425" y="475" text-anchor="middle" font-size="10" fill="#94A3B8">그림 1.3: Vivado FPGA 설계 플로우 — 시뮬레이션(검증)과 합성(구현)의 두 경로</text>
+</svg>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="820" height="420" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="820" height="420" fill="#F8FAFC" rx="8"/>
+  <text x="410" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">Flush 메커니즘 — 분기 taken 시 파이프라인 레지스터 NOP 대체</text>
+  <text x="410" y="44" text-anchor="middle" font-size="11" fill="#64748B">if_id_flush / id_ex_flush 활성화 → 해당 레지스터를 NOP(32'h0000_0013)으로 교체</text>
+
+  <!-- 클록 사이클 헤더 -->
+  <rect x="150" y="58" width="640" height="26" fill="#1E40AF" rx="4"/>
+  <text x="75" y="75" text-anchor="middle" font-size="11" fill="#334155">구분</text>
+  <text x="230" y="75" text-anchor="middle" font-size="12" font-weight="600" fill="white">C4 (BEQ EX)</text>
+  <text x="390" y="75" text-anchor="middle" font-size="12" font-weight="600" fill="white">C5 (flush 후)</text>
+  <text x="550" y="75" text-anchor="middle" font-size="12" font-weight="600" fill="white">C6 (정상 재개)</text>
+  <text x="710" y="75" text-anchor="middle" font-size="12" font-weight="600" fill="white">C7</text>
+
+  <!-- 행 레이블 -->
+  <rect x="4" y="88" width="146" height="290" fill="#EFF6FF" rx="4" stroke="#BFDBFE" stroke-width="1"/>
+  <text x="75" y="117" text-anchor="middle" font-size="10" font-weight="700" fill="#1E40AF">PC</text>
+  <text x="75" y="185" text-anchor="middle" font-size="10" font-weight="700" fill="#1E40AF">IF/ID 레지스터</text>
+  <text x="75" y="200" text-anchor="middle" font-size="9" fill="#64748B">(instr, pc)</text>
+  <text x="75" y="290" text-anchor="middle" font-size="10" font-weight="700" fill="#1E40AF">ID/EX 레지스터</text>
+  <text x="75" y="305" text-anchor="middle" font-size="9" fill="#64748B">(제어신호, 데이터)</text>
+
+  <!-- PC 행 -->
+  <rect x="150" y="92" width="160" height="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="230" y="114" text-anchor="middle" font-size="10" font-weight="700" fill="#1D4ED8">0x0010 (BEQ 후)</text>
+  <text x="230" y="130" text-anchor="middle" font-size="9" fill="#64748B">wrong-path 진행중</text>
+  <text x="230" y="144" text-anchor="middle" font-size="9" fill="#64748B">branch_taken = 1</text>
+
+  <rect x="310" y="92" width="160" height="55" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="3"/>
+  <text x="390" y="114" text-anchor="middle" font-size="10" font-weight="700" fill="#16A34A">label 주소로 변경</text>
+  <text x="390" y="130" text-anchor="middle" font-size="9" fill="#16A34A">pc_next = branch_target</text>
+  <text x="390" y="144" text-anchor="middle" font-size="9" fill="#16A34A">= id_ex_pc + id_ex_imm</text>
+
+  <rect x="470" y="92" width="160" height="55" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="550" y="121" text-anchor="middle" font-size="10" font-weight="600" fill="#16A34A">label+4 진행</text>
+
+  <rect x="630" y="92" width="160" height="55" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="710" y="121" text-anchor="middle" font-size="10" fill="#1D4ED8">label+8 진행</text>
+
+  <!-- IF/ID 행 -->
+  <rect x="150" y="162" width="160" height="65" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="230" y="182" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">wrong instr (C3에서 IF)</text>
+  <text x="230" y="198" text-anchor="middle" font-size="9" fill="#DC2626">if_id_flush=1 →</text>
+  <text x="230" y="212" text-anchor="middle" font-size="9" fill="#DC2626">다음 클록에 NOP으로</text>
+  <text x="230" y="224" text-anchor="middle" font-size="8" fill="#64748B">(아직 wrong 내용 유지)</text>
+
+  <rect x="310" y="162" width="160" height="65" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="390" y="184" text-anchor="middle" font-size="11" font-weight="700" fill="#16A34A">NOP</text>
+  <text x="390" y="200" text-anchor="middle" font-size="9" fill="#16A34A">32'h0000_0013</text>
+  <text x="390" y="216" text-anchor="middle" font-size="9" fill="#16A34A">flush 적용됨</text>
+
+  <rect x="470" y="162" width="160" height="65" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="550" y="192" text-anchor="middle" font-size="10" font-weight="600" fill="#16A34A">label: 올바른 명령어</text>
+  <text x="550" y="208" text-anchor="middle" font-size="9" fill="#16A34A">정상 실행 재개</text>
+
+  <rect x="630" y="162" width="160" height="65" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="710" y="200" text-anchor="middle" font-size="10" fill="#1D4ED8">label+4 명령어</text>
+
+  <!-- ID/EX 행 -->
+  <rect x="150" y="242" width="160" height="65" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="3"/>
+  <text x="230" y="268" text-anchor="middle" font-size="10" fill="#1D4ED8">BEQ 제어신호</text>
+  <text x="230" y="284" text-anchor="middle" font-size="9" fill="#64748B">(EX 단계 진행중)</text>
+
+  <rect x="310" y="242" width="160" height="65" fill="#FEE2E2" stroke="#DC2626" stroke-width="2" rx="3"/>
+  <text x="390" y="262" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">wrong instr 제어신호</text>
+  <text x="390" y="278" text-anchor="middle" font-size="9" fill="#DC2626">id_ex_flush=1 →</text>
+  <text x="390" y="294" text-anchor="middle" font-size="9" fill="#DC2626">다음 클록에 NOP으로</text>
+
+  <rect x="470" y="242" width="160" height="65" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5,3" rx="3"/>
+  <text x="550" y="272" text-anchor="middle" font-size="11" font-weight="700" fill="#16A34A">NOP</text>
+  <text x="550" y="288" text-anchor="middle" font-size="9" fill="#16A34A">reg_w_en=0 등</text>
+
+  <rect x="630" y="242" width="160" height="65" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="710" y="272" text-anchor="middle" font-size="10" font-weight="600" fill="#16A34A">label: 올바른 명령어</text>
+  <text x="710" y="288" text-anchor="middle" font-size="9" fill="#16A34A">정상 실행</text>
+
+  <!-- 핵심 원칙 박스 -->
+  <rect x="150" y="325" width="640" height="60" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="6"/>
+  <text x="470" y="345" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">핵심 원칙: Flush = 내용 지우기 (NOP 삽입), Stall = 내용 유지 (홀드)</text>
+  <text x="470" y="363" text-anchor="middle" font-size="10" fill="#78350F">flush 조건: !rst_n || flush → NOP 삽입 | en 조건: 스톨 없을 때만 새 값 래치</text>
+  <text x="470" y="379" text-anchor="middle" font-size="10" fill="#78350F">Flush와 Stall이 동시 발생하면 → Flush 우선 (잘못된 명령어를 즉시 제거)</text>
+</svg>

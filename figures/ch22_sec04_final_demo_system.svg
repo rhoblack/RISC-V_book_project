@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="600" fill="#F8FAFC" rx="8"/>
+
+  <text x="450" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">최종 데모 시스템 — Basys 3에서 C 프로그램 실행</text>
+  <text x="450" y="52" text-anchor="middle" font-size="12" fill="#64748B">RV32I 파이프라인 SoC + 소프트웨어 스택 통합 구성도</text>
+
+  <!-- ===== FPGA 경계 ===== -->
+  <rect x="30" y="70" width="620" height="500" rx="10" fill="none" stroke="#2563EB" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="50" y="90" font-size="11" font-weight="700" fill="#2563EB">Basys 3 FPGA (XC7A35T)</text>
+
+  <!-- ===== CPU 코어 ===== -->
+  <rect x="50" y="110" width="280" height="200" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="190" y="135" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">RV32I 파이프라인 CPU</text>
+
+  <!-- 파이프라인 스테이지 -->
+  <rect x="65" y="150" width="52" height="30" rx="4" fill="#3B82F6"/>
+  <text x="91" y="170" text-anchor="middle" font-size="9" font-weight="600" fill="white">IF</text>
+  <rect x="121" y="150" width="52" height="30" rx="4" fill="#3B82F6"/>
+  <text x="147" y="170" text-anchor="middle" font-size="9" font-weight="600" fill="white">ID</text>
+  <rect x="177" y="150" width="52" height="30" rx="4" fill="#3B82F6"/>
+  <text x="203" y="170" text-anchor="middle" font-size="9" font-weight="600" fill="white">EX</text>
+  <rect x="233" y="150" width="52" height="30" rx="4" fill="#3B82F6"/>
+  <text x="259" y="170" text-anchor="middle" font-size="9" font-weight="600" fill="white">MEM</text>
+  <rect x="289" y="150" width="30" height="30" rx="4" fill="#3B82F6"/>
+  <text x="304" y="170" text-anchor="middle" font-size="9" font-weight="600" fill="white">WB</text>
+
+  <!-- CPU 내부 모듈 -->
+  <rect x="65" y="195" width="110" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="120" y="212" text-anchor="middle" font-size="9" fill="#4F46E5">포워딩 유닛</text>
+  <rect x="185" y="195" width="130" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="250" y="212" text-anchor="middle" font-size="9" fill="#4F46E5">해저드 감지 유닛</text>
+
+  <rect x="65" y="230" width="80" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="105" y="247" text-anchor="middle" font-size="9" fill="#4F46E5">CSR 모듈</text>
+  <rect x="155" y="230" width="110" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="210" y="247" text-anchor="middle" font-size="9" fill="#4F46E5">예외/인터럽트</text>
+  <rect x="275" y="230" width="45" height="25" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1"/>
+  <text x="297" y="247" text-anchor="middle" font-size="8" fill="#4F46E5">BPU</text>
+
+  <text x="190" y="285" text-anchor="middle" font-size="9" fill="#64748B">Ch09~12, Ch18~19</text>
+  <text x="190" y="300" text-anchor="middle" font-size="9" fill="#64748B">50 MHz @ Artix-7</text>
+
+  <!-- ===== 캐시 ===== -->
+  <rect x="50" y="320" width="130" height="70" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="115" y="345" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">L1 I-Cache</text>
+  <text x="115" y="362" text-anchor="middle" font-size="9" fill="#1E293B">4 KB DM</text>
+  <text x="115" y="378" text-anchor="middle" font-size="9" fill="#64748B">Ch13</text>
+
+  <rect x="200" y="320" width="130" height="70" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="265" y="345" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">L1 D-Cache</text>
+  <text x="265" y="362" text-anchor="middle" font-size="9" fill="#1E293B">4 KB 2-Way</text>
+  <text x="265" y="378" text-anchor="middle" font-size="9" fill="#64748B">Ch14</text>
+
+  <!-- AHB 버스 -->
+  <rect x="50" y="410" width="580" height="30" rx="6" fill="#3B82F6"/>
+  <text x="340" y="430" text-anchor="middle" font-size="11" font-weight="700" fill="white">AHB-Lite 버스 (Ch16)</text>
+
+  <!-- 화살표: 캐시 → AHB -->
+  <line x1="115" y1="395" x2="115" y2="407" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
+  <line x1="265" y1="395" x2="265" y2="407" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
+
+  <!-- AHB-APB 브리지 -->
+  <rect x="360" y="320" width="120" height="70" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="420" y="345" text-anchor="middle" font-size="10" font-weight="600" fill="#D97706">AHB-APB</text>
+  <text x="420" y="362" text-anchor="middle" font-size="10" font-weight="600" fill="#D97706">브리지</text>
+  <text x="420" y="378" text-anchor="middle" font-size="9" fill="#64748B">Ch17</text>
+
+  <line x1="420" y1="395" x2="420" y2="407" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- SRAM -->
+  <rect x="510" y="320" width="120" height="70" rx="6" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="570" y="345" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">SRAM</text>
+  <text x="570" y="362" text-anchor="middle" font-size="9" fill="#1E293B">IMEM + DMEM</text>
+  <text x="570" y="378" text-anchor="middle" font-size="9" fill="#64748B">BRAM 기반</text>
+
+  <line x1="570" y1="395" x2="570" y2="407" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- APB 버스 -->
+  <rect x="50" y="460" width="580" height="25" rx="4" fill="#60A5FA"/>
+  <text x="340" y="477" text-anchor="middle" font-size="10" font-weight="600" fill="white">APB 버스 (Ch17)</text>
+
+  <!-- APB 슬레이브들 -->
+  <rect x="60" y="500" width="120" height="55" rx="6" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="120" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#4F46E5">UART</text>
+  <text x="120" y="537" text-anchor="middle" font-size="9" fill="#1E293B">115200 baud</text>
+  <text x="120" y="550" text-anchor="middle" font-size="9" fill="#64748B">0xC000_0000</text>
+
+  <rect x="200" y="500" width="120" height="55" rx="6" fill="#D1FAE5" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="260" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">GPIO</text>
+  <text x="260" y="537" text-anchor="middle" font-size="9" fill="#1E293B">16 LED + 16 SW</text>
+  <text x="260" y="550" text-anchor="middle" font-size="9" fill="#64748B">0xC000_0010</text>
+
+  <rect x="340" y="500" width="120" height="55" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="400" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#D97706">Timer</text>
+  <text x="400" y="537" text-anchor="middle" font-size="9" fill="#1E293B">인터럽트 생성</text>
+  <text x="400" y="550" text-anchor="middle" font-size="9" fill="#64748B">0xC000_0020</text>
+
+  <rect x="480" y="500" width="140" height="55" rx="6" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="550" y="520" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">성능 카운터</text>
+  <text x="550" y="537" text-anchor="middle" font-size="9" fill="#1E293B">mcycle / minstret</text>
+  <text x="550" y="550" text-anchor="middle" font-size="9" fill="#64748B">Ch21</text>
+
+  <!-- APB → 슬레이브 화살표 -->
+  <line x1="120" y1="488" x2="120" y2="497" stroke="#4F46E5" stroke-width="1" marker-end="url(#arrowB)"/>
+  <line x1="260" y1="488" x2="260" y2="497" stroke="#059669" stroke-width="1" marker-end="url(#arrowG)"/>
+  <line x1="400" y1="488" x2="400" y2="497" stroke="#D97706" stroke-width="1" marker-end="url(#arrowB)"/>
+  <line x1="550" y1="488" x2="550" y2="497" stroke="#DC2626" stroke-width="1" marker-end="url(#arrowR)"/>
+
+  <!-- ===== 외부 장치 (FPGA 밖) ===== -->
+  <!-- PC / 터미널 -->
+  <rect x="680" y="110" width="190" height="90" rx="8" fill="#FFF" stroke="#94A3B8" stroke-width="2" filter="url(#shadow)"/>
+  <text x="775" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#1E293B">PC / 터미널</text>
+  <text x="775" y="160" text-anchor="middle" font-size="10" fill="#64748B">PuTTY / Tera Term</text>
+  <text x="775" y="178" text-anchor="middle" font-size="10" fill="#64748B">115200-8-N-1</text>
+
+  <!-- USB-UART 연결 -->
+  <line x1="655" y1="525" x2="710" y2="525" stroke="#4F46E5" stroke-width="2"/>
+  <line x1="710" y1="525" x2="710" y2="155" stroke="#4F46E5" stroke-width="2"/>
+  <line x1="710" y1="155" x2="675" y2="155" stroke="#4F46E5" stroke-width="2" marker-end="url(#arrowB)"/>
+  <text x="720" y="350" font-size="9" font-weight="600" fill="#4F46E5" transform="rotate(-90, 720, 350)">USB-UART</text>
+
+  <!-- LED 표시 -->
+  <rect x="680" y="250" width="190" height="70" rx="8" fill="#FFF" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="775" y="275" text-anchor="middle" font-size="13" font-weight="700" fill="#059669">Basys 3 LED</text>
+  <text x="775" y="298" text-anchor="middle" font-size="10" fill="#1E293B">LD0 ~ LD15 패턴 표시</text>
+
+  <line x1="655" y1="525" x2="680" y2="525" stroke="#059669" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="775" y1="325" x2="775" y2="325" stroke="#059669" stroke-width="2"/>
+
+  <!-- SW 표시 -->
+  <rect x="680" y="350" width="190" height="60" rx="8" fill="#FFF" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
+  <text x="775" y="375" text-anchor="middle" font-size="13" font-weight="700" fill="#D97706">스위치 / 버튼</text>
+  <text x="775" y="395" text-anchor="middle" font-size="10" fill="#1E293B">SW0~15, BTNU/D/L/R/C</text>
+
+  <!-- 인터럽트 화살표 -->
+  <line x1="400" y1="497" x2="400" y2="460" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="340" y="300" font-size="9" fill="#DC2626" font-weight="600">timer_irq</text>
+  <line x1="370" y1="305" x2="275" y2="248" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowR)"/>
+
+  <!-- 소프트웨어 스택 표시 (오버레이) -->
+  <rect x="680" y="450" width="190" height="120" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="775" y="475" text-anchor="middle" font-size="12" font-weight="700" fill="#2563EB">소프트웨어 스택</text>
+  <text x="775" y="495" text-anchor="middle" font-size="10" fill="#1E293B">startup.S</text>
+  <text x="775" y="512" text-anchor="middle" font-size="10" fill="#1E293B">linker.ld</text>
+  <text x="775" y="529" text-anchor="middle" font-size="10" fill="#1E293B">drivers.c / main.c</text>
+  <text x="775" y="548" text-anchor="middle" font-size="9" fill="#64748B">Ch22 (이번 챕터)</text>
+  <rect x="758" y="552" width="34" height="12" rx="6" fill="#2563EB"/>
+  <text x="775" y="562" text-anchor="middle" font-size="8" font-weight="600" fill="white">NEW</text>
+</svg>

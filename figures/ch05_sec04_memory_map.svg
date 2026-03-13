@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowD" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#D97706"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="800" height="520" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="400" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">메모리 주소 공간 맵 (Memory Map)</text>
+  <text x="400" y="52" text-anchor="middle" font-size="12" fill="#64748B">RV32I 단일 사이클 프로세서 — Basys 3 FPGA 구현 기준</text>
+
+  <!-- 주소 공간 막대 그래프 (왼쪽) -->
+  <text x="200" y="85" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">32비트 주소 공간 배치</text>
+
+  <!-- IMEM 영역 -->
+  <rect x="80" y="100" width="240" height="100" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="200" y="125" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">IMEM (명령어 메모리)</text>
+  <text x="200" y="145" text-anchor="middle" font-size="11" fill="#1E293B">읽기 전용 (ROM)</text>
+  <text x="200" y="163" text-anchor="middle" font-size="10" fill="#64748B">16 KB (4096 워드)</text>
+  <text x="200" y="180" text-anchor="middle" font-size="10" font-family="monospace" fill="#64748B">BRAM 추론 또는 IP</text>
+  <!-- 주소 라벨 -->
+  <text x="60" y="108" text-anchor="end" font-size="10" font-family="monospace" fill="#2563EB" font-weight="600">0x0000_0000</text>
+  <text x="60" y="198" text-anchor="end" font-size="10" font-family="monospace" fill="#2563EB">0x0000_3FFF</text>
+
+  <!-- DMEM 영역 -->
+  <rect x="80" y="210" width="240" height="100" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="200" y="235" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">DMEM (데이터 메모리)</text>
+  <text x="200" y="255" text-anchor="middle" font-size="11" fill="#1E293B">읽기/쓰기 (RAM)</text>
+  <text x="200" y="273" text-anchor="middle" font-size="10" fill="#64748B">16 KB (4096 워드)</text>
+  <text x="200" y="290" text-anchor="middle" font-size="10" font-family="monospace" fill="#64748B">바이트 인에이블 BRAM</text>
+  <text x="60" y="218" text-anchor="end" font-size="10" font-family="monospace" fill="#059669" font-weight="600">0x0001_0000</text>
+  <text x="60" y="308" text-anchor="end" font-size="10" font-family="monospace" fill="#059669">0x0001_3FFF</text>
+
+  <!-- MMIO 영역 -->
+  <rect x="80" y="320" width="240" height="80" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
+  <text x="200" y="345" text-anchor="middle" font-size="14" font-weight="700" fill="#D97706">MMIO (주변 장치)</text>
+  <text x="200" y="365" text-anchor="middle" font-size="11" fill="#1E293B">메모리 맵 입출력</text>
+  <text x="200" y="383" text-anchor="middle" font-size="10" fill="#64748B">GPIO, UART, Timer 등</text>
+  <text x="60" y="328" text-anchor="end" font-size="10" font-family="monospace" fill="#D97706" font-weight="600">0x0004_0000</text>
+  <text x="60" y="398" text-anchor="end" font-size="10" font-family="monospace" fill="#D97706">0x0004_FFFF</text>
+
+  <!-- 미사용 영역 -->
+  <rect x="80" y="410" width="240" height="50" rx="6" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="200" y="435" text-anchor="middle" font-size="11" fill="#94A3B8">미사용 영역 (Reserved)</text>
+  <text x="200" y="452" text-anchor="middle" font-size="9" fill="#94A3B8">접근 시 무응답 또는 버스 에러</text>
+
+  <!-- 디코딩 로직 (오른쪽) -->
+  <text x="580" y="85" text-anchor="middle" font-size="14" font-weight="600" fill="#2563EB">주소 디코딩 로직</text>
+
+  <!-- CPU 주소 버스 -->
+  <rect x="450" y="100" width="120" height="40" rx="6" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="510" y="120" text-anchor="middle" font-size="11" font-weight="600" fill="#1E293B">addr[31:0]</text>
+  <text x="510" y="135" text-anchor="middle" font-size="9" fill="#64748B">CPU 출력</text>
+
+  <!-- 디코더 블록 -->
+  <rect x="460" y="170" width="200" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="560" y="195" text-anchor="middle" font-size="12" font-weight="700" fill="#2563EB">주소 디코더</text>
+  <text x="560" y="215" text-anchor="middle" font-size="10" font-family="monospace" fill="#1E293B">addr[31:16] 상위 비트 비교</text>
+  <text x="560" y="233" text-anchor="middle" font-size="9" fill="#64748B">imem_sel / dmem_sel / mmio_sel 생성</text>
+
+  <!-- 화살표 -->
+  <line x1="510" y1="140" x2="510" y2="165" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 선택 신호 출력 -->
+  <rect x="450" y="280" width="80" height="35" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="490" y="302" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">imem_sel</text>
+
+  <rect x="540" y="280" width="80" height="35" rx="4" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="580" y="302" text-anchor="middle" font-size="10" font-weight="600" fill="#059669">dmem_sel</text>
+
+  <rect x="630" y="280" width="80" height="35" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="670" y="302" text-anchor="middle" font-size="10" font-weight="600" fill="#D97706">mmio_sel</text>
+
+  <line x1="500" y1="250" x2="490" y2="275" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="560" y1="250" x2="580" y2="275" stroke="#059669" stroke-width="1.5"/>
+  <line x1="600" y1="250" x2="670" y2="275" stroke="#D97706" stroke-width="1.5" marker-end="url(#arrowD)"/>
+
+  <!-- 코드 스니펫 -->
+  <rect x="430" y="340" width="340" height="120" rx="6" fill="#1E293B" filter="url(#shadow)"/>
+  <text x="450" y="362" font-size="10" font-family="monospace" fill="#C084FC">// 주소 디코딩 (always_comb)</text>
+  <text x="450" y="380" font-size="10" font-family="monospace" fill="#E2E8F0">imem_sel = (addr[31:16] == 16'h0000);</text>
+  <text x="450" y="398" font-size="10" font-family="monospace" fill="#E2E8F0">dmem_sel = (addr[31:16] == 16'h0001);</text>
+  <text x="450" y="416" font-size="10" font-family="monospace" fill="#E2E8F0">mmio_sel = (addr[31:16] == 16'h0004);</text>
+  <text x="450" y="446" font-size="10" font-family="monospace" fill="#94A3B8">// 읽기 데이터 MUX</text>
+
+  <!-- Basys 3 제약 표시 -->
+  <rect x="430" y="475" width="340" height="35" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="600" y="497" text-anchor="middle" font-size="10" fill="#DC2626">Basys 3: BRAM 50개 × 36Kb = 총 225KB 가용 (IMEM 16KB + DMEM 16KB = 32KB 사용)</text>
+</svg>

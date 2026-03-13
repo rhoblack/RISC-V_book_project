@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="420" fill="#F8FAFC" rx="8"/>
+  <text x="430" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">Flush와 Stall 동시 발생 시 우선순위 결정 규칙</text>
+
+  <!-- 시나리오: Load-Use + Branch -->
+  <rect x="30" y="55" width="800" height="100" rx="8" fill="#DBEAFE" filter="url(#shadow)"/>
+  <text x="50" y="80" font-size="13" font-weight="700" fill="#2563EB">시나리오: LW 직후 BEQ가 LW의 결과를 사용하며 분기 성공</text>
+  <text x="50" y="105" font-size="12" fill="#1E293B">LW   x5, 0(x10)        # MEM 스테이지에서 데이터 로드</text>
+  <text x="50" y="125" font-size="12" fill="#1E293B">BEQ  x5, x6, target     # x5 필요 → Load-Use 해저드 + 분기 성공 시 flush 필요</text>
+  <text x="50" y="145" font-size="12" font-weight="600" fill="#DC2626">→ 스톨(stall)과 플러시(flush)가 동시에 요청됨!</text>
+
+  <!-- 우선순위 규칙 표 -->
+  <rect x="30" y="170" width="800" height="230" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- 표 헤더 -->
+  <rect x="35" y="175" width="790" height="35" rx="4" fill="#2563EB"/>
+  <text x="115" y="198" text-anchor="middle" font-size="12" font-weight="600" fill="white">우선순위</text>
+  <text x="295" y="198" text-anchor="middle" font-size="12" font-weight="600" fill="white">조건</text>
+  <text x="520" y="198" text-anchor="middle" font-size="12" font-weight="600" fill="white">동작</text>
+  <text x="740" y="198" text-anchor="middle" font-size="12" font-weight="600" fill="white">이유</text>
+
+  <!-- 행 1: Flush 우선 -->
+  <rect x="35" y="215" width="790" height="55" rx="0" fill="#FEF2F2"/>
+  <text x="115" y="238" text-anchor="middle" font-size="24" font-weight="700" fill="#DC2626">1</text>
+  <text x="115" y="258" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">최우선</text>
+  <text x="295" y="238" text-anchor="middle" font-size="12" fill="#1E293B">branch_flush = 1</text>
+  <text x="295" y="258" text-anchor="middle" font-size="11" fill="#64748B">(분기 성공 확정)</text>
+  <text x="520" y="238" text-anchor="middle" font-size="12" fill="#1E293B">IF/ID, ID/EX 레지스터 클리어</text>
+  <text x="520" y="258" text-anchor="middle" font-size="11" fill="#1E293B">PC ← branch_target</text>
+  <text x="740" y="238" text-anchor="middle" font-size="11" fill="#1E293B">스톨 대상 명령어가</text>
+  <text x="740" y="258" text-anchor="middle" font-size="11" fill="#1E293B">어차피 flush됨</text>
+
+  <!-- 행 2: Stall -->
+  <rect x="35" y="275" width="790" height="55" rx="0" fill="#F9FAFB"/>
+  <text x="115" y="298" text-anchor="middle" font-size="24" font-weight="700" fill="#D97706">2</text>
+  <text x="115" y="318" text-anchor="middle" font-size="11" font-weight="600" fill="#D97706">차순위</text>
+  <text x="295" y="298" text-anchor="middle" font-size="12" fill="#1E293B">load_use_stall = 1</text>
+  <text x="295" y="318" text-anchor="middle" font-size="11" fill="#64748B">(flush 미발생 시에만)</text>
+  <text x="520" y="298" text-anchor="middle" font-size="12" fill="#1E293B">PC, IF/ID 홀드</text>
+  <text x="520" y="318" text-anchor="middle" font-size="11" fill="#1E293B">ID/EX ← bubble (NOP)</text>
+  <text x="740" y="298" text-anchor="middle" font-size="11" fill="#1E293B">데이터 의존성 해소</text>
+  <text x="740" y="318" text-anchor="middle" font-size="11" fill="#1E293B">1사이클 대기</text>
+
+  <!-- 행 3: 정상 -->
+  <rect x="35" y="335" width="790" height="55" rx="0" fill="white"/>
+  <text x="115" y="358" text-anchor="middle" font-size="24" font-weight="700" fill="#059669">3</text>
+  <text x="115" y="378" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">기본</text>
+  <text x="295" y="358" text-anchor="middle" font-size="12" fill="#1E293B">둘 다 비활성</text>
+  <text x="295" y="378" text-anchor="middle" font-size="11" fill="#64748B">(해저드 없음)</text>
+  <text x="520" y="358" text-anchor="middle" font-size="12" fill="#1E293B">정상 파이프라인 동작</text>
+  <text x="520" y="378" text-anchor="middle" font-size="11" fill="#1E293B">모든 스테이지 진행</text>
+  <text x="740" y="358" text-anchor="middle" font-size="11" fill="#1E293B">CPI = 1</text>
+  <text x="740" y="378" text-anchor="middle" font-size="11" fill="#1E293B">이상적 상태</text>
+</svg>

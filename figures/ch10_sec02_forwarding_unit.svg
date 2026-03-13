@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" width="980" height="620"
+     font-family="'Pretendard', 'Noto Sans KR', sans-serif">
+
+  <!-- 배경 -->
+  <rect width="980" height="620" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 바 -->
+  <rect x="0" y="0" width="980" height="44" fill="#1E3A8A" rx="8"/>
+  <rect x="0" y="36" width="980" height="8" fill="#1E3A8A"/>
+  <text x="490" y="27" text-anchor="middle" fill="white" font-size="15" font-weight="bold">포워딩 유닛 데이터패스</text>
+
+  <!-- 화살표 마커 -->
+  <defs>
+    <marker id="aBlue" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="aDarkBlue" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#1E3A8A"/>
+    </marker>
+    <marker id="aOrange" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L9,4 z" fill="#EA580C"/>
+    </marker>
+    <marker id="aOrangeLight" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L9,4 z" fill="#F97316"/>
+    </marker>
+    <marker id="aGray" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#64748B"/>
+    </marker>
+    <marker id="aGreen" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#16A34A"/>
+    </marker>
+    <marker id="aAmber" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#D97706"/>
+    </marker>
+  </defs>
+
+  <!-- ======== ID/EX 레지스터 (좌측) ======== -->
+  <rect x="10" y="54" width="120" height="300" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <rect x="10" y="54" width="120" height="26" fill="#2563EB" rx="6"/>
+  <rect x="10" y="70" width="120" height="10" fill="#2563EB"/>
+  <text x="70" y="71" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ID/EX 레지스터</text>
+
+  <!-- ID/EX 필드들 -->
+  <text x="70" y="98" text-anchor="middle" fill="#1E40AF" font-size="9" font-weight="bold">rs1_data_ex</text>
+  <line x1="14" y1="103" x2="126" y2="103" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="117" text-anchor="middle" fill="#1E40AF" font-size="9" font-weight="bold">rs2_data_ex</text>
+  <line x1="14" y1="122" x2="126" y2="122" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="136" text-anchor="middle" fill="#1E40AF" font-size="9">imm_ext_ex</text>
+  <line x1="14" y1="141" x2="126" y2="141" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="155" text-anchor="middle" fill="#1E40AF" font-size="9">pc_ex</text>
+  <line x1="14" y1="160" x2="126" y2="160" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="175" text-anchor="middle" fill="#1E40AF" font-size="8.5" font-weight="bold">rs1_addr_ex</text>
+  <line x1="14" y1="180" x2="126" y2="180" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="195" text-anchor="middle" fill="#1E40AF" font-size="8.5" font-weight="bold">rs2_addr_ex</text>
+  <line x1="14" y1="200" x2="126" y2="200" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="215" text-anchor="middle" fill="#1E40AF" font-size="8.5" font-weight="bold">rd_addr_ex</text>
+  <line x1="14" y1="220" x2="126" y2="220" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="237" text-anchor="middle" fill="#1E40AF" font-size="8.5">ctrl_ex</text>
+  <text x="70" y="249" text-anchor="middle" fill="#60A5FA" font-size="7.5">(alu_src_a/b,</text>
+  <text x="70" y="260" text-anchor="middle" fill="#60A5FA" font-size="7.5">alu_ctrl, branch,</text>
+  <text x="70" y="271" text-anchor="middle" fill="#60A5FA" font-size="7.5">mem_r/w, reg_write,</text>
+  <text x="70" y="282" text-anchor="middle" fill="#60A5FA" font-size="7.5">mem_to_reg, jump)</text>
+  <line x1="14" y1="288" x2="126" y2="288" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="70" y="305" text-anchor="middle" fill="#3B82F6" font-size="7.5" font-style="italic">en / flush 포트</text>
+  <text x="70" y="315" text-anchor="middle" fill="#3B82F6" font-size="7.5" font-style="italic">(Ch09 예약 포트)</text>
+  <text x="70" y="330" text-anchor="middle" fill="#3B82F6" font-size="7.5" font-style="italic">← ID 스테이지 래치</text>
+
+  <!-- ======== Forward MUX A (3:1) ======== -->
+  <!-- 삼각형 모양 MUX: 좌측 넓고 우측 좁은 사다리꼴 -->
+  <polygon points="230,78 272,88 272,150 230,160" fill="#FED7AA" stroke="#EA580C" stroke-width="2"/>
+  <text x="254" y="116" text-anchor="middle" fill="#7C2D12" font-size="9" font-weight="bold">MUX</text>
+  <text x="254" y="127" text-anchor="middle" fill="#7C2D12" font-size="9">A (3:1)</text>
+
+  <!-- MUX A 입력 레이블 -->
+  <text x="226" y="96" text-anchor="end" fill="#EA580C" font-size="8" font-weight="bold">2'b10 ▶</text>
+  <text x="226" y="119" text-anchor="end" fill="#F97316" font-size="8" font-weight="bold">2'b01 ▶</text>
+  <text x="226" y="148" text-anchor="end" fill="#475569" font-size="8">2'b00 ▶</text>
+
+  <!-- ID/EX rs1_data_ex → MUX A (2'b00) -->
+  <line x1="130" y1="98" x2="230" y2="148" stroke="#64748B" stroke-width="1.5" marker-end="url(#aGray)"/>
+  <text x="175" y="128" text-anchor="middle" fill="#475569" font-size="8">rs1_data_ex</text>
+
+  <!-- alu_src_a MUX (2:1) -->
+  <polygon points="340,100 376,108 376,140 340,148" fill="#BFDBFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="360" y="121" text-anchor="middle" fill="#1E40AF" font-size="8">MUX</text>
+  <text x="360" y="133" text-anchor="middle" fill="#1E40AF" font-size="7.5">alu_src_a</text>
+
+  <!-- MUX A → alu_src_a MUX -->
+  <line x1="272" y1="120" x2="340" y2="120" stroke="#EA580C" stroke-width="2" marker-end="url(#aOrange)"/>
+  <text x="306" y="114" text-anchor="middle" fill="#EA580C" font-size="8" font-weight="bold">rs1_fwd_ex</text>
+
+  <!-- pc_ex → alu_src_a MUX (하단 입력) -->
+  <line x1="130" y1="155" x2="300" y2="155" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="300" y1="155" x2="340" y2="140" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#aGray)"/>
+  <text x="215" y="165" text-anchor="middle" fill="#64748B" font-size="8">pc_ex</text>
+
+  <!-- alu_src_a MUX → ALU 상단 입력 -->
+  <line x1="376" y1="124" x2="432" y2="150" stroke="#1E3A8A" stroke-width="2" marker-end="url(#aDarkBlue)"/>
+  <text x="402" y="133" text-anchor="middle" fill="#1E3A8A" font-size="8">alu_a</text>
+
+  <!-- ======== Forward MUX B (3:1) ======== -->
+  <polygon points="230,210 272,220 272,282 230,292" fill="#FED7AA" stroke="#EA580C" stroke-width="2"/>
+  <text x="254" y="248" text-anchor="middle" fill="#7C2D12" font-size="9" font-weight="bold">MUX</text>
+  <text x="254" y="259" text-anchor="middle" fill="#7C2D12" font-size="9">B (3:1)</text>
+
+  <!-- MUX B 입력 레이블 -->
+  <text x="226" y="228" text-anchor="end" fill="#EA580C" font-size="8" font-weight="bold">2'b10 ▶</text>
+  <text x="226" y="251" text-anchor="end" fill="#F97316" font-size="8" font-weight="bold">2'b01 ▶</text>
+  <text x="226" y="280" text-anchor="end" fill="#475569" font-size="8">2'b00 ▶</text>
+
+  <!-- ID/EX rs2_data_ex → MUX B (2'b00) -->
+  <line x1="130" y1="117" x2="190" y2="117" stroke="#64748B" stroke-width="1.2"/>
+  <line x1="190" y1="117" x2="190" y2="278" stroke="#64748B" stroke-width="1.2"/>
+  <line x1="190" y1="278" x2="230" y2="278" stroke="#64748B" stroke-width="1.2" marker-end="url(#aGray)"/>
+  <text x="178" y="198" text-anchor="middle" fill="#475569" font-size="7.5" transform="rotate(-90,178,198)">rs2_data_ex</text>
+
+  <!-- alu_src_b MUX (2:1) -->
+  <polygon points="340,230 376,238 376,270 340,278" fill="#BFDBFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="360" y="251" text-anchor="middle" fill="#1E40AF" font-size="8">MUX</text>
+  <text x="360" y="263" text-anchor="middle" fill="#1E40AF" font-size="7.5">alu_src_b</text>
+
+  <!-- MUX B → alu_src_b MUX -->
+  <line x1="272" y1="250" x2="340" y2="250" stroke="#EA580C" stroke-width="2" marker-end="url(#aOrange)"/>
+  <text x="306" y="244" text-anchor="middle" fill="#EA580C" font-size="8" font-weight="bold">rs2_fwd_ex</text>
+
+  <!-- imm_ext_ex → alu_src_b MUX (하단 입력) -->
+  <line x1="130" y1="136" x2="200" y2="136" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="200" y1="136" x2="200" y2="272" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="200" y1="272" x2="340" y2="272" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#aGray)"/>
+  <text x="212" y="284" text-anchor="middle" fill="#64748B" font-size="8">imm_ext_ex</text>
+
+  <!-- alu_src_b MUX → ALU 하단 입력 -->
+  <line x1="376" y1="254" x2="432" y2="230" stroke="#1E3A8A" stroke-width="2" marker-end="url(#aDarkBlue)"/>
+  <text x="402" y="252" text-anchor="middle" fill="#1E3A8A" font-size="8">alu_b</text>
+
+  <!-- ======== ALU ======== -->
+  <polygon points="432,140 498,118 498,310 432,288" fill="#1E3A8A" stroke="#0F172A" stroke-width="2"/>
+  <text x="468" y="205" text-anchor="middle" fill="white" font-size="13" font-weight="bold">ALU</text>
+  <text x="468" y="220" text-anchor="middle" fill="#93C5FD" font-size="8.5">alu_result →</text>
+
+  <!-- ======== EX/MEM 레지스터 ======== -->
+  <rect x="530" y="54" width="128" height="270" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <rect x="530" y="54" width="128" height="26" fill="#2563EB" rx="6"/>
+  <rect x="530" y="70" width="128" height="10" fill="#2563EB"/>
+  <text x="594" y="71" text-anchor="middle" fill="white" font-size="10" font-weight="bold">EX/MEM 레지스터</text>
+
+  <!-- EX/MEM 필드 -->
+  <text x="594" y="98" text-anchor="middle" fill="#1E40AF" font-size="9" font-weight="bold">alu_result_mem</text>
+  <line x1="534" y1="103" x2="654" y2="103" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="594" y="118" text-anchor="middle" fill="#1E40AF" font-size="9">rs2_data_mem</text>
+  <line x1="534" y1="123" x2="654" y2="123" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="594" y="138" text-anchor="middle" fill="#1E40AF" font-size="9">pc_plus4_mem</text>
+  <line x1="534" y1="143" x2="654" y2="143" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="594" y="158" text-anchor="middle" fill="#1E40AF" font-size="8.5" font-weight="bold">rd_addr_mem</text>
+  <line x1="534" y1="163" x2="654" y2="163" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="594" y="178" text-anchor="middle" fill="#1E40AF" font-size="8.5">zero / branch_taken</text>
+  <line x1="534" y1="183" x2="654" y2="183" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="594" y="198" text-anchor="middle" fill="#1E40AF" font-size="8.5">ctrl_mem</text>
+  <text x="594" y="210" text-anchor="middle" fill="#60A5FA" font-size="7.5">(reg_write_mem,</text>
+  <text x="594" y="221" text-anchor="middle" fill="#60A5FA" font-size="7.5">mem_write, ...)</text>
+  <line x1="534" y1="226" x2="654" y2="226" stroke="#93C5FD" stroke-width="0.8"/>
+
+  <!-- ALU → EX/MEM -->
+  <line x1="498" y1="192" x2="530" y2="98" stroke="#1E3A8A" stroke-width="2" marker-end="url(#aDarkBlue)"/>
+
+  <!-- rs2_fwd_ex → EX/MEM rs2_data (Store용) -->
+  <line x1="272" y1="266" x2="285" y2="300" stroke="#64748B" stroke-width="1.2" stroke-dasharray="3,2"/>
+  <line x1="285" y1="300" x2="530" y2="121" stroke="#64748B" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#aGray)"/>
+  <text x="400" y="312" text-anchor="middle" fill="#64748B" font-size="8" font-style="italic">↑ rs2_fwd_ex → EX/MEM.rs2_data (Store 명령어용)</text>
+
+  <!-- ======== MEM/WB 레지스터 ======== -->
+  <rect x="710" y="54" width="128" height="250" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <rect x="710" y="54" width="128" height="26" fill="#2563EB" rx="6"/>
+  <rect x="710" y="70" width="128" height="10" fill="#2563EB"/>
+  <text x="774" y="71" text-anchor="middle" fill="white" font-size="10" font-weight="bold">MEM/WB 레지스터</text>
+
+  <!-- MEM/WB 필드 -->
+  <text x="774" y="98" text-anchor="middle" fill="#1E40AF" font-size="9">read_data_wb</text>
+  <line x1="714" y1="103" x2="834" y2="103" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="774" y="118" text-anchor="middle" fill="#1E40AF" font-size="9" font-weight="bold">alu_result_wb</text>
+  <line x1="714" y1="123" x2="834" y2="123" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="774" y="138" text-anchor="middle" fill="#1E40AF" font-size="9">pc_plus4_wb</text>
+  <line x1="714" y1="143" x2="834" y2="143" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="774" y="158" text-anchor="middle" fill="#1E40AF" font-size="8.5" font-weight="bold">rd_addr_wb</text>
+  <line x1="714" y1="163" x2="834" y2="163" stroke="#93C5FD" stroke-width="0.8"/>
+  <text x="774" y="178" text-anchor="middle" fill="#1E40AF" font-size="8.5">ctrl_wb</text>
+  <text x="774" y="190" text-anchor="middle" fill="#60A5FA" font-size="7.5">(reg_write_wb, mem_to_reg)</text>
+  <line x1="714" y1="195" x2="834" y2="195" stroke="#93C5FD" stroke-width="0.8"/>
+
+  <!-- WB MUX -->
+  <polygon points="838,96 876,88 876,208 838,200" fill="#DCFCE7" stroke="#16A34A" stroke-width="2"/>
+  <text x="860" y="144" text-anchor="middle" fill="#166534" font-size="9" font-weight="bold">WB</text>
+  <text x="860" y="155" text-anchor="middle" fill="#166534" font-size="9">MUX</text>
+  <text x="860" y="167" text-anchor="middle" fill="#166534" font-size="7.5">mem_to_reg</text>
+
+  <!-- MEM/WB → WB MUX -->
+  <line x1="838" y1="100" x2="838" y2="108" stroke="#16A34A" stroke-width="1.5"/>
+  <line x1="838" y1="120" x2="838" y2="130" stroke="#16A34A" stroke-width="1.5"/>
+  <line x1="838" y1="140" x2="838" y2="152" stroke="#16A34A" stroke-width="1.5"/>
+
+  <!-- wb_data 출력 -->
+  <line x1="876" y1="148" x2="938" y2="148" stroke="#16A34A" stroke-width="2"/>
+  <text x="907" y="141" text-anchor="middle" fill="#166534" font-size="9" font-weight="bold">wb_data</text>
+  <text x="907" y="161" text-anchor="middle" fill="#166534" font-size="7.5">(WB MUX 출력)</text>
+
+  <!-- ======== EX-EX 포워딩 (진한 주황 실선) ======== -->
+  <!-- EX/MEM.alu_result_mem → MUX A 2'b10 입력 -->
+  <path d="M594,98 L594,46 L251,46 L251,85" fill="none" stroke="#EA580C" stroke-width="2.5" marker-end="url(#aOrange)"/>
+  <!-- EX/MEM.alu_result_mem → MUX B 2'b10 입력 -->
+  <path d="M594,98 L594,46 L251,46 L251,217" fill="none" stroke="#EA580C" stroke-width="2.5" marker-end="url(#aOrange)"/>
+
+  <rect x="350" y="36" width="160" height="16" fill="#FED7AA" rx="3"/>
+  <text x="430" y="48" text-anchor="middle" fill="#7C2D12" font-size="9" font-weight="bold">EX-EX 포워딩: alu_result_mem (2'b10)</text>
+
+  <!-- ======== MEM-EX 포워딩 (주황 점선) ======== -->
+  <!-- wb_data → MUX A 2'b01 입력 -->
+  <path d="M938,148 L950,148 L950,28 L242,28 L242,106" fill="none" stroke="#F97316" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#aOrangeLight)"/>
+  <!-- wb_data → MUX B 2'b01 입력 -->
+  <path d="M950,28 L242,28 L242,238" fill="none" stroke="#F97316" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#aOrangeLight)"/>
+
+  <rect x="545" y="18" width="175" height="16" fill="#FED7AA" rx="3"/>
+  <text x="632" y="30" text-anchor="middle" fill="#7C2D12" font-size="9" font-weight="bold">MEM-EX 포워딩: wb_data (2'b01)</text>
+
+  <!-- ======== Forwarding Unit ======== -->
+  <rect x="155" y="370" width="480" height="130" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="6"/>
+  <rect x="155" y="370" width="480" height="26" fill="#D97706" rx="6"/>
+  <rect x="155" y="386" width="480" height="10" fill="#D97706"/>
+  <text x="395" y="387" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Forwarding Unit</text>
+
+  <!-- FU 내용 -->
+  <text x="170" y="415" fill="#92400E" font-size="10" font-weight="bold">입력:</text>
+  <text x="215" y="415" fill="#78350F" font-size="9">rs1_addr_ex, rs2_addr_ex (ID/EX)</text>
+  <text x="170" y="430" fill="#92400E" font-size="10" font-weight="bold"></text>
+  <text x="215" y="430" fill="#78350F" font-size="9">rd_addr_mem, reg_write_mem (EX/MEM)</text>
+  <text x="215" y="445" fill="#78350F" font-size="9">rd_addr_wb,  reg_write_wb  (MEM/WB)</text>
+  <text x="170" y="466" fill="#92400E" font-size="10" font-weight="bold">출력:</text>
+  <text x="215" y="466" fill="#78350F" font-size="9">forward_a[1:0], forward_b[1:0]</text>
+  <text x="170" y="484" fill="#78350F" font-size="8.5" font-style="italic">조건: (rd_mem != 0) AND reg_write_mem → 2'b10 우선,  (rd_wb != 0) AND reg_write_wb → 2'b01</text>
+
+  <!-- FU → MUX A sel -->
+  <line x1="395" y1="370" x2="280" y2="165" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#aAmber)"/>
+  <text x="322" y="336" text-anchor="middle" fill="#D97706" font-size="9" font-weight="bold">forward_a[1:0]</text>
+
+  <!-- FU → MUX B sel -->
+  <line x1="415" y1="370" x2="290" y2="300" stroke="#D97706" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#aAmber)"/>
+  <text x="370" y="352" text-anchor="middle" fill="#D97706" font-size="9" font-weight="bold">forward_b[1:0]</text>
+
+  <!-- FU 입력: rs1_addr_ex, rs2_addr_ex from ID/EX -->
+  <line x1="130" y1="175" x2="155" y2="175" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3,2"/>
+  <line x1="155" y1="175" x2="155" y2="432" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#aAmber)"/>
+  <text x="148" y="310" fill="#D97706" font-size="7.5" text-anchor="middle" transform="rotate(-90,148,310)">rs1/rs2_addr_ex</text>
+
+  <!-- FU 입력: rd_addr_mem, reg_write_mem from EX/MEM -->
+  <line x1="594" y1="158" x2="594" y2="340" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3,2"/>
+  <line x1="594" y1="340" x2="480" y2="430" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#aAmber)"/>
+  <text x="608" y="260" fill="#D97706" font-size="7.5">rd_addr_mem</text>
+  <text x="608" y="272" fill="#D97706" font-size="7.5">reg_write_mem</text>
+
+  <!-- FU 입력: rd_addr_wb, reg_write_wb from MEM/WB -->
+  <line x1="774" y1="158" x2="774" y2="360" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3,2"/>
+  <line x1="774" y1="360" x2="570" y2="480" stroke="#D97706" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#aAmber)"/>
+  <text x="790" y="260" fill="#D97706" font-size="7.5">rd_addr_wb</text>
+  <text x="790" y="272" fill="#D97706" font-size="7.5">reg_write_wb</text>
+
+  <!-- ======== 우선순위 박스 ======== -->
+  <rect x="658" y="370" width="302" height="150" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5" rx="5"/>
+  <text x="809" y="390" text-anchor="middle" fill="#7C2D12" font-size="11" font-weight="bold">포워딩 우선순위 (EX-EX 우선)</text>
+  <line x1="668" y1="396" x2="950" y2="396" stroke="#FED7AA" stroke-width="1"/>
+  <rect x="668" y="402" width="282" height="36" fill="#FEE2E2" rx="3"/>
+  <text x="809" y="416" text-anchor="middle" fill="#991B1B" font-size="9.5" font-weight="bold">1순위: EX-EX 포워딩 (forward = 2'b10)</text>
+  <text x="809" y="430" text-anchor="middle" fill="#78350F" font-size="8.5">rd_addr_mem == rs_ex AND reg_write_mem AND rd != 0</text>
+  <rect x="668" y="443" width="282" height="36" fill="#FFF7ED" rx="3"/>
+  <text x="809" y="457" text-anchor="middle" fill="#92400E" font-size="9.5" font-weight="bold">2순위: MEM-EX 포워딩 (forward = 2'b01)</text>
+  <text x="809" y="471" text-anchor="middle" fill="#78350F" font-size="8.5">rd_addr_wb == rs_ex AND reg_write_wb AND rd != 0</text>
+  <text x="809" y="496" text-anchor="middle" fill="#475569" font-size="9">0순위: 포워딩 없음 (forward = 2'b00)</text>
+  <text x="809" y="510" text-anchor="middle" fill="#475569" font-size="8" font-style="italic">* 1, 2순위 동시 만족 → 1순위(최신값) 선택</text>
+
+</svg>

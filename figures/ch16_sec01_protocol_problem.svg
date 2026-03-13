@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" font-family="Pretendard, sans-serif">
+  <!-- 배경 -->
+  <rect width="800" height="420" fill="#F8FAFC" rx="12"/>
+
+  <!-- 제목 -->
+  <text x="400" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">프로토콜 없이 연결 vs AHB 표준 버스</text>
+
+  <!-- ===== 왼쪽: 혼잡한 점대점 연결 ===== -->
+  <rect x="20" y="50" width="340" height="340" fill="#FEF2F2" rx="8" stroke="#FECACA" stroke-width="1.5"/>
+  <text x="190" y="75" text-anchor="middle" font-size="13" font-weight="bold" fill="#DC2626">문제: 각 슬레이브마다 별도 배선</text>
+
+  <!-- Master 박스 -->
+  <rect x="60" y="95" width="100" height="50" fill="#DBEAFE" rx="6" stroke="#2563EB" stroke-width="2"/>
+  <text x="110" y="115" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">캐시</text>
+  <text x="110" y="132" text-anchor="middle" font-size="11" fill="#1E40AF">브리지</text>
+
+  <!-- Slave 0 -->
+  <rect x="240" y="95" width="95" height="45" fill="#DCFCE7" rx="6" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="288" y="116" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803D">IMEM</text>
+  <text x="288" y="131" text-anchor="middle" font-size="10" fill="#15803D">SRAM</text>
+
+  <!-- Slave 1 -->
+  <rect x="240" y="185" width="95" height="45" fill="#DCFCE7" rx="6" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="288" y="206" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803D">DMEM</text>
+  <text x="288" y="221" text-anchor="middle" font-size="10" fill="#15803D">SRAM</text>
+
+  <!-- Slave 2 -->
+  <rect x="240" y="275" width="95" height="45" fill="#FEF9C3" rx="6" stroke="#CA8A04" stroke-width="1.5"/>
+  <text x="288" y="296" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">주변장치</text>
+  <text x="288" y="311" text-anchor="middle" font-size="10" fill="#92400E">3</text>
+
+  <!-- 복잡한 배선들 (혼잡) -->
+  <!-- Master to IMEM -->
+  <path d="M160 107 Q195 100 240 115" stroke="#EF4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <path d="M160 112 Q198 112 240 112" stroke="#F97316" stroke-width="1.5" fill="none"/>
+  <path d="M160 118 Q195 125 240 108" stroke="#EF4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <path d="M160 122 Q192 130 240 120" stroke="#F97316" stroke-width="1.5" fill="none"/>
+
+  <!-- Master to DMEM -->
+  <path d="M160 115 Q220 115 220 207 Q220 207 240 207" stroke="#EF4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <path d="M160 120 Q225 120 225 200 Q225 200 240 200" stroke="#F97316" stroke-width="1.5" fill="none"/>
+  <path d="M160 130 Q230 130 230 215 Q230 215 240 215" stroke="#EF4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <path d="M160 140 Q235 140 235 208 Q235 208 240 208" stroke="#F97316" stroke-width="1.5" fill="none"/>
+
+  <!-- Master to 주변장치 -->
+  <path d="M160 125 Q215 125 215 295 Q215 295 240 295" stroke="#EF4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <path d="M160 130 Q210 130 210 298 Q210 298 240 298" stroke="#F97316" stroke-width="1.5" fill="none"/>
+  <path d="M160 135 Q205 135 205 305 Q205 305 240 305" stroke="#EF4444" stroke-width="1.5" fill="none" stroke-dasharray="4,2"/>
+  <path d="M160 140 Q200 140 200 310 Q200 310 240 310" stroke="#F97316" stroke-width="1.5" fill="none"/>
+
+  <!-- 혼잡 표시 -->
+  <text x="190" y="175" text-anchor="middle" font-size="10" fill="#DC2626">⚠ 배선 N × M 증가</text>
+  <text x="190" y="250" text-anchor="middle" font-size="10" fill="#DC2626">⚠ 슬레이브 추가 시</text>
+  <text x="190" y="263" text-anchor="middle" font-size="10" fill="#DC2626">전체 재설계 필요</text>
+  <text x="190" y="355" text-anchor="middle" font-size="10" fill="#7F1D1D">배선 수: 마스터×슬레이브×신호</text>
+  <text x="190" y="370" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626">= 1 × 3 × 10 = 30선</text>
+
+  <!-- ===== 오른쪽: AHB 버스 ===== -->
+  <rect x="440" y="50" width="340" height="340" fill="#EFF6FF" rx="8" stroke="#BFDBFE" stroke-width="1.5"/>
+  <text x="610" y="75" text-anchor="middle" font-size="13" font-weight="bold" fill="#1D4ED8">해결: AHB 공유 버스</text>
+
+  <!-- Master 박스 -->
+  <rect x="460" y="95" width="100" height="50" fill="#DBEAFE" rx="6" stroke="#2563EB" stroke-width="2"/>
+  <text x="510" y="115" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">캐시</text>
+  <text x="510" y="132" text-anchor="middle" font-size="11" fill="#1E40AF">브리지</text>
+
+  <!-- AHB Bus 수평선 -->
+  <rect x="460" y="165" width="280" height="30" fill="#2563EB" rx="4"/>
+  <text x="600" y="185" text-anchor="middle" font-size="12" font-weight="bold" fill="white">AHB 공유 버스</text>
+
+  <!-- 수직 연결선 (Master → Bus) -->
+  <line x1="510" y1="145" x2="510" y2="165" stroke="#2563EB" stroke-width="2.5"/>
+  <polygon points="505,162 515,162 510,165" fill="#2563EB"/>
+
+  <!-- HSEL 디코더 -->
+  <rect x="555" y="210" width="90" height="35" fill="#E0E7FF" rx="4" stroke="#4F46E5" stroke-width="1.5"/>
+  <text x="600" y="230" text-anchor="middle" font-size="11" font-weight="bold" fill="#3730A3">HSEL</text>
+  <text x="600" y="244" text-anchor="middle" font-size="10" fill="#3730A3">디코더</text>
+  <line x1="600" y1="195" x2="600" y2="210" stroke="#4F46E5" stroke-width="1.5"/>
+
+  <!-- Slave 0 -->
+  <rect x="470" y="270" width="90" height="45" fill="#DCFCE7" rx="6" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="515" y="291" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803D">IMEM</text>
+  <text x="515" y="306" text-anchor="middle" font-size="10" fill="#15803D">SRAM</text>
+
+  <!-- Slave 1 -->
+  <rect x="580" y="270" width="90" height="45" fill="#DCFCE7" rx="6" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="625" y="291" text-anchor="middle" font-size="11" font-weight="bold" fill="#15803D">DMEM</text>
+  <text x="625" y="306" text-anchor="middle" font-size="10" fill="#15803D">SRAM</text>
+
+  <!-- 연결선 Bus → Slaves -->
+  <line x1="515" y1="195" x2="515" y2="270" stroke="#2563EB" stroke-width="2"/>
+  <polygon points="510,267 520,267 515,270" fill="#2563EB"/>
+  <line x1="625" y1="195" x2="625" y2="270" stroke="#2563EB" stroke-width="2"/>
+  <polygon points="620,267 630,267 625,270" fill="#2563EB"/>
+
+  <!-- 효과 설명 -->
+  <text x="610" y="355" text-anchor="middle" font-size="10" fill="#1D4ED8">✓ 슬레이브 추가 = HSEL만 추가</text>
+  <text x="610" y="370" text-anchor="middle" font-size="11" font-weight="bold" fill="#1D4ED8">배선 수: 고정 11개 신호</text>
+
+  <!-- 화살표 중앙 -->
+  <text x="400" y="240" text-anchor="middle" font-size="24" fill="#475569">→</text>
+</svg>

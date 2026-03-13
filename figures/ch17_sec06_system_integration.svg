@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 550" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr6" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr6r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="550" fill="#FFFFFF" rx="8"/>
+  <text x="450" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2563EB">전체 시스템 통합 블록 다이어그램 — AHB/APB 주변 장치</text>
+
+  <!-- CPU -->
+  <rect x="30" y="60" width="140" height="90" rx="8" fill="#2563EB"/>
+  <text x="100" y="95" text-anchor="middle" font-size="14" font-weight="bold" fill="white">RV32I CPU</text>
+  <text x="100" y="115" text-anchor="middle" font-size="10" fill="white">파이프라인 코어</text>
+  <text x="100" y="135" text-anchor="middle" font-size="10" fill="white">+ L1 캐시</text>
+
+  <!-- AHB Bus -->
+  <rect x="30" y="190" width="840" height="40" rx="4" fill="#2563EB" opacity="0.15" stroke="#2563EB" stroke-width="2"/>
+  <text x="450" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">AHB-Lite 버스</text>
+
+  <!-- CPU to AHB -->
+  <line x1="100" y1="150" x2="100" y2="185" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arr6)"/>
+  <text x="115" y="172" font-size="9" fill="#1F2937">AHB Master</text>
+
+  <!-- SRAM -->
+  <rect x="30" y="270" width="130" height="70" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="95" y="298" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">SRAM</text>
+  <text x="95" y="316" text-anchor="middle" font-size="10" fill="#1F2937">AHB Slave</text>
+  <text x="95" y="332" text-anchor="middle" font-size="9" fill="#6B7280">0x0000_0000</text>
+  <line x1="95" y1="230" x2="95" y2="265" stroke="#2563EB" stroke-width="2" marker-end="url(#arr6)"/>
+
+  <!-- AHB-to-APB Bridge -->
+  <rect x="220" y="270" width="160" height="70" rx="6" fill="#3B82F6"/>
+  <text x="300" y="298" text-anchor="middle" font-size="12" font-weight="bold" fill="white">AHB-to-APB</text>
+  <text x="300" y="316" text-anchor="middle" font-size="10" fill="white">브리지 (Ch17.2)</text>
+  <text x="300" y="332" text-anchor="middle" font-size="9" fill="white">0x4000_0000</text>
+  <line x1="300" y1="230" x2="300" y2="265" stroke="#2563EB" stroke-width="2" marker-end="url(#arr6)"/>
+
+  <!-- APB Bus -->
+  <rect x="180" y="380" width="690" height="30" rx="4" fill="#3B82F6" opacity="0.12" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="525" y="400" text-anchor="middle" font-size="12" font-weight="bold" fill="#3B82F6">APB 버스</text>
+
+  <!-- Bridge to APB -->
+  <line x1="300" y1="340" x2="300" y2="375" stroke="#3B82F6" stroke-width="2" marker-end="url(#arr6)"/>
+
+  <!-- UART -->
+  <rect x="180" y="430" width="130" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="245" y="458" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">UART</text>
+  <text x="245" y="476" text-anchor="middle" font-size="10" fill="#1F2937">APB Slave</text>
+  <text x="245" y="494" text-anchor="middle" font-size="9" fill="#6B7280">0x4000_0000</text>
+  <line x1="245" y1="410" x2="245" y2="425" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr6)"/>
+
+  <!-- GPIO -->
+  <rect x="350" y="430" width="130" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="415" y="458" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">GPIO</text>
+  <text x="415" y="476" text-anchor="middle" font-size="10" fill="#1F2937">APB Slave</text>
+  <text x="415" y="494" text-anchor="middle" font-size="9" fill="#6B7280">0x4000_1000</text>
+  <line x1="415" y1="410" x2="415" y2="425" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr6)"/>
+
+  <!-- Timer -->
+  <rect x="520" y="430" width="130" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="585" y="458" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">타이머</text>
+  <text x="585" y="476" text-anchor="middle" font-size="10" fill="#1F2937">APB Slave</text>
+  <text x="585" y="494" text-anchor="middle" font-size="9" fill="#6B7280">0x4000_2000</text>
+  <line x1="585" y1="410" x2="585" y2="425" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr6)"/>
+
+  <!-- Reserved -->
+  <rect x="690" y="430" width="130" height="80" rx="6" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5" stroke-dasharray="4,4"/>
+  <text x="755" y="462" text-anchor="middle" font-size="12" fill="#6B7280">예약 영역</text>
+  <text x="755" y="482" text-anchor="middle" font-size="10" fill="#6B7280">(SPI, I2C 등)</text>
+  <text x="755" y="498" text-anchor="middle" font-size="9" fill="#6B7280">0x4000_3000~</text>
+  <line x1="755" y1="410" x2="755" y2="425" stroke="#E5E7EB" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+  <!-- Interrupt lines -->
+  <line x1="245" y1="445" x2="245" y2="75" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="255" y="65" font-size="9" fill="#DC2626">uart_irq</text>
+
+  <line x1="585" y1="445" x2="585" y2="90" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="600" y="80" font-size="9" fill="#DC2626">timer_irq</text>
+
+  <!-- External peripherals labels -->
+  <text x="245" y="530" text-anchor="middle" font-size="9" fill="#D97706">USB-UART (PC)</text>
+  <text x="415" y="530" text-anchor="middle" font-size="9" fill="#D97706">LED/SW/BTN</text>
+  <text x="585" y="530" text-anchor="middle" font-size="9" fill="#D97706">타이밍 기준</text>
+
+  <!-- Memory Map on right -->
+  <rect x="660" y="60" width="210" height="160" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="765" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB">메모리 맵</text>
+  <text x="675" y="102" font-size="9" fill="#1F2937" font-family="monospace">0x0000_0000  SRAM (64KB)</text>
+  <text x="675" y="120" font-size="9" fill="#1F2937" font-family="monospace">0x4000_0000  UART</text>
+  <text x="675" y="138" font-size="9" fill="#1F2937" font-family="monospace">0x4000_1000  GPIO</text>
+  <text x="675" y="156" font-size="9" fill="#1F2937" font-family="monospace">0x4000_2000  Timer</text>
+  <text x="675" y="174" font-size="9" fill="#6B7280" font-family="monospace">0x4000_3000  Reserved</text>
+  <text x="675" y="192" font-size="9" fill="#6B7280" font-family="monospace">...</text>
+  <text x="675" y="210" font-size="9" fill="#6B7280" font-family="monospace">0xFFFF_FFFF  End</text>
+</svg>

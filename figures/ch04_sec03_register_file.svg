@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .block { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; rx: 8; }
+      .block-inner { fill: #EFF6FF; stroke: #3B82F6; stroke-width: 1.5; rx: 4; }
+      .block-x0 { fill: #FEF2F2; stroke: #DC2626; stroke-width: 2; rx: 4; }
+      .label { font-size: 13px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .title { font-size: 17px; fill: #1E293B; font-weight: 700; text-anchor: middle; }
+      .subtitle { font-size: 12px; fill: #6B7280; text-anchor: middle; }
+      .arrow { stroke: #3B82F6; stroke-width: 2; fill: none; marker-end: url(#ah); }
+      .arrow-red { stroke: #DC2626; stroke-width: 2; fill: none; marker-end: url(#ah-red); }
+      .signal { font-size: 10px; fill: #2563EB; font-family: 'JetBrains Mono', monospace; }
+      .reg-label { font-size: 10px; fill: #1E293B; font-family: 'JetBrains Mono', monospace; text-anchor: middle; }
+      .note { font-size: 11px; fill: #6B7280; }
+      .clk-symbol { stroke: #059669; stroke-width: 2; fill: none; }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3B82F6"/>
+    </marker>
+    <marker id="ah-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="28" class="title">레지스터 파일 구조 (Register File)</text>
+  <text x="400" y="48" class="subtitle">32개 레지스터 x 32비트, 2 Read Ports + 1 Write Port</text>
+
+  <!-- Main Register File Block -->
+  <rect x="250" y="70" width="300" height="370" class="block"/>
+  <text x="400" y="100" class="label" style="font-size:16px; fill:#2563EB;">레지스터 파일</text>
+  <text x="400" y="118" class="label" style="font-size:11px; fill:#3B82F6;">Register File (32 x 32bit)</text>
+
+  <!-- Register array representation -->
+  <!-- x0 (special) -->
+  <rect x="310" y="135" width="180" height="22" class="block-x0"/>
+  <text x="340" y="150" class="reg-label" style="fill:#DC2626; font-weight:700;">x0</text>
+  <text x="420" y="150" class="reg-label" style="fill:#DC2626;">= 32'h0000_0000 (고정)</text>
+
+  <!-- x1~x4 -->
+  <rect x="310" y="160" width="180" height="20" class="block-inner"/>
+  <text x="340" y="174" class="reg-label">x1</text>
+  <text x="420" y="174" class="reg-label" style="fill:#6B7280;">(ra)</text>
+
+  <rect x="310" y="182" width="180" height="20" class="block-inner"/>
+  <text x="340" y="196" class="reg-label">x2</text>
+  <text x="420" y="196" class="reg-label" style="fill:#6B7280;">(sp)</text>
+
+  <rect x="310" y="204" width="180" height="20" class="block-inner"/>
+  <text x="340" y="218" class="reg-label">x3</text>
+  <text x="420" y="218" class="reg-label" style="fill:#6B7280;">(gp)</text>
+
+  <!-- dots -->
+  <text x="400" y="245" class="label" style="font-size:16px; fill:#9CA3AF;">...</text>
+
+  <!-- x30, x31 -->
+  <rect x="310" y="260" width="180" height="20" class="block-inner"/>
+  <text x="340" y="274" class="reg-label">x30</text>
+  <text x="420" y="274" class="reg-label" style="fill:#6B7280;">(t5)</text>
+
+  <rect x="310" y="282" width="180" height="20" class="block-inner"/>
+  <text x="340" y="296" class="reg-label">x31</text>
+  <text x="420" y="296" class="reg-label" style="fill:#6B7280;">(t6)</text>
+
+  <!-- Clock symbol -->
+  <polyline points="255,420 265,420 265,410 275,410" class="clk-symbol"/>
+  <text x="290" y="416" style="font-size:10px; fill:#059669; font-weight:600;">clk</text>
+
+  <!-- === Read Port 1 (Asynchronous) === -->
+  <text x="90" y="155" class="signal" style="fill:#059669; font-weight:600;">비동기 읽기</text>
+  <!-- rs1 addr input -->
+  <line x1="100" y1="180" x2="248" y2="180" class="arrow"/>
+  <text x="140" y="174" class="signal">rs1_addr [4:0]</text>
+
+  <!-- read_data1 output -->
+  <line x1="552" y1="180" x2="700" y2="180" class="arrow"/>
+  <text x="640" y="174" class="signal">read_data1 [31:0]</text>
+
+  <!-- === Read Port 2 (Asynchronous) === -->
+  <!-- rs2 addr input -->
+  <line x1="100" y1="240" x2="248" y2="240" class="arrow"/>
+  <text x="140" y="234" class="signal">rs2_addr [4:0]</text>
+
+  <!-- read_data2 output -->
+  <line x1="552" y1="240" x2="700" y2="240" class="arrow"/>
+  <text x="640" y="234" class="signal">read_data2 [31:0]</text>
+
+  <!-- === Write Port (Synchronous) === -->
+  <text x="90" y="325" class="signal" style="fill:#DC2626; font-weight:600;">동기 쓰기</text>
+  <!-- wr_addr input -->
+  <line x1="100" y1="345" x2="248" y2="345" class="arrow-red"/>
+  <text x="140" y="339" class="signal" style="fill:#DC2626;">wr_addr [4:0]</text>
+
+  <!-- wr_data input -->
+  <line x1="100" y1="375" x2="248" y2="375" class="arrow-red"/>
+  <text x="140" y="369" class="signal" style="fill:#DC2626;">wr_data [31:0]</text>
+
+  <!-- wr_en input -->
+  <line x1="100" y1="405" x2="248" y2="405" class="arrow-red"/>
+  <text x="140" y="399" class="signal" style="fill:#DC2626;">wr_en</text>
+
+  <!-- x0 protection annotation -->
+  <rect x="560" y="310" width="220" height="70" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="670" y="330" style="font-size:11px; fill:#DC2626; font-weight:700; text-anchor:middle;">x0 쓰기 보호 로직</text>
+  <text x="670" y="348" style="font-size:10px; fill:#DC2626; text-anchor:middle;">wr_addr == 5'd0 이면</text>
+  <text x="670" y="365" style="font-size:10px; fill:#DC2626; text-anchor:middle;">쓰기 무시 (값 항상 0)</text>
+
+  <!-- Annotation arrow from x0 to protection box -->
+  <path d="M 490 146 Q 540 146 560 320" stroke="#DC2626" stroke-width="1" fill="none" stroke-dasharray="4,3"/>
+
+  <!-- Timing notes -->
+  <rect x="40" y="460" width="720" height="45" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="1"/>
+  <text x="60" y="478" class="note" style="fill:#059669; font-weight:600;">FPGA 구현 핵심:</text>
+  <text x="60" y="495" class="note">비동기 읽기(combinational) → LUTRAM으로 추론 | 동기 쓰기(posedge clk) → 단일 사이클에서 같은 클럭 내 읽기+쓰기 가능</text>
+</svg>

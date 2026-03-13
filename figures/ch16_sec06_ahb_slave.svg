@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 480" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="480" fill="#F8FAFC" rx="8"/>
+  <text x="425" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">AHB Slave: SRAM 컨트롤러 구조</text>
+  <text x="425" y="48" text-anchor="middle" font-size="12" fill="#64748B">주소 래치 → SRAM 접근 → 응답 생성</text>
+
+  <!-- AHB 버스 인터페이스 (왼쪽) -->
+  <rect x="30" y="80" width="160" height="340" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="110" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">AHB Bus</text>
+  <text x="110" y="123" text-anchor="middle" font-size="10" fill="#64748B">인터페이스</text>
+
+  <text x="110" y="155" text-anchor="middle" font-size="10" fill="#1E293B">HADDR[31:0] →</text>
+  <text x="110" y="175" text-anchor="middle" font-size="10" fill="#1E293B">HTRANS[1:0] →</text>
+  <text x="110" y="195" text-anchor="middle" font-size="10" fill="#1E293B">HWRITE →</text>
+  <text x="110" y="215" text-anchor="middle" font-size="10" fill="#1E293B">HSIZE[2:0] →</text>
+  <text x="110" y="235" text-anchor="middle" font-size="10" fill="#1E293B">HWDATA[31:0] →</text>
+  <text x="110" y="265" text-anchor="middle" font-size="10" fill="#059669">← HRDATA[31:0]</text>
+  <text x="110" y="285" text-anchor="middle" font-size="10" fill="#059669">← HREADY</text>
+  <text x="110" y="305" text-anchor="middle" font-size="10" fill="#059669">← HRESP</text>
+  <text x="110" y="335" text-anchor="middle" font-size="10" fill="#64748B">HSELx →</text>
+  <text x="110" y="355" text-anchor="middle" font-size="10" fill="#64748B">(디코더에서)</text>
+
+  <!-- 주소 래치 블록 -->
+  <rect x="230" y="100" width="140" height="80" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="300" y="125" text-anchor="middle" font-size="12" font-weight="600" fill="#D97706">주소 래치</text>
+  <text x="300" y="143" text-anchor="middle" font-size="9" fill="#1E293B">addr_phase →</text>
+  <text x="300" y="158" text-anchor="middle" font-size="9" fill="#1E293B">data_phase 변환</text>
+  <text x="300" y="173" text-anchor="middle" font-size="9" fill="#64748B">haddr_r, hwrite_r</text>
+
+  <!-- 화살표: 버스 → 래치 -->
+  <line x1="190" y1="140" x2="230" y2="140" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- SRAM 블록 -->
+  <rect x="420" y="80" width="180" height="160" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="510" y="108" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">SRAM</text>
+  <text x="510" y="126" text-anchor="middle" font-size="10" fill="#64748B">16KB (4096 x 32-bit)</text>
+  <rect x="435" y="138" width="150" height="40" rx="4" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="510" y="157" text-anchor="middle" font-size="10" fill="#1E293B">logic [31:0]</text>
+  <text x="510" y="172" text-anchor="middle" font-size="10" fill="#1E293B">mem [0:4095]</text>
+  <rect x="435" y="185" width="150" height="40" rx="4" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="510" y="203" text-anchor="middle" font-size="9" fill="#1E293B">동기 쓰기 / 동기 읽기</text>
+  <text x="510" y="218" text-anchor="middle" font-size="9" fill="#64748B">BRAM 추론 가능</text>
+
+  <!-- 화살표: 래치 → SRAM -->
+  <line x1="370" y1="140" x2="420" y2="140" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- 웨이트 스테이트 FSM -->
+  <rect x="230" y="260" width="140" height="80" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="300" y="285" text-anchor="middle" font-size="12" font-weight="600" fill="#DC2626">웨이트 FSM</text>
+  <text x="300" y="303" text-anchor="middle" font-size="9" fill="#1E293B">SRAM 지연 시</text>
+  <text x="300" y="318" text-anchor="middle" font-size="9" fill="#1E293B">HREADY=0 발생</text>
+  <text x="300" y="333" text-anchor="middle" font-size="9" fill="#64748B">단일 BRAM: 0 wait</text>
+
+  <!-- 응답 생성 블록 -->
+  <rect x="420" y="280" width="180" height="80" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="510" y="305" text-anchor="middle" font-size="12" font-weight="600" fill="#2563EB">응답 생성</text>
+  <text x="510" y="323" text-anchor="middle" font-size="9" fill="#1E293B">HRESP = OKAY (정상)</text>
+  <text x="510" y="338" text-anchor="middle" font-size="9" fill="#1E293B">HRESP = ERROR (범위초과)</text>
+  <text x="510" y="353" text-anchor="middle" font-size="9" fill="#64748B">HREADY 제어</text>
+
+  <line x1="370" y1="305" x2="420" y2="310" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- 출력 MUX -->
+  <rect x="650" y="180" width="160" height="120" rx="6" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="730" y="205" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">출력 MUX</text>
+  <text x="730" y="225" text-anchor="middle" font-size="10" fill="#059669">HRDATA ←</text>
+  <text x="730" y="243" text-anchor="middle" font-size="10" fill="#059669">HREADY ←</text>
+  <text x="730" y="261" text-anchor="middle" font-size="10" fill="#059669">HRESP ←</text>
+  <text x="730" y="285" text-anchor="middle" font-size="9" fill="#64748B">→ AHB 버스로</text>
+
+  <line x1="600" y1="200" x2="650" y2="220" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
+  <line x1="600" y1="310" x2="650" y2="270" stroke="#059669" stroke-width="1.5" marker-end="url(#arrowG)"/>
+
+  <!-- 하단 설명 -->
+  <rect x="30" y="410" width="790" height="55" rx="6" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1"/>
+  <text x="425" y="432" text-anchor="middle" font-size="11" font-weight="600" fill="#D97706">핵심 설계 포인트</text>
+  <text x="425" y="452" text-anchor="middle" font-size="10" fill="#1E293B">1) 주소 래치로 Address Phase/Data Phase 분리 | 2) HREADY로 웨이트 스테이트 제어 | 3) HSELx로 슬레이브 선택</text>
+</svg>

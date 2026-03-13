@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .block { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; }
+      .block-inner { fill: #EFF6FF; stroke: #3B82F6; stroke-width: 1.5; rx: 4; }
+      .label { font-size: 13px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .label-sm { font-size: 11px; fill: #1E293B; font-weight: 500; text-anchor: middle; }
+      .title { font-size: 17px; fill: #1E293B; font-weight: 700; text-anchor: middle; }
+      .arrow { stroke: #3B82F6; stroke-width: 2; fill: none; marker-end: url(#ah); }
+      .signal { font-size: 10px; fill: #2563EB; font-family: 'JetBrains Mono', monospace; }
+      .op-label { font-size: 10px; fill: #1E293B; font-family: 'JetBrains Mono', monospace; }
+      .op-code { font-size: 10px; fill: #2563EB; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+      .group-title { font-size: 12px; fill: #2563EB; font-weight: 700; }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#3B82F6"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="28" class="title">ALU 블록 다이어그램 (Arithmetic Logic Unit)</text>
+
+  <!-- ALU Trapezoid shape -->
+  <polygon points="220,70 380,70 420,400 180,400" class="block" style="rx:0;"/>
+  <text x="300" y="240" class="label" style="font-size:22px; fill:#2563EB; font-weight:700;">ALU</text>
+
+  <!-- Input A (left top) -->
+  <line x1="100" y1="120" x2="240" y2="120" class="arrow"/>
+  <text x="130" y="112" class="signal">operand_a [31:0]</text>
+  <text x="130" y="128" class="signal" style="fill:#6B7280;">(rs1 데이터)</text>
+
+  <!-- Input B (left bottom) -->
+  <line x1="100" y1="320" x2="225" y2="320" class="arrow"/>
+  <text x="130" y="312" class="signal">operand_b [31:0]</text>
+  <text x="130" y="328" class="signal" style="fill:#6B7280;">(rs2/즉치수)</text>
+
+  <!-- ALU Control (bottom) -->
+  <line x1="300" y1="450" x2="300" y2="402" class="arrow"/>
+  <text x="300" y="465" class="signal" style="text-anchor:middle;">alu_ctrl [3:0]</text>
+  <text x="300" y="480" class="signal" style="text-anchor:middle; fill:#6B7280;">제어 유닛에서</text>
+
+  <!-- Output Result (right) -->
+  <line x1="395" y1="240" x2="500" y2="240" class="arrow"/>
+  <text x="460" y="232" class="signal">alu_result [31:0]</text>
+
+  <!-- Output Zero flag (right top) -->
+  <line x1="370" y1="140" x2="500" y2="140" class="arrow"/>
+  <text x="460" y="132" class="signal">alu_zero</text>
+  <text x="460" y="152" class="signal" style="fill:#6B7280;">(분기 판정용)</text>
+
+  <!-- Operation Table -->
+  <rect x="520" y="60" width="260" height="380" rx="8" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="650" y="85" class="group-title" style="text-anchor:middle; font-size:14px;">10가지 ALU 연산</text>
+
+  <!-- Table header -->
+  <rect x="530" y="95" width="240" height="22" rx="3" fill="#2563EB"/>
+  <text x="570" y="111" style="font-size:10px; fill:white; font-weight:600;">alu_ctrl</text>
+  <text x="650" y="111" style="font-size:10px; fill:white; font-weight:600;">연산</text>
+  <text x="730" y="111" style="font-size:10px; fill:white; font-weight:600;">기능</text>
+
+  <!-- Arithmetic -->
+  <text x="530" y="140" class="group-title">산술 연산</text>
+  <text x="570" y="157" class="op-code">4'b0000</text>
+  <text x="650" y="157" class="op-label">ADD</text>
+  <text x="730" y="157" class="op-label">a + b</text>
+  <text x="570" y="175" class="op-code">4'b0001</text>
+  <text x="650" y="175" class="op-label">SUB</text>
+  <text x="730" y="175" class="op-label">a - b</text>
+
+  <!-- Logic -->
+  <text x="530" y="200" class="group-title">논리 연산</text>
+  <text x="570" y="217" class="op-code">4'b0010</text>
+  <text x="650" y="217" class="op-label">AND</text>
+  <text x="730" y="217" class="op-label">a &amp; b</text>
+  <text x="570" y="235" class="op-code">4'b0011</text>
+  <text x="650" y="235" class="op-label">OR</text>
+  <text x="730" y="235" class="op-label">a | b</text>
+  <text x="570" y="253" class="op-code">4'b0100</text>
+  <text x="650" y="253" class="op-label">XOR</text>
+  <text x="730" y="253" class="op-label">a ^ b</text>
+
+  <!-- Shift -->
+  <text x="530" y="278" class="group-title">시프트 연산</text>
+  <text x="570" y="295" class="op-code">4'b0101</text>
+  <text x="650" y="295" class="op-label">SLL</text>
+  <text x="730" y="295" class="op-label">a &lt;&lt; b[4:0]</text>
+  <text x="570" y="313" class="op-code">4'b0110</text>
+  <text x="650" y="313" class="op-label">SRL</text>
+  <text x="730" y="313" class="op-label">a &gt;&gt; b[4:0]</text>
+  <text x="570" y="331" class="op-code">4'b0111</text>
+  <text x="650" y="331" class="op-label">SRA</text>
+  <text x="730" y="331" class="op-label">a &gt;&gt;&gt; b[4:0]</text>
+
+  <!-- Compare -->
+  <text x="530" y="356" class="group-title">비교 연산</text>
+  <text x="570" y="373" class="op-code">4'b1000</text>
+  <text x="650" y="373" class="op-label">SLT</text>
+  <text x="730" y="373" class="op-label">signed(a&lt;b)</text>
+  <text x="570" y="391" class="op-code">4'b1001</text>
+  <text x="650" y="391" class="op-label">SLTU</text>
+  <text x="730" y="391" class="op-label">unsign(a&lt;b)</text>
+
+  <!-- Separator lines in table -->
+  <line x1="530" y1="120" x2="770" y2="120" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="530" y1="185" x2="770" y2="185" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="530" y1="262" x2="770" y2="262" stroke="#E5E7EB" stroke-width="1"/>
+  <line x1="530" y1="342" x2="770" y2="342" stroke="#E5E7EB" stroke-width="1"/>
+
+  <!-- Note -->
+  <text x="650" y="425" style="font-size:10px; fill:#6B7280; text-anchor:middle;">시프트량은 하위 5비트만 사용 (RV32I)</text>
+</svg>

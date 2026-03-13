@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 420" width="700" height="420" font-family="Pretendard, sans-serif">
+  <!-- 배경 -->
+  <rect width="700" height="420" fill="#F8FAFC" rx="12"/>
+
+  <!-- 제목 -->
+  <text x="350" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">AMBA 버스 패밀리 — 복잡도 vs 성능</text>
+
+  <!-- 그래프 영역 배경 -->
+  <rect x="80" y="50" width="560" height="320" fill="white" rx="8" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- 그리드 선 -->
+  <line x1="80" y1="157" x2="640" y2="157" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="80" y1="263" x2="640" y2="263" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="267" y1="50" x2="267" y2="370" stroke="#F1F5F9" stroke-width="1"/>
+  <line x1="453" y1="50" x2="453" y2="370" stroke="#F1F5F9" stroke-width="1"/>
+
+  <!-- X축 -->
+  <line x1="80" y1="370" x2="648" y2="370" stroke="#475569" stroke-width="2"/>
+  <polygon points="645,365 645,375 655,370" fill="#475569"/>
+  <text x="350" y="400" text-anchor="middle" font-size="13" fill="#475569">복잡도 (낮음 → 높음)</text>
+
+  <!-- Y축 -->
+  <line x1="80" y1="370" x2="80" y2="42" stroke="#475569" stroke-width="2"/>
+  <polygon points="75,45 85,45 80,35" fill="#475569"/>
+  <text x="22" y="210" text-anchor="middle" font-size="13" fill="#475569" transform="rotate(-90, 22, 210)">성능 (낮음 → 높음)</text>
+
+  <!-- APB 버블 -->
+  <circle cx="175" cy="310" r="52" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.5" opacity="0.85"/>
+  <text x="175" y="302" text-anchor="middle" font-size="15" font-weight="bold" fill="#1E40AF">APB</text>
+  <text x="175" y="320" text-anchor="middle" font-size="11" fill="#1E40AF">Advanced</text>
+  <text x="175" y="334" text-anchor="middle" font-size="11" fill="#1E40AF">Peripheral Bus</text>
+  <!-- APB 태그 -->
+  <rect x="118" y="248" width="114" height="22" fill="#EFF6FF" rx="4" stroke="#93C5FD" stroke-width="1"/>
+  <text x="175" y="263" text-anchor="middle" font-size="11" fill="#1D4ED8">Ch17 — APB &amp; UART</text>
+
+  <!-- AHB 버블 (강조) -->
+  <circle cx="360" cy="200" r="62" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="3" opacity="0.9"/>
+  <circle cx="360" cy="200" r="66" fill="none" stroke="#2563EB" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>
+  <text x="360" y="188" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">AHB-Lite</text>
+  <text x="360" y="208" text-anchor="middle" font-size="11" fill="#1E3A5F">Advanced High-perf</text>
+  <text x="360" y="222" text-anchor="middle" font-size="11" fill="#1E3A5F">Bus (Lite)</text>
+  <!-- AHB 태그 -->
+  <rect x="286" y="124" width="148" height="24" fill="#1D4ED8" rx="4"/>
+  <text x="360" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="white">Ch16 ← 지금 여기!</text>
+
+  <!-- AXI 버블 -->
+  <circle cx="555" cy="100" r="60" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2.5" opacity="0.85"/>
+  <text x="555" y="88" text-anchor="middle" font-size="15" font-weight="bold" fill="#5B21B6">AXI4</text>
+  <text x="555" y="106" text-anchor="middle" font-size="11" fill="#5B21B6">Advanced</text>
+  <text x="555" y="120" text-anchor="middle" font-size="11" fill="#5B21B6">eXtensible Interface</text>
+  <!-- AXI 태그 -->
+  <rect x="490" y="53" width="130" height="22" fill="#F5F3FF" rx="4" stroke="#C4B5FD" stroke-width="1"/>
+  <text x="555" y="68" text-anchor="middle" font-size="11" fill="#7C3AED">Ch20 (선택 심화)</text>
+
+  <!-- 진행 방향 화살표 -->
+  <path d="M225 290 Q285 245 302 210" stroke="#94A3B8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <polygon points="299,212 308,206 307,215" fill="#94A3B8"/>
+  <path d="M418 173 Q470 140 498 122" stroke="#94A3B8" stroke-width="1.5" fill="none" stroke-dasharray="5,3"/>
+  <polygon points="496,124 505,118 504,127" fill="#94A3B8"/>
+
+  <!-- 범례 -->
+  <rect x="88" y="58" width="12" height="12" fill="#DBEAFE" rx="2" stroke="#2563EB"/>
+  <text x="106" y="69" font-size="11" fill="#475569">버블 크기 ∝ 설계 복잡도</text>
+</svg>

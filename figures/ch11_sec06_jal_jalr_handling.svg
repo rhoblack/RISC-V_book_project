@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 480" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#D97706"/>
+    </marker>
+  </defs>
+
+  <rect width="880" height="480" fill="#F8FAFC" rx="8"/>
+  <text x="440" y="30" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">JAL vs JALR 처리 비교</text>
+
+  <!-- JAL -->
+  <rect x="30" y="55" width="820" height="185" rx="8" fill="white" stroke="#059669" stroke-width="2"/>
+  <text x="50" y="80" font-size="14" font-weight="700" fill="#059669">JAL rd, offset — 무조건 점프 (PC 상대)</text>
+
+  <text x="50" y="105" font-size="11" fill="#64748B">대상 주소 = ID_PC + imm (ID 스테이지에서 계산 가능)</text>
+
+  <!-- JAL 파이프라인 -->
+  <text x="50" y="135" font-size="11" fill="#1E293B">JAL</text>
+  <rect x="100" y="120" width="100" height="28" rx="4" fill="#2563EB"/><text x="150" y="139" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
+  <rect x="210" y="120" width="100" height="28" rx="4" fill="#059669"/><text x="260" y="139" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID ★ 점프</text>
+  <rect x="320" y="120" width="100" height="28" rx="4" fill="#2563EB"/><text x="370" y="139" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX (WB)</text>
+
+  <text x="50" y="170" font-size="11" fill="#DC2626">PC+4</text>
+  <rect x="210" y="155" width="100" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="260" y="174" text-anchor="middle" font-size="10" fill="#DC2626">IF → flush</text>
+
+  <text x="50" y="205" font-size="11" fill="#059669">Target</text>
+  <rect x="320" y="190" width="100" height="28" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+  <text x="370" y="209" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">IF ✓</text>
+
+  <rect x="560" y="90" width="270" height="60" rx="6" fill="#ECFDF5"/>
+  <text x="695" y="112" text-anchor="middle" font-size="12" font-weight="600" fill="#059669">페널티: 1사이클</text>
+  <text x="695" y="132" text-anchor="middle" font-size="11" fill="#059669">ID에서 PC+imm 계산 → IF/ID flush</text>
+
+  <rect x="560" y="160" width="270" height="60" rx="6" fill="#DBEAFE"/>
+  <text x="695" y="182" text-anchor="middle" font-size="11" fill="#2563EB">rd ← PC + 4 (복귀 주소 저장)</text>
+  <text x="695" y="202" text-anchor="middle" font-size="11" fill="#2563EB">WB 스테이지에서 레지스터 파일에 기록</text>
+
+  <!-- JALR -->
+  <rect x="30" y="255" width="820" height="210" rx="8" fill="white" stroke="#D97706" stroke-width="2"/>
+  <text x="50" y="280" font-size="14" font-weight="700" fill="#D97706">JALR rd, rs1, offset — 간접 점프 (레지스터 기반)</text>
+
+  <text x="50" y="305" font-size="11" fill="#64748B">대상 주소 = rs1 + imm (rs1 값 필요 → 포워딩 의존성 발생 가능)</text>
+
+  <!-- JALR 파이프라인 -->
+  <text x="50" y="335" font-size="11" fill="#1E293B">JALR</text>
+  <rect x="100" y="320" width="100" height="28" rx="4" fill="#2563EB"/><text x="150" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="white">IF</text>
+  <rect x="210" y="320" width="100" height="28" rx="4" fill="#2563EB"/><text x="260" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="white">ID (rs1 읽기)</text>
+  <rect x="320" y="320" width="100" height="28" rx="4" fill="#D97706"/><text x="370" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="white">EX ★ 점프</text>
+  <rect x="430" y="320" width="100" height="28" rx="4" fill="#2563EB"/><text x="480" y="339" text-anchor="middle" font-size="11" font-weight="600" fill="white">MEM</text>
+
+  <text x="50" y="370" font-size="11" fill="#DC2626">PC+4</text>
+  <rect x="210" y="355" width="100" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="260" y="374" text-anchor="middle" font-size="10" fill="#DC2626">IF → flush</text>
+  <rect x="320" y="355" width="100" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="370" y="374" text-anchor="middle" font-size="10" fill="#DC2626">ID → flush</text>
+
+  <text x="50" y="405" font-size="11" fill="#DC2626">PC+8</text>
+  <rect x="320" y="390" width="100" height="28" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="370" y="409" text-anchor="middle" font-size="10" fill="#DC2626">IF → flush</text>
+
+  <text x="50" y="440" font-size="11" fill="#059669">Target</text>
+  <rect x="430" y="425" width="100" height="28" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1.5"/>
+  <text x="480" y="444" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">IF ✓</text>
+
+  <rect x="560" y="290" width="270" height="80" rx="6" fill="#FEF3C7"/>
+  <text x="695" y="312" text-anchor="middle" font-size="12" font-weight="600" fill="#D97706">페널티: 2사이클</text>
+  <text x="695" y="332" text-anchor="middle" font-size="11" fill="#D97706">EX에서 rs1+imm 계산 후 점프</text>
+  <text x="695" y="352" text-anchor="middle" font-size="11" fill="#D97706">IF/ID, ID/EX 모두 flush</text>
+
+  <rect x="560" y="380" width="270" height="75" rx="6" fill="#FEF2F2"/>
+  <text x="695" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">포워딩 의존성 주의!</text>
+  <text x="695" y="420" text-anchor="middle" font-size="10" fill="#DC2626">직전 명령어가 rs1에 쓰는 경우</text>
+  <text x="695" y="440" text-anchor="middle" font-size="10" fill="#DC2626">→ EX-EX 포워딩 또는 스톨 필요</text>
+</svg>

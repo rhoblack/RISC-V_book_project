@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 05 — 메모리 서브시스템 설계</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 05</span>
+  <h1>메모리 서브시스템 설계</h1>
+  <p class="chapter-intro">
+    Chapter 04에서 ALU와 레지스터 파일을 완성했습니다. 이제 프로세서에 "기억"을 부여할 차례입니다.
+    이 챕터에서는 명령어를 저장하는 명령어 메모리(Instruction Memory)와
+    데이터를 읽고 쓰는 데이터 메모리(Data Memory)를 각각 설계하고,
+    두 메모리가 공존하는 주소 공간(Address Space)을 체계적으로 구성합니다.
+    바이트 단위 접근, 리틀 엔디언(Little-Endian) 저장 방식, FPGA의 블록 RAM(Block RAM, BRAM) 추론 규칙까지
+    실무에서 반드시 알아야 할 개념들을 코드와 함께 익힙니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: 하버드 구조(Harvard Architecture)와 폰 노이만 구조(Von Neumann Architecture)의 차이를 설명하고, 단일 사이클 프로세서에서 IMEM과 DMEM을 분리하는 이유를 논술할 수 있다.</li>
+    <li><strong>LO-2</strong>: BRAM 추론 규칙에 따라 명령어 메모리(IMEM)를 SystemVerilog로 설계하고, <code>$readmemh</code>와 COE 파일 두 가지 초기화 방법을 비교할 수 있다.</li>
+    <li><strong>LO-3</strong>: 바이트 인에이블(Byte Enable)과 부호/무부호 로드(Signed/Unsigned Load)를 지원하는 데이터 메모리(DMEM)를 합성 가능한 SystemVerilog로 구현할 수 있다.</li>
+    <li><strong>LO-4</strong>: IMEM, DMEM, MMIO 영역으로 구성된 메모리 맵(Memory Map)을 설계하고 주소 디코딩(Address Decoding) 로직을 구현할 수 있다.</li>
+    <li><strong>LO-5</strong>: 로드-스토어 시퀀스를 검증하는 자가 검증(Self-Checking) 테스트벤치를 작성하고 바이트/하프워드/워드 접근을 모두 확인할 수 있다.</li>
+  </ul>
+</nav>
+
+
+<!-- ========== 5.1절 ========== -->
+<section id="sec-05-1">
+  <h2>5.1 이 챕터에서 만들 모듈 — 전체 데이터패스 내 위치</h2>
+
+  <p>
+    단일 사이클 프로세서(Single-Cycle Processor)를 조립하는 과정을 건물 공사에 비유하면,
+    Chapter 04에서 철근(ALU)과 콘크리트 블록(레지스터 파일)을 준비했습니다.
+    이번 챕터에서는 그 재료들을 올려놓을 <strong>바닥(메모리)</strong>을 설계합니다.
+    아무리 강력한 ALU가 있어도 명령어를 가져올 곳이 없으면 프로세서는 동작할 수 없고,
+    계산 결과를 저장할 공간이 없으면 연산의 의미가 사라집니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 점진적 공개(Gradual Reveal) 안내</strong>
+    <p>
+      이 챕터에서 설계할 모듈은 명령어 메모리(IMEM), 데이터 메모리(DMEM),
+      그리고 두 메모리를 관리하는 주소 디코더(Address Decoder) 세 가지입니다.
+      아래 데이터패스 그림에서 파란 테두리로 강조된 블록이 오늘의 구현 대상입니다.
+      제어 유닛(Control Unit)과 PC 경로는 Chapter 06에서 추가되므로, 지금은 회색으로 표시됩니다.
+      "오늘 할 일"의 범위가 명확할 때 학습이 가장 효과적입니다.
+    </p>
+  </aside>
+
+  <h3>전체 데이터패스에서 메모리의 위치</h3>
+  <p>
+    RV32I 단일 사이클 데이터패스의 신호 흐름은 왼쪽에서 오른쪽으로 진행됩니다.
+    프로그램 카운터(Program Counter, PC)가 주소를 생성하면,
+    <strong>명령어 메모리(IMEM)</strong>가 해당 주소의 32비트 명령어를 출력합니다.
+    명령어가 로드(Load) 또는 스토어(Store) 명령어일 경우,
+    ALU가 계산한 유효 주소(Effective Address)로 <strong>데이터 메모리(DMEM)</strong>에 접근합니다.
+    두 메모리 블록은 각각 다른 클럭 동작과 포트 구성을 갖기 때문에 분리하여 설계합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch05_sec01_datapath_memory.svg"
+         alt="단일 사이클 데이터패스 전체 구조 — IMEM과 DMEM 위치 강조">
+    <figcaption>그림 5.1: RV32I 단일 사이클 데이터패스. 파란 테두리 블록(IMEM, DMEM, 주소 디코더)이 이번 챕터에서 구현할 모듈입니다. PC, 제어 유닛, 멀티플렉서는 Chapter 06에서 추가됩니다.</figcaption>
+  </figure>
+
+  <h3>두 메모리가 필요한 이유: 하버드 구조 vs. 폰 노이만 구조</h3>
+  <p>
+    컴퓨터 아키텍처(Computer Architecture) 역사에서 메모리 조직 방식은 두 가지 큰 흐름으로 나뉩니다.
+  </p>
+
+  <p>
+    <strong>폰 노이만 구조(Von Neumann Architecture 또는 Princeton Architecture)</strong>는
+    명령어와 데이터를 하나의 메모리에 함께 저장합니다.
+    구조가 단순하고 메모리를 유연하게 활용할 수 있다는 장점이 있습니다.
+    현대 PC의 메인 메모리(DRAM)가 이 방식을 따릅니다.
+    그러나 명령어 읽기와 데이터 읽기/쓰기가 같은 버스(Bus)를 공유하므로,
+    한 클럭 사이클에 두 접근이 동시에 일어날 수 없다는 병목(Bottleneck)이 생깁니다.
+    이를 <strong>폰 노이만 병목(Von Neumann Bottleneck)</strong>이라 부릅니다.
+  </p>
+
+  <p>
+    <strong>하버드 구조(Harvard Architecture)</strong>는 명령어 메모리와 데이터 메모리를
+    물리적으로 분리하여 별도의 버스로 접근합니다.
+    단일 사이클 프로세서에서는 하나의 클럭 안에 명령어 인출(Instruction Fetch)과
+    데이터 메모리 접근이 동시에 일어나야 합니다.
+    만약 두 메모리가 하나로 합쳐져 있다면, 같은 사이클에 두 번 읽거나
+    읽기와 쓰기를 동시에 수행할 수 없습니다. 따라서 FPGA 기반 단일 사이클 프로세서 설계에서는
+    하버드 구조를 채택하는 것이 표준적인 접근법입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유 — 도서관과 창고:</strong>
+    하버드 구조는 "읽기 전용 도서관(IMEM)"과 "물건을 넣고 빼는 창고(DMEM)"를 완전히 별개의 건물로 운영하는 것과 같습니다.
+    사서(CPU)는 동시에 도서관에서 책을 읽으면서 창고에서 물건을 꺼낼 수 있습니다.
+    반면 폰 노이만 구조는 하나의 건물에 책과 물건이 함께 있어,
+    한 번에 한 가지 일만 처리할 수 있습니다.
+    FPGA의 BRAM은 물리적으로 두 포트를 독립적으로 사용할 수 있으므로,
+    이 하버드 구조를 자연스럽게 실현할 수 있습니다.
+  </div>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 하버드 구조와 캐시 메모리</strong>
+    <p>
+      현대 고성능 프로세서(Cortex-A, RISC-V 멀티코어 등)는 내부적으로 하버드 구조(분리된 L1 명령어 캐시와 L1 데이터 캐시)를
+      사용하지만, 외부 DRAM은 폰 노이만 방식으로 하나의 주소 공간을 공유합니다.
+      이를 <strong>수정 하버드 구조(Modified Harvard Architecture)</strong>라 부릅니다.
+      이 챕터의 IMEM/DMEM 분리 설계는 바로 이 L1 캐시 분리의 원리와 동일합니다.
+    </p>
+  </aside>
+
+  <h3>이번 챕터의 구현 로드맵</h3>
+  <p>
+    다음 표는 이번 챕터에서 설계할 세 모듈의 핵심 특성을 미리 정리한 것입니다.
+    각 절에서 세부 내용을 다루기 전에 전체 그림을 파악하면 학습 흐름을 놓치지 않습니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>모듈</th>
+        <th>읽기</th>
+        <th>쓰기</th>
+        <th>FPGA 자원</th>
+        <th>초기화</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>imem</code></td>
+        <td>비동기 (조합 논리)</td>
+        <td>없음 (ROM)</td>
+        <td>BRAM 또는 분산 RAM</td>
+        <td><code>$readmemh</code> / COE 파일</td>
+      </tr>
+      <tr>
+        <td><code>dmem</code></td>
+        <td>비동기 (조합 논리)</td>
+        <td>동기 (클럭 상승 에지)</td>
+        <td>BRAM (바이트 인에이블)</td>
+        <td>초기화 없음 (런타임 쓰기)</td>
+      </tr>
+      <tr>
+        <td><code>memory_map</code></td>
+        <td>조합 논리 (선택 신호)</td>
+        <td>해당 없음</td>
+        <td>LUT</td>
+        <td>해당 없음</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    이제 각 모듈을 차례로 설계하겠습니다.
+    5.2절에서 IMEM, 5.3절에서 DMEM, 5.4절에서 메모리 맵, 5.5절에서 통합 테스트벤치를 다룹니다.
+  </p>
+
+</section>
+<!-- ========== 5.1절 끝 ========== -->
+
+
+<!-- ========== 5.2절 ========== -->
+<section id="sec-05-2">
+  <h2>5.2 명령어 메모리(IMEM) 설계</h2>
+
+  <p>
+    프로세서가 첫 번째로 접근하는 메모리는 명령어 메모리(Instruction Memory, IMEM)입니다.
+    프로그램 카운터(PC)가 가리키는 주소에서 32비트 명령어를 읽어 오는 이 모듈은
+    쓰기 기능이 없는 읽기 전용 메모리(Read-Only Memory, ROM)처럼 동작합니다.
+    설계는 단순해 보이지만, FPGA 합성 도구가 이를 어떤 자원으로 매핑하는지,
+    시뮬레이션과 합성을 동시에 고려한 초기화 방법은 무엇인지를 이해하면
+    실제 FPGA 구현에서 발생하는 많은 문제를 예방할 수 있습니다.
+  </p>
+
+  <h3>하버드 구조에서 IMEM의 역할</h3>
+  <p>
+    단일 사이클 프로세서에서 IMEM은 매 클럭 사이클마다 한 번씩 읽힙니다.
+    PC가 갱신되면 새 주소로 IMEM을 즉시 읽어야 하므로, 읽기는 반드시 <strong>비동기(Asynchronous)</strong>,
+    즉 조합 논리(Combinational Logic)로 구현해야 합니다.
+    만약 읽기에 클럭이 필요하다면 1사이클의 지연이 생겨 단일 사이클 동작이 불가능해집니다.
+    이 점은 Chapter 04의 레지스터 파일 설계에서 배운 원칙과 동일합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch05_sec02_imem_structure.svg"
+         alt="IMEM 내부 구조 — 워드 주소 변환과 비동기 읽기">
+    <figcaption>그림 5.2: IMEM 구조. 바이트 주소의 하위 2비트를 무시하여 워드 주소로 변환하고, 조합 논리로 즉시 명령어를 출력합니다.</figcaption>
+  </figure>
+
+  <h3>바이트 주소와 워드 주소 변환</h3>
+  <p>
+    RISC-V는 바이트 주소 지정 방식(Byte-Addressable)을 사용합니다.
+    PC는 항상 4의 배수 주소를 가리키므로 하위 2비트는 항상 <code>2'b00</code>입니다.
+    메모리 배열(Array)은 워드(4바이트) 단위로 구성되어 있으므로,
+    바이트 주소를 워드 인덱스로 변환하려면 주소를 오른쪽으로 2비트 시프트(<code>addr[31:2]</code>)하면 됩니다.
+    예를 들어, 바이트 주소 <code>0x00000008</code>은 워드 인덱스 <code>2</code>에 해당합니다.
+  </p>
+
+  <h3>IMEM SystemVerilog 구현</h3>
+
+<pre><code class="language-systemverilog">// 명령어 메모리 — 단일 사이클용 ROM
+// Vivado에서 BRAM 또는 분산 RAM(Distributed RAM)으로 합성됨
+// IEEE 1800-2017 준수 / 합성 가능(Synthesizable)
+module imem #(
+   parameter DEPTH = 256  // 명령어 개수 (1KB = 256 × 4바이트)
+)(
+   input  logic [31:0] addr,    // 바이트 주소 (하위 2비트는 항상 0)
+   output logic [31:0] instr    // 32비트 명령어 출력
+);
+   // 워드 단위 2차원 배열 — 합성 도구가 ROM으로 추론
+   logic [31:0] mem [0:DEPTH-1];
+
+   // -------------------------------------------------------
+   // 시뮬레이션용 초기화: $readmemh로 hex 파일을 읽어 들임
+   // 합성 시에는 이 구문이 무시될 수 있으므로,
+   // Vivado BRAM IP를 사용할 경우 COE 파일로 별도 초기화 필요
+   // -------------------------------------------------------
+   initial $readmemh("program.hex", mem);
+
+   // 비동기 읽기 — 워드 주소로 변환하여 즉시 출력
+   // addr[31:2]: 하위 2비트(바이트 오프셋) 무시
+   assign instr = mem[addr[31:2]];
+
+endmodule
+</code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — <code>$readmemh</code> vs COE 파일</strong>
+    <p>
+      <code>$readmemh</code>는 SystemVerilog 시스템 함수(System Function)로,
+      <strong>시뮬레이션 환경에서만 동작</strong>합니다.
+      Vivado, VCS, ModelSim 등 모든 시뮬레이터가 이를 지원하므로 개발·검증 단계에서 매우 편리합니다.
+    </p>
+    <p>
+      그러나 <strong>Vivado 합성(Synthesis) 단계에서 BRAM IP를 사용할 경우</strong>,
+      초기화 데이터는 <strong>COE(Coefficient) 파일</strong> 형식으로 제공해야 합니다.
+      COE 파일 형식은 다음과 같습니다.
+    </p>
+    <pre><code>memory_initialization_radix = 16;
+memory_initialization_vector =
+00000093,
+00100113,
+002081B3,
+...;
+</code></pre>
+    <p>
+      Vivado IP Catalog에서 "Block Memory Generator"를 사용할 때
+      "Memory Initialization" 탭에서 이 COE 파일을 지정합니다.
+      <code>initial $readmemh</code>로 개발하고, FPGA 구현 시 COE 파일로 전환하는 것이 권장 워크플로입니다.
+    </p>
+  </aside>
+
+  <h3>BRAM 추론 vs 분산 RAM 추론</h3>
+  <p>
+    Xilinx/AMD FPGA에서 배열 선언만으로도 합성 도구가 자동으로 최적의 자원을 선택합니다.
+    이를 <strong>메모리 추론(Memory Inference)</strong>이라 합니다.
+    합성 도구가 BRAM(Block RAM)을 선택할지, 분산 RAM(Distributed RAM, LUT 기반)을 선택할지는
+    배열의 크기와 포트 구성에 따라 결정됩니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>특성</th>
+        <th>BRAM (Block RAM)</th>
+        <th>분산 RAM (Distributed RAM)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>FPGA 자원</td>
+        <td>전용 BRAM 타일</td>
+        <td>슬라이스 LUT</td>
+      </tr>
+      <tr>
+        <td>읽기 방식</td>
+        <td>기본: 동기 (레지스터 출력)</td>
+        <td>비동기 가능</td>
+      </tr>
+      <tr>
+        <td>단일 사이클 적합성</td>
+        <td>주의 필요 (출력 레지스터 비활성화 필요)</td>
+        <td>적합</td>
+      </tr>
+      <tr>
+        <td>용량</td>
+        <td>크다 (18Kb, 36Kb 단위)</td>
+        <td>작다 (용량 증가 시 LUT 소모 급증)</td>
+      </tr>
+      <tr>
+        <td>합성 권장 크기</td>
+        <td>512바이트 이상</td>
+        <td>512바이트 미만</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Basys 3 FPGA에서 IMEM을 BRAM으로 합성해도 단일 사이클 프로세서가 동작하나요?</p>
+    <p>
+      <strong>A:</strong> Vivado는 BRAM 출력에 기본적으로 출력 레지스터를 삽입합니다.
+      이 레지스터가 활성화되면 읽기에 1클럭 지연이 생겨 단일 사이클 동작이 불가능합니다.
+      BRAM을 사용하면서 비동기 읽기를 원한다면, Vivado IP Catalog의 Block Memory Generator에서
+      "Output Register"를 <strong>비활성화(No Registers)</strong>하거나,
+      합성 속성(Synthesis Attribute)으로 <code>(* ram_style = "distributed" *)</code>를 지정하여
+      분산 RAM을 강제하는 방법을 사용합니다.
+      실습 보드(Basys 3)의 1KB 정도 프로그램에서는 분산 RAM이 더 안전한 선택입니다.
+    </p>
+  </aside>
+
+  <h3>IMEM 초기화: program.hex 파일 형식</h3>
+  <p>
+    <code>$readmemh</code>가 읽는 HEX 파일은 각 줄에 16진수 워드 값을 기록합니다.
+    아래는 <code>addi x1, x0, 1</code> (x1 = 0 + 1) 과 <code>addi x2, x0, 2</code> 두 명령어를 담은 예시입니다.
+  </p>
+
+<pre><code class="language-text">// program.hex — RISC-V 기계어 코드 예시
+// addi x1, x0, 1  → 0x00100093
+00100093
+// addi x2, x0, 2  → 0x00200113
+00200113
+// add  x3, x1, x2 → 0x002081B3
+002081B3
+// nop (addi x0, x0, 0)
+00000013
+</code></pre>
+
+  <p>
+    RISC-V 어셈블러(Assembler)가 생성한 ELF 파일에서 <code>objcopy</code> 또는 Python 스크립트를 사용하여
+    이 형식의 HEX 파일을 생성할 수 있습니다.
+    Chapter 09(소프트웨어 툴체인)에서 자동화 방법을 상세히 다룹니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트 — COE 파일과 BRAM 초기화</strong>
+    <p>
+      "FPGA에서 ROM을 구현할 때 시뮬레이션과 합성의 초기화 방법 차이를 설명하시오."라는 질문이 실무 면접에서 자주 등장합니다.
+      핵심 답변은 다음 세 가지입니다.
+      (1) <code>$readmemh</code>는 시뮬레이터 전용, 합성 도구가 무시할 수 있다.
+      (2) Vivado BRAM IP는 COE 파일로 초기화하며, 형식은 <code>memory_initialization_radix</code>와 <code>memory_initialization_vector</code> 키워드를 사용한다.
+      (3) 분산 RAM의 경우 <code>initial</code> 블록의 상수 값이 합성 도구에 의해 LUT 초기값으로 반영될 수 있으나,
+      도구별 동작이 다르므로 공식 문서를 반드시 확인해야 한다.
+    </p>
+  </aside>
+
+  <h3>워드 주소 계산 검증</h3>
+  <p>
+    구현 전 워드 주소 변환이 올바른지 직접 확인해 보겠습니다.
+    DEPTH = 256일 때 유효 주소 범위는 <code>0x00000000</code>부터 <code>0x000003FC</code>(= 255 × 4)까지입니다.
+    <code>addr[31:2]</code>는 32비트 주소에서 상위 30비트를 워드 인덱스로 사용하며,
+    이를 통해 최대 2<sup>30</sup>개의 워드를 주소 지정할 수 있습니다.
+    실제 DEPTH 크기만큼만 배열이 존재하므로, 범위를 벗어난 접근은 시뮬레이션에서
+    부정값(X)을 반환하여 설계 오류를 쉽게 발견할 수 있습니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      다음 질문에 답할 수 있는지 확인하십시오.
+      (1) IMEM 읽기가 비동기여야 하는 이유는 무엇입니까?
+      (2) 바이트 주소 <code>0x0000000C</code>는 IMEM 배열의 몇 번 인덱스에 해당합니까?
+      (3) <code>$readmemh</code>와 COE 파일의 차이를 한 문장으로 설명할 수 있습니까?
+      모두 답할 수 있다면 5.3절로 진행하십시오.
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 5.2절 끝 ========== -->
+
+
+<!-- ========== 5.3절 ========== -->
+<section id="sec-05-3">
+  <h2>5.3 데이터 메모리(DMEM) 설계</h2>
+
+  <p>
+    데이터 메모리(Data Memory, DMEM)는 IMEM보다 복잡합니다.
+    RISC-V의 로드(Load) 명령어 집합만 보더라도 <code>LW</code>(워드 로드),
+    <code>LH</code>(하프워드 부호 확장 로드), <code>LHU</code>(하프워드 무부호 로드),
+    <code>LB</code>(바이트 부호 확장 로드), <code>LBU</code>(바이트 무부호 로드)
+    다섯 가지를 지원해야 합니다.
+    스토어(Store)도 <code>SW</code>, <code>SH</code>, <code>SB</code> 세 가지가 있습니다.
+    이 모든 접근 방식을 하나의 메모리 모듈로 처리하려면 <strong>바이트 인에이블(Byte Enable)</strong>
+    메커니즘이 필요합니다.
+  </p>
+
+  <h3>바이트 인에이블의 개념</h3>
+  <p>
+    바이트 인에이블(Byte Enable)은 32비트 워드의 4개 바이트 중 어느 바이트를 쓸지를
+    4비트 마스크로 지정하는 신호입니다.
+    <code>be[0]</code>은 최하위 바이트(addr+0), <code>be[3]</code>은 최상위 바이트(addr+3)에 대응합니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어</th>
+        <th>바이트 인에이블 (be[3:0])</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>SW</code> (스토어 워드)</td>
+        <td><code>4'b1111</code></td>
+        <td>4바이트 모두 쓰기</td>
+      </tr>
+      <tr>
+        <td><code>SH</code> (스토어 하프워드), addr 짝수</td>
+        <td><code>4'b0011</code></td>
+        <td>하위 2바이트만 쓰기</td>
+      </tr>
+      <tr>
+        <td><code>SB</code> (스토어 바이트), addr 최하위</td>
+        <td><code>4'b0001</code></td>
+        <td>최하위 바이트만 쓰기</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    바이트 인에이블 신호는 DMEM 내부에서 생성하지 않고, 외부의 제어 유닛(Chapter 06)이나
+    로드-스토어 유닛(Load-Store Unit)이 명령어 타입에 따라 생성하여 DMEM에 전달합니다.
+    DMEM은 단순히 전달받은 <code>be</code> 신호에 따라 해당 바이트만 쓰면 됩니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch05_sec03_dmem_byte_enable.svg"
+         alt="DMEM 바이트 인에이블 동작 — SW, SH, SB 시나리오">
+    <figcaption>그림 5.3: DMEM 바이트 인에이블 동작. be[3:0] 값에 따라 워드의 각 바이트를 독립적으로 쓸 수 있습니다. 리틀 엔디언 방식에서 be[0]이 최하위 바이트(addr+0)에 대응됩니다.</figcaption>
+  </figure>
+
+  <h3>리틀 엔디언 저장 방식</h3>
+  <p>
+    RISC-V는 <strong>리틀 엔디언(Little-Endian)</strong> 바이트 순서를 기본으로 합니다.
+    리틀 엔디언에서는 다중 바이트 값의 <strong>최하위 바이트(Least Significant Byte, LSB)를
+    가장 낮은 주소에</strong> 저장합니다.
+    예를 들어, <code>0xDEADBEEF</code>를 주소 <code>0x1000</code>에 저장하면:
+  </p>
+  <ul>
+    <li><code>addr 0x1000</code>: <code>0xEF</code> (최하위 바이트)</li>
+    <li><code>addr 0x1001</code>: <code>0xBE</code></li>
+    <li><code>addr 0x1002</code>: <code>0xAD</code></li>
+    <li><code>addr 0x1003</code>: <code>0xDE</code> (최상위 바이트)</li>
+  </ul>
+
+  <div class="analogy">
+    <strong>비유 — 책의 페이지 번호:</strong>
+    리틀 엔디언을 "작은 것이 먼저"라는 규칙으로 기억할 수 있습니다.
+    책을 처음부터 읽듯이, 낮은 주소(낮은 페이지 번호)에 낮은 비트를 저장합니다.
+    반대로 빅 엔디언(Big-Endian)은 "큰 것이 먼저"로, 최상위 바이트가 가장 낮은 주소에 옵니다.
+    네트워크 프로토콜은 대부분 빅 엔디언을 사용하므로, 두 시스템 간 데이터를 교환할 때는
+    반드시 바이트 스왑(Byte Swap)이 필요합니다.
+  </div>
+
+  <h3>DMEM SystemVerilog 구현</h3>
+
+<pre><code class="language-systemverilog">// 데이터 메모리 — 바이트 인에이블(Byte Enable) 지원
+// 동기 쓰기 / 비동기 읽기 — 단일 사이클 프로세서 호환
+// IEEE 1800-2017 준수 / 합성 가능(Synthesizable)
+module dmem #(
+   parameter DEPTH = 256  // 워드 개수 (1KB = 256 × 4바이트)
+)(
+   input  logic        clk,          // 클럭 (쓰기에만 사용)
+   input  logic        we,           // 쓰기 인에이블 (Write Enable)
+   input  logic [3:0]  be,           // 바이트 인에이블 (Byte Enable)
+   input  logic [31:0] addr,         // 바이트 주소
+   input  logic [31:0] wdata,        // 쓰기 데이터 (Write Data)
+   output logic [31:0] rdata         // 읽기 데이터 (Read Data) — 비동기
+);
+   // 바이트 단위 메모리 배열 — BRAM 추론 가능
+   // 총 크기: DEPTH × 4 바이트 = 1KB (DEPTH=256일 때)
+   logic [7:0] mem [0:DEPTH*4-1];
+
+   // -------------------------------------------------------
+   // 동기 쓰기 — 바이트 인에이블에 따라 해당 바이트만 갱신
+   // RISC-V 리틀 엔디언(Little-Endian): 낮은 주소 = 낮은 바이트
+   // -------------------------------------------------------
+   always_ff @(posedge clk) begin
+      if (we) begin
+         // be[0]: 최하위 바이트 (addr+0) — wdata[7:0]
+         if (be[0]) mem[addr+0] &lt;= wdata[7:0];
+         // be[1]: 두 번째 바이트 (addr+1) — wdata[15:8]
+         if (be[1]) mem[addr+1] &lt;= wdata[15:8];
+         // be[2]: 세 번째 바이트 (addr+2) — wdata[23:16]
+         if (be[2]) mem[addr+2] &lt;= wdata[23:16];
+         // be[3]: 최상위 바이트 (addr+3) — wdata[31:24]
+         if (be[3]) mem[addr+3] &lt;= wdata[31:24];
+      end
+   end
+
+   // -------------------------------------------------------
+   // 비동기 읽기 — 리틀 엔디언 조합으로 32비트 워드 재구성
+   // {최상위, ..., 최하위} 순서로 결합
+   // -------------------------------------------------------
+   assign rdata = {mem[addr+3], mem[addr+2], mem[addr+1], mem[addr+0]};
+
+endmodule
+</code></pre>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁 — 바이트 순서 실수 방지</strong>
+    <p>
+      수강생이 가장 많이 실수하는 부분은 <code>rdata</code> 조합 순서입니다.
+      <code>{mem[addr+0], mem[addr+1], mem[addr+2], mem[addr+3]}</code>으로 작성하면
+      빅 엔디언이 되어 값이 뒤집힙니다.
+      강의 현장에서는 "SystemVerilog의 비트 결합(Concatenation) <code>{}</code>은
+      왼쪽이 최상위 비트"라는 사실을 칠판에 크게 써두고,
+      addr+3이 최상위 바이트이므로 왼쪽에 와야 함을 시각적으로 보여 주십시오.
+      테스트벤치에서 <code>0xDEADBEEF</code>를 쓰고 바이트별로 읽어 확인하는 실습을 추가하면 효과적입니다.
+    </p>
+  </aside>
+
+  <h3>부호/무부호 로드 처리</h3>
+  <p>
+    DMEM 자체는 항상 32비트 <code>rdata</code>를 출력합니다.
+    바이트 또는 하프워드 로드 명령어의 경우, 실제 읽은 값이 <code>rdata</code>의 하위 비트에 담기므로
+    상위 비트를 부호 확장(Sign Extension)하거나 0으로 채우는 것은
+    DMEM 외부, 즉 로드-스토어 유닛 또는 데이터패스의 부호 확장 회로가 담당합니다.
+    이 분리 원칙 덕분에 DMEM은 단순하게 유지되고, 부호 확장 로직은 독립적으로 검증할 수 있습니다.
+  </p>
+
+  <p>
+    예를 들어, 주소 <code>0x1000</code>에 <code>LB</code> 명령어로 접근한다면:
+  </p>
+  <ol>
+    <li>DMEM은 <code>rdata = {mem[0x1003], mem[0x1002], mem[0x1001], mem[0x1000]}</code>을 출력합니다.</li>
+    <li>로드-스토어 유닛은 <code>rdata[7:0]</code>을 추출합니다.</li>
+    <li>최상위 비트(<code>rdata[7]</code>)를 24비트 복사하여 32비트로 부호 확장합니다.</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> <code>LBU</code>(무부호 바이트 로드)와 <code>LB</code>(부호 바이트 로드)의 차이가 무엇인가요? DMEM 설계에서 달라지는 점이 있나요?</p>
+    <p>
+      <strong>A:</strong> DMEM 자체는 달라지지 않습니다. 두 명령어 모두 같은 방식으로 메모리에서 1바이트를 읽습니다.
+      차이는 읽은 8비트 값을 32비트로 확장하는 방식에 있습니다.
+      <code>LB</code>는 최상위 비트(<code>bit[7]</code>)를 상위 24비트에 복사하여 부호 확장(Sign Extension)합니다.
+      예를 들어, 읽은 바이트가 <code>0xFF</code>이면 <code>LB</code>는 <code>0xFFFFFFFF</code>(-1),
+      <code>LBU</code>는 <code>0x000000FF</code>(255)를 레지스터에 저장합니다.
+      이 부호 확장 로직은 제어 유닛의 <code>funct3</code> 디코딩을 통해 Chapter 06에서 구현됩니다.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 바이트 인에이블 생성 로직</strong>
+    <p>
+      제어 유닛이 명령어의 <code>funct3</code> 필드를 디코딩하여 바이트 인에이블 신호를 생성합니다.
+      RISC-V에서 스토어 명령어의 <code>funct3</code>는 다음과 같이 인코딩됩니다.
+    </p>
+    <ul>
+      <li><code>SB</code>: <code>funct3 = 3'b000</code> → <code>be = 4'b0001</code> (최하위 바이트, addr[1:0]에 따라 시프트)</li>
+      <li><code>SH</code>: <code>funct3 = 3'b001</code> → <code>be = 4'b0011</code> (addr[1]에 따라 시프트)</li>
+      <li><code>SW</code>: <code>funct3 = 3'b010</code> → <code>be = 4'b1111</code></li>
+    </ul>
+    <p>
+      정렬되지 않은(Unaligned) 주소 접근은 이 챕터의 범위를 벗어납니다.
+      이 설계에서는 모든 접근이 자연 정렬(Naturally Aligned)됨을 가정합니다.
+    </p>
+  </aside>
+
+  <h3>DMEM의 BRAM 합성 최적화</h3>
+  <p>
+    위 구현에서 바이트 단위 배열(<code>logic [7:0] mem [0:DEPTH*4-1]</code>)을 사용한 것은
+    바이트 인에이블을 직관적으로 표현하기 위함입니다.
+    Vivado 합성 도구는 이 패턴을 인식하여 BRAM의 바이트 쓰기 인에이블(Byte Write Enable) 기능으로
+    매핑할 수 있습니다. Basys 3의 Artix-7 FPGA는 18Kb BRAM을 50개 보유하고 있으므로
+    수 KB 크기의 DMEM도 충분히 수용합니다.
+  </p>
+
+  <p>
+    합성 후 Vivado의 "Implementation → Report Utilization" 창에서
+    <code>RAMB18E1</code> 또는 <code>RAMB36E1</code> 프리미티브(Primitive)가 나타나면
+    BRAM 추론이 성공한 것입니다. 이 프리미티브가 보이지 않고 <code>FDRE</code>(플립플롭)가
+    다수 사용되었다면, 분산 RAM이나 플립플롭으로 구현된 것이며 자원 효율이 낮습니다.
+  </p>
+
+</section>
+<!-- ========== 5.3절 끝 ========== -->
+
+
+<!-- ========== 5.4절 ========== -->
+<section id="sec-05-4">
+  <h2>5.4 메모리 맵 설계</h2>
+
+  <p>
+    단일 프로세서 시스템에서도 "어떤 주소가 어떤 장치에 대응하는가"를 명확히 정의해야 합니다.
+    이 정의를 <strong>메모리 맵(Memory Map)</strong>이라 하며, 시스템 설계의 시작점이 됩니다.
+    메모리 맵이 없으면 CPU가 임의의 주소로 접근했을 때 어떤 장치가 응답해야 하는지 결정할 수 없고,
+    소프트웨어와 하드웨어 팀이 동일한 기준으로 협력할 수도 없습니다.
+    메모리 맵은 단순한 표 한 장이지만, 시스템 전체의 설계를 지배하는 계약서와 같습니다.
+  </p>
+
+  <h3>주소 공간 설계 원칙</h3>
+  <p>
+    이 챕터의 시스템은 세 영역으로 주소 공간을 분할합니다.
+    각 영역은 크기가 2의 거듭제곱이 되도록 설계하여 주소 디코딩 하드웨어를 최소화합니다.
+  </p>
+
+  <figure>
+    <img src="../../figures/ch05_sec04_memory_map.svg"
+         alt="RISC-V 단일 사이클 프로세서 메모리 맵 — IMEM, DMEM, MMIO 영역 분할">
+    <figcaption>그림 5.4: 메모리 맵 구성. 32비트 주소 공간을 IMEM(0x0000_0000), DMEM(0x0001_0000), MMIO(0x0002_0000) 세 영역으로 분할합니다.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr>
+        <th>영역</th>
+        <th>시작 주소</th>
+        <th>끝 주소</th>
+        <th>크기</th>
+        <th>용도</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>IMEM</td>
+        <td><code>0x0000_0000</code></td>
+        <td><code>0x0000_03FF</code></td>
+        <td>1KB</td>
+        <td>명령어 저장 (ROM)</td>
+      </tr>
+      <tr>
+        <td>DMEM</td>
+        <td><code>0x0001_0000</code></td>
+        <td><code>0x0001_03FF</code></td>
+        <td>1KB</td>
+        <td>데이터 저장 (RAM)</td>
+      </tr>
+      <tr>
+        <td>MMIO</td>
+        <td><code>0x0002_0000</code></td>
+        <td><code>0x0002_FFFF</code></td>
+        <td>64KB</td>
+        <td>메모리 맵 입출력 (GPIO, UART 등)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    MMIO(Memory-Mapped I/O, 메모리 맵 입출력)는 주변 장치(Peripheral Device)를 메모리 주소로
+    접근하는 방식입니다. CPU는 UART나 GPIO를 접근할 때도 일반 메모리 접근과 동일한
+    <code>SW</code>/<code>LW</code> 명령어를 사용하고, 주소 디코더가 해당 주소를 주변 장치로 라우팅합니다.
+    Chapter 11에서 AMBA APB 버스를 통한 MMIO 구현을 상세히 다룹니다.
+  </p>
+
+  <h3>주소 디코딩 로직 설계</h3>
+  <p>
+    주소 디코딩(Address Decoding)은 32비트 주소의 상위 비트를 검사하여 어느 장치에 접근할지 선택 신호를 생성합니다.
+    2의 거듭제곱 크기로 영역을 정렬하면, 각 영역의 기준 비트만 비교하면 되므로 하드웨어가 단순해집니다.
+  </p>
+
+  <p>
+    각 영역의 디코딩 기준을 분석합니다.
+  </p>
+  <ul>
+    <li><strong>IMEM</strong>: 주소 <code>[31:10]</code>가 <code>22'h000000</code> → 하위 10비트가 오프셋 (1KB = 2<sup>10</sup>)</li>
+    <li><strong>DMEM</strong>: 주소 <code>[31:10]</code>가 <code>22'h000040</code> → <code>0x0001_0000 >> 10 = 0x40</code></li>
+    <li><strong>MMIO</strong>: 주소 <code>[31:16]</code>가 <code>16'h0002</code> → 하위 16비트가 오프셋 (64KB = 2<sup>16</sup>)</li>
+  </ul>
+
+<pre><code class="language-systemverilog">// 메모리 맵 — 주소 공간 분할 및 선택 신호 생성
+// 주소 공간:
+//   0x0000_0000 ~ 0x0000_03FF : IMEM (1KB)
+//   0x0001_0000 ~ 0x0001_03FF : DMEM (1KB)
+//   0x0002_0000 ~ 0x0002_FFFF : MMIO (주변 장치 64KB)
+// IEEE 1800-2017 준수 / 합성 가능(Synthesizable)
+module memory_map (
+   input  logic [31:0] addr,      // 32비트 바이트 주소
+   output logic        imem_sel,  // IMEM 선택 신호 (Active High)
+   output logic        dmem_sel,  // DMEM 선택 신호 (Active High)
+   output logic        mmio_sel   // MMIO 선택 신호 (Active High)
+);
+   // IMEM: addr[31:10] == 22'h0 (0x0000_0000 ~ 0x0000_03FF)
+   assign imem_sel = (addr[31:10] == 22'h0);
+
+   // DMEM: addr[31:10] == 22'h40
+   // 근거: 0x0001_0000을 10비트 오른쪽 시프트 → 0x40
+   assign dmem_sel = (addr[31:10] == 22'h40);
+
+   // MMIO: addr[31:16] == 16'h2
+   // 근거: 0x0002_xxxx의 상위 16비트 = 0x0002
+   assign mmio_sel = (addr[31:16] == 16'h2);
+
+endmodule
+</code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 메모리 맵 설계 원칙</strong>
+    <p>
+      실무에서 메모리 맵을 설계할 때 지켜야 할 세 가지 원칙이 있습니다.
+    </p>
+    <ol>
+      <li><strong>2의 거듭제곱 정렬(Power-of-Two Alignment)</strong>: 각 영역의 크기와 시작 주소를 2의 거듭제곱으로 맞추면 디코딩 로직이 단순한 비트 비교로 줄어듭니다.</li>
+      <li><strong>고정 상수화(Parameterization)</strong>: 메모리 맵의 기준 주소를 `parameter`나 `localparam`으로 정의하면, 추후 주소 변경 시 한 곳만 수정하면 됩니다.</li>
+      <li><strong>디코딩 우선순위(Priority)</strong>: 영역이 겹치지 않도록 설계하고, 겹칠 경우 우선순위를 명시합니다. 위 설계에서는 세 영역이 겹치지 않으므로 동시에 선택되는 경우가 없습니다.</li>
+    </ol>
+  </aside>
+
+  <h3>메모리 맵을 활용한 상위 모듈 연결</h3>
+  <p>
+    주소 디코더가 생성한 선택 신호로 데이터 버스를 멀티플렉싱(Multiplexing)합니다.
+    CPU의 데이터 버스는 하나이므로, 어떤 장치가 읽기 데이터를 드라이브할지 선택 신호로 결정합니다.
+  </p>
+
+<pre><code class="language-systemverilog">// 상위 모듈에서의 메모리 접근 라우팅 예시 (개념 코드)
+// 실제 구현은 Chapter 06 데이터패스 통합에서 완성됩니다
+module mem_subsystem (
+   input  logic        clk,
+   input  logic        we,
+   input  logic [3:0]  be,
+   input  logic [31:0] pc,       // 명령어 주소 (IMEM 전용)
+   input  logic [31:0] alu_out,  // 데이터 주소 (DMEM/MMIO)
+   input  logic [31:0] wdata,
+   output logic [31:0] instr,    // IMEM 출력
+   output logic [31:0] rdata     // DMEM 또는 MMIO 읽기 데이터
+);
+   // 내부 신호
+   logic        imem_sel, dmem_sel, mmio_sel;
+   logic [31:0] dmem_rdata, mmio_rdata;
+
+   // 주소 디코더 인스턴스 (데이터 주소 디코딩)
+   memory_map u_mmap (
+      .addr     (alu_out),
+      .imem_sel (imem_sel),
+      .dmem_sel (dmem_sel),
+      .mmio_sel (mmio_sel)
+   );
+
+   // 명령어 메모리 — PC로 직접 접근
+   imem u_imem (
+      .addr  (pc),
+      .instr (instr)
+   );
+
+   // 데이터 메모리
+   dmem u_dmem (
+      .clk   (clk),
+      .we    (we &amp; dmem_sel),  // DMEM 영역일 때만 쓰기
+      .be    (be),
+      .addr  (alu_out),
+      .wdata (wdata),
+      .rdata (dmem_rdata)
+   );
+
+   // 읽기 데이터 멀티플렉서 (DMEM 또는 MMIO 선택)
+   // MMIO는 Chapter 11에서 구현; 현재는 0으로 처리
+   assign mmio_rdata = 32'h0;
+   assign rdata = dmem_sel ? dmem_rdata :
+                  mmio_sel ? mmio_rdata : 32'h0;
+
+endmodule
+</code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> MMIO 주소를 왜 <code>0x0002_0000</code>으로 시작하도록 정했나요? 다른 주소를 사용해도 되나요?</p>
+    <p>
+      <strong>A:</strong> 네, 얼마든지 다른 주소를 선택할 수 있습니다.
+      중요한 것은 세 영역이 겹치지 않고, 소프트웨어(링커 스크립트, 디바이스 드라이버)와 하드웨어(주소 디코더)가
+      동일한 맵을 사용하는 것입니다.
+      이 챕터의 선택은 "쉬운 비교"를 위한 것입니다. <code>0x0002_0000</code>의 <code>addr[31:16] = 0x0002</code>는
+      깔끔한 비교 상수를 만들어 줍니다.
+      실제 SoC 설계에서는 회사 표준 메모리 맵 문서(Address Map Specification)에 따라 결정되며,
+      한 번 배포된 맵은 소프트웨어 호환성을 위해 거의 변경하지 않습니다.
+    </p>
+  </aside>
+
+  <h3>주소 디코딩 타이밍 고려</h3>
+  <p>
+    주소 디코더는 순수 조합 논리이므로, 주소가 안정적으로 확정된 후에만 선택 신호가 유효합니다.
+    단일 사이클 프로세서에서는 ALU 연산이 끝나고 나서 주소가 확정되므로,
+    주소 디코더의 전파 지연(Propagation Delay)이 전체 클럭 주기 타이밍에 영향을 줍니다.
+    Vivado 타이밍 보고서(Timing Report)에서 데이터 경로 중 가장 느린 구간(Critical Path)을 확인하고,
+    필요하다면 파이프라인 레지스터를 삽입하는 방법을 Chapter 07에서 다룹니다.
+  </p>
+
+</section>
+<!-- ========== 5.4절 끝 ========== -->
+
+
+<!-- ========== 5.5절 ========== -->
+<section id="sec-05-5">
+  <h2>5.5 메모리 테스트벤치</h2>
+
+  <p>
+    설계한 IMEM과 DMEM이 올바르게 동작하는지 검증하는 것은 구현만큼 중요합니다.
+    "테스트하지 않은 코드는 동작하지 않는 코드"라는 말처럼,
+    체계적인 테스트벤치(Testbench) 없이는 설계 오류를 보장할 수 없습니다.
+    이 절에서는 바이트, 하프워드, 워드 접근을 모두 검증하는
+    <strong>자가 검증(Self-Checking) 테스트벤치</strong>를 작성합니다.
+    자가 검증 테스트벤치는 파형 창을 직접 눈으로 확인하지 않아도,
+    시뮬레이터 콘솔 출력만으로 합격/불합격을 판정합니다.
+  </p>
+
+  <h3>테스트벤치 설계 전략</h3>
+  <p>
+    효과적인 메모리 테스트벤치는 다음 시나리오를 순서대로 검증합니다.
+  </p>
+  <ol>
+    <li><strong>워드 쓰기/읽기</strong>: <code>SW</code>→<code>LW</code> 시퀀스로 기본 동작 확인</li>
+    <li><strong>바이트 단위 검증</strong>: 리틀 엔디언 저장 순서 확인 (<code>0xDEADBEEF</code>의 각 바이트 위치)</li>
+    <li><strong>하프워드 쓰기/읽기</strong>: <code>be=4'b0011</code>로 하위 2바이트만 쓰고 확인</li>
+    <li><strong>바이트 오버라이트</strong>: 특정 바이트만 변경하고 나머지 바이트 보존 확인</li>
+    <li><strong>경계 주소 접근</strong>: DMEM 첫 번째와 마지막 워드 접근 확인</li>
+  </ol>
+
+  <h3>DMEM 자가 검증 테스트벤치</h3>
+
+<pre><code class="language-systemverilog">// DMEM 자가 검증 테스트벤치 — 바이트/하프워드/워드 접근 검증
+// 시뮬레이션 전용 — 합성 불필요
+`timescale 1ns/1ps
+
+module dmem_tb;
+   // -------------------------------------------------------
+   // 신호 선언
+   // -------------------------------------------------------
+   logic        clk  = 1'b0;  // 클럭: 10ns 주기 (100MHz)
+   logic        we;
+   logic [3:0]  be;
+   logic [31:0] addr, wdata, rdata;
+
+   // DUT(Device Under Test) 인스턴스화
+   // .*: 이름 기반 자동 연결
+   dmem dut (.*);
+
+   // 클럭 생성: 5ns마다 반전 → 10ns 주기
+   always #5 clk = ~clk;
+
+   // -------------------------------------------------------
+   // 태스크: 워드 쓰기 (be=4'hF, 4바이트 모두)
+   // -------------------------------------------------------
+   task automatic write_word(input [31:0] a, d);
+      @(posedge clk);                  // 클럭 상승 에지 동기화
+      addr = a; wdata = d; we = 1'b1; be = 4'hF;
+      @(posedge clk);                  // 쓰기 완료 대기
+      we = 1'b0;
+   endtask
+
+   // -------------------------------------------------------
+   // 태스크: 하프워드 쓰기 (하위 2바이트 be=4'b0011)
+   // -------------------------------------------------------
+   task automatic write_half(input [31:0] a, input [15:0] d);
+      @(posedge clk);
+      addr = a; wdata = {16'h0, d}; we = 1'b1; be = 4'b0011;
+      @(posedge clk);
+      we = 1'b0;
+   endtask
+
+   // -------------------------------------------------------
+   // 태스크: 바이트 쓰기 (최하위 바이트 be=4'b0001)
+   // -------------------------------------------------------
+   task automatic write_byte(input [31:0] a, input [7:0] d);
+      @(posedge clk);
+      addr = a; wdata = {24'h0, d}; we = 1'b1; be = 4'b0001;
+      @(posedge clk);
+      we = 1'b0;
+   endtask
+
+   // -------------------------------------------------------
+   // 태스크: 읽기 검증 — 기대값과 비교하여 PASS/FAIL 출력
+   // -------------------------------------------------------
+   task automatic check_read(
+      input [31:0] a,
+      input [31:0] exp,
+      input string desc
+   );
+      addr = a;
+      #1;  // 조합 논리 안정화 대기 (1ns)
+      if (rdata !== exp)
+         $display("FAIL [%s]: got=0x%08h  exp=0x%08h  addr=0x%08h",
+                  desc, rdata, exp, a);
+      else
+         $display("PASS [%s]", desc);
+   endtask
+
+   // -------------------------------------------------------
+   // 메인 테스트 시퀀스
+   // -------------------------------------------------------
+   initial begin
+      // 초기화
+      we = 1'b0; be = 4'h0; addr = 32'h0; wdata = 32'h0;
+      repeat(2) @(posedge clk);  // 초기 안정화
+
+      // --------------------------------------------------
+      // 테스트 1: 워드 쓰기 및 읽기
+      // --------------------------------------------------
+      $display("=== 테스트 1: 워드 쓰기/읽기 ===");
+      write_word(32'h0001_0000, 32'hDEAD_BEEF);
+      check_read(32'h0001_0000, 32'hDEAD_BEEF, "워드 로드 (LW)");
+
+      // --------------------------------------------------
+      // 테스트 2: 리틀 엔디언 바이트 저장 순서 검증
+      // 0xDEADBEEF → mem[0x1000]=0xEF, mem[0x1001]=0xBE,
+      //               mem[0x1002]=0xAD, mem[0x1003]=0xDE
+      // --------------------------------------------------
+      $display("=== 테스트 2: 리틀 엔디언 바이트 순서 ===");
+      // DUT 내부 메모리 직접 접근 (화이트박스 테스트)
+      if (dut.mem[32'h1_0000] !== 8'hEF)
+         $display("FAIL [리틀 엔디언 byte0]: got=0x%02h  exp=0xEF",
+                  dut.mem[32'h1_0000]);
+      else
+         $display("PASS [리틀 엔디언 byte0 = 0xEF]");
+
+      if (dut.mem[32'h1_0001] !== 8'hBE)
+         $display("FAIL [리틀 엔디언 byte1]: got=0x%02h  exp=0xBE",
+                  dut.mem[32'h1_0001]);
+      else
+         $display("PASS [리틀 엔디언 byte1 = 0xBE]");
+
+      if (dut.mem[32'h1_0002] !== 8'hAD)
+         $display("FAIL [리틀 엔디언 byte2]: got=0x%02h  exp=0xAD",
+                  dut.mem[32'h1_0002]);
+      else
+         $display("PASS [리틀 엔디언 byte2 = 0xAD]");
+
+      if (dut.mem[32'h1_0003] !== 8'hDE)
+         $display("FAIL [리틀 엔디언 byte3]: got=0x%02h  exp=0xDE",
+                  dut.mem[32'h1_0003]);
+      else
+         $display("PASS [리틀 엔디언 byte3 = 0xDE]");
+
+      // --------------------------------------------------
+      // 테스트 3: 하프워드 쓰기 (be=4'b0011)
+      // 0x0001_0004에 0x1234 쓰기 → 리틀 엔디언으로 저장
+      // mem[0x1004]=0x34, mem[0x1005]=0x12
+      // --------------------------------------------------
+      $display("=== 테스트 3: 하프워드 쓰기/읽기 ===");
+      write_half(32'h0001_0004, 16'h1234);
+      // rdata의 하위 16비트만 유효 (상위 16비트는 초기화값 X)
+      addr = 32'h0001_0004; #1;
+      if (rdata[15:0] !== 16'h1234)
+         $display("FAIL [하프워드 (SH→LH)]: got=0x%04h  exp=0x1234",
+                  rdata[15:0]);
+      else
+         $display("PASS [하프워드 하위 16비트 = 0x1234]");
+
+      // --------------------------------------------------
+      // 테스트 4: 바이트 오버라이트 — 특정 바이트만 변경
+      // 0x0001_0000에 현재 0xDEADBEEF 저장됨
+      // 최하위 바이트만 0xEF → 0x42로 변경
+      // 결과: 0xDEADBE42
+      // --------------------------------------------------
+      $display("=== 테스트 4: 바이트 오버라이트 ===");
+      write_byte(32'h0001_0000, 8'h42);
+      check_read(32'h0001_0000, 32'hDEAD_BE42, "바이트 오버라이트 후 워드 읽기");
+
+      // --------------------------------------------------
+      // 테스트 5: 경계 주소 — DMEM 마지막 워드
+      // DEPTH=256 → 마지막 워드 주소: 0x0001_0000 + 255*4 = 0x0001_03FC
+      // --------------------------------------------------
+      $display("=== 테스트 5: 경계 주소 접근 ===");
+      write_word(32'h0001_03FC, 32'hCAFE_BABE);
+      check_read(32'h0001_03FC, 32'hCAFE_BABE, "DMEM 마지막 워드");
+
+      // --------------------------------------------------
+      // 테스트 6: 연속 스토어-로드 시퀀스
+      // --------------------------------------------------
+      $display("=== 테스트 6: 연속 스토어-로드 시퀀스 ===");
+      write_word(32'h0001_0008, 32'hAAAA_5555);
+      write_word(32'h0001_000C, 32'h5555_AAAA);
+      check_read(32'h0001_0008, 32'hAAAA_5555, "스토어-로드 #1");
+      check_read(32'h0001_000C, 32'h5555_AAAA, "스토어-로드 #2");
+
+      $display("=== ALL DONE ===");
+      $finish;
+   end
+
+endmodule
+</code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — 자가 검증 테스트벤치 패턴</strong>
+    <p>
+      위 테스트벤치에서 사용한 패턴을 <strong>자가 검증 테스트벤치(Self-Checking Testbench)</strong> 패턴이라 합니다.
+      핵심은 세 가지입니다.
+    </p>
+    <ol>
+      <li><strong>태스크(Task) 추상화</strong>: 반복되는 쓰기/읽기 시퀀스를 <code>task</code>로 캡슐화하면 가독성이 높아지고 재사용이 쉬워집니다.</li>
+      <li><strong><code>$display</code> 판정</strong>: 파형 창을 보지 않아도 콘솔 출력만으로 PASS/FAIL을 확인할 수 있습니다. CI(Continuous Integration) 환경에서 자동화하기에 적합합니다.</li>
+      <li><strong>화이트박스(Whitebox) + 블랙박스(Blackbox) 혼용</strong>: <code>dut.mem[addr]</code>처럼 내부 신호를 직접 확인하는 화이트박스 테스트와, 포트 신호만 사용하는 블랙박스 테스트를 함께 사용하면 디버깅 효율이 높아집니다.</li>
+    </ol>
+  </aside>
+
+  <h3>IMEM 테스트벤치</h3>
+  <p>
+    IMEM은 비동기 읽기만 지원하므로 테스트벤치가 단순합니다.
+    초기화 파일을 읽어 들이고 여러 주소에서 명령어가 올바르게 출력되는지 확인합니다.
+  </p>
+
+<pre><code class="language-systemverilog">// IMEM 자가 검증 테스트벤치
+// 시뮬레이션 전용
+`timescale 1ns/1ps
+
+module imem_tb;
+   logic [31:0] addr;    // 바이트 주소 입력
+   logic [31:0] instr;   // 명령어 출력
+
+   // DUT 인스턴스화 (DEPTH=8, 소규모 테스트용)
+   imem #(.DEPTH(8)) dut (.addr(addr), .instr(instr));
+
+   // -------------------------------------------------------
+   // 태스크: 명령어 읽기 검증
+   // -------------------------------------------------------
+   task automatic check_instr(
+      input [31:0] byte_addr,
+      input [31:0] exp,
+      input string desc
+   );
+      addr = byte_addr;
+      #1;  // 조합 논리 안정화
+      if (instr !== exp)
+         $display("FAIL [%s]: addr=0x%08h  got=0x%08h  exp=0x%08h",
+                  desc, byte_addr, instr, exp);
+      else
+         $display("PASS [%s]: 0x%08h", desc, instr);
+   endtask
+
+   initial begin
+      // program.hex의 내용을 알고 있다고 가정:
+      // 주소 0x00: 0x00100093 (addi x1, x0, 1)
+      // 주소 0x04: 0x00200113 (addi x2, x0, 2)
+      // 주소 0x08: 0x002081B3 (add  x3, x1, x2)
+      // 주소 0x0C: 0x00000013 (nop)
+      $display("=== IMEM 테스트 ===");
+      check_instr(32'h00, 32'h00100093, "addi x1, x0, 1");
+      check_instr(32'h04, 32'h00200113, "addi x2, x0, 2");
+      check_instr(32'h08, 32'h002081B3, "add x3, x1, x2");
+      check_instr(32'h0C, 32'h00000013, "nop");
+
+      // 바이트 주소 정렬 확인: addr[1:0]은 무시됨
+      // addr=0x01과 addr=0x00은 같은 명령어를 반환해야 함
+      check_instr(32'h01, 32'h00100093, "비정렬 주소 (addr[1:0]=01, 무시됨)");
+      check_instr(32'h03, 32'h00100093, "비정렬 주소 (addr[1:0]=11, 무시됨)");
+
+      $display("=== ALL DONE ===");
+      $finish;
+   end
+
+endmodule
+</code></pre>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검 — 로드-스토어 흐름 자가 점검</strong>
+    <p>다음 질문에 답할 수 있는지 확인하십시오.</p>
+    <ol>
+      <li><code>SW x5, 0(x6)</code> 명령어에서 DMEM에 전달되는 <code>addr</code>, <code>wdata</code>, <code>be</code> 값은 각각 무엇입니까? (x6 = <code>0x0001_0010</code>, x5 = <code>0xABCD_1234</code> 가정)</li>
+      <li>위 명령어 실행 후 <code>LBU x7, 0(x6)</code>를 실행하면 x7에 저장되는 값은 무엇입니까?</li>
+      <li>테스트벤치에서 <code>#1</code> 딜레이를 추가하는 이유는 무엇입니까?</li>
+    </ol>
+    <p>
+      정답: (1) addr=<code>0x0001_0010</code>, wdata=<code>0xABCD_1234</code>, be=<code>4'hF</code>. (2) x7=<code>0x0000_0034</code>. (3) 비동기 읽기이지만 SystemVerilog 시뮬레이션에서 값 전파(delta cycle)가 완전히 완료되도록 기다리기 위함.
+    </p>
+  </aside>
+
+  <h3>시뮬레이션 실행 방법</h3>
+  <p>
+    Vivado 시뮬레이터(xsim)를 사용하는 경우, 다음 순서로 테스트벤치를 실행합니다.
+  </p>
+  <ol>
+    <li>Vivado 프로젝트에 <code>dmem.sv</code>, <code>dmem_tb.sv</code>를 소스 파일로 추가합니다.</li>
+    <li><code>dmem_tb</code>를 시뮬레이션 최상위 모듈(Top Module)로 설정합니다.</li>
+    <li>"Run Simulation → Run Behavioral Simulation"을 실행합니다.</li>
+    <li>Tcl 콘솔에서 PASS/FAIL 메시지를 확인합니다.</li>
+  </ol>
+  <p>
+    VCS를 사용하는 경우 다음 명령어로 컴파일 및 시뮬레이션을 실행합니다.
+  </p>
+
+<pre><code class="language-bash"># VCS 컴파일 및 시뮬레이션 (Unix 환경)
+vcs -sverilog dmem.sv dmem_tb.sv -o dmem_sim
+./dmem_sim
+</code></pre>
+
+</section>
+<!-- ========== 5.5절 끝 ========== -->
+
+
+<!-- ========== 5.6절 ========== -->
+<section id="sec-05-6">
+  <h2>5.6 본 챕터 요약 및 다음 단계</h2>
+
+  <p>
+    이 챕터에서 RISC-V 단일 사이클 프로세서의 메모리 서브시스템을 완성했습니다.
+    처음에는 "메모리는 단순한 배열 아닌가?"라고 생각했을지 모르지만,
+    하버드 구조의 필요성, BRAM 추론 규칙, 리틀 엔디언 바이트 순서, 메모리 맵 설계까지
+    생각보다 많은 개념이 하나의 메모리 서브시스템에 담겨 있음을 확인했습니다.
+    이 개념들은 이후 파이프라인, 캐시, 버스 프로토콜 설계로 이어지는 탄탄한 기반이 됩니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 챕터 마무리 — 스스로 점검</strong>
+    <p>이 챕터를 통해 다음을 할 수 있게 되었는지 확인하십시오.</p>
+    <ul>
+      <li>하버드 구조와 폰 노이만 구조의 차이를, "단일 사이클 프로세서에서 IMEM/DMEM을 분리하는 이유"와 연결하여 설명할 수 있다.</li>
+      <li><code>$readmemh</code>와 COE 파일의 용도 차이를 설명하고, Vivado 프로젝트에서 올바른 초기화 방법을 선택할 수 있다.</li>
+      <li>DMEM의 바이트 인에이블 코드에서 <code>be[0]</code>이 <code>addr+0</code>에 대응함을 이해하고, 리틀 엔디언 읽기 조합(<code>{mem[addr+3], ..., mem[addr+0]}</code>)이 올바른 이유를 설명할 수 있다.</li>
+      <li>주어진 메모리 영역의 시작 주소로부터 주소 디코딩 비교 상수를 직접 계산할 수 있다.</li>
+      <li><code>task</code>와 <code>$display</code>를 활용하여 자가 검증 테스트벤치를 작성할 수 있다.</li>
+    </ul>
+    <p>
+      위 항목 중 자신 없는 것이 있다면, 해당 절을 다시 읽고 코드를 직접 타이핑하여 시뮬레이션해 보십시오.
+      손가락이 기억하는 것이 가장 오래 남습니다.
+    </p>
+  </aside>
+
+
+  <section class="chapter-summary">
+    <h2>핵심 정리</h2>
+    <ul>
+      <li><strong>하버드 구조</strong>: IMEM과 DMEM을 물리적으로 분리하여 명령어 인출과 데이터 접근을 동시에 수행한다. 단일 사이클 프로세서에서 필수적인 구조이다.</li>
+      <li><strong>IMEM</strong>: 비동기 읽기 전용 메모리. 바이트 주소 → 워드 인덱스 변환(<code>addr[31:2]</code>). 시뮬레이션은 <code>$readmemh</code>, FPGA 합성은 COE 파일로 초기화한다.</li>
+      <li><strong>DMEM</strong>: 동기 쓰기 / 비동기 읽기. 바이트 인에이블(<code>be[3:0]</code>)로 SW/SH/SB를 모두 지원한다. 리틀 엔디언 순서로 바이트를 조합하여 워드를 읽는다.</li>
+      <li><strong>BRAM 추론</strong>: Vivado는 배열 선언 패턴으로 BRAM 또는 분산 RAM을 자동 선택한다. 단일 사이클 프로세서에서는 출력 레지스터를 비활성화하거나, <code>ram_style = "distributed"</code> 속성을 지정하여 비동기 읽기를 보장한다.</li>
+      <li><strong>메모리 맵</strong>: 주소 공간을 IMEM/DMEM/MMIO로 분할하고, 상위 비트 비교로 선택 신호를 생성한다. 2의 거듭제곱 정렬로 디코딩 로직을 최소화한다.</li>
+      <li><strong>자가 검증 테스트벤치</strong>: <code>task</code>로 쓰기/읽기를 추상화하고, <code>$display</code>로 PASS/FAIL을 자동 판정한다. 화이트박스 테스트로 내부 바이트 저장 순서를 직접 확인한다.</li>
+    </ul>
+  </section>
+
+  <section class="exercises">
+    <h2>연습문제</h2>
+    <ol>
+      <li>
+        <strong>[기억]</strong>
+        리틀 엔디언 방식으로 <code>0x12345678</code>을 바이트 주소 <code>0x0001_0020</code>에 저장할 때,
+        주소 <code>0x0001_0021</code>에 저장되는 바이트 값은 무엇인가?
+      </li>
+      <li>
+        <strong>[이해]</strong>
+        IMEM의 읽기가 동기식(클럭 필요)이라면 단일 사이클 프로세서에서 어떤 문제가 발생하는지
+        타이밍 관점에서 설명하시오.
+      </li>
+      <li>
+        <strong>[적용]</strong>
+        DMEM의 크기를 4KB로 늘리려면 <code>parameter DEPTH</code>를 어떤 값으로 변경해야 하는가?
+        또한 메모리 맵에서 DMEM 영역의 끝 주소(<code>0x0001_0FFF</code>)를 디코딩하는 비교 상수는
+        무엇이 되어야 하는가?
+      </li>
+      <li>
+        <strong>[분석]</strong>
+        다음 코드에서 버그를 찾고 수정하시오.
+        <pre><code class="language-systemverilog">// 버그가 있는 코드
+assign rdata = {mem[addr+0], mem[addr+1], mem[addr+2], mem[addr+3]};
+</code></pre>
+        어떤 명령어 시퀀스를 실행할 때 이 버그가 발견될 수 있는가?
+      </li>
+      <li>
+        <strong>[평가]</strong>
+        Basys 3 FPGA 프로젝트에서 IMEM 크기를 4KB로 설정하려 한다.
+        BRAM 방식과 분산 RAM 방식 중 어느 것이 더 적합한가?
+        자원 사용량, 타이밍, 초기화 방법 세 가지 관점에서 근거를 제시하고 최종 선택을 권고하시오.
+      </li>
+    </ol>
+  </section>
+
+  <section class="next-chapter">
+    <h2>다음 챕터 예고 — Chapter 06: 제어 유닛 설계</h2>
+    <p>
+      Chapter 05까지 완성된 부품 목록을 확인해 보겠습니다.
+      ALU(Chapter 04), 레지스터 파일(Chapter 04), IMEM/DMEM(이번 챕터).
+      이제 이 부품들을 어떻게 <em>연결</em>하고 <em>제어</em>할지를 결정하는
+      <strong>제어 유닛(Control Unit)</strong>이 필요합니다.
+    </p>
+    <p>
+      Chapter 06에서는 32비트 명령어를 해독하여 ALU 제어 신호, 레지스터 파일 쓰기 인에이블,
+      메모리 쓰기 인에이블, 멀티플렉서 선택 신호 등을 생성하는 제어 유닛을 설계합니다.
+      제어 유닛이 완성되면 비로소 모든 부품이 조립되어 완전한 단일 사이클 프로세서가 탄생합니다.
+      이번 챕터에서 설계한 <code>memory_map</code> 모듈과 <code>dmem</code>의 <code>we</code>, <code>be</code>
+      신호가 제어 유닛과 연결되는 방식을 미리 생각해 두면 다음 챕터 학습이 한결 수월해집니다.
+    </p>
+  </section>
+
+</section>
+<!-- ========== 5.6절 끝 ========== -->
+
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch05_instruction_memory.sv</h3>
+    <pre><code class="language-verilog">//=============================================================================
+// 모듈명  : instruction_memory
+// 파일명  : ch05_instruction_memory.sv
+// 설명    : RV32I 명령어 메모리 (IMEM)
+//           - 읽기 전용(ROM) 동작
+//           - 시뮬레이션: $readmemh로 .hex 파일 초기화
+//           - FPGA 합성: Vivado BRAM 추론 또는 COE 파일 사용
+//           - 비동기 읽기 (조합 논리) — 단일 사이클 프로세서 호환
+// 저자    : RISC-V 프로세서 설계 완전정복
+// 표준    : SystemVerilog IEEE 1800-2017
+//=============================================================================
+
+module instruction_memory #(
+   parameter ADDR_WIDTH = 12,                    // 주소 비트 수 (12비트 = 4096 워드)
+   parameter MEM_DEPTH  = 2**ADDR_WIDTH,         // 메모리 깊이 (4096 워드 = 16 KB)
+   parameter INIT_FILE  = "program.hex"          // 초기화 파일 경로
+)(
+   input  logic [31:0] pc_i,                     // PC 입력 (바이트 주소)
+   output logic [31:0] instr_o                   // 명령어 출력 (32비트)
+);
+
+   //--------------------------------------------------------------------------
+   // 메모리 배열 선언
+   //   - 32비트 × MEM_DEPTH 워드
+   //   - Vivado에서 BRAM으로 추론됨 (비동기 읽기 시 분산 RAM 가능)
+   //--------------------------------------------------------------------------
+   logic [31:0] mem [0:MEM_DEPTH-1];
+
+   //--------------------------------------------------------------------------
+   // 메모리 초기화 ($readmemh)
+   //   - 시뮬레이션 전용: VCS, Vivado Simulator에서 동작
+   //   - FPGA 합성 시: Vivado가 이 initial 블록을 BRAM 초기값으로 변환
+   //   - .hex 파일 형식: 한 줄에 하나의 32비트 16진수 값
+   //     예) 00500093
+   //         00A00113
+   //         002081B3
+   //--------------------------------------------------------------------------
+   initial begin
+      // 메모리를 0으로 초기화 (NOP = 0x00000013, 또는 0으로 채움)
+      for (int i = 0; i &lt; MEM_DEPTH; i++) begin
+         mem[i] = 32'h0000_0013;  // ADDI x0, x0, 0 (NOP)
+      end
+      // .hex 파일에서 명령어 로드
+      $readmemh(INIT_FILE, mem);
+   end
+
+   //--------------------------------------------------------------------------
+   // 비동기 읽기 (조합 논리)
+   //   - PC의 하위 2비트(pc_i[1:0])는 항상 00 (워드 정렬)
+   //   - pc_i[ADDR_WIDTH+1:2]를 워드 주소로 사용
+   //   - 클럭 없이 즉시 출력 → 단일 사이클 프로세서에 적합
+   //--------------------------------------------------------------------------
+   assign instr_o = mem[pc_i[ADDR_WIDTH+1:2]];
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch05_data_memory.sv</h3>
+    <pre><code class="language-verilog">//=============================================================================
+// 모듈명  : data_memory
+// 파일명  : ch05_data_memory.sv
+// 설명    : RV32I 데이터 메모리 (DMEM)
+//           - 바이트 인에이블(byte enable) 기반 쓰기
+//           - LB/LBU/LH/LHU/LW 로드 시 부호/제로 확장
+//           - SB/SH/SW 스토어 지원
+//           - 리틀 엔디언(little-endian) 바이트 순서
+//           - 동기 쓰기, 비동기 읽기 (단일 사이클 프로세서 호환)
+// 저자    : RISC-V 프로세서 설계 완전정복
+// 표준    : SystemVerilog IEEE 1800-2017
+//=============================================================================
+
+module data_memory #(
+   parameter ADDR_WIDTH = 12,                    // 주소 비트 수 (12비트 = 4096 워드)
+   parameter MEM_DEPTH  = 2**ADDR_WIDTH          // 메모리 깊이 (4096 워드 = 16 KB)
+)(
+   input  logic        clk_i,                    // 시스템 클록
+   input  logic        rst_ni,                   // 비동기 리셋 (액티브 로우)
+
+   // 메모리 인터페이스
+   input  logic [31:0] addr_i,                   // 바이트 주소
+   input  logic [31:0] wdata_i,                  // 쓰기 데이터
+   input  logic        mem_write_i,              // 쓰기 인에이블 (1=쓰기, 0=읽기)
+   input  logic [2:0]  funct3_i,                 // funct3 필드 (접근 크기/부호 결정)
+   output logic [31:0] rdata_o                   // 읽기 데이터 (부호/제로 확장 완료)
+);
+
+   //--------------------------------------------------------------------------
+   // funct3 인코딩 상수 정의
+   //--------------------------------------------------------------------------
+   localparam logic [2:0] FUNCT3_LB  = 3'b000;  // Load Byte (부호 확장)
+   localparam logic [2:0] FUNCT3_LH  = 3'b001;  // Load Halfword (부호 확장)
+   localparam logic [2:0] FUNCT3_LW  = 3'b010;  // Load Word
+   localparam logic [2:0] FUNCT3_LBU = 3'b100;  // Load Byte Unsigned (제로 확장)
+   localparam logic [2:0] FUNCT3_LHU = 3'b101;  // Load Halfword Unsigned (제로 확장)
+   // 스토어 명령어도 동일한 funct3[1:0] 비트 사용
+   // SB = 3'b000, SH = 3'b001, SW = 3'b010
+
+   //--------------------------------------------------------------------------
+   // 메모리 배열 선언 (바이트 단위로 4개 뱅크)
+   //   - 바이트 인에이블 BRAM 추론을 위해 바이트 배열로 선언
+   //   - bank[0]: Byte 0 (최하위, addr[1:0]=00)
+   //   - bank[1]: Byte 1 (addr[1:0]=01)
+   //   - bank[2]: Byte 2 (addr[1:0]=10)
+   //   - bank[3]: Byte 3 (최상위, addr[1:0]=11)
+   //--------------------------------------------------------------------------
+   logic [7:0] mem_bank0 [0:MEM_DEPTH-1];  // Byte 0 (LSB)
+   logic [7:0] mem_bank1 [0:MEM_DEPTH-1];  // Byte 1
+   logic [7:0] mem_bank2 [0:MEM_DEPTH-1];  // Byte 2
+   logic [7:0] mem_bank3 [0:MEM_DEPTH-1];  // Byte 3 (MSB)
+
+   //--------------------------------------------------------------------------
+   // 내부 신호
+   //--------------------------------------------------------------------------
+   logic [ADDR_WIDTH-1:0] word_addr;             // 워드 주소 (addr_i[ADDR_WIDTH+1:2])
+   logic [1:0]            byte_offset;           // 바이트 오프셋 (addr_i[1:0])
+   logic [3:0]            byte_we;               // 바이트 쓰기 인에이블
+   logic [31:0]           mem_word;              // 메모리에서 읽은 원본 워드
+
+   //--------------------------------------------------------------------------
+   // 주소 분해
+   //--------------------------------------------------------------------------
+   assign word_addr   = addr_i[ADDR_WIDTH+1:2];
+   assign byte_offset = addr_i[1:0];
+
+   //--------------------------------------------------------------------------
+   // 바이트 쓰기 인에이블 생성
+   //   - funct3[1:0]과 byte_offset에 따라 활성화할 바이트 뱅크 결정
+   //   - SB: 1바이트, SH: 2바이트, SW: 4바이트
+   //--------------------------------------------------------------------------
+   always_comb begin
+      byte_we = 4'b0000;
+      if (mem_write_i) begin
+         case (funct3_i[1:0])
+            2'b00: begin  // SB: 1바이트 쓰기
+               case (byte_offset)
+                  2'b00: byte_we = 4'b0001;
+                  2'b01: byte_we = 4'b0010;
+                  2'b10: byte_we = 4'b0100;
+                  2'b11: byte_we = 4'b1000;
+               endcase
+            end
+            2'b01: begin  // SH: 2바이트 쓰기 (하프워드 정렬 가정)
+               case (byte_offset[1])
+                  1'b0: byte_we = 4'b0011;   // 하위 하프워드
+                  1'b1: byte_we = 4'b1100;   // 상위 하프워드
+               endcase
+            end
+            2'b10: begin  // SW: 4바이트 쓰기
+               byte_we = 4'b1111;
+            end
+            default: byte_we = 4'b0000;
+         endcase
+      end
+   end
+
+   //--------------------------------------------------------------------------
+   // 동기 쓰기 (클록 상승 에지)
+   //   - 바이트 인에이블에 따라 해당 바이트 뱅크만 갱신
+   //   - SB: wdata_i[7:0]를 해당 바이트 위치에 기록
+   //   - SH: wdata_i[15:0]를 해당 하프워드 위치에 기록
+   //   - SW: wdata_i[31:0] 전체 기록
+   //--------------------------------------------------------------------------
+   always_ff @(posedge clk_i) begin
+      if (byte_we[0]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank0[word_addr] &lt;= wdata_i[7:0];            // SB
+            2'b01:   mem_bank0[word_addr] &lt;= wdata_i[7:0];            // SH 하위 바이트
+            default: mem_bank0[word_addr] &lt;= wdata_i[7:0];            // SW
+         endcase
+      end
+      if (byte_we[1]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank1[word_addr] &lt;= wdata_i[7:0];            // SB (byte_offset=01)
+            2'b01:   mem_bank1[word_addr] &lt;= wdata_i[15:8];           // SH 상위 바이트
+            default: mem_bank1[word_addr] &lt;= wdata_i[15:8];           // SW
+         endcase
+      end
+      if (byte_we[2]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank2[word_addr] &lt;= wdata_i[7:0];            // SB (byte_offset=10)
+            2'b01:   mem_bank2[word_addr] &lt;= wdata_i[7:0];            // SH 하위 바이트 (상위 HW)
+            default: mem_bank2[word_addr] &lt;= wdata_i[23:16];          // SW
+         endcase
+      end
+      if (byte_we[3]) begin
+         case (funct3_i[1:0])
+            2'b00:   mem_bank3[word_addr] &lt;= wdata_i[7:0];            // SB (byte_offset=11)
+            2'b01:   mem_bank3[word_addr] &lt;= wdata_i[15:8];           // SH 상위 바이트 (상위 HW)
+            default: mem_bank3[word_addr] &lt;= wdata_i[31:24];          // SW
+         endcase
+      end
+   end
+
+   //--------------------------------------------------------------------------
+   // 비동기 읽기 — 메모리 워드 조합
+   //--------------------------------------------------------------------------
+   assign mem_word = {mem_bank3[word_addr],
+                      mem_bank2[word_addr],
+                      mem_bank1[word_addr],
+                      mem_bank0[word_addr]};
+
+   //--------------------------------------------------------------------------
+   // 로드 데이터 확장 (부호 확장 / 제로 확장)
+   //   - funct3에 따라 읽은 워드에서 해당 바이트/하프워드 추출 후 확장
+   //   - funct3[2]: 0=부호 확장(signed), 1=제로 확장(unsigned)
+   //--------------------------------------------------------------------------
+   always_comb begin
+      rdata_o = 32'h0;
+      case (funct3_i)
+         FUNCT3_LB: begin  // LB: 부호 확장 바이트
+            case (byte_offset)
+               2'b00: rdata_o = {{24{mem_word[7]}},  mem_word[7:0]};
+               2'b01: rdata_o = {{24{mem_word[15]}}, mem_word[15:8]};
+               2'b10: rdata_o = {{24{mem_word[23]}}, mem_word[23:16]};
+               2'b11: rdata_o = {{24{mem_word[31]}}, mem_word[31:24]};
+            endcase
+         end
+         FUNCT3_LH: begin  // LH: 부호 확장 하프워드
+            case (byte_offset[1])
+               1'b0: rdata_o = {{16{mem_word[15]}}, mem_word[15:0]};
+               1'b1: rdata_o = {{16{mem_word[31]}}, mem_word[31:16]};
+            endcase
+         end
+         FUNCT3_LW: begin  // LW: 워드 전체
+            rdata_o = mem_word;
+         end
+         FUNCT3_LBU: begin  // LBU: 제로 확장 바이트
+            case (byte_offset)
+               2'b00: rdata_o = {24'b0, mem_word[7:0]};
+               2'b01: rdata_o = {24'b0, mem_word[15:8]};
+               2'b10: rdata_o = {24'b0, mem_word[23:16]};
+               2'b11: rdata_o = {24'b0, mem_word[31:24]};
+            endcase
+         end
+         FUNCT3_LHU: begin  // LHU: 제로 확장 하프워드
+            case (byte_offset[1])
+               1'b0: rdata_o = {16'b0, mem_word[15:0]};
+               1'b1: rdata_o = {16'b0, mem_word[31:16]};
+            endcase
+         end
+         default: rdata_o = mem_word;  // 안전 기본값
+      endcase
+   end
+
+   //--------------------------------------------------------------------------
+   // 메모리 초기화 (시뮬레이션용)
+   //   - 모든 바이트 뱅크를 0으로 초기화
+   //--------------------------------------------------------------------------
+   initial begin
+      for (int i = 0; i &lt; MEM_DEPTH; i++) begin
+         mem_bank0[i] = 8'h00;
+         mem_bank1[i] = 8'h00;
+         mem_bank2[i] = 8'h00;
+         mem_bank3[i] = 8'h00;
+      end
+   end
+
+endmodule</code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch05_memory_tb.sv</h3>
+    <pre><code class="language-verilog">//=============================================================================
+// 모듈명  : memory_tb
+// 파일명  : ch05_memory_tb.sv
+// 설명    : IMEM/DMEM 통합 테스트벤치
+//           - IMEM: .hex 파일 로드 및 명령어 읽기 검증
+//           - DMEM: 바이트/하프워드/워드 스토어-로드 시퀀스 검증
+//           - 부호 확장/제로 확장 정확성 검증
+//           - 바이트 인에이블 동작 검증
+// 저자    : RISC-V 프로세서 설계 완전정복
+// 표준    : SystemVerilog IEEE 1800-2017
+//=============================================================================
+
+`timescale 1ns / 1ps
+
+module memory_tb;
+
+   //--------------------------------------------------------------------------
+   // 테스트벤치 신호 선언
+   //--------------------------------------------------------------------------
+   logic        clk;
+   logic        rst_n;
+
+   // IMEM 인터페이스
+   logic [31:0] imem_pc;
+   logic [31:0] imem_instr;
+
+   // DMEM 인터페이스
+   logic [31:0] dmem_addr;
+   logic [31:0] dmem_wdata;
+   logic        dmem_write;
+   logic [2:0]  dmem_funct3;
+   logic [31:0] dmem_rdata;
+
+   // 테스트 결과 카운터
+   int          test_pass;
+   int          test_fail;
+   int          test_total;
+
+   //--------------------------------------------------------------------------
+   // 클록 생성 (주기: 10ns = 100MHz)
+   //--------------------------------------------------------------------------
+   initial clk = 1'b0;
+   always #5 clk = ~clk;
+
+   //--------------------------------------------------------------------------
+   // DUT 인스턴스: 명령어 메모리 (IMEM)
+   //--------------------------------------------------------------------------
+   instruction_memory #(
+      .ADDR_WIDTH (12),
+      .INIT_FILE  ("test_program.hex")
+   ) u_imem (
+      .pc_i    (imem_pc),
+      .instr_o (imem_instr)
+   );
+
+   //--------------------------------------------------------------------------
+   // DUT 인스턴스: 데이터 메모리 (DMEM)
+   //--------------------------------------------------------------------------
+   data_memory #(
+      .ADDR_WIDTH (12)
+   ) u_dmem (
+      .clk_i       (clk),
+      .rst_ni      (rst_n),
+      .addr_i      (dmem_addr),
+      .wdata_i     (dmem_wdata),
+      .mem_write_i (dmem_write),
+      .funct3_i    (dmem_funct3),
+      .rdata_o     (dmem_rdata)
+   );
+
+   //--------------------------------------------------------------------------
+   // funct3 상수 정의 (가독성)
+   //--------------------------------------------------------------------------
+   localparam logic [2:0] F3_B  = 3'b000;  // Byte
+   localparam logic [2:0] F3_H  = 3'b001;  // Halfword
+   localparam logic [2:0] F3_W  = 3'b010;  // Word
+   localparam logic [2:0] F3_BU = 3'b100;  // Byte Unsigned
+   localparam logic [2:0] F3_HU = 3'b101;  // Halfword Unsigned
+
+   //--------------------------------------------------------------------------
+   // 검증 태스크: 기대값과 실제값 비교
+   //--------------------------------------------------------------------------
+   task automatic check_result(
+      input string test_name,
+      input logic [31:0] expected,
+      input logic [31:0] actual
+   );
+      test_total++;
+      if (expected === actual) begin
+         test_pass++;
+         $display("[PASS] %s: expected=0x%08h, actual=0x%08h", test_name, expected, actual);
+      end else begin
+         test_fail++;
+         $display("[FAIL] %s: expected=0x%08h, actual=0x%08h", test_name, expected, actual);
+      end
+   endtask
+
+   //--------------------------------------------------------------------------
+   // DMEM 쓰기 태스크
+   //--------------------------------------------------------------------------
+   task automatic dmem_store(
+      input logic [31:0] addr,
+      input logic [31:0] data,
+      input logic [2:0]  funct3
+   );
+      @(negedge clk);          // 클록 하강 에지에서 입력 안정화
+      dmem_addr   = addr;
+      dmem_wdata  = data;
+      dmem_funct3 = funct3;
+      dmem_write  = 1'b1;
+      @(posedge clk);          // 상승 에지에서 쓰기 수행
+      #1;                       // 약간의 지연 (전파 시간)
+      dmem_write  = 1'b0;
+   endtask
+
+   //--------------------------------------------------------------------------
+   // DMEM 읽기 태스크
+   //--------------------------------------------------------------------------
+   task automatic dmem_load(
+      input  logic [31:0] addr,
+      input  logic [2:0]  funct3,
+      output logic [31:0] data
+   );
+      @(negedge clk);
+      dmem_addr   = addr;
+      dmem_funct3 = funct3;
+      dmem_write  = 1'b0;
+      #1;                       // 비동기 읽기 안정화 대기
+      data = dmem_rdata;
+   endtask
+
+   //--------------------------------------------------------------------------
+   // 메인 테스트 시퀀스
+   //--------------------------------------------------------------------------
+   initial begin
+      // 초기화
+      test_pass  = 0;
+      test_fail  = 0;
+      test_total = 0;
+      rst_n      = 1'b0;
+      dmem_write = 1'b0;
+      dmem_addr  = 32'h0;
+      dmem_wdata = 32'h0;
+      dmem_funct3 = F3_W;
+      imem_pc    = 32'h0;
+
+      // 리셋 해제
+      #20;
+      rst_n = 1'b1;
+      #10;
+
+      $display("============================================================");
+      $display("  메모리 서브시스템 테스트벤치 시작");
+      $display("============================================================");
+
+      //----------------------------------------------------------------------
+      // 테스트 1: IMEM 명령어 읽기 검증
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 1: IMEM 명령어 읽기 ---");
+
+      imem_pc = 32'h0000_0000;  // 첫 번째 명령어 주소
+      #2;
+      // 주의: test_program.hex가 없으면 NOP(0x00000013)이 읽힘
+      $display("  IMEM[0x000] = 0x%08h", imem_instr);
+
+      imem_pc = 32'h0000_0004;  // 두 번째 명령어 (PC+4)
+      #2;
+      $display("  IMEM[0x004] = 0x%08h", imem_instr);
+
+      imem_pc = 32'h0000_0008;  // 세 번째 명령어 (PC+8)
+      #2;
+      $display("  IMEM[0x008] = 0x%08h", imem_instr);
+
+      //----------------------------------------------------------------------
+      // 테스트 2: DMEM 워드 스토어/로드 (SW/LW)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 2: 워드 스토어/로드 (SW/LW) ---");
+
+      // SW: 0xDEAD_BEEF를 주소 0x00에 저장
+      dmem_store(32'h0001_0000, 32'hDEAD_BEEF, F3_W);
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0000, F3_W, read_data);
+         check_result("SW/LW 0xDEADBEEF", 32'hDEAD_BEEF, read_data);
+      end
+
+      // SW: 0x1234_5678을 주소 0x04에 저장
+      dmem_store(32'h0001_0004, 32'h1234_5678, F3_W);
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0004, F3_W, read_data);
+         check_result("SW/LW 0x12345678", 32'h1234_5678, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 3: DMEM 바이트 스토어/로드 (SB/LB/LBU)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 3: 바이트 스토어/로드 (SB/LB/LBU) ---");
+
+      // 먼저 워드 전체를 0으로 초기화
+      dmem_store(32'h0001_0010, 32'h0000_0000, F3_W);
+
+      // SB: 0xA5를 바이트 오프셋 0에 저장
+      dmem_store(32'h0001_0010, 32'h0000_00A5, F3_B);
+      begin
+         logic [31:0] read_data;
+         // LBU: 제로 확장 읽기
+         dmem_load(32'h0001_0010, F3_BU, read_data);
+         check_result("SB/LBU byte0=0xA5", 32'h0000_00A5, read_data);
+
+         // LB: 부호 확장 읽기 (0xA5의 MSB=1이므로 부호 확장)
+         dmem_load(32'h0001_0010, F3_B, read_data);
+         check_result("SB/LB byte0=0xA5(sign-ext)", 32'hFFFF_FFA5, read_data);
+      end
+
+      // SB: 0x7F를 바이트 오프셋 1에 저장
+      dmem_store(32'h0001_0011, 32'h0000_007F, F3_B);
+      begin
+         logic [31:0] read_data;
+         // LBU: 제로 확장
+         dmem_load(32'h0001_0011, F3_BU, read_data);
+         check_result("SB/LBU byte1=0x7F", 32'h0000_007F, read_data);
+
+         // LB: 부호 확장 (0x7F의 MSB=0이므로 제로 확장과 동일)
+         dmem_load(32'h0001_0011, F3_B, read_data);
+         check_result("SB/LB byte1=0x7F(sign-ext)", 32'h0000_007F, read_data);
+      end
+
+      // SB: 0x80을 바이트 오프셋 2에 저장 (부호 확장 경계값)
+      dmem_store(32'h0001_0012, 32'h0000_0080, F3_B);
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0012, F3_B, read_data);
+         check_result("SB/LB byte2=0x80(sign-ext)", 32'hFFFF_FF80, read_data);
+
+         dmem_load(32'h0001_0012, F3_BU, read_data);
+         check_result("SB/LBU byte2=0x80(zero-ext)", 32'h0000_0080, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 4: DMEM 하프워드 스토어/로드 (SH/LH/LHU)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 4: 하프워드 스토어/로드 (SH/LH/LHU) ---");
+
+      // 주소 0x20을 0으로 초기화
+      dmem_store(32'h0001_0020, 32'h0000_0000, F3_W);
+
+      // SH: 0x8765를 하위 하프워드에 저장
+      dmem_store(32'h0001_0020, 32'h0000_8765, F3_H);
+      begin
+         logic [31:0] read_data;
+         // LHU: 제로 확장
+         dmem_load(32'h0001_0020, F3_HU, read_data);
+         check_result("SH/LHU lower=0x8765", 32'h0000_8765, read_data);
+
+         // LH: 부호 확장 (0x8765의 MSB=1)
+         dmem_load(32'h0001_0020, F3_H, read_data);
+         check_result("SH/LH lower=0x8765(sign-ext)", 32'hFFFF_8765, read_data);
+      end
+
+      // SH: 0x1234를 상위 하프워드에 저장
+      dmem_store(32'h0001_0022, 32'h0000_1234, F3_H);
+      begin
+         logic [31:0] read_data;
+         // LHU: 제로 확장 (상위 하프워드)
+         dmem_load(32'h0001_0022, F3_HU, read_data);
+         check_result("SH/LHU upper=0x1234", 32'h0000_1234, read_data);
+
+         // LW: 전체 워드 확인 (상위 0x1234 + 하위 0x8765)
+         dmem_load(32'h0001_0020, F3_W, read_data);
+         check_result("Full word after SH×2", 32'h1234_8765, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 5: 연속 주소 스토어/로드 (데이터 무결성)
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 5: 연속 주소 데이터 무결성 ---");
+
+      // 4개 연속 워드 저장
+      dmem_store(32'h0001_0100, 32'hAAAA_AAAA, F3_W);
+      dmem_store(32'h0001_0104, 32'hBBBB_BBBB, F3_W);
+      dmem_store(32'h0001_0108, 32'hCCCC_CCCC, F3_W);
+      dmem_store(32'h0001_010C, 32'hDDDD_DDDD, F3_W);
+
+      // 역순으로 읽기 검증
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_010C, F3_W, read_data);
+         check_result("Sequential[3]=0xDDDDDDDD", 32'hDDDD_DDDD, read_data);
+
+         dmem_load(32'h0001_0108, F3_W, read_data);
+         check_result("Sequential[2]=0xCCCCCCCC", 32'hCCCC_CCCC, read_data);
+
+         dmem_load(32'h0001_0104, F3_W, read_data);
+         check_result("Sequential[1]=0xBBBBBBBB", 32'hBBBB_BBBB, read_data);
+
+         dmem_load(32'h0001_0100, F3_W, read_data);
+         check_result("Sequential[0]=0xAAAAAAAA", 32'hAAAA_AAAA, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 6: 바이트 인에이블 독립성 검증
+      //----------------------------------------------------------------------
+      $display("\n--- 테스트 6: 바이트 인에이블 독립성 ---");
+
+      // 워드 전체를 0xFF로 초기화
+      dmem_store(32'h0001_0200, 32'hFFFF_FFFF, F3_W);
+
+      // Byte 0만 0x11로 변경 (나머지 바이트는 0xFF 유지)
+      dmem_store(32'h0001_0200, 32'h0000_0011, F3_B);
+
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0200, F3_W, read_data);
+         check_result("Byte0 only write", 32'hFFFF_FF11, read_data);
+      end
+
+      // Byte 2만 0x22로 변경
+      dmem_store(32'h0001_0202, 32'h0000_0022, F3_B);
+
+      begin
+         logic [31:0] read_data;
+         dmem_load(32'h0001_0200, F3_W, read_data);
+         check_result("Byte2 only write", 32'hFF22_FF11, read_data);
+      end
+
+      //----------------------------------------------------------------------
+      // 테스트 결과 요약
+      //----------------------------------------------------------------------
+      $display("\n============================================================");
+      $display("  테스트 완료");
+      $display("  총 테스트: %0d | 통과: %0d | 실패: %0d",
+               test_total, test_pass, test_fail);
+      if (test_fail == 0)
+         $display("  ★ 모든 테스트 통과! ★");
+      else
+         $display("  ✗ %0d개 테스트 실패", test_fail);
+      $display("============================================================");
+
+      #20;
+      $finish;
+   end
+
+   //--------------------------------------------------------------------------
+   // 시뮬레이션 타임아웃 보호
+   //--------------------------------------------------------------------------
+   initial begin
+      #100_000;
+      $display("[TIMEOUT] 시뮬레이션이 100us를 초과하여 강제 종료합니다.");
+      $finish;
+   end
+
+   //--------------------------------------------------------------------------
+   // VCD 파형 덤프 (선택)
+   //--------------------------------------------------------------------------
+   initial begin
+      $dumpfile("memory_tb.vcd");
+      $dumpvars(0, memory_tb);
+   end
+
+endmodule</code></pre>
+  </div>
+</section>
+
+  <!-- Highlight.js 스크립트 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+    document.querySelectorAll('pre code').forEach(el => {
+      if (el.className.includes('language-systemverilog')) {
+        el.className = el.className.replace('language-systemverilog', 'language-verilog');
+      }
+    });
+    hljs.highlightAll();
+  </script>
+</body>
+</html>

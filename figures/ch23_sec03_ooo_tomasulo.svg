@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 600" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow3" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow3g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 16px; font-weight: bold; fill: #1e293b; text-anchor: middle; }
+    .label { font-size: 12px; fill: #1e293b; text-anchor: middle; }
+    .small { font-size: 10px; fill: #64748b; text-anchor: middle; }
+    .box { rx: 8; ry: 8; }
+  </style>
+
+  <text x="430" y="30" class="title">Tomasulo 알고리즘 기반 비순차 실행 구조</text>
+
+  <!-- 명령어 큐 -->
+  <rect x="310" y="50" width="240" height="45" fill="#2563EB" class="box"/>
+  <text x="430" y="70" class="label" fill="white" font-weight="bold">명령어 큐 (Instruction Queue)</text>
+  <text x="430" y="87" class="small" fill="#DBEAFE">순차 인출 (In-Order Fetch)</text>
+
+  <line x1="430" y1="95" x2="430" y2="125" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- 디코드 / 발행 -->
+  <rect x="310" y="125" width="240" height="40" fill="#3B82F6" class="box"/>
+  <text x="430" y="150" class="label" fill="white" font-weight="bold">디코드 / 발행 (Issue)</text>
+
+  <!-- 화살표: 발행 → 예약 스테이션들 -->
+  <line x1="360" y1="165" x2="160" y2="210" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <line x1="430" y1="165" x2="430" y2="210" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <line x1="500" y1="165" x2="700" y2="210" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- 예약 스테이션: 정수 ALU -->
+  <rect x="50" y="210" width="220" height="120" fill="#DBEAFE" class="box" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="160" y="235" class="label" font-weight="bold">예약 스테이션 (RS)</text>
+  <text x="160" y="255" class="label">정수 ALU</text>
+
+  <!-- RS 테이블 -->
+  <rect x="65" y="265" width="190" height="18" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="160" y="279" class="small">Op | Vj | Vk | Qj | Qk | Busy</text>
+  <rect x="65" y="285" width="190" height="15" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="160" y="296" class="small">ADD  12   ?    -   RS3   1</text>
+  <rect x="65" y="302" width="190" height="15" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="160" y="313" class="small">SUB   7   3    -    -    1</text>
+
+  <!-- 예약 스테이션: 곱셈/나눗셈 -->
+  <rect x="310" y="210" width="240" height="120" fill="#DBEAFE" class="box" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="430" y="235" class="label" font-weight="bold">예약 스테이션 (RS)</text>
+  <text x="430" y="255" class="label">곱셈 / 나눗셈</text>
+
+  <rect x="325" y="265" width="210" height="18" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="430" y="279" class="small">Op | Vj | Vk | Qj | Qk | Busy</text>
+  <rect x="325" y="285" width="210" height="15" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="430" y="296" class="small">MUL   4   ?    -   RS1   1</text>
+  <rect x="325" y="302" width="210" height="15" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="430" y="313" class="small">(비어 있음)              0</text>
+
+  <!-- 예약 스테이션: 로드/스토어 -->
+  <rect x="590" y="210" width="220" height="120" fill="#DBEAFE" class="box" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="700" y="235" class="label" font-weight="bold">예약 스테이션 (RS)</text>
+  <text x="700" y="255" class="label">로드 / 스토어</text>
+
+  <rect x="605" y="265" width="190" height="18" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="700" y="279" class="small">Op | Addr | Vk  | Qk | Busy</text>
+  <rect x="605" y="285" width="190" height="15" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="700" y="296" class="small">LW  0x100  -     -    1</text>
+  <rect x="605" y="302" width="190" height="15" fill="white" stroke="#3B82F6" rx="3"/>
+  <text x="700" y="313" class="small">SW  0x200  ?    RS2   1</text>
+
+  <!-- 실행 유닛 -->
+  <line x1="160" y1="330" x2="160" y2="370" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <rect x="90" y="370" width="140" height="35" fill="#2563EB" class="box"/>
+  <text x="160" y="393" class="label" fill="white">ALU 실행</text>
+
+  <line x1="430" y1="330" x2="430" y2="370" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <rect x="360" y="370" width="140" height="35" fill="#2563EB" class="box"/>
+  <text x="430" y="393" class="label" fill="white">MUL/DIV 실행</text>
+
+  <line x1="700" y1="330" x2="700" y2="370" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <rect x="630" y="370" width="140" height="35" fill="#2563EB" class="box"/>
+  <text x="700" y="393" class="label" fill="white">메모리 접근</text>
+
+  <!-- CDB (Common Data Bus) -->
+  <rect x="50" y="430" width="760" height="35" fill="#2563EB" class="box" opacity="0.15" stroke="#2563EB" stroke-width="2"/>
+  <text x="430" y="453" class="label" fill="#2563EB" font-weight="bold">공통 데이터 버스 (CDB: Common Data Bus)</text>
+
+  <line x1="160" y1="405" x2="160" y2="430" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <line x1="430" y1="405" x2="430" y2="430" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <line x1="700" y1="405" x2="700" y2="430" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+
+  <!-- CDB → RS 피드백 (snooping) -->
+  <path d="M 810,447 L 830,447 L 830,280 L 810,280" stroke="#64748b" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrow3g)"/>
+  <text x="845" y="370" class="small" transform="rotate(-90, 845, 370)">스누핑 (Snooping)</text>
+
+  <!-- ROB -->
+  <line x1="430" y1="465" x2="430" y2="495" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <rect x="260" y="495" width="340" height="45" fill="#2563EB" class="box"/>
+  <text x="430" y="515" class="label" fill="white" font-weight="bold">재정렬 버퍼 (ROB: Reorder Buffer)</text>
+  <text x="430" y="533" class="small" fill="#DBEAFE">순차 커밋 (In-Order Commit) → 정확한 예외 보장</text>
+
+  <!-- 레지스터 파일 -->
+  <line x1="430" y1="540" x2="430" y2="565" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow3)"/>
+  <rect x="310" y="565" width="240" height="30" fill="#3B82F6" class="box"/>
+  <text x="430" y="585" class="label" fill="white">레지스터 파일 (ARF)</text>
+
+  <!-- 비순차 실행 영역 표시 -->
+  <rect x="35" y="200" width="790" height="275" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="8,4" rx="10"/>
+  <text x="75" y="195" font-size="11" fill="#ef4444" font-weight="bold">비순차 실행 영역 (Out-of-Order)</text>
+</svg>

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+  <style>
+    .stage-box { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; rx: 8; }
+    .pipe-reg  { fill: #3B82F6; stroke: #2563EB; stroke-width: 2; rx: 4; }
+    .label     { font-size: 14px; fill: #1E3A5F; text-anchor: middle; font-weight: bold; }
+    .sub-label { font-size: 11px; fill: #475569; text-anchor: middle; }
+    .pipe-label{ font-size: 10px; fill: #FFFFFF; text-anchor: middle; font-weight: bold; }
+    .title     { font-size: 18px; fill: #1E3A5F; font-weight: bold; text-anchor: middle; }
+    .signal    { font-size: 11px; fill: #DC2626; text-anchor: middle; font-weight: bold; }
+    .note      { font-size: 11px; fill: #6B7280; text-anchor: start; }
+  </style>
+
+  <text x="450" y="30" class="title">5단계 파이프라인 구조 핵심 복습</text>
+
+  <!-- IF Stage -->
+  <rect x="30" y="60" width="140" height="120" class="stage-box"/>
+  <text x="100" y="95" class="label">IF</text>
+  <text x="100" y="115" class="sub-label">명령어 인출</text>
+  <text x="100" y="135" class="sub-label">PC → IMEM</text>
+  <text x="100" y="155" class="sub-label">PC + 4 계산</text>
+
+  <!-- IF/ID Register -->
+  <rect x="180" y="55" width="24" height="130" class="pipe-reg"/>
+  <text x="192" y="125" class="pipe-label" transform="rotate(-90,192,125)">IF/ID</text>
+
+  <!-- ID Stage -->
+  <rect x="214" y="60" width="140" height="120" class="stage-box"/>
+  <text x="284" y="95" class="label">ID</text>
+  <text x="284" y="115" class="sub-label">명령어 해독</text>
+  <text x="284" y="135" class="sub-label">레지스터 읽기</text>
+  <text x="284" y="155" class="sub-label">즉치수 생성</text>
+
+  <!-- ID/EX Register -->
+  <rect x="364" y="55" width="24" height="130" class="pipe-reg"/>
+  <text x="376" y="125" class="pipe-label" transform="rotate(-90,376,125)">ID/EX</text>
+
+  <!-- EX Stage -->
+  <rect x="398" y="60" width="140" height="120" class="stage-box"/>
+  <text x="468" y="95" class="label">EX</text>
+  <text x="468" y="115" class="sub-label">ALU 연산</text>
+  <text x="468" y="135" class="sub-label">분기 판정</text>
+  <text x="468" y="155" class="sub-label">주소 계산</text>
+
+  <!-- EX/MEM Register -->
+  <rect x="548" y="55" width="24" height="130" class="pipe-reg"/>
+  <text x="560" y="125" class="pipe-label" transform="rotate(-90,560,125)">EX/MEM</text>
+
+  <!-- MEM Stage -->
+  <rect x="582" y="60" width="140" height="120" class="stage-box"/>
+  <text x="652" y="95" class="label">MEM</text>
+  <text x="652" y="115" class="sub-label">데이터 메모리</text>
+  <text x="652" y="135" class="sub-label">접근 (R/W)</text>
+  <text x="652" y="155" class="sub-label">캐시 접근</text>
+
+  <!-- MEM/WB Register -->
+  <rect x="732" y="55" width="24" height="130" class="pipe-reg"/>
+  <text x="744" y="125" class="pipe-label" transform="rotate(-90,744,125)">MEM/WB</text>
+
+  <!-- WB Stage -->
+  <rect x="766" y="60" width="110" height="120" class="stage-box"/>
+  <text x="821" y="95" class="label">WB</text>
+  <text x="821" y="115" class="sub-label">레지스터 쓰기</text>
+  <text x="821" y="135" class="sub-label">Write-Back</text>
+
+  <!-- Stall signal -->
+  <line x1="100" y1="200" x2="100" y2="240" stroke="#DC2626" stroke-width="2"/>
+  <line x1="100" y1="240" x2="376" y2="240" stroke="#DC2626" stroke-width="2" marker-end="url(#arrow1)" stroke-dasharray="6,3"/>
+  <text x="238" y="258" class="signal">Stall (PC 홀드 + IF/ID 홀드)</text>
+
+  <!-- Flush signal -->
+  <line x1="468" y1="200" x2="468" y2="280" stroke="#DC2626" stroke-width="2"/>
+  <line x1="192" y1="280" x2="468" y2="280" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="330" y="298" class="signal">Flush (IF/ID, ID/EX 클리어)</text>
+  <circle cx="192" cy="280" r="5" fill="#DC2626"/>
+  <circle cx="376" cy="280" r="5" fill="#DC2626"/>
+
+  <!-- Forwarding paths -->
+  <path d="M560,190 L560,330 L440,330 L440,180" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#arrow1)" stroke-dasharray="4,3"/>
+  <text x="500" y="348" class="sub-label" style="fill:#059669; font-weight:bold;">EX-EX 포워딩</text>
+
+  <path d="M744,190 L744,370 L440,370 L440,180" stroke="#7C3AED" stroke-width="2" fill="none" marker-end="url(#arrow1)" stroke-dasharray="4,3"/>
+  <text x="592" y="388" class="sub-label" style="fill:#7C3AED; font-weight:bold;">MEM-EX 포워딩</text>
+
+  <!-- Legend -->
+  <rect x="30" y="400" width="16" height="10" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="52" y="410" class="note">파이프라인 스테이지</text>
+  <rect x="170" y="400" width="16" height="10" fill="#3B82F6" stroke="#2563EB" stroke-width="1"/>
+  <text x="192" y="410" class="note">파이프라인 레지스터</text>
+  <line x1="330" y1="405" x2="370" y2="405" stroke="#DC2626" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="376" y="410" class="note">제어 신호 (스톨/플러시)</text>
+  <line x1="560" y1="405" x2="600" y2="405" stroke="#059669" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="606" y="410" class="note">포워딩 경로</text>
+</svg>

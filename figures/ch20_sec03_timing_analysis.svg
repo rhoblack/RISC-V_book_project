@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 550" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="550" fill="#F8FAFC" rx="8"/>
+
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">Setup/Hold 타이밍 분석과 슬랙(Slack) 개념</text>
+  <text x="425" y="50" text-anchor="middle" font-size="12" fill="#64748B">WNS(Worst Negative Slack)와 TNS(Total Negative Slack)의 의미</text>
+
+  <!-- 타이밍 다이어그램 영역 -->
+  <rect x="30" y="70" width="790" height="240" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1" filter="url(#shadow)"/>
+
+  <!-- 클록 신호 -->
+  <text x="50" y="100" font-size="12" font-weight="600" fill="#1E293B">CLK</text>
+  <!-- 클록 파형 -->
+  <polyline points="100,115 100,90 250,90 250,115 400,115 400,90 550,90 550,115 700,115 700,90 790,90" fill="none" stroke="#2563EB" stroke-width="2"/>
+
+  <!-- 데이터 신호 -->
+  <text x="50" y="170" font-size="12" font-weight="600" fill="#1E293B">DATA</text>
+  <polyline points="100,185 130,185 150,160 550,160 570,185 700,185" fill="none" stroke="#059669" stroke-width="2"/>
+  <text x="350" y="153" text-anchor="middle" font-size="10" fill="#059669">유효 데이터 (Valid Data)</text>
+
+  <!-- Setup Time 표시 -->
+  <line x1="400" y1="145" x2="400" y2="200" stroke="#DC2626" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="550" y1="145" x2="550" y2="200" stroke="#2563EB" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="400" y1="200" x2="550" y2="200" stroke="#DC2626" stroke-width="2" marker-start="url(#arrowR)" marker-end="url(#arrowR)"/>
+  <text x="475" y="218" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">Setup Time (Tsu)</text>
+  <text x="475" y="233" text-anchor="middle" font-size="9" fill="#64748B">클록 에지 전 데이터 안정 시간</text>
+
+  <!-- Hold Time 표시 -->
+  <line x1="550" y1="145" x2="550" y2="260" stroke="#2563EB" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="570" y1="145" x2="570" y2="260" stroke="#D97706" stroke-width="1" stroke-dasharray="4,2"/>
+  <line x1="550" y1="260" x2="570" y2="260" stroke="#D97706" stroke-width="2" marker-start="url(#arrowR)" marker-end="url(#arrowR)"/>
+  <text x="620" y="258" font-size="11" font-weight="600" fill="#D97706">Hold Time (Th)</text>
+  <text x="620" y="273" font-size="9" fill="#64748B">에지 후 데이터 유지 시간</text>
+
+  <!-- 캡처 에지 표시 -->
+  <line x1="550" y1="85" x2="550" y2="130" stroke="#2563EB" stroke-width="3"/>
+  <text x="550" y="80" text-anchor="middle" font-size="10" font-weight="600" fill="#2563EB">캡처 에지</text>
+
+  <!-- 슬랙 설명 영역 -->
+  <rect x="30" y="330" width="390" height="200" rx="8" fill="white" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="30" y="330" width="390" height="35" rx="8" fill="#059669"/>
+  <text x="225" y="353" text-anchor="middle" font-size="13" font-weight="700" fill="white">Setup Slack 계산</text>
+
+  <text x="50" y="385" font-size="12" font-weight="600" fill="#1E293B">Setup Slack =</text>
+  <text x="60" y="408" font-size="11" fill="#2563EB">  T_clk_period</text>
+  <text x="60" y="428" font-size="11" fill="#DC2626">  - T_clk_to_q (발신 FF)</text>
+  <text x="60" y="448" font-size="11" fill="#DC2626">  - T_comb_logic (조합 로직)</text>
+  <text x="60" y="468" font-size="11" fill="#DC2626">  - T_setup (수신 FF)</text>
+  <text x="60" y="488" font-size="11" fill="#DC2626">  - T_clock_uncertainty</text>
+
+  <rect x="50" y="498" width="350" height="24" rx="4" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+  <text x="225" y="515" text-anchor="middle" font-size="11" font-weight="700" fill="#DC2626">Slack &lt; 0 → Setup Violation! (타이밍 실패)</text>
+
+  <!-- WNS/TNS 설명 -->
+  <rect x="440" y="330" width="380" height="200" rx="8" fill="white" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="440" y="330" width="380" height="35" rx="8" fill="#2563EB"/>
+  <text x="630" y="353" text-anchor="middle" font-size="13" font-weight="700" fill="white">WNS / TNS 해석</text>
+
+  <rect x="460" y="380" width="340" height="55" rx="6" fill="#F0FDF4" stroke="#059669" stroke-width="1"/>
+  <text x="470" y="400" font-size="12" font-weight="700" fill="#059669">WNS (Worst Negative Slack)</text>
+  <text x="470" y="420" font-size="10" fill="#1E293B">가장 나쁜 경로의 슬랙. WNS &gt; 0이면 타이밍 충족.</text>
+
+  <rect x="460" y="445" width="340" height="55" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="470" y="465" font-size="12" font-weight="700" fill="#D97706">TNS (Total Negative Slack)</text>
+  <text x="470" y="485" font-size="10" fill="#1E293B">음수 슬랙 경로들의 합. TNS = 0이면 모든 경로 충족.</text>
+
+  <!-- 판정 기준 -->
+  <rect x="460" y="508" width="340" height="16" rx="3" fill="#059669"/>
+  <text x="630" y="520" text-anchor="middle" font-size="10" font-weight="600" fill="white">목표: WNS ≥ 0 &amp;&amp; TNS = 0 → 타이밍 클로저 달성</text>
+</svg>

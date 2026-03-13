@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="960" height="520"
+     font-family="'Pretendard', 'Noto Sans KR', monospace">
+
+  <!-- 배경 -->
+  <rect width="960" height="520" fill="#0F172A" rx="8"/>
+
+  <!-- 제목 바 -->
+  <rect x="0" y="0" width="960" height="44" fill="#1E3A8A" rx="8"/>
+  <rect x="0" y="36" width="960" height="8" fill="#1E3A8A"/>
+  <text x="480" y="27" text-anchor="middle" fill="white" font-size="15" font-weight="bold">
+    포워딩 동작 검증 파형 (EX-EX 포워딩)
+  </text>
+
+  <!-- 명령어 설명 배너 -->
+  <rect x="160" y="50" width="640" height="26" fill="#1E3A8A" rx="4"/>
+  <text x="480" y="67" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="bold">
+    ADD x1, x2, x3  →  ADD x4, x1, x5  (EX-EX RAW 해저드, x2=3, x3=5 가정 → x1=8)
+  </text>
+
+  <!-- 배경 그리드 -->
+  <!-- 사이클 배경 구분 (교대 색상) -->
+  <rect x="160" y="78" width="130" height="394" fill="#1E293B" opacity="0.5"/>
+  <rect x="290" y="78" width="130" height="394" fill="#1E3A5C" opacity="0.4"/>
+  <rect x="420" y="78" width="130" height="394" fill="#1E293B" opacity="0.5"/>
+  <rect x="550" y="78" width="130" height="394" fill="#FFF7ED" opacity="0.07"/>
+  <!-- C5는 포워딩 발생! 강조 -->
+  <rect x="550" y="78" width="130" height="394" fill="#EA580C" opacity="0.12"/>
+  <rect x="680" y="78" width="130" height="394" fill="#1E293B" opacity="0.5"/>
+  <rect x="810" y="78" width="130" height="394" fill="#1E3A5C" opacity="0.4"/>
+
+  <!-- 사이클 헤더 -->
+  <rect x="160" y="78" width="780" height="24" fill="#1E3A8A"/>
+  <text x="80" y="95" text-anchor="middle" fill="#94A3B8" font-size="10" font-weight="bold">신호명</text>
+  <text x="225" y="95" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="bold">C1</text>
+  <text x="355" y="95" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="bold">C2</text>
+  <text x="485" y="95" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="bold">C3</text>
+  <text x="615" y="95" text-anchor="middle" fill="#FBBF24" font-size="11" font-weight="bold">C4 ★</text>
+  <text x="745" y="95" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="bold">C5</text>
+  <text x="875" y="95" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="bold">C6</text>
+
+  <!-- 포워딩 발생 강조 텍스트 -->
+  <rect x="550" y="76" width="130" height="6" fill="#EA580C"/>
+  <text x="615" y="472" text-anchor="middle" fill="#FBBF24" font-size="9.5" font-weight="bold">← 포워딩 발생!</text>
+
+  <!-- 세로 그리드 구분선 -->
+  <line x1="160" y1="102" x2="160" y2="462" stroke="#334155" stroke-width="1"/>
+  <line x1="290" y1="102" x2="290" y2="462" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <line x1="420" y1="102" x2="420" y2="462" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <line x1="550" y1="102" x2="550" y2="462" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <line x1="680" y1="102" x2="680" y2="462" stroke="#EA580C" stroke-width="2" stroke-dasharray="4,3"/>
+  <line x1="810" y1="102" x2="810" y2="462" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <line x1="940" y1="102" x2="940" y2="462" stroke="#334155" stroke-width="1"/>
+
+  <!-- ======== 신호 1: clk ======== -->
+  <text x="80" y="130" text-anchor="middle" fill="#94A3B8" font-size="10">clk</text>
+  <line x1="160" y1="118" x2="940" y2="118" stroke="#334155" stroke-width="0.5"/>
+  <!-- CLK 파형: 65px 주기 -->
+  <polyline points="
+    160,138 160,118 225,118 225,138 290,138 290,118 355,118 355,138 420,138 420,118
+    485,118 485,138 550,138 550,118 615,118 615,138 680,138 680,118 745,118 745,138
+    810,138 810,118 875,118 875,138 940,138"
+    fill="none" stroke="#22D3EE" stroke-width="2"/>
+
+  <!-- ======== 신호 2: pc_reg ======== -->
+  <line x1="160" y1="148" x2="940" y2="148" stroke="#1E293B" stroke-width="0.5"/>
+  <text x="80" y="165" text-anchor="middle" fill="#94A3B8" font-size="10">pc_reg</text>
+
+  <!-- 버스 신호 표현: 위/아래 선 + 내부 값 텍스트 -->
+  <!-- C1: 0x00 -->
+  <polygon points="163,153 167,148 287,148 291,153 287,158 167,158" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.2"/>
+  <text x="227" y="162" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">0x0000_0000</text>
+  <!-- C2: 0x04 -->
+  <polygon points="293,153 297,148 417,148 421,153 417,158 297,158" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.2"/>
+  <text x="357" y="162" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">0x0000_0004</text>
+  <!-- C3: 0x08 -->
+  <polygon points="423,153 427,148 547,148 551,153 547,158 427,158" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.2"/>
+  <text x="487" y="162" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">0x0000_0008</text>
+  <!-- C4 -->
+  <polygon points="553,153 557,148 677,148 681,153 677,158 557,158" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.2"/>
+  <text x="617" y="162" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">0x0000_000C</text>
+  <!-- C5+ -->
+  <polygon points="683,153 687,148 807,148 811,153 807,158 687,158" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.2"/>
+  <text x="747" y="162" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">0x0000_0010</text>
+  <polygon points="813,153 817,148 937,148 941,153 937,158 817,158" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.2"/>
+  <text x="877" y="162" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">0x0000_0014</text>
+
+  <!-- ======== 신호 3: forward_a[1:0] ======== -->
+  <line x1="160" y1="178" x2="940" y2="178" stroke="#1E293B" stroke-width="0.5"/>
+  <text x="80" y="197" text-anchor="middle" fill="#94A3B8" font-size="10">forward_a</text>
+  <text x="80" y="208" text-anchor="middle" fill="#94A3B8" font-size="9">[1:0]</text>
+
+  <!-- C1~C3: 2'b00 -->
+  <polygon points="163,183 167,178 417,178 421,183 417,188 167,188" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="292" y="192" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">2'b00 (포워딩 없음)</text>
+  <!-- C4~C5: 2'b00 (A가 EX, B가 ID) -->
+  <polygon points="423,183 427,178 547,178 551,183 547,188 427,188" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="487" y="192" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">2'b00</text>
+  <!-- C5(클록 상승후): 2'b10 강조! 주황 -->
+  <polygon points="553,183 557,178 677,178 681,183 677,188 557,188" fill="#7C2D12" stroke="#EA580C" stroke-width="2"/>
+  <text x="617" y="192" text-anchor="middle" fill="#FED7AA" font-size="10" font-weight="bold" font-family="monospace">2'b10 ← EX-EX!</text>
+  <!-- C6 이후: 2'b00 -->
+  <polygon points="683,183 687,178 937,178 941,183 937,188 683,188" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="810" y="192" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">2'b00</text>
+
+  <!-- ======== 신호 4: alu_a_ex (포워딩 전/후 값) ======== -->
+  <line x1="160" y1="208" x2="940" y2="208" stroke="#1E293B" stroke-width="0.5"/>
+  <text x="80" y="228" text-anchor="middle" fill="#94A3B8" font-size="10">alu_a_ex</text>
+  <text x="80" y="238" text-anchor="middle" fill="#94A3B8" font-size="8.5">(MUX A 출력)</text>
+
+  <!-- C1~C4: 아직 포워딩 없음 또는 다른 명령어 -->
+  <polygon points="163,213 167,208 547,208 551,213 547,218 167,218" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="357" y="222" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">x2 값 (= 3)  또는 이전 값</text>
+
+  <!-- C5: 포워딩 전 잘못된 값 → 포워딩 후 올바른 값 (빨간→초록 전환) -->
+  <!-- 포워딩 전 (클록 상승 직전까지): 잘못된 값 빨간 -->
+  <polygon points="553,213 557,208 620,208 620,213 620,218 557,218" fill="#7F1D1D" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="588" y="222" text-anchor="middle" fill="#FCA5A5" font-size="8.5" font-family="monospace">stale</text>
+  <!-- 포워딩 후 (클록 상승 후): 올바른 값 초록 -->
+  <polygon points="622,213 626,208 677,208 681,213 677,218 626,218" fill="#14532D" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="651" y="222" text-anchor="middle" fill="#BBF7D0" font-size="8.5" font-family="monospace">8 ✓</text>
+
+  <!-- C6 이후: 정상 -->
+  <polygon points="683,213 687,208 937,208 941,213 937,218 683,218" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="810" y="222" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">x1 값 (정상)</text>
+
+  <!-- ======== 신호 5: alu_result_mem (A 명령어의 결과) ======== -->
+  <line x1="160" y1="238" x2="940" y2="238" stroke="#1E293B" stroke-width="0.5"/>
+  <text x="80" y="258" text-anchor="middle" fill="#94A3B8" font-size="10">alu_result</text>
+  <text x="80" y="268" text-anchor="middle" fill="#94A3B8" font-size="8.5">_mem</text>
+
+  <!-- C1~C3: 무효/이전 값 -->
+  <polygon points="163,243 167,238 417,238 421,243 417,248 167,248" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="292" y="252" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">—</text>
+  <!-- C4: A명령어가 EX→MEM 이동, alu_result_mem = 8 (ADD x1: 3+5=8) 유효! -->
+  <polygon points="423,243 427,238 547,238 551,243 547,248 427,248" fill="#14532D" stroke="#16A34A" stroke-width="2"/>
+  <text x="487" y="252" text-anchor="middle" fill="#BBF7D0" font-size="10" font-weight="bold" font-family="monospace">8 (x1 = 3+5)</text>
+  <!-- C5: 유지 (포워딩 소스!) -->
+  <polygon points="553,243 557,238 677,238 681,243 677,248 557,248" fill="#14532D" stroke="#EA580C" stroke-width="2.5"/>
+  <text x="617" y="252" text-anchor="middle" fill="#FED7AA" font-size="10" font-weight="bold" font-family="monospace">8 ← 포워딩 소스</text>
+  <!-- C6 이후 -->
+  <polygon points="683,243 687,238 937,238 941,243 937,248 683,248" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="810" y="252" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">—</text>
+
+  <!-- ======== 신호 6: rd_addr_wb (레지스터 쓰기 주소) ======== -->
+  <line x1="160" y1="268" x2="940" y2="268" stroke="#1E293B" stroke-width="0.5"/>
+  <text x="80" y="288" text-anchor="middle" fill="#94A3B8" font-size="10">rd_addr_wb</text>
+  <text x="80" y="298" text-anchor="middle" fill="#94A3B8" font-size="8.5">(WB 쓰기 주소)</text>
+
+  <!-- C1~C4: 무효 -->
+  <polygon points="163,273 167,268 547,268 551,273 547,278 167,278" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="357" y="282" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">— (x0 또는 이전 값)</text>
+  <!-- C5: x1 (=5) WB 단계 -->
+  <polygon points="553,273 557,268 677,268 681,273 677,278 557,278" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="617" y="282" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">x1 (=5)</text>
+  <!-- C6: x4 WB -->
+  <polygon points="683,273 687,268 807,268 811,273 807,278 687,278" fill="#1E3A5C" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="747" y="282" text-anchor="middle" fill="#93C5FD" font-size="9.5" font-family="monospace">x4 (=5)</text>
+  <!-- C7이후 -->
+  <polygon points="813,273 817,268 937,268 941,273 937,278 813,278" fill="#1E293B" stroke="#475569" stroke-width="1.2"/>
+  <text x="877" y="282" text-anchor="middle" fill="#64748B" font-size="9.5" font-family="monospace">—</text>
+
+  <!-- ======== 신호 7: reg_write_mem ======== -->
+  <line x1="160" y1="298" x2="940" y2="298" stroke="#1E293B" stroke-width="0.5"/>
+  <text x="80" y="318" text-anchor="middle" fill="#94A3B8" font-size="10">reg_write</text>
+  <text x="80" y="328" text-anchor="middle" fill="#94A3B8" font-size="8.5">_mem</text>
+
+  <!-- C1~C3: 0 -->
+  <polyline points="160,322 420,322" fill="none" stroke="#475569" stroke-width="1.5"/>
+  <text x="292" y="318" text-anchor="middle" fill="#475569" font-size="9" font-family="monospace">0</text>
+  <!-- C4: 1 (A 명령어, reg_write=1) -->
+  <polyline points="420,308 420,308 550,308" fill="none" stroke="#22D3EE" stroke-width="2"/>
+  <text x="487" y="304" text-anchor="middle" fill="#22D3EE" font-size="9.5" font-weight="bold" font-family="monospace">1</text>
+  <!-- C5: 1 (B 명령어도 reg_write=1) 포워딩 소스 유지 -->
+  <polyline points="550,308 680,308" fill="none" stroke="#EA580C" stroke-width="2.5"/>
+  <text x="617" y="304" text-anchor="middle" fill="#FBBF24" font-size="9.5" font-weight="bold" font-family="monospace">1 ← 포워딩 조건 성립</text>
+  <!-- C6: 1 (B 명령어 WB) -->
+  <polyline points="680,308 810,308" fill="none" stroke="#22D3EE" stroke-width="2"/>
+  <text x="747" y="304" text-anchor="middle" fill="#22D3EE" font-size="9.5" font-family="monospace">1</text>
+  <polyline points="810,322 940,322" fill="none" stroke="#475569" stroke-width="1.5"/>
+  <text x="877" y="318" text-anchor="middle" fill="#475569" font-size="9" font-family="monospace">0</text>
+
+  <!-- ======== 파이프라인 스테이지 표시 ======== -->
+  <!-- ADD x1 (명령어 A) 파이프라인 단계 -->
+  <rect x="160" y="340" width="885" height="16" fill="#0F172A"/>
+  <rect x="163" y="342" width="126" height="12" fill="#1E3A8A" rx="2"/>
+  <text x="226" y="352" text-anchor="middle" fill="#93C5FD" font-size="8.5">A: IF</text>
+  <rect x="293" y="342" width="126" height="12" fill="#1E3A8A" rx="2"/>
+  <text x="356" y="352" text-anchor="middle" fill="#93C5FD" font-size="8.5">A: ID</text>
+  <rect x="423" y="342" width="126" height="12" fill="#2563EB" rx="2"/>
+  <text x="486" y="352" text-anchor="middle" fill="white" font-size="8.5" font-weight="bold">A: EX (x1=8 계산)</text>
+  <rect x="553" y="342" width="126" height="12" fill="#1E40AF" rx="2"/>
+  <text x="616" y="352" text-anchor="middle" fill="white" font-size="8.5">A: MEM → alu_result=8</text>
+  <rect x="683" y="342" width="126" height="12" fill="#16A34A" rx="2"/>
+  <text x="746" y="352" text-anchor="middle" fill="white" font-size="8.5">A: WB (x1←8)</text>
+
+  <!-- ADD x4 (명령어 B) 파이프라인 단계 -->
+  <rect x="160" y="358" width="885" height="16" fill="#0F172A"/>
+  <rect x="293" y="360" width="126" height="12" fill="#4C1D95" rx="2"/>
+  <text x="356" y="370" text-anchor="middle" fill="#DDD6FE" font-size="8.5">B: IF</text>
+  <rect x="423" y="360" width="126" height="12" fill="#4C1D95" rx="2"/>
+  <text x="486" y="370" text-anchor="middle" fill="#DDD6FE" font-size="8.5">B: ID</text>
+  <rect x="553" y="360" width="126" height="12" fill="#7C3AED" rx="2"/>
+  <text x="616" y="370" text-anchor="middle" fill="white" font-size="8.5" font-weight="bold">B: EX ← 포워딩 수신!</text>
+  <rect x="683" y="360" width="126" height="12" fill="#5B21B6" rx="2"/>
+  <text x="746" y="370" text-anchor="middle" fill="#DDD6FE" font-size="8.5">B: MEM</text>
+  <rect x="813" y="360" width="126" height="12" fill="#6D28D9" rx="2"/>
+  <text x="876" y="370" text-anchor="middle" fill="#DDD6FE" font-size="8.5">B: WB</text>
+
+  <!-- 포워딩 화살표 (C4.MEM → C5.EX) -->
+  <defs>
+    <marker id="aOrangeFwd" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L10,4 z" fill="#EA580C"/>
+    </marker>
+  </defs>
+  <path d="M616,354 L616,360" fill="none" stroke="#EA580C" stroke-width="3" marker-end="url(#aOrangeFwd)"/>
+
+  <!-- ======== 하단 설명 패널 ======== -->
+  <rect x="8" y="388" width="944" height="118" fill="#1E293B" stroke="#334155" stroke-width="1" rx="5"/>
+  <text x="480" y="406" text-anchor="middle" fill="#93C5FD" font-size="12" font-weight="bold">EX-EX 포워딩 동작 원리 요약</text>
+  <line x1="24" y1="412" x2="936" y2="412" stroke="#334155" stroke-width="1"/>
+  <text x="24" y="428" fill="#94A3B8" font-size="10">
+    C4: A(ADD x1,x2,x3)가 EX→MEM 이동하며 alu_result_mem = 8 확정. Forwarding Unit이 rd_addr_mem(x1) == rs1_addr_ex(x1) 감지
+  </text>
+  <text x="24" y="444" fill="#94A3B8" font-size="10">
+    C4: forward_a[1:0] = 2'b10 신호 생성 → MUX A가 rs1_data_ex(낡은 x1) 대신 alu_result_mem(=8) 선택
+  </text>
+  <text x="24" y="460" fill="#94A3B8" font-size="10">
+    C5: B(ADD x4,x1,x5) EX 단계에서 alu_a = 8 (포워딩된 정확한 x1 값) → alu_result = 8 + x5 = 올바른 결과
+  </text>
+  <text x="24" y="480" fill="#64748B" font-size="9.5" font-style="italic">
+    검증 포인트: forward_a = 2'b10인 사이클에서 alu_a_ex 값이 alu_result_mem과 동일함을 시뮬레이션으로 확인
+  </text>
+  <text x="24" y="498" fill="#64748B" font-size="9.5" font-style="italic">
+    * 파형에서 forward_a가 2'b10으로 전환되는 상승 엣지 직후 alu_a_ex가 올바른 값(8)으로 변경됨을 확인
+  </text>
+
+</svg>

@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 440" font-family="Pretendard, sans-serif">
+  <rect width="780" height="440" fill="#FFFFFF" rx="8"/>
+
+  <text x="390" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2937">CSR 명령어 인코딩 (I-타입 형식)</text>
+
+  <!-- 비트 위치 레이블 -->
+  <text x="90" y="60" text-anchor="middle" font-size="10" fill="#6B7280">31        20</text>
+  <text x="225" y="60" text-anchor="middle" font-size="10" fill="#6B7280">19    15</text>
+  <text x="315" y="60" text-anchor="middle" font-size="10" fill="#6B7280">14  12</text>
+  <text x="405" y="60" text-anchor="middle" font-size="10" fill="#6B7280">11    7</text>
+  <text x="530" y="60" text-anchor="middle" font-size="10" fill="#6B7280">6        0</text>
+
+  <!-- CSRRW 인코딩 -->
+  <rect x="20" y="70" width="140" height="34" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="91" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB" font-family="monospace">csr[11:0]</text>
+  <rect x="160" y="70" width="130" height="34" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="225" y="91" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706" font-family="monospace">rs1</text>
+  <rect x="290" y="70" width="50" height="34" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="315" y="91" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669" font-family="monospace">001</text>
+  <rect x="340" y="70" width="130" height="34" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="405" y="91" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626" font-family="monospace">rd</text>
+  <rect x="470" y="70" width="120" height="34" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="530" y="91" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937" font-family="monospace">1110011</text>
+  <text x="620" y="91" font-size="13" font-weight="bold" fill="#2563EB">CSRRW</text>
+  <text x="690" y="91" font-size="10" fill="#6B7280">rd = CSR; CSR = rs1</text>
+
+  <!-- CSRRS 인코딩 -->
+  <rect x="20" y="112" width="140" height="34" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="133" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB" font-family="monospace">csr[11:0]</text>
+  <rect x="160" y="112" width="130" height="34" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="225" y="133" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706" font-family="monospace">rs1</text>
+  <rect x="290" y="112" width="50" height="34" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="315" y="133" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669" font-family="monospace">010</text>
+  <rect x="340" y="112" width="130" height="34" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="405" y="133" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626" font-family="monospace">rd</text>
+  <rect x="470" y="112" width="120" height="34" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="530" y="133" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937" font-family="monospace">1110011</text>
+  <text x="620" y="133" font-size="13" font-weight="bold" fill="#2563EB">CSRRS</text>
+  <text x="690" y="133" font-size="10" fill="#6B7280">rd = CSR; CSR |= rs1</text>
+
+  <!-- CSRRC 인코딩 -->
+  <rect x="20" y="154" width="140" height="34" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB" font-family="monospace">csr[11:0]</text>
+  <rect x="160" y="154" width="130" height="34" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="225" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#D97706" font-family="monospace">rs1</text>
+  <rect x="290" y="154" width="50" height="34" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="315" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669" font-family="monospace">011</text>
+  <rect x="340" y="154" width="130" height="34" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="405" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626" font-family="monospace">rd</text>
+  <rect x="470" y="154" width="120" height="34" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="530" y="175" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937" font-family="monospace">1110011</text>
+  <text x="620" y="175" font-size="13" font-weight="bold" fill="#2563EB">CSRRC</text>
+  <text x="690" y="175" font-size="10" fill="#6B7280">rd = CSR; CSR &amp;= ~rs1</text>
+
+  <!-- 구분선 -->
+  <line x1="20" y1="200" x2="760" y2="200" stroke="#E5E7EB" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="390" y="220" text-anchor="middle" font-size="12" font-weight="bold" fill="#6B7280">즉치수(Immediate) 변형 — rs1 대신 5비트 zimm[4:0] 사용</text>
+
+  <!-- CSRRWI 인코딩 -->
+  <rect x="20" y="235" width="140" height="34" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="256" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB" font-family="monospace">csr[11:0]</text>
+  <rect x="160" y="235" width="130" height="34" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.5"/>
+  <text x="225" y="256" text-anchor="middle" font-size="11" font-weight="bold" fill="#4F46E5" font-family="monospace">zimm[4:0]</text>
+  <rect x="290" y="235" width="50" height="34" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="315" y="256" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669" font-family="monospace">101</text>
+  <rect x="340" y="235" width="130" height="34" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="405" y="256" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626" font-family="monospace">rd</text>
+  <rect x="470" y="235" width="120" height="34" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="530" y="256" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937" font-family="monospace">1110011</text>
+  <text x="620" y="256" font-size="13" font-weight="bold" fill="#4F46E5">CSRRWI</text>
+  <text x="690" y="256" font-size="10" fill="#6B7280">rd = CSR; CSR = zimm</text>
+
+  <!-- CSRRSI 인코딩 -->
+  <rect x="20" y="277" width="140" height="34" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="298" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB" font-family="monospace">csr[11:0]</text>
+  <rect x="160" y="277" width="130" height="34" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.5"/>
+  <text x="225" y="298" text-anchor="middle" font-size="11" font-weight="bold" fill="#4F46E5" font-family="monospace">zimm[4:0]</text>
+  <rect x="290" y="277" width="50" height="34" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="315" y="298" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669" font-family="monospace">110</text>
+  <rect x="340" y="277" width="130" height="34" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="405" y="298" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626" font-family="monospace">rd</text>
+  <rect x="470" y="277" width="120" height="34" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="530" y="298" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937" font-family="monospace">1110011</text>
+  <text x="620" y="298" font-size="13" font-weight="bold" fill="#4F46E5">CSRRSI</text>
+  <text x="690" y="298" font-size="10" fill="#6B7280">rd = CSR; CSR |= zimm</text>
+
+  <!-- CSRRCI 인코딩 -->
+  <rect x="20" y="319" width="140" height="34" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="340" text-anchor="middle" font-size="11" font-weight="bold" fill="#2563EB" font-family="monospace">csr[11:0]</text>
+  <rect x="160" y="319" width="130" height="34" rx="3" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1.5"/>
+  <text x="225" y="340" text-anchor="middle" font-size="11" font-weight="bold" fill="#4F46E5" font-family="monospace">zimm[4:0]</text>
+  <rect x="290" y="319" width="50" height="34" rx="3" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="315" y="340" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669" font-family="monospace">111</text>
+  <rect x="340" y="319" width="130" height="34" rx="3" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="405" y="340" text-anchor="middle" font-size="11" font-weight="bold" fill="#DC2626" font-family="monospace">rd</text>
+  <rect x="470" y="319" width="120" height="34" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="530" y="340" text-anchor="middle" font-size="11" font-weight="bold" fill="#1F2937" font-family="monospace">1110011</text>
+  <text x="620" y="340" font-size="13" font-weight="bold" fill="#4F46E5">CSRRCI</text>
+  <text x="690" y="340" font-size="10" fill="#6B7280">rd = CSR; CSR &amp;= ~zimm</text>
+
+  <!-- 범례 -->
+  <rect x="20" y="370" width="740" height="60" rx="6" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="40" y="390" font-size="11" font-weight="bold" fill="#1F2937">원자적 읽기-수정-쓰기 (Atomic Read-Modify-Write)</text>
+  <text x="40" y="408" font-size="10" fill="#6B7280">모든 CSR 명령어는 하나의 명령어 안에서 CSR 이전 값 읽기(→rd)와 새 값 쓰기(→CSR)를 동시에 수행합니다.</text>
+  <text x="40" y="422" font-size="10" fill="#6B7280">opcode = 1110011 (SYSTEM), funct3로 연산 종류 구분. zimm 변형은 rs1 필드를 5비트 무부호 즉치수로 재해석합니다.</text>
+</svg>

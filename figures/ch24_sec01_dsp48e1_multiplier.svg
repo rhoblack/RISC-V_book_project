@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 550" font-family="Pretendard, 'Noto Sans KR', sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-gray" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94A3B8"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="550" fill="#F8FAFC" rx="8"/>
+  <text x="430" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E293B">DSP48E1 슬라이스를 활용한 32x32 곱셈기 구조</text>
+
+  <!-- DSP48E1 블록 -->
+  <rect x="280" y="120" width="300" height="320" fill="white" stroke="#2563EB" stroke-width="3" rx="12"/>
+  <rect x="280" y="120" width="300" height="40" fill="#2563EB" rx="12"/>
+  <rect x="280" y="148" width="300" height="12" fill="#2563EB"/>
+  <text x="430" y="146" text-anchor="middle" font-size="16" font-weight="bold" fill="white">DSP48E1 Slice</text>
+
+  <!-- 내부 블록: Pre-Adder -->
+  <rect x="310" y="180" width="120" height="40" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="6"/>
+  <text x="370" y="205" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">Pre-Adder</text>
+  <text x="370" y="218" text-anchor="middle" font-size="10" fill="#64748B">(D +/- A)</text>
+
+  <!-- 내부 블록: 25x18 Multiplier -->
+  <rect x="310" y="240" width="240" height="50" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <text x="430" y="262" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">25 x 18 Multiplier</text>
+  <text x="430" y="278" text-anchor="middle" font-size="10" fill="#64748B">하드웨어 곱셈기 코어</text>
+
+  <!-- 내부 블록: 48-bit ALU -->
+  <rect x="310" y="310" width="240" height="50" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5" rx="6"/>
+  <text x="430" y="332" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">48-bit ALU/Acc</text>
+  <text x="430" y="348" text-anchor="middle" font-size="10" fill="#64748B">누적 연산 (P = P + M)</text>
+
+  <!-- 내부 블록: Pattern Detect -->
+  <rect x="310" y="380" width="240" height="35" fill="#E0F2FE" stroke="#3B82F6" stroke-width="1" rx="6"/>
+  <text x="430" y="402" text-anchor="middle" font-size="11" fill="#3B82F6">Pattern Detector</text>
+
+  <!-- 입력 포트 -->
+  <!-- A -->
+  <rect x="60" y="170" width="80" height="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="6"/>
+  <text x="100" y="192" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">A [29:0]</text>
+  <line x1="140" y1="188" x2="310" y2="195" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- B -->
+  <rect x="60" y="250" width="80" height="35" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="6"/>
+  <text x="100" y="272" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">B [17:0]</text>
+  <line x1="140" y1="268" x2="310" y2="262" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- C -->
+  <rect x="60" y="320" width="80" height="35" fill="#E0F2FE" stroke="#3B82F6" stroke-width="1.5" rx="6"/>
+  <text x="100" y="342" text-anchor="middle" font-size="13" font-weight="bold" fill="#3B82F6">C [47:0]</text>
+  <line x1="140" y1="338" x2="310" y2="335" stroke="#3B82F6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- D -->
+  <rect x="60" y="390" width="80" height="35" fill="#E0F2FE" stroke="#3B82F6" stroke-width="1.5" rx="6"/>
+  <text x="100" y="412" text-anchor="middle" font-size="13" font-weight="bold" fill="#3B82F6">D [24:0]</text>
+  <line x1="140" y1="408" x2="280" y2="408" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-gray)"/>
+
+  <!-- 출력 포트 -->
+  <rect x="700" y="310" width="100" height="40" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="6"/>
+  <text x="750" y="335" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">P [47:0]</text>
+  <line x1="550" y1="335" x2="700" y2="330" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- rs1, rs2 매핑 -->
+  <g transform="translate(0, 0)">
+    <rect x="60" y="70" width="180" height="30" fill="white" stroke="#2563EB" stroke-width="1.5" rx="4"/>
+    <text x="150" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">rs1[31:0] --> A[29:0]</text>
+
+    <rect x="350" y="70" width="180" height="30" fill="white" stroke="#2563EB" stroke-width="1.5" rx="4"/>
+    <text x="440" y="90" text-anchor="middle" font-size="12" font-weight="bold" fill="#2563EB">rs2[31:0] --> B[17:0]</text>
+  </g>
+
+  <!-- 하단 주석 -->
+  <rect x="60" y="465" width="740" height="70" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5" rx="8"/>
+  <text x="80" y="488" font-size="12" font-weight="bold" fill="#92400E">Basys 3 (XC7A35T) DSP48E1 리소스:</text>
+  <text x="80" y="506" font-size="12" fill="#78350F">- 총 90개 DSP48E1 슬라이스 보유, 25x18 곱셈기 내장</text>
+  <text x="80" y="522" font-size="12" fill="#78350F">- 32x32 부호 있는 곱셈: 4개 DSP48E1 슬라이스 사용 (부분곱 4회 + 누적)</text>
+</svg>

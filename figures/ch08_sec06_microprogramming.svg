@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" width="900" height="440" font-family="Pretendard, sans-serif">
+  <rect width="900" height="440" fill="#F8FAFF" rx="12"/>
+  <text x="450" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">마이크로프로그래밍 ROM 구조 개념도</text>
+
+  <defs>
+    <marker id="ma" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#374151"/>
+    </marker>
+    <marker id="mb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- 하드와이어드 방식 (왼쪽) -->
+  <rect x="30" y="50" width="360" height="340" rx="10" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2"/>
+  <text x="210" y="75" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E40AF">하드와이어드 (Hardwired)</text>
+  <text x="210" y="92" text-anchor="middle" font-size="11" fill="#1E40AF">우리가 구현한 FSM 방식</text>
+
+  <!-- FSM 블록 -->
+  <rect x="70" y="110" width="280" height="180" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="210" y="135" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">FSM 조합 논리 (게이트)</text>
+  <text x="210" y="157" text-anchor="middle" font-size="11" fill="#1E3A5F">always_comb {</text>
+  <text x="210" y="173" text-anchor="middle" font-size="11" fill="#1E3A5F">  case (current_state)</text>
+  <text x="210" y="189" text-anchor="middle" font-size="11" fill="#1E3A5F">    S_IF: pc_write=1, ...</text>
+  <text x="210" y="205" text-anchor="middle" font-size="11" fill="#1E3A5F">    S_EX_R: alu_op=2'b10,...</text>
+  <text x="210" y="221" text-anchor="middle" font-size="11" fill="#1E3A5F">    ...</text>
+  <text x="210" y="237" text-anchor="middle" font-size="11" fill="#1E3A5F">}</text>
+  <text x="210" y="270" text-anchor="middle" font-size="10" fill="#374151">상태 → 게이트 → 제어 신호</text>
+  <text x="210" y="284" text-anchor="middle" font-size="10" fill="#374151">(물리적 배선으로 고정)</text>
+
+  <!-- 특징 -->
+  <text x="70" y="315" font-size="11" fill="#166534">✓ 빠름 (게이트 지연만 존재)</text>
+  <text x="70" y="333" font-size="11" fill="#166534">✓ RISC 계열에 적합</text>
+  <text x="70" y="351" font-size="11" fill="#DC2626">✗ 수정하려면 회로 재설계 필요</text>
+  <text x="70" y="369" font-size="11" fill="#DC2626">✗ 명령어 추가 어려움</text>
+
+  <!-- 마이크로프로그래밍 방식 (오른쪽) -->
+  <rect x="510" y="50" width="360" height="340" rx="10" fill="#F5F3FF" stroke="#7C3AED" stroke-width="2"/>
+  <text x="690" y="75" text-anchor="middle" font-size="14" font-weight="bold" fill="#5B21B6">마이크로프로그래밍 (Microprogrammed)</text>
+  <text x="690" y="92" text-anchor="middle" font-size="11" fill="#5B21B6">x86 복잡한 명령어 처리에 사용</text>
+
+  <!-- 마이크로코드 ROM -->
+  <rect x="560" y="110" width="260" height="180" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="2"/>
+  <text x="690" y="132" text-anchor="middle" font-size="12" font-weight="bold" fill="#5B21B6">마이크로코드 ROM</text>
+  <!-- ROM 테이블 -->
+  <rect x="570" y="142" width="240" height="22" rx="3" fill="#7C3AED"/>
+  <text x="590" y="157" font-size="10" fill="white" font-weight="bold">주소 (상태)</text>
+  <text x="740" y="157" font-size="10" fill="white" font-weight="bold">제어 신호 패턴</text>
+  <rect x="570" y="164" width="240" height="18" fill="#C4B5FD"/>
+  <text x="590" y="177" font-size="10" fill="#1E1B4B">0x00 (IF)</text>
+  <text x="720" y="177" font-size="10" fill="#1E1B4B">1100_1000_01...</text>
+  <rect x="570" y="182" width="240" height="18" fill="#DDD6FE"/>
+  <text x="590" y="195" font-size="10" fill="#1E1B4B">0x01 (ID)</text>
+  <text x="720" y="195" font-size="10" fill="#1E1B4B">0000_0000_00...</text>
+  <rect x="570" y="200" width="240" height="18" fill="#C4B5FD"/>
+  <text x="590" y="213" font-size="10" fill="#1E1B4B">0x02 (EX_R)</text>
+  <text x="720" y="213" font-size="10" fill="#1E1B4B">0000_0001_10...</text>
+  <text x="690" y="238" text-anchor="middle" font-size="10" fill="#5B21B6">...</text>
+  <text x="690" y="255" text-anchor="middle" font-size="10" fill="#5B21B6">0x10 (WB_LD) → 0010_0001_00...</text>
+  <text x="690" y="280" text-anchor="middle" font-size="10" fill="#374151">상태 주소 → ROM 읽기 → 제어 신호</text>
+
+  <!-- 특징 -->
+  <text x="550" y="315" font-size="11" fill="#166534">✓ 명령어 추가 쉬움 (ROM 수정)</text>
+  <text x="550" y="333" font-size="11" fill="#166534">✓ 버그 수정 가능 (마이크로코드 패치)</text>
+  <text x="550" y="351" font-size="11" fill="#DC2626">✗ ROM 접근 지연 (속도 저하)</text>
+  <text x="550" y="369" font-size="11" fill="#DC2626">✗ CISC (x86)에 주로 사용</text>
+
+  <!-- 가운데 비유 -->
+  <text x="450" y="415" text-anchor="middle" font-size="12" fill="#374151">비유: 레시피를 <tspan font-weight="bold" fill="#1E40AF">외워서</tspan> 요리 vs 레시피 책을 <tspan font-weight="bold" fill="#5B21B6">읽으며</tspan> 요리</text>
+
+  <!-- 화살표 비교 -->
+  <line x1="393" y1="220" x2="507" y2="220" stroke="#374151" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="450" y="215" text-anchor="middle" font-size="11" fill="#374151">비교</text>
+</svg>

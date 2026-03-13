@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="a2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="a2r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="a2g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <rect width="960" height="600" fill="#F8FAFC" rx="12"/>
+  <text x="480" y="35" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">제어 신호 흐름도 (Control Signal Flow)</text>
+
+  <!-- 제어 유닛 중앙 -->
+  <rect x="340" y="60" width="280" height="80" rx="10" fill="#2563EB" stroke="#1D4ED8" stroke-width="2"/>
+  <text x="480" y="95" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">제어 유닛 (Control Unit)</text>
+  <text x="480" y="118" text-anchor="middle" font-size="12" fill="#DBEAFE">instruction[31:0] → 제어 신호</text>
+
+  <!-- 데이터패스 구성 요소들 -->
+  <!-- PC / PC+4 -->
+  <rect x="30" y="200" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="95" y="224" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">PC</text>
+  <text x="95" y="242" text-anchor="middle" font-size="10" fill="#6B7280">프로그램 카운터</text>
+
+  <!-- IMEM -->
+  <rect x="200" y="200" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="265" y="224" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">IMEM</text>
+  <text x="265" y="242" text-anchor="middle" font-size="10" fill="#6B7280">명령어 메모리</text>
+
+  <!-- 레지스터 파일 -->
+  <rect x="370" y="200" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="435" y="224" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">Register File</text>
+  <text x="435" y="242" text-anchor="middle" font-size="10" fill="#6B7280">레지스터 파일</text>
+
+  <!-- ImmGen -->
+  <rect x="370" y="290" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="435" y="314" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">ImmGen</text>
+  <text x="435" y="332" text-anchor="middle" font-size="10" fill="#6B7280">즉치수 생성기</text>
+
+  <!-- ALU -->
+  <rect x="560" y="200" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="625" y="224" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">ALU</text>
+  <text x="625" y="242" text-anchor="middle" font-size="10" fill="#6B7280">산술논리연산장치</text>
+
+  <!-- DMEM -->
+  <rect x="740" y="200" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="805" y="224" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">DMEM</text>
+  <text x="805" y="242" text-anchor="middle" font-size="10" fill="#6B7280">데이터 메모리</text>
+
+  <!-- Branch Comp -->
+  <rect x="560" y="290" width="130" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="625" y="314" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">Branch Comp</text>
+  <text x="625" y="332" text-anchor="middle" font-size="10" fill="#6B7280">분기 비교기</text>
+
+  <!-- WB MUX -->
+  <rect x="740" y="290" width="130" height="55" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="805" y="314" text-anchor="middle" font-size="13" font-weight="600" fill="#1E293B">WB MUX</text>
+  <text x="805" y="332" text-anchor="middle" font-size="10" fill="#6B7280">Write-Back 선택</text>
+
+  <!-- 제어 신호 화살표들 (빨간색 = 제어) -->
+  <!-- PCSel → PC -->
+  <line x1="380" y1="140" x2="95" y2="198" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="220" y="162" font-size="10" fill="#DC2626" font-weight="600">PCSel</text>
+
+  <!-- RegWEn → RF -->
+  <line x1="435" y1="140" x2="435" y2="198" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="450" y="175" font-size="10" fill="#DC2626" font-weight="600">RegWEn</text>
+
+  <!-- ImmSel → ImmGen -->
+  <line x1="430" y1="140" x2="420" y2="288" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="400" y="270" font-size="10" fill="#DC2626" font-weight="600">ImmSel</text>
+
+  <!-- BSel / ASel → ALU 입력 MUX (표현) -->
+  <line x1="520" y1="140" x2="570" y2="198" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="530" y="162" font-size="10" fill="#DC2626" font-weight="600">ASel, BSel</text>
+
+  <!-- ALUSel → ALU -->
+  <line x1="560" y1="140" x2="625" y2="198" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="600" y="162" font-size="10" fill="#DC2626" font-weight="600">ALUSel</text>
+
+  <!-- MemRW → DMEM -->
+  <line x1="600" y1="140" x2="780" y2="198" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="710" y="162" font-size="10" fill="#DC2626" font-weight="600">MemRW</text>
+
+  <!-- WBSel → WB MUX -->
+  <line x1="610" y1="140" x2="805" y2="288" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="740" y="270" font-size="10" fill="#DC2626" font-weight="600">WBSel</text>
+
+  <!-- BrUn → Branch Comp -->
+  <line x1="540" y1="140" x2="600" y2="288" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#a2r)"/>
+  <text x="545" y="270" font-size="10" fill="#DC2626" font-weight="600">BrUn</text>
+
+  <!-- BrEq/BrLt 피드백 (녹색) -->
+  <line x1="625" y1="345" x2="480" y2="140" stroke="#059669" stroke-width="1.5" marker-end="url(#a2g)"/>
+  <text x="560" y="380" font-size="10" fill="#059669" font-weight="600">BrEq, BrLt</text>
+
+  <!-- 데이터 흐름 화살표 (파란색) -->
+  <line x1="160" y1="227" x2="198" y2="227" stroke="#2563EB" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="330" y1="227" x2="368" y2="227" stroke="#2563EB" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="500" y1="227" x2="558" y2="227" stroke="#2563EB" stroke-width="2" marker-end="url(#a2)"/>
+  <line x1="690" y1="227" x2="738" y2="227" stroke="#2563EB" stroke-width="2" marker-end="url(#a2)"/>
+
+  <!-- 진리표 요약 -->
+  <rect x="30" y="390" width="900" height="190" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="480" y="418" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">제어 신호 요약 (주요 명령어 유형별)</text>
+
+  <!-- 헤더 -->
+  <rect x="40" y="430" width="880" height="25" rx="3" fill="#2563EB"/>
+  <text x="100" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">유형</text>
+  <text x="195" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">PCSel</text>
+  <text x="280" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">ImmSel</text>
+  <text x="365" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">RegWEn</text>
+  <text x="450" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">BSel</text>
+  <text x="530" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">ASel</text>
+  <text x="615" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">ALUSel</text>
+  <text x="700" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">MemRW</text>
+  <text x="785" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">WBSel</text>
+  <text x="870" y="448" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="600">BrUn</text>
+
+  <!-- R-type -->
+  <text x="100" y="475" text-anchor="middle" font-size="11" fill="#1E293B" font-weight="600">R-type</text>
+  <text x="195" y="475" text-anchor="middle" font-size="10" fill="#475569">PC+4</text>
+  <text x="280" y="475" text-anchor="middle" font-size="10" fill="#475569">x</text>
+  <text x="365" y="475" text-anchor="middle" font-size="10" fill="#059669" font-weight="600">1</text>
+  <text x="450" y="475" text-anchor="middle" font-size="10" fill="#475569">Reg</text>
+  <text x="530" y="475" text-anchor="middle" font-size="10" fill="#475569">Reg</text>
+  <text x="615" y="475" text-anchor="middle" font-size="10" fill="#475569">f3/f7</text>
+  <text x="700" y="475" text-anchor="middle" font-size="10" fill="#475569">None</text>
+  <text x="785" y="475" text-anchor="middle" font-size="10" fill="#475569">ALU</text>
+  <text x="870" y="475" text-anchor="middle" font-size="10" fill="#475569">x</text>
+
+  <!-- I-type (ALU) -->
+  <rect x="40" y="483" width="880" height="20" fill="#F9FAFB"/>
+  <text x="100" y="498" text-anchor="middle" font-size="11" fill="#1E293B" font-weight="600">I-type</text>
+  <text x="195" y="498" text-anchor="middle" font-size="10" fill="#475569">PC+4</text>
+  <text x="280" y="498" text-anchor="middle" font-size="10" fill="#475569">I</text>
+  <text x="365" y="498" text-anchor="middle" font-size="10" fill="#059669" font-weight="600">1</text>
+  <text x="450" y="498" text-anchor="middle" font-size="10" fill="#475569">Imm</text>
+  <text x="530" y="498" text-anchor="middle" font-size="10" fill="#475569">Reg</text>
+  <text x="615" y="498" text-anchor="middle" font-size="10" fill="#475569">f3</text>
+  <text x="700" y="498" text-anchor="middle" font-size="10" fill="#475569">None</text>
+  <text x="785" y="498" text-anchor="middle" font-size="10" fill="#475569">ALU</text>
+  <text x="870" y="498" text-anchor="middle" font-size="10" fill="#475569">x</text>
+
+  <!-- Load -->
+  <text x="100" y="520" text-anchor="middle" font-size="11" fill="#1E293B" font-weight="600">Load</text>
+  <text x="195" y="520" text-anchor="middle" font-size="10" fill="#475569">PC+4</text>
+  <text x="280" y="520" text-anchor="middle" font-size="10" fill="#475569">I</text>
+  <text x="365" y="520" text-anchor="middle" font-size="10" fill="#059669" font-weight="600">1</text>
+  <text x="450" y="520" text-anchor="middle" font-size="10" fill="#475569">Imm</text>
+  <text x="530" y="520" text-anchor="middle" font-size="10" fill="#475569">Reg</text>
+  <text x="615" y="520" text-anchor="middle" font-size="10" fill="#475569">ADD</text>
+  <text x="700" y="520" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="600">Read</text>
+  <text x="785" y="520" text-anchor="middle" font-size="10" fill="#2563EB" font-weight="600">Mem</text>
+  <text x="870" y="520" text-anchor="middle" font-size="10" fill="#475569">x</text>
+
+  <!-- Store -->
+  <rect x="40" y="526" width="880" height="20" fill="#F9FAFB"/>
+  <text x="100" y="541" text-anchor="middle" font-size="11" fill="#1E293B" font-weight="600">Store</text>
+  <text x="195" y="541" text-anchor="middle" font-size="10" fill="#475569">PC+4</text>
+  <text x="280" y="541" text-anchor="middle" font-size="10" fill="#475569">S</text>
+  <text x="365" y="541" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">0</text>
+  <text x="450" y="541" text-anchor="middle" font-size="10" fill="#475569">Imm</text>
+  <text x="530" y="541" text-anchor="middle" font-size="10" fill="#475569">Reg</text>
+  <text x="615" y="541" text-anchor="middle" font-size="10" fill="#475569">ADD</text>
+  <text x="700" y="541" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">Write</text>
+  <text x="785" y="541" text-anchor="middle" font-size="10" fill="#475569">x</text>
+  <text x="870" y="541" text-anchor="middle" font-size="10" fill="#475569">x</text>
+
+  <!-- Branch -->
+  <text x="100" y="563" text-anchor="middle" font-size="11" fill="#1E293B" font-weight="600">Branch</text>
+  <text x="195" y="563" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">분기조건</text>
+  <text x="280" y="563" text-anchor="middle" font-size="10" fill="#475569">B</text>
+  <text x="365" y="563" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">0</text>
+  <text x="450" y="563" text-anchor="middle" font-size="10" fill="#475569">Imm</text>
+  <text x="530" y="563" text-anchor="middle" font-size="10" fill="#475569">PC</text>
+  <text x="615" y="563" text-anchor="middle" font-size="10" fill="#475569">ADD</text>
+  <text x="700" y="563" text-anchor="middle" font-size="10" fill="#475569">None</text>
+  <text x="785" y="563" text-anchor="middle" font-size="10" fill="#475569">x</text>
+  <text x="870" y="563" text-anchor="middle" font-size="10" fill="#475569">f3</text>
+
+  <!-- 범례 -->
+  <rect x="30" y="575" width="15" height="10" fill="#DC2626" rx="2"/>
+  <text x="50" y="584" font-size="10" fill="#475569">제어 신호 (Control)</text>
+  <rect x="170" y="575" width="15" height="10" fill="#2563EB" rx="2"/>
+  <text x="190" y="584" font-size="10" fill="#475569">데이터 흐름 (Data)</text>
+  <rect x="310" y="575" width="15" height="10" fill="#059669" rx="2"/>
+  <text x="330" y="584" font-size="10" fill="#475569">피드백 (Feedback)</text>
+</svg>

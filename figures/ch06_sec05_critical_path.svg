@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="ac" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#DC2626"/>
+    </marker>
+    <marker id="acb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="480" fill="#F8FAFC" rx="12"/>
+  <text x="500" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">임계 경로 분석 (Critical Path: Load 명령어)</text>
+  <text x="500" y="52" text-anchor="middle" font-size="12" fill="#6B7280">LW x5, 0(x10) — 가장 긴 전파 지연 경로</text>
+
+  <!-- 스테이지 블록들 -->
+  <!-- 1. PC -->
+  <rect x="30" y="100" width="100" height="80" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="80" y="135" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">PC</text>
+  <text x="80" y="155" text-anchor="middle" font-size="10" fill="#6B7280">t_pcq</text>
+  <text x="80" y="170" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">~0.5 ns</text>
+
+  <!-- 2. IMEM -->
+  <rect x="160" y="100" width="130" height="80" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="225" y="135" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">IMEM</text>
+  <text x="225" y="155" text-anchor="middle" font-size="10" fill="#6B7280">BRAM 읽기</text>
+  <text x="225" y="170" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">~3.0 ns</text>
+
+  <!-- 3. 디코더+RF -->
+  <rect x="320" y="100" width="130" height="80" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="385" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">Decoder</text>
+  <text x="385" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">+ RF Read</text>
+  <text x="385" y="170" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">~3.5 ns</text>
+
+  <!-- 4. ALU (주소 계산) -->
+  <rect x="480" y="100" width="120" height="80" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="540" y="135" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">ALU</text>
+  <text x="540" y="155" text-anchor="middle" font-size="10" fill="#6B7280">주소 계산 (ADD)</text>
+  <text x="540" y="170" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">~5.0 ns</text>
+
+  <!-- 5. DMEM -->
+  <rect x="630" y="100" width="130" height="80" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="695" y="135" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">DMEM</text>
+  <text x="695" y="155" text-anchor="middle" font-size="10" fill="#6B7280">BRAM 읽기</text>
+  <text x="695" y="170" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">~3.0 ns</text>
+
+  <!-- 6. WB MUX + RF Write -->
+  <rect x="790" y="100" width="130" height="80" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="855" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">WB MUX</text>
+  <text x="855" y="148" text-anchor="middle" font-size="12" fill="#6B7280">+ Setup</text>
+  <text x="855" y="170" text-anchor="middle" font-size="10" fill="#DC2626" font-weight="600">~1.0 ns</text>
+
+  <!-- 임계 경로 화살표 -->
+  <line x1="130" y1="140" x2="158" y2="140" stroke="#DC2626" stroke-width="3" marker-end="url(#ac)"/>
+  <line x1="290" y1="140" x2="318" y2="140" stroke="#DC2626" stroke-width="3" marker-end="url(#ac)"/>
+  <line x1="450" y1="140" x2="478" y2="140" stroke="#DC2626" stroke-width="3" marker-end="url(#ac)"/>
+  <line x1="600" y1="140" x2="628" y2="140" stroke="#DC2626" stroke-width="3" marker-end="url(#ac)"/>
+  <line x1="760" y1="140" x2="788" y2="140" stroke="#DC2626" stroke-width="3" marker-end="url(#ac)"/>
+
+  <!-- 총 지연 시간 -->
+  <rect x="200" y="210" width="600" height="55" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="2"/>
+  <text x="500" y="233" text-anchor="middle" font-size="15" font-weight="700" fill="#DC2626">총 임계 경로 지연: 0.5 + 3.0 + 3.5 + 5.0 + 3.0 + 1.0 = ~16.0 ns</text>
+  <text x="500" y="253" text-anchor="middle" font-size="13" fill="#DC2626">최대 동작 주파수: 1 / 16.0ns = ~62.5 MHz (이론) → Basys 3 실측: ~25-35 MHz</text>
+
+  <!-- 명령어별 경로 비교 -->
+  <rect x="30" y="290" width="940" height="170" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="500" y="318" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">명령어 유형별 경로 길이 비교</text>
+
+  <!-- 가로 막대 그래프 -->
+  <!-- Load (가장 긴 경로) -->
+  <text x="100" y="350" text-anchor="end" font-size="12" font-weight="600" fill="#1E293B">Load (LW)</text>
+  <rect x="110" y="336" width="750" height="22" rx="4" fill="#DC2626" opacity="0.8"/>
+  <text x="870" y="352" font-size="11" fill="#FFFFFF" font-weight="600">~16.0 ns (임계 경로)</text>
+
+  <!-- R-type -->
+  <text x="100" y="378" text-anchor="end" font-size="12" font-weight="600" fill="#1E293B">R-type</text>
+  <rect x="110" y="364" width="580" height="22" rx="4" fill="#2563EB" opacity="0.7"/>
+  <text x="700" y="380" font-size="11" fill="#FFFFFF" font-weight="600">~13.0 ns</text>
+
+  <!-- Store -->
+  <text x="100" y="406" text-anchor="end" font-size="12" font-weight="600" fill="#1E293B">Store (SW)</text>
+  <rect x="110" y="392" width="620" height="22" rx="4" fill="#3B82F6" opacity="0.7"/>
+  <text x="740" y="408" font-size="11" fill="#FFFFFF" font-weight="600">~13.5 ns</text>
+
+  <!-- Branch -->
+  <text x="100" y="434" text-anchor="end" font-size="12" font-weight="600" fill="#1E293B">Branch</text>
+  <rect x="110" y="420" width="540" height="22" rx="4" fill="#059669" opacity="0.7"/>
+  <text x="660" y="436" font-size="11" fill="#FFFFFF" font-weight="600">~12.0 ns</text>
+
+  <!-- 주석 -->
+  <text x="500" y="470" text-anchor="middle" font-size="11" fill="#6B7280" font-style="italic">단일 사이클 프로세서의 클럭 주기는 가장 느린 명령어(Load)에 맞춰야 합니다 — 이것이 멀티사이클/파이프라인의 동기 부여입니다.</text>
+</svg>

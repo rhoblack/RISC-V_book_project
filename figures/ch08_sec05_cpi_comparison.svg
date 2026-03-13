@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Pretendard, sans-serif">
+  <defs>
+    <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 제목 -->
+  <text x="450" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1F2937">단일 사이클 vs 멀티사이클 성능 비교</text>
+
+  <!-- ========== 왼쪽: CPI 비교 막대 차트 ========== -->
+  <text x="230" y="65" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">명령어별 CPI 비교</text>
+
+  <!-- Y축 -->
+  <line x1="80" y1="90" x2="80" y2="350" stroke="#1F2937" stroke-width="1.5"/>
+  <text x="25" y="100" font-size="11" fill="#6B7280">5</text>
+  <line x1="75" y1="97" x2="80" y2="97" stroke="#6B7280" stroke-width="1"/>
+  <text x="25" y="150" font-size="11" fill="#6B7280">4</text>
+  <line x1="75" y1="147" x2="80" y2="147" stroke="#6B7280" stroke-width="1"/>
+  <text x="25" y="200" font-size="11" fill="#6B7280">3</text>
+  <line x1="75" y1="197" x2="80" y2="197" stroke="#6B7280" stroke-width="1"/>
+  <text x="25" y="250" font-size="11" fill="#6B7280">2</text>
+  <line x1="75" y1="247" x2="80" y2="247" stroke="#6B7280" stroke-width="1"/>
+  <text x="25" y="300" font-size="11" fill="#6B7280">1</text>
+  <line x1="75" y1="297" x2="80" y2="297" stroke="#6B7280" stroke-width="1"/>
+
+  <!-- X축 -->
+  <line x1="80" y1="350" x2="420" y2="350" stroke="#1F2937" stroke-width="1.5"/>
+
+  <!-- 그리드 라인 -->
+  <line x1="80" y1="97" x2="420" y2="97" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="4,4"/>
+  <line x1="80" y1="147" x2="420" y2="147" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="4,4"/>
+  <line x1="80" y1="197" x2="420" y2="197" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="4,4"/>
+  <line x1="80" y1="247" x2="420" y2="247" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="4,4"/>
+  <line x1="80" y1="297" x2="420" y2="297" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="4,4"/>
+
+  <!-- 단일 사이클 (파란색) - CPI = 1 전부 -->
+  <!-- R-Type -->
+  <rect x="95" y="297" width="25" height="50" rx="2" fill="url(#gradBlue)"/>
+  <!-- Load -->
+  <rect x="155" y="297" width="25" height="50" rx="2" fill="url(#gradBlue)"/>
+  <!-- Store -->
+  <rect x="215" y="297" width="25" height="50" rx="2" fill="url(#gradBlue)"/>
+  <!-- Branch -->
+  <rect x="275" y="297" width="25" height="50" rx="2" fill="url(#gradBlue)"/>
+  <!-- U/J -->
+  <rect x="345" y="297" width="25" height="50" rx="2" fill="url(#gradBlue)"/>
+
+  <!-- 멀티사이클 (초록색) -->
+  <!-- R-Type: CPI=4 -->
+  <rect x="125" y="147" width="25" height="200" rx="2" fill="url(#gradGreen)"/>
+  <text x="137" y="140" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">4</text>
+  <!-- Load: CPI=5 -->
+  <rect x="185" y="97" width="25" height="250" rx="2" fill="url(#gradGreen)"/>
+  <text x="197" y="90" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">5</text>
+  <!-- Store: CPI=4 -->
+  <rect x="245" y="147" width="25" height="200" rx="2" fill="url(#gradGreen)"/>
+  <text x="257" y="140" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">4</text>
+  <!-- Branch: CPI=3 -->
+  <rect x="305" y="197" width="25" height="150" rx="2" fill="url(#gradGreen)"/>
+  <text x="317" y="190" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">3</text>
+  <!-- U/J: CPI=4 -->
+  <rect x="375" y="147" width="25" height="200" rx="2" fill="url(#gradGreen)"/>
+  <text x="387" y="140" text-anchor="middle" font-size="11" font-weight="bold" fill="#059669">4</text>
+
+  <!-- 단일 사이클 CPI 레이블 -->
+  <text x="107" y="292" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563EB">1</text>
+  <text x="167" y="292" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563EB">1</text>
+  <text x="227" y="292" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563EB">1</text>
+  <text x="287" y="292" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563EB">1</text>
+  <text x="357" y="292" text-anchor="middle" font-size="10" font-weight="bold" fill="#2563EB">1</text>
+
+  <!-- X축 레이블 -->
+  <text x="120" y="370" text-anchor="middle" font-size="11" fill="#1F2937">R/I</text>
+  <text x="180" y="370" text-anchor="middle" font-size="11" fill="#1F2937">Load</text>
+  <text x="240" y="370" text-anchor="middle" font-size="11" fill="#1F2937">Store</text>
+  <text x="300" y="370" text-anchor="middle" font-size="11" fill="#1F2937">Branch</text>
+  <text x="370" y="370" text-anchor="middle" font-size="11" fill="#1F2937">U/J</text>
+
+  <!-- Y축 레이블 -->
+  <text x="15" y="220" font-size="12" fill="#1F2937" transform="rotate(-90,15,220)">CPI (사이클/명령어)</text>
+
+  <!-- 범례 -->
+  <rect x="90" y="385" width="14" height="14" rx="2" fill="url(#gradBlue)"/>
+  <text x="110" y="397" font-size="11" fill="#1F2937">단일 사이클 (CPI=1)</text>
+  <rect x="230" y="385" width="14" height="14" rx="2" fill="url(#gradGreen)"/>
+  <text x="250" y="397" font-size="11" fill="#1F2937">멀티사이클 (CPI=3~5)</text>
+
+  <!-- ========== 오른쪽: 성능 요약 테이블 ========== -->
+  <rect x="470" y="70" width="410" height="340" rx="8" fill="white" stroke="#E5E7EB" stroke-width="1.5"/>
+  <text x="675" y="98" text-anchor="middle" font-size="14" font-weight="bold" fill="#2563EB">성능 분석 요약</text>
+
+  <!-- 테이블 헤더 -->
+  <rect x="485" y="110" width="380" height="30" rx="4" fill="#2563EB"/>
+  <text x="560" y="130" text-anchor="middle" font-size="11" fill="white" font-weight="bold">항목</text>
+  <text x="710" y="130" text-anchor="middle" font-size="11" fill="white" font-weight="bold">단일 사이클</text>
+  <text x="830" y="130" text-anchor="middle" font-size="11" fill="white" font-weight="bold">멀티사이클</text>
+
+  <!-- 행 1 -->
+  <text x="560" y="160" text-anchor="middle" font-size="11" fill="#1F2937">CPI</text>
+  <text x="710" y="160" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">1.0</text>
+  <text x="830" y="160" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">~4.0 (가중)</text>
+  <line x1="485" y1="170" x2="865" y2="170" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- 행 2 -->
+  <rect x="485" y="172" width="380" height="30" fill="#F9FAFB"/>
+  <text x="560" y="192" text-anchor="middle" font-size="11" fill="#1F2937">클럭 주기 (T_clk)</text>
+  <text x="710" y="192" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">T_longest</text>
+  <text x="830" y="192" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">T_longest / 5</text>
+  <line x1="485" y1="202" x2="865" y2="202" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- 행 3 -->
+  <text x="560" y="222" text-anchor="middle" font-size="11" fill="#1F2937">클럭 주파수</text>
+  <text x="710" y="222" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">~25 MHz</text>
+  <text x="830" y="222" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">~80 MHz</text>
+  <line x1="485" y1="232" x2="865" y2="232" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- 행 4 -->
+  <rect x="485" y="234" width="380" height="30" fill="#F9FAFB"/>
+  <text x="560" y="254" text-anchor="middle" font-size="11" fill="#1F2937">실행 시간 계산</text>
+  <text x="710" y="254" text-anchor="middle" font-size="11" fill="#2563EB" font-weight="bold">N x T_long</text>
+  <text x="830" y="254" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">CPI_avg x N x T_short</text>
+  <line x1="485" y1="264" x2="865" y2="264" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- 행 5 -->
+  <text x="560" y="284" text-anchor="middle" font-size="11" fill="#1F2937">하드웨어 공유</text>
+  <text x="710" y="284" text-anchor="middle" font-size="11" fill="#DC2626">불가 (중복)</text>
+  <text x="830" y="284" text-anchor="middle" font-size="11" fill="#059669" font-weight="bold">가능 (ALU, Mem)</text>
+  <line x1="485" y1="294" x2="865" y2="294" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- 행 6 -->
+  <rect x="485" y="296" width="380" height="30" fill="#F9FAFB"/>
+  <text x="560" y="316" text-anchor="middle" font-size="11" fill="#1F2937">추가 레지스터</text>
+  <text x="710" y="316" text-anchor="middle" font-size="11" fill="#059669">불필요</text>
+  <text x="830" y="316" text-anchor="middle" font-size="11" fill="#DC2626">A, B, ALUOut, MDR</text>
+  <line x1="485" y1="326" x2="865" y2="326" stroke="#E5E7EB" stroke-width="0.5"/>
+
+  <!-- 행 7: 제어 복잡도 -->
+  <text x="560" y="348" text-anchor="middle" font-size="11" fill="#1F2937">제어 복잡도</text>
+  <text x="710" y="348" text-anchor="middle" font-size="11" fill="#059669">조합 로직</text>
+  <text x="830" y="348" text-anchor="middle" font-size="11" fill="#DC2626">FSM 필요</text>
+
+  <!-- ========== 하단 수식 ========== -->
+  <rect x="470" y="420" width="410" height="80" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="675" y="445" text-anchor="middle" font-size="13" font-weight="bold" fill="#2563EB">성능 비교 공식</text>
+  <text x="675" y="470" text-anchor="middle" font-size="12" fill="#1F2937" font-family="monospace">실행시간 = 명령어수 x CPI x T_clk</text>
+  <text x="675" y="490" text-anchor="middle" font-size="11" fill="#6B7280">멀티사이클: 높은 CPI, 낮은 T_clk → 명령어 믹스에 따라 유불리 결정</text>
+
+  <!-- CPI 가중 평균 계산 -->
+  <rect x="60" y="415" width="370" height="90" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+  <text x="245" y="438" text-anchor="middle" font-size="12" font-weight="bold" fill="#059669">예시: 가중 평균 CPI 계산 (gcc 벤치마크)</text>
+  <text x="245" y="458" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">R/I: 40% x 4 = 1.60</text>
+  <text x="245" y="473" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">Load: 25% x 5 = 1.25  |  Store: 10% x 4 = 0.40</text>
+  <text x="245" y="488" text-anchor="middle" font-size="10" fill="#1F2937" font-family="monospace">Branch: 20% x 3 = 0.60  |  U/J: 5% x 4 = 0.20</text>
+  <text x="245" y="505" text-anchor="middle" font-size="12" font-weight="bold" fill="#059669">CPI_avg = 4.05</text>
+</svg>

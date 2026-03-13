@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr6" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+  <style>
+    .box      { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; rx: 8; }
+    .test-box { fill: #FEF3C7; stroke: #D97706; stroke-width: 2; rx: 8; }
+    .pass-box { fill: #D1FAE5; stroke: #059669; stroke-width: 2; rx: 8; }
+    .label    { font-size: 13px; fill: #1E3A5F; text-anchor: middle; font-weight: bold; }
+    .sub      { font-size: 11px; fill: #475569; text-anchor: middle; }
+    .title    { font-size: 18px; fill: #1E3A5F; font-weight: bold; text-anchor: middle; }
+    .code     { font-size: 10px; fill: #6B7280; text-anchor: middle; font-family: monospace; }
+  </style>
+
+  <text x="400" y="30" class="title">예외/인터럽트 테스트벤치 검증 흐름</text>
+
+  <!-- Test Scenario 1: ECALL -->
+  <rect x="30" y="60" width="160" height="80" class="test-box"/>
+  <text x="110" y="85" class="label" style="fill:#92400E;">시나리오 1</text>
+  <text x="110" y="105" class="sub" style="fill:#92400E;">ECALL 예외</text>
+  <text x="110" y="125" class="code">mcause == 11</text>
+
+  <!-- Test Scenario 2: Illegal -->
+  <rect x="30" y="160" width="160" height="80" class="test-box"/>
+  <text x="110" y="185" class="label" style="fill:#92400E;">시나리오 2</text>
+  <text x="110" y="205" class="sub" style="fill:#92400E;">Illegal Instruction</text>
+  <text x="110" y="225" class="code">mcause == 2</text>
+
+  <!-- Test Scenario 3: Timer -->
+  <rect x="30" y="260" width="160" height="80" class="test-box"/>
+  <text x="110" y="285" class="label" style="fill:#92400E;">시나리오 3</text>
+  <text x="110" y="305" class="sub" style="fill:#92400E;">타이머 인터럽트</text>
+  <text x="110" y="325" class="code">mcause == 0x80000007</text>
+
+  <!-- DUT -->
+  <rect x="260" y="100" width="200" height="200" class="box"/>
+  <text x="360" y="155" class="label">DUT</text>
+  <text x="360" y="180" class="sub">파이프라인 CPU</text>
+  <text x="360" y="200" class="sub">+ CSR 모듈</text>
+  <text x="360" y="220" class="sub">+ 예외 제어 유닛</text>
+  <text x="360" y="250" class="code">pipeline_top_with_trap</text>
+
+  <!-- Arrows to DUT -->
+  <line x1="190" y1="100" x2="260" y2="160" stroke="#D97706" stroke-width="1.5" marker-end="url(#arr6)"/>
+  <line x1="190" y1="200" x2="260" y2="200" stroke="#D97706" stroke-width="1.5" marker-end="url(#arr6)"/>
+  <line x1="190" y1="300" x2="260" y2="240" stroke="#D97706" stroke-width="1.5" marker-end="url(#arr6)"/>
+
+  <!-- Checker boxes -->
+  <rect x="530" y="60" width="230" height="70" class="pass-box"/>
+  <text x="645" y="85" class="label" style="fill:#059669;">검증 1: CSR 값 확인</text>
+  <text x="645" y="105" class="sub" style="fill:#065F46;">mepc, mcause, mstatus 정확성</text>
+  <text x="645" y="120" class="code">assert(csr_mepc == expected_pc)</text>
+
+  <rect x="530" y="150" width="230" height="70" class="pass-box"/>
+  <text x="645" y="175" class="label" style="fill:#059669;">검증 2: 파이프라인 동작</text>
+  <text x="645" y="195" class="sub" style="fill:#065F46;">플러시 확인, 후속 명령어 취소</text>
+  <text x="645" y="210" class="code">assert(pipeline flushed)</text>
+
+  <rect x="530" y="240" width="230" height="70" class="pass-box"/>
+  <text x="645" y="265" class="label" style="fill:#059669;">검증 3: MRET 복귀</text>
+  <text x="645" y="285" class="sub" style="fill:#065F46;">PC 복원, MIE 복원 확인</text>
+  <text x="645" y="300" class="code">assert(pc == mepc_saved)</text>
+
+  <rect x="530" y="330" width="230" height="50" class="pass-box"/>
+  <text x="645" y="355" class="label" style="fill:#059669;">검증 4: 응답 시간 측정</text>
+  <text x="645" y="373" class="sub" style="fill:#065F46;">인터럽트 → 핸들러 진입 사이클 수</text>
+
+  <!-- Arrows from DUT to checkers -->
+  <line x1="460" y1="160" x2="530" y2="95" stroke="#059669" stroke-width="1.5" marker-end="url(#arr6)"/>
+  <line x1="460" y1="185" x2="530" y2="185" stroke="#059669" stroke-width="1.5" marker-end="url(#arr6)"/>
+  <line x1="460" y1="220" x2="530" y2="275" stroke="#059669" stroke-width="1.5" marker-end="url(#arr6)"/>
+  <line x1="460" y1="260" x2="530" y2="355" stroke="#059669" stroke-width="1.5" marker-end="url(#arr6)"/>
+</svg>

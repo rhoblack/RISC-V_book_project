@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 440" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="440" fill="#F8FAFC" rx="8"/>
+  <text x="450" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1E293B">AHB 버스 시뮬레이션 파형 — 읽기 후 쓰기 시퀀스</text>
+
+  <!-- 사이클 번호 -->
+  <text x="170" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 1</text>
+  <text x="280" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 2</text>
+  <text x="390" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 3</text>
+  <text x="500" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 4</text>
+  <text x="610" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 5</text>
+  <text x="720" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 6</text>
+  <text x="830" y="52" text-anchor="middle" font-size="9" fill="#94A3B8">Cycle 7</text>
+
+  <!-- HCLK -->
+  <text x="25" y="78" font-size="10" font-weight="600" fill="#64748B">HCLK</text>
+  <polyline points="110,85 110,65 170,65 170,85 230,85 230,65 280,65 280,85 340,85 340,65 390,65 390,85 450,85 450,65 500,65 500,85 560,85 560,65 610,65 610,85 670,85 670,65 720,65 720,85 780,85 780,65 830,65 830,85 870,85" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+
+  <!-- 수직 점선 -->
+  <line x1="110" y1="55" x2="110" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="230" y1="55" x2="230" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="340" y1="55" x2="340" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="450" y1="55" x2="450" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="560" y1="55" x2="560" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="670" y1="55" x2="670" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="780" y1="55" x2="780" y2="430" stroke="#E5E7EB" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <!-- HTRANS -->
+  <text x="25" y="118" font-size="10" font-weight="600" fill="#2563EB">HTRANS</text>
+  <rect x="110" y="100" width="120" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="170" y="116" text-anchor="middle" font-size="9" font-weight="600" fill="#2563EB">NONSEQ</text>
+  <rect x="230" y="100" width="110" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="285" y="116" text-anchor="middle" font-size="9" font-weight="600" fill="#2563EB">NONSEQ</text>
+  <rect x="340" y="100" width="110" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="395" y="116" text-anchor="middle" font-size="9" fill="#94A3B8">IDLE</text>
+  <rect x="450" y="100" width="110" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="505" y="116" text-anchor="middle" font-size="9" fill="#94A3B8">IDLE</text>
+  <rect x="560" y="100" width="110" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="615" y="116" text-anchor="middle" font-size="9" font-weight="600" fill="#2563EB">NONSEQ</text>
+
+  <!-- HADDR -->
+  <text x="25" y="158" font-size="10" font-weight="600" fill="#2563EB">HADDR</text>
+  <rect x="110" y="140" width="120" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="170" y="156" text-anchor="middle" font-size="9" font-weight="600" fill="#1E293B">0x00001000</text>
+  <rect x="230" y="140" width="110" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="285" y="156" text-anchor="middle" font-size="9" font-weight="600" fill="#1E293B">0x00001004</text>
+  <rect x="340" y="140" width="220" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="450" y="156" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="560" y="140" width="110" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="615" y="156" text-anchor="middle" font-size="9" font-weight="600" fill="#1E293B">0x00001008</text>
+
+  <!-- HWRITE -->
+  <text x="25" y="198" font-size="10" font-weight="600" fill="#2563EB">HWRITE</text>
+  <rect x="110" y="180" width="120" height="24" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="2"/>
+  <text x="170" y="196" text-anchor="middle" font-size="9" fill="#059669">READ (0)</text>
+  <rect x="230" y="180" width="110" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="285" y="196" text-anchor="middle" font-size="9" fill="#2563EB">WRITE (1)</text>
+  <rect x="340" y="180" width="220" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="450" y="196" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="560" y="180" width="110" height="24" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="2"/>
+  <text x="615" y="196" text-anchor="middle" font-size="9" fill="#059669">READ (0)</text>
+
+  <!-- HWDATA -->
+  <text x="25" y="238" font-size="10" font-weight="600" fill="#2563EB">HWDATA</text>
+  <rect x="110" y="220" width="120" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="170" y="236" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="230" y="220" width="110" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="285" y="236" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="340" y="220" width="110" height="24" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" rx="2"/>
+  <text x="395" y="236" text-anchor="middle" font-size="9" font-weight="600" fill="#1E293B">0xDEADBEEF</text>
+  <rect x="450" y="220" width="110" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="505" y="236" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+
+  <!-- HRDATA -->
+  <text x="25" y="278" font-size="10" font-weight="600" fill="#059669">HRDATA</text>
+  <rect x="110" y="260" width="120" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="170" y="276" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="230" y="260" width="110" height="24" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="2"/>
+  <text x="285" y="276" text-anchor="middle" font-size="9" font-weight="600" fill="#059669">0x12345678</text>
+  <rect x="340" y="260" width="220" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="450" y="276" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="560" y="260" width="110" height="24" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1" rx="2"/>
+  <text x="615" y="276" text-anchor="middle" font-size="9" fill="#94A3B8">---</text>
+  <rect x="670" y="260" width="110" height="24" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" rx="2"/>
+  <text x="725" y="276" text-anchor="middle" font-size="9" font-weight="600" fill="#059669">0xCAFE0000</text>
+
+  <!-- HREADY -->
+  <text x="25" y="318" font-size="10" font-weight="600" fill="#059669">HREADY</text>
+  <polyline points="110,310 230,310 230,310 340,310 340,310 450,310 450,310 560,310 560,310 670,310 670,310 780,310 780,310 870,310" fill="none" stroke="#059669" stroke-width="2"/>
+  <text x="500" y="308" text-anchor="middle" font-size="9" fill="#059669">항상 HIGH (웨이트 없음)</text>
+
+  <!-- HRESP -->
+  <text x="25" y="348" font-size="10" font-weight="600" fill="#059669">HRESP</text>
+  <rect x="110" y="335" width="760" height="20" fill="#ECFDF5" stroke="#059669" stroke-width="1" rx="2"/>
+  <text x="490" y="349" text-anchor="middle" font-size="9" fill="#059669">OKAY (0) — 모든 전송 정상 완료</text>
+
+  <!-- 페이즈 표시 -->
+  <rect x="110" y="370" width="120" height="22" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="170" y="385" text-anchor="middle" font-size="8" font-weight="600" fill="#2563EB">Addr Phase (RD)</text>
+
+  <rect x="230" y="370" width="110" height="22" rx="3" fill="#ECFDF5" stroke="#059669" stroke-width="1"/>
+  <text x="285" y="385" text-anchor="middle" font-size="8" font-weight="600" fill="#059669">Data Phase (RD)</text>
+  <rect x="230" y="395" width="110" height="22" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="285" y="410" text-anchor="middle" font-size="8" font-weight="600" fill="#2563EB">Addr Phase (WR)</text>
+
+  <rect x="340" y="395" width="110" height="22" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="395" y="410" text-anchor="middle" font-size="8" font-weight="600" fill="#D97706">Data Phase (WR)</text>
+
+  <text x="450" y="432" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">Address Phase와 Data Phase가 1사이클 오프셋으로 중첩 (파이프라인 전송)</text>
+</svg>

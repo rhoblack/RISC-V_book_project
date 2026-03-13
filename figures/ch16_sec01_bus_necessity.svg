@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 480" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+  </defs>
+
+  <rect width="850" height="480" fill="#F8FAFC" rx="8"/>
+  <text x="425" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">Ch15 자체 프로토콜 vs 표준 버스 비교</text>
+
+  <!-- 왼쪽: 자체 프로토콜 (문제) -->
+  <rect x="20" y="55" width="390" height="400" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="215" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#DC2626">자체 프로토콜 (Ch15)</text>
+  <text x="215" y="98" text-anchor="middle" font-size="11" fill="#6B7280">Point-to-Point, 비표준 신호</text>
+
+  <!-- CPU -->
+  <rect x="140" y="120" width="100" height="45" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="190" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">CPU</text>
+  <text x="190" y="155" text-anchor="middle" font-size="9" fill="#64748B">파이프라인</text>
+
+  <!-- 슬레이브들 -->
+  <rect x="40" y="220" width="80" height="40" rx="5" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="80" y="244" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">SRAM</text>
+
+  <rect x="140" y="220" width="80" height="40" rx="5" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="180" y="244" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">UART</text>
+
+  <rect x="240" y="220" width="80" height="40" rx="5" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="280" y="244" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">GPIO</text>
+
+  <!-- 스파게티 배선 -->
+  <line x1="160" y1="165" x2="80" y2="220" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arrowR)"/>
+  <line x1="190" y1="165" x2="180" y2="220" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arrowR)"/>
+  <line x1="220" y1="165" x2="280" y2="220" stroke="#DC2626" stroke-width="1.5" marker-end="url(#arrowR)"/>
+
+  <!-- 문제점 텍스트 -->
+  <rect x="40" y="290" width="330" height="150" rx="6" fill="white" stroke="#FCA5A5" stroke-width="1"/>
+  <text x="55" y="312" font-size="11" font-weight="600" fill="#DC2626">문제점:</text>
+  <text x="55" y="332" font-size="10" fill="#1E293B">1. 슬레이브 추가 시 CPU 포트 수정 필요</text>
+  <text x="55" y="352" font-size="10" fill="#1E293B">2. 신호 이름·타이밍 규칙 비표준</text>
+  <text x="55" y="372" font-size="10" fill="#1E293B">3. 외부 IP 재사용 불가</text>
+  <text x="55" y="392" font-size="10" fill="#1E293B">4. 검증 도구·체커 부재</text>
+  <text x="55" y="420" font-size="10" font-weight="600" fill="#DC2626">→ 확장할수록 복잡도 O(N) 증가</text>
+
+  <!-- 오른쪽: 표준 버스 (해결) -->
+  <rect x="440" y="55" width="390" height="400" rx="8" fill="#F0FDF4" stroke="#059669" stroke-width="1.5"/>
+  <text x="635" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">AMBA AHB 표준 버스 (Ch16)</text>
+  <text x="635" y="98" text-anchor="middle" font-size="11" fill="#6B7280">공유 버스, 표준화된 신호</text>
+
+  <!-- CPU -->
+  <rect x="560" y="120" width="100" height="45" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="610" y="140" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">AHB Master</text>
+  <text x="610" y="155" text-anchor="middle" font-size="9" fill="#64748B">CPU (캐시 브리지)</text>
+
+  <!-- 공유 버스 -->
+  <rect x="470" y="185" width="310" height="20" rx="4" fill="#2563EB"/>
+  <text x="625" y="199" text-anchor="middle" font-size="10" font-weight="600" fill="white">AHB Bus (HADDR, HWDATA, HRDATA, ...)</text>
+
+  <line x1="610" y1="165" x2="610" y2="185" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- 슬레이브들 -->
+  <rect x="470" y="230" width="80" height="40" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="510" y="254" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">SRAM</text>
+
+  <rect x="575" y="230" width="80" height="40" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="615" y="254" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">UART</text>
+
+  <rect x="680" y="230" width="80" height="40" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="720" y="254" text-anchor="middle" font-size="10" font-weight="600" fill="#1E293B">GPIO</text>
+
+  <line x1="510" y1="205" x2="510" y2="230" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+  <line x1="615" y1="205" x2="615" y2="230" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+  <line x1="720" y1="205" x2="720" y2="230" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrowB)"/>
+
+  <!-- 장점 텍스트 -->
+  <rect x="470" y="290" width="330" height="150" rx="6" fill="white" stroke="#86EFAC" stroke-width="1"/>
+  <text x="485" y="312" font-size="11" font-weight="600" fill="#059669">장점:</text>
+  <text x="485" y="332" font-size="10" fill="#1E293B">1. 슬레이브 추가 시 디코더만 수정</text>
+  <text x="485" y="352" font-size="10" fill="#1E293B">2. ARM 공식 스펙 기반 표준 타이밍</text>
+  <text x="485" y="372" font-size="10" fill="#1E293B">3. 타사 IP 즉시 연결 가능</text>
+  <text x="485" y="392" font-size="10" fill="#1E293B">4. SVA 프로토콜 체커로 자동 검증</text>
+  <text x="485" y="420" font-size="10" font-weight="600" fill="#059669">→ 확장해도 인터페이스 불변</text>
+</svg>

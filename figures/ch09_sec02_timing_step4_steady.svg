@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+
+  <!-- 배경 -->
+  <rect width="700" height="400" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="350" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E293B">타이밍 다이어그램 읽기 Step 4: Steady-State (정상 상태)</text>
+
+  <!-- 격자 배경 -->
+  <rect x="80" y="60" width="560" height="240" fill="white" stroke="#E2E8F0" rx="4"/>
+
+  <!-- 격자 세로선 -->
+  <line x1="150" y1="60" x2="150" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="220" y1="60" x2="220" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="290" y1="60" x2="290" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="360" y1="60" x2="360" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="430" y1="60" x2="430" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="500" y1="60" x2="500" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="570" y1="60" x2="570" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- 격자 가로선 -->
+  <line x1="80" y1="108" x2="640" y2="108" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="80" y1="156" x2="640" y2="156" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="80" y1="204" x2="640" y2="204" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="80" y1="252" x2="640" y2="252" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- X축 사이클 번호 -->
+  <text x="115" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C1</text>
+  <text x="185" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C2</text>
+  <text x="255" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C3</text>
+  <text x="325" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C4</text>
+  <text x="395" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#F59E0B">★C5</text>
+  <text x="465" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C6</text>
+  <text x="535" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C7</text>
+  <text x="605" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C8</text>
+
+  <!-- Y축 명령어 번호 -->
+  <text x="70" y="89"  text-anchor="end" font-size="10" font-weight="bold" fill="#1D4ED8">I1</text>
+  <text x="70" y="137" text-anchor="end" font-size="10" font-weight="bold" fill="#1D4ED8">I2</text>
+  <text x="70" y="185" text-anchor="end" font-size="10" font-weight="bold" fill="#1D4ED8">I3</text>
+  <text x="70" y="233" text-anchor="end" font-size="10" font-weight="bold" fill="#1D4ED8">I4</text>
+  <text x="70" y="281" text-anchor="end" font-size="10" font-weight="bold" fill="#1D4ED8">I5</text>
+
+  <!-- I1: IF ID EX MEM WB -->
+  <rect x="82"  y="62" width="67" height="45" fill="#DBEAFE" rx="3" stroke="#93C5FD"/>
+  <text x="115" y="89" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">IF</text>
+  <rect x="152" y="62" width="67" height="45" fill="#BBF7D0" rx="3" stroke="#6EE7B7"/>
+  <text x="185" y="89" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">ID</text>
+  <rect x="222" y="62" width="67" height="45" fill="#FEF3C7" rx="3" stroke="#FCD34D"/>
+  <text x="255" y="89" text-anchor="middle" font-size="10" font-weight="bold" fill="#78350F">EX</text>
+  <rect x="292" y="62" width="67" height="45" fill="#FCE7F3" rx="3" stroke="#F9A8D4"/>
+  <text x="325" y="89" text-anchor="middle" font-size="10" font-weight="bold" fill="#831843">MEM</text>
+  <rect x="362" y="62" width="67" height="45" fill="#F3E8FF" rx="3" stroke="#C4B5FD"/>
+  <text x="395" y="89" text-anchor="middle" font-size="10" font-weight="bold" fill="#4C1D95">WB</text>
+  <rect x="432" y="62" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="502" y="62" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="572" y="62" width="67" height="45" fill="#F1F5F9" rx="3"/>
+
+  <!-- I2 -->
+  <rect x="82"  y="110" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="152" y="110" width="67" height="45" fill="#DBEAFE" rx="3" stroke="#93C5FD"/>
+  <text x="185" y="137" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">IF</text>
+  <rect x="222" y="110" width="67" height="45" fill="#BBF7D0" rx="3" stroke="#6EE7B7"/>
+  <text x="255" y="137" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">ID</text>
+  <rect x="292" y="110" width="67" height="45" fill="#FEF3C7" rx="3" stroke="#FCD34D"/>
+  <text x="325" y="137" text-anchor="middle" font-size="10" font-weight="bold" fill="#78350F">EX</text>
+  <rect x="362" y="110" width="67" height="45" fill="#FCE7F3" rx="3" stroke="#F9A8D4"/>
+  <text x="395" y="137" text-anchor="middle" font-size="10" font-weight="bold" fill="#831843">MEM</text>
+  <rect x="432" y="110" width="67" height="45" fill="#F3E8FF" rx="3" stroke="#C4B5FD"/>
+  <text x="465" y="137" text-anchor="middle" font-size="10" font-weight="bold" fill="#4C1D95">WB</text>
+  <rect x="502" y="110" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="572" y="110" width="67" height="45" fill="#F1F5F9" rx="3"/>
+
+  <!-- I3 -->
+  <rect x="82"  y="158" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="152" y="158" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="222" y="158" width="67" height="45" fill="#DBEAFE" rx="3" stroke="#93C5FD"/>
+  <text x="255" y="185" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">IF</text>
+  <rect x="292" y="158" width="67" height="45" fill="#BBF7D0" rx="3" stroke="#6EE7B7"/>
+  <text x="325" y="185" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">ID</text>
+  <rect x="362" y="158" width="67" height="45" fill="#FEF3C7" rx="3" stroke="#FCD34D"/>
+  <text x="395" y="185" text-anchor="middle" font-size="10" font-weight="bold" fill="#78350F">EX</text>
+  <rect x="432" y="158" width="67" height="45" fill="#FCE7F3" rx="3" stroke="#F9A8D4"/>
+  <text x="465" y="185" text-anchor="middle" font-size="10" font-weight="bold" fill="#831843">MEM</text>
+  <rect x="502" y="158" width="67" height="45" fill="#F3E8FF" rx="3" stroke="#C4B5FD"/>
+  <text x="535" y="185" text-anchor="middle" font-size="10" font-weight="bold" fill="#4C1D95">WB</text>
+  <rect x="572" y="158" width="67" height="45" fill="#F1F5F9" rx="3"/>
+
+  <!-- I4 -->
+  <rect x="82"  y="206" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="152" y="206" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="222" y="206" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="292" y="206" width="67" height="45" fill="#DBEAFE" rx="3" stroke="#93C5FD"/>
+  <text x="325" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">IF</text>
+  <rect x="362" y="206" width="67" height="45" fill="#BBF7D0" rx="3" stroke="#6EE7B7"/>
+  <text x="395" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">ID</text>
+  <rect x="432" y="206" width="67" height="45" fill="#FEF3C7" rx="3" stroke="#FCD34D"/>
+  <text x="465" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#78350F">EX</text>
+  <rect x="502" y="206" width="67" height="45" fill="#FCE7F3" rx="3" stroke="#F9A8D4"/>
+  <text x="535" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#831843">MEM</text>
+  <rect x="572" y="206" width="67" height="45" fill="#F3E8FF" rx="3" stroke="#C4B5FD"/>
+  <text x="605" y="233" text-anchor="middle" font-size="10" font-weight="bold" fill="#4C1D95">WB</text>
+
+  <!-- I5 -->
+  <rect x="82"  y="254" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="152" y="254" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="222" y="254" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="292" y="254" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="362" y="254" width="67" height="45" fill="#DBEAFE" rx="3" stroke="#93C5FD"/>
+  <text x="395" y="281" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E40AF">IF</text>
+  <rect x="432" y="254" width="67" height="45" fill="#BBF7D0" rx="3" stroke="#6EE7B7"/>
+  <text x="465" y="281" text-anchor="middle" font-size="10" font-weight="bold" fill="#065F46">ID</text>
+  <rect x="502" y="254" width="67" height="45" fill="#FEF3C7" rx="3" stroke="#FCD34D"/>
+  <text x="535" y="281" text-anchor="middle" font-size="10" font-weight="bold" fill="#78350F">EX</text>
+  <rect x="572" y="254" width="67" height="45" fill="#FCE7F3" rx="3" stroke="#F9A8D4"/>
+  <text x="605" y="281" text-anchor="middle" font-size="10" font-weight="bold" fill="#831843">MEM</text>
+
+  <!-- Steady-state 강조 (C5 세로 열) -->
+  <rect x="362" y="58" width="69" height="246" fill="none" stroke="#F59E0B" stroke-width="2.5" rx="3"/>
+  <text x="396" y="48" text-anchor="middle" font-size="10" font-weight="bold" fill="#D97706">★ Steady-State</text>
+
+  <!-- C5 열 설명 -->
+  <text x="645" y="89"  font-size="8" fill="#4C1D95">← I1: WB</text>
+  <text x="645" y="137" font-size="8" fill="#831843">← I2: MEM</text>
+  <text x="645" y="185" font-size="8" fill="#78350F">← I3: EX</text>
+  <text x="645" y="233" font-size="8" fill="#065F46">← I4: ID</text>
+  <text x="645" y="281" font-size="8" fill="#1E40AF">← I5: IF</text>
+
+  <!-- 설명 박스 -->
+  <rect x="80" y="314" width="560" height="70" fill="#FFFBEB" rx="4" stroke="#FDE68A"/>
+  <text x="350" y="333" text-anchor="middle" font-size="11" font-weight="bold" fill="#92400E">★ C5부터 Steady-State: 모든 스테이지가 동시에 활성화!</text>
+  <text x="350" y="350" text-anchor="middle" font-size="9" fill="#78350F">C5 시점: I1(WB), I2(MEM), I3(EX), I4(ID), I5(IF) — 5개 스테이지가 모두 다른 명령어를 처리</text>
+  <text x="350" y="366" text-anchor="middle" font-size="9" fill="#78350F">이후 매 사이클마다 명령어 1개 완료 → 이상적 CPI = 1.0</text>
+  <text x="350" y="379" text-anchor="middle" font-size="9" fill="#78350F">처음 4사이클 = 파이프라인 채우기(fill) 단계 (완전 채워지는 데 N-1 = 4사이클 필요)</text>
+</svg>

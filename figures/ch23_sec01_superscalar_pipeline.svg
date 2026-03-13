@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arrow1" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title { font-size: 16px; font-weight: bold; fill: #1e293b; }
+    .label { font-size: 12px; fill: #1e293b; text-anchor: middle; }
+    .small { font-size: 10px; fill: #64748b; text-anchor: middle; }
+    .stage-box { rx: 6; ry: 6; }
+    .code { font-family: monospace; font-size: 11px; fill: #1e293b; }
+  </style>
+
+  <!-- 제목 -->
+  <text x="450" y="30" class="title" text-anchor="middle">스칼라 vs 2-이슈 슈퍼스칼라 파이프라인 비교</text>
+
+  <!-- 스칼라 파이프라인 (상단) -->
+  <text x="70" y="65" class="label" font-weight="bold">스칼라 (IPC ≤ 1)</text>
+
+  <!-- Cycle labels -->
+  <text x="200" y="80" class="small">Cycle 1</text>
+  <text x="310" y="80" class="small">Cycle 2</text>
+  <text x="420" y="80" class="small">Cycle 3</text>
+  <text x="530" y="80" class="small">Cycle 4</text>
+  <text x="640" y="80" class="small">Cycle 5</text>
+  <text x="750" y="80" class="small">Cycle 6</text>
+
+  <!-- Instruction 1 -->
+  <text x="130" y="107" class="code">I1:</text>
+  <rect x="160" y="90" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.9"/>
+  <text x="210" y="107" class="label" fill="white">IF</text>
+  <rect x="270" y="90" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.9"/>
+  <text x="320" y="107" class="label" fill="white">ID</text>
+  <rect x="380" y="90" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.9"/>
+  <text x="430" y="107" class="label" fill="white">EX</text>
+  <rect x="490" y="90" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.9"/>
+  <text x="540" y="107" class="label" fill="white">MEM</text>
+  <rect x="600" y="90" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.9"/>
+  <text x="650" y="107" class="label" fill="white">WB</text>
+
+  <!-- Instruction 2 -->
+  <text x="130" y="137" class="code">I2:</text>
+  <rect x="270" y="120" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="320" y="137" class="label" fill="white">IF</text>
+  <rect x="380" y="120" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.7"/>
+  <text x="430" y="137" class="label" fill="white">ID</text>
+  <rect x="490" y="120" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="540" y="137" class="label" fill="white">EX</text>
+  <rect x="600" y="120" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.7"/>
+  <text x="650" y="137" class="label" fill="white">MEM</text>
+  <rect x="710" y="120" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="760" y="137" class="label" fill="white">WB</text>
+
+  <!-- 구분선 -->
+  <line x1="100" y1="175" x2="850" y2="175" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8,4"/>
+
+  <!-- 2-이슈 슈퍼스칼라 (하단) -->
+  <text x="70" y="205" class="label" font-weight="bold">2-이슈 (IPC ≤ 2)</text>
+
+  <text x="200" y="220" class="small">Cycle 1</text>
+  <text x="310" y="220" class="small">Cycle 2</text>
+  <text x="420" y="220" class="small">Cycle 3</text>
+  <text x="530" y="220" class="small">Cycle 4</text>
+  <text x="640" y="220" class="small">Cycle 5</text>
+
+  <!-- Instruction 1 (Way 0) -->
+  <text x="130" y="247" class="code">I1:</text>
+  <rect x="160" y="230" width="100" height="25" fill="#2563EB" class="stage-box"/>
+  <text x="210" y="247" class="label" fill="white">IF</text>
+  <rect x="270" y="230" width="100" height="25" fill="#3B82F6" class="stage-box"/>
+  <text x="320" y="247" class="label" fill="white">ID</text>
+  <rect x="380" y="230" width="100" height="25" fill="#2563EB" class="stage-box"/>
+  <text x="430" y="247" class="label" fill="white">EX</text>
+  <rect x="490" y="230" width="100" height="25" fill="#3B82F6" class="stage-box"/>
+  <text x="540" y="247" class="label" fill="white">MEM</text>
+  <rect x="600" y="230" width="100" height="25" fill="#2563EB" class="stage-box"/>
+  <text x="650" y="247" class="label" fill="white">WB</text>
+
+  <!-- Instruction 2 (Way 1, same cycle as I1) -->
+  <text x="130" y="277" class="code">I2:</text>
+  <rect x="160" y="260" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="210" y="277" class="label" fill="white">IF</text>
+  <rect x="270" y="260" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.7"/>
+  <text x="320" y="277" class="label" fill="white">ID</text>
+  <rect x="380" y="260" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="430" y="277" class="label" fill="white">EX</text>
+  <rect x="490" y="260" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.7"/>
+  <text x="540" y="277" class="label" fill="white">MEM</text>
+  <rect x="600" y="260" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="650" y="277" class="label" fill="white">WB</text>
+
+  <!-- Instruction 3 (Way 0, next cycle) -->
+  <text x="130" y="307" class="code">I3:</text>
+  <rect x="270" y="290" width="100" height="25" fill="#2563EB" class="stage-box"/>
+  <text x="320" y="307" class="label" fill="white">IF</text>
+  <rect x="380" y="290" width="100" height="25" fill="#3B82F6" class="stage-box"/>
+  <text x="430" y="307" class="label" fill="white">ID</text>
+  <rect x="490" y="290" width="100" height="25" fill="#2563EB" class="stage-box"/>
+  <text x="540" y="307" class="label" fill="white">EX</text>
+  <rect x="600" y="290" width="100" height="25" fill="#3B82F6" class="stage-box"/>
+  <text x="650" y="307" class="label" fill="white">MEM</text>
+
+  <!-- Instruction 4 (Way 1, same cycle as I3) -->
+  <text x="130" y="337" class="code">I4:</text>
+  <rect x="270" y="320" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="320" y="337" class="label" fill="white">IF</text>
+  <rect x="380" y="320" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.7"/>
+  <text x="430" y="337" class="label" fill="white">ID</text>
+  <rect x="490" y="320" width="100" height="25" fill="#2563EB" class="stage-box" opacity="0.7"/>
+  <text x="540" y="337" class="label" fill="white">EX</text>
+  <rect x="600" y="320" width="100" height="25" fill="#3B82F6" class="stage-box" opacity="0.7"/>
+  <text x="650" y="337" class="label" fill="white">MEM</text>
+
+  <!-- 성능 비교 박스 -->
+  <rect x="130" y="375" width="340" height="110" fill="#DBEAFE" rx="8" ry="8" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="300" y="398" class="label" font-weight="bold">스칼라 파이프라인</text>
+  <text x="300" y="418" class="small">N개 명령어 실행: N + 4 사이클</text>
+  <text x="300" y="438" class="small">이상적 IPC = 1.0</text>
+  <text x="300" y="458" class="small">하드웨어: ALU 1개, Reg Port 2R/1W</text>
+  <text x="300" y="478" class="small">면적: 기준 (1x)</text>
+
+  <rect x="500" y="375" width="340" height="110" fill="#DBEAFE" rx="8" ry="8" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="670" y="398" class="label" font-weight="bold">2-이슈 슈퍼스칼라</text>
+  <text x="670" y="418" class="small">N개 명령어 실행: N/2 + 4 사이클</text>
+  <text x="670" y="438" class="small">이상적 IPC = 2.0</text>
+  <text x="670" y="458" class="small">하드웨어: ALU 2개, Reg Port 4R/2W</text>
+  <text x="670" y="478" class="small">면적: ~2.5x (의존성 검사 포함)</text>
+</svg>

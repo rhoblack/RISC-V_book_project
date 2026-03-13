@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="#00000020"/>
+    </filter>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="900" height="520" rx="12" fill="#F8FAFC"/>
+
+  <!-- 제목 -->
+  <text x="450" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#1E293B">RV32I 5단계 파이프라인 프로세서 전체 조감도</text>
+  <text x="450" y="55" text-anchor="middle" font-size="12" fill="#64748B">이 교재에서 설계할 프로세서의 완성된 모습</text>
+
+  <!-- IF 스테이지 -->
+  <rect x="30" y="80" width="140" height="200" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="30" y="80" width="140" height="32" rx="8" fill="#2563EB"/>
+  <text x="100" y="101" text-anchor="middle" font-size="13" font-weight="bold" fill="white">IF (명령어 인출)</text>
+  <rect x="50" y="125" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="100" y="147" text-anchor="middle" font-size="11" fill="#1E293B">PC</text>
+  <rect x="50" y="175" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="100" y="197" text-anchor="middle" font-size="11" fill="#1E293B">IMEM</text>
+  <rect x="50" y="225" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="100" y="247" text-anchor="middle" font-size="11" fill="#1E293B">PC+4 Adder</text>
+
+  <!-- IF/ID 파이프라인 레지스터 -->
+  <rect x="177" y="85" width="16" height="190" rx="3" fill="#93C5FD" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="185" y="183" text-anchor="middle" font-size="8" fill="#1E3A8A" transform="rotate(-90,185,183)">IF/ID</text>
+
+  <!-- ID 스테이지 -->
+  <rect x="200" y="80" width="140" height="200" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="200" y="80" width="140" height="32" rx="8" fill="#2563EB"/>
+  <text x="270" y="101" text-anchor="middle" font-size="13" font-weight="bold" fill="white">ID (명령어 해독)</text>
+  <rect x="220" y="125" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="270" y="147" text-anchor="middle" font-size="11" fill="#1E293B">Decoder</text>
+  <rect x="220" y="175" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="270" y="197" text-anchor="middle" font-size="11" fill="#1E293B">Register File</text>
+  <rect x="220" y="225" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="270" y="247" text-anchor="middle" font-size="11" fill="#1E293B">Imm Gen</text>
+
+  <!-- ID/EX 파이프라인 레지스터 -->
+  <rect x="347" y="85" width="16" height="190" rx="3" fill="#93C5FD" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="355" y="183" text-anchor="middle" font-size="8" fill="#1E3A8A" transform="rotate(-90,355,183)">ID/EX</text>
+
+  <!-- EX 스테이지 -->
+  <rect x="370" y="80" width="140" height="200" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="370" y="80" width="140" height="32" rx="8" fill="#2563EB"/>
+  <text x="440" y="101" text-anchor="middle" font-size="13" font-weight="bold" fill="white">EX (실행)</text>
+  <rect x="390" y="125" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="440" y="147" text-anchor="middle" font-size="11" fill="#1E293B">ALU</text>
+  <rect x="390" y="175" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="440" y="197" text-anchor="middle" font-size="11" fill="#1E293B">Branch Comp</text>
+  <rect x="390" y="225" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="440" y="247" text-anchor="middle" font-size="11" fill="#1E293B">Forwarding</text>
+
+  <!-- EX/MEM 파이프라인 레지스터 -->
+  <rect x="517" y="85" width="16" height="190" rx="3" fill="#93C5FD" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="525" y="183" text-anchor="middle" font-size="8" fill="#1E3A8A" transform="rotate(-90,525,183)">EX/MEM</text>
+
+  <!-- MEM 스테이지 -->
+  <rect x="540" y="80" width="140" height="200" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="540" y="80" width="140" height="32" rx="8" fill="#2563EB"/>
+  <text x="610" y="101" text-anchor="middle" font-size="13" font-weight="bold" fill="white">MEM (메모리)</text>
+  <rect x="560" y="125" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="610" y="147" text-anchor="middle" font-size="11" fill="#1E293B">DMEM</text>
+  <rect x="560" y="175" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="610" y="197" text-anchor="middle" font-size="11" fill="#1E293B">Load/Store</text>
+
+  <!-- MEM/WB 파이프라인 레지스터 -->
+  <rect x="687" y="85" width="16" height="190" rx="3" fill="#93C5FD" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="695" y="183" text-anchor="middle" font-size="8" fill="#1E3A8A" transform="rotate(-90,695,183)">MEM/WB</text>
+
+  <!-- WB 스테이지 -->
+  <rect x="710" y="80" width="140" height="200" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="710" y="80" width="140" height="32" rx="8" fill="#2563EB"/>
+  <text x="780" y="101" text-anchor="middle" font-size="13" font-weight="bold" fill="white">WB (쓰기 복귀)</text>
+  <rect x="730" y="125" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="780" y="147" text-anchor="middle" font-size="11" fill="#1E293B">WB Mux</text>
+  <rect x="730" y="175" width="100" height="35" rx="4" fill="white" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="780" y="197" text-anchor="middle" font-size="11" fill="#1E293B">Reg Write</text>
+
+  <!-- 데이터 흐름 화살표 -->
+  <line x1="170" y1="180" x2="200" y2="180" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="340" y1="180" x2="370" y2="180" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="510" y1="180" x2="540" y2="180" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="680" y1="180" x2="710" y2="180" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 포워딩 경로 (점선) -->
+  <path d="M 440 265 L 440 300 L 270 300 L 270 280" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="355" y="315" text-anchor="middle" font-size="10" fill="#DC2626">포워딩 경로</text>
+
+  <!-- WB → ID 쓰기 경로 -->
+  <path d="M 780 215 L 780 340 L 270 340 L 270 280" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" fill="none"/>
+  <text x="525" y="355" text-anchor="middle" font-size="10" fill="#059669">WB → 레지스터 파일 쓰기</text>
+
+  <!-- 제어 유닛 -->
+  <rect x="200" y="380" width="550" height="55" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
+  <text x="475" y="405" text-anchor="middle" font-size="13" font-weight="bold" fill="#92400E">Control Unit (제어 유닛)</text>
+  <text x="475" y="422" text-anchor="middle" font-size="11" fill="#92400E">해저드 감지 | 포워딩 제어 | 분기 판정 | 스톨/플러시</text>
+
+  <!-- 제어 신호 화살표 -->
+  <line x1="270" y1="380" x2="270" y2="280" stroke="#D97706" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="440" y1="380" x2="440" y2="265" stroke="#D97706" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="610" y1="380" x2="610" y2="280" stroke="#D97706" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- 범례 -->
+  <rect x="30" y="455" width="840" height="55" rx="6" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="50" y="475" font-size="11" font-weight="bold" fill="#1E293B">범례:</text>
+  <rect x="100" y="465" width="20" height="14" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="125" y="476" font-size="10" fill="#1E293B">파이프라인 스테이지</text>
+  <rect x="250" y="465" width="20" height="14" rx="2" fill="#93C5FD" stroke="#2563EB" stroke-width="1"/>
+  <text x="275" y="476" font-size="10" fill="#1E293B">파이프라인 레지스터</text>
+  <rect x="420" y="465" width="20" height="14" rx="2" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="445" y="476" font-size="10" fill="#1E293B">제어 유닛</text>
+  <line x1="560" y1="472" x2="590" y2="472" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="595" y="476" font-size="10" fill="#1E293B">포워딩 경로</text>
+  <line x1="710" y1="472" x2="740" y2="472" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="745" y="476" font-size="10" fill="#1E293B">쓰기 복귀 경로</text>
+
+  <text x="450" y="505" text-anchor="middle" font-size="10" fill="#94A3B8">그림 1.1: 본 교재에서 최종 완성할 RV32I 5단계 파이프라인 프로세서의 구조</text>
+</svg>

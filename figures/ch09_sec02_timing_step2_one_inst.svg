@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+
+  <!-- 배경 -->
+  <rect width="700" height="380" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="350" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E293B">타이밍 다이어그램 읽기 Step 2: 명령어 한 개의 여정</text>
+
+  <!-- Y축 레이블 -->
+  <text x="24" y="190" text-anchor="middle" font-size="10" fill="#374151" transform="rotate(-90, 24, 190)">명령어</text>
+  <!-- X축 레이블 -->
+  <text x="420" y="368" text-anchor="middle" font-size="10" fill="#374151">클럭 사이클</text>
+
+  <!-- 격자 배경 -->
+  <rect x="80" y="60" width="560" height="240" fill="white" stroke="#E2E8F0" rx="4"/>
+
+  <!-- 격자 세로선 -->
+  <line x1="150" y1="60" x2="150" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="220" y1="60" x2="220" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="290" y1="60" x2="290" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="360" y1="60" x2="360" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="430" y1="60" x2="430" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="500" y1="60" x2="500" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="570" y1="60" x2="570" y2="300" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- 격자 가로선 -->
+  <line x1="80" y1="108" x2="640" y2="108" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="80" y1="156" x2="640" y2="156" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="80" y1="204" x2="640" y2="204" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="80" y1="252" x2="640" y2="252" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- X축 사이클 번호 -->
+  <text x="115" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C1</text>
+  <text x="185" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C2</text>
+  <text x="255" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C3</text>
+  <text x="325" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C4</text>
+  <text x="395" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C5</text>
+  <text x="465" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C6</text>
+  <text x="535" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C7</text>
+  <text x="605" y="55" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">C8</text>
+
+  <!-- Y축 명령어 번호 -->
+  <text x="70" y="89" text-anchor="end" font-size="10" font-weight="bold" fill="#1D4ED8">I1</text>
+  <text x="70" y="137" text-anchor="end" font-size="10" font-weight="bold" fill="#94A3B8">I2</text>
+  <text x="70" y="185" text-anchor="end" font-size="10" font-weight="bold" fill="#94A3B8">I3</text>
+  <text x="70" y="233" text-anchor="end" font-size="10" font-weight="bold" fill="#94A3B8">I4</text>
+  <text x="70" y="281" text-anchor="end" font-size="10" font-weight="bold" fill="#94A3B8">I5</text>
+
+  <!-- I1 강조 행: 5스테이지 -->
+  <!-- IF: C1 -->
+  <rect x="82" y="62" width="67" height="45" fill="#DBEAFE" rx="3" stroke="#3B82F6" stroke-width="2"/>
+  <text x="115" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">IF</text>
+  <text x="115" y="97" text-anchor="middle" font-size="8" fill="#1E40AF">명령어 인출</text>
+  <!-- ID: C2 -->
+  <rect x="152" y="62" width="67" height="45" fill="#BBF7D0" rx="3" stroke="#22C55E" stroke-width="2"/>
+  <text x="185" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#065F46">ID</text>
+  <text x="185" y="97" text-anchor="middle" font-size="8" fill="#065F46">명령어 해석</text>
+  <!-- EX: C3 -->
+  <rect x="222" y="62" width="67" height="45" fill="#FEF3C7" rx="3" stroke="#F59E0B" stroke-width="2"/>
+  <text x="255" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#78350F">EX</text>
+  <text x="255" y="97" text-anchor="middle" font-size="8" fill="#78350F">ALU 연산</text>
+  <!-- MEM: C4 -->
+  <rect x="292" y="62" width="67" height="45" fill="#FCE7F3" rx="3" stroke="#EC4899" stroke-width="2"/>
+  <text x="325" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#831843">MEM</text>
+  <text x="325" y="97" text-anchor="middle" font-size="8" fill="#831843">메모리 접근</text>
+  <!-- WB: C5 -->
+  <rect x="362" y="62" width="67" height="45" fill="#F3E8FF" rx="3" stroke="#8B5CF6" stroke-width="2"/>
+  <text x="395" y="82" text-anchor="middle" font-size="11" font-weight="bold" fill="#4C1D95">WB</text>
+  <text x="395" y="97" text-anchor="middle" font-size="8" fill="#4C1D95">결과 저장</text>
+
+  <!-- 나머지 셀: 연한 회색 -->
+  <!-- I1 나머지 -->
+  <rect x="432" y="62" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="502" y="62" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <rect x="572" y="62" width="67" height="45" fill="#F1F5F9" rx="3"/>
+  <!-- I2~I5 행 전체 회색 -->
+  <rect x="82" y="110" width="557" height="45" fill="#F8FAFC" rx="3"/>
+  <rect x="82" y="158" width="557" height="45" fill="#F8FAFC" rx="3"/>
+  <rect x="82" y="206" width="557" height="45" fill="#F8FAFC" rx="3"/>
+  <rect x="82" y="254" width="557" height="45" fill="#F8FAFC" rx="3"/>
+
+  <!-- 이동 화살표 (I1 행 위에) -->
+  <defs>
+    <marker id="arrowOrange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#F59E0B"/>
+    </marker>
+  </defs>
+  <line x1="148" y1="84" x2="152" y2="84" stroke="#F59E0B" stroke-width="0"/>
+  <!-- I1 진행 화살표 -->
+  <line x1="82" y1="46" x2="430" y2="46" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowOrange)"/>
+  <text x="256" y="44" text-anchor="middle" font-size="9" font-weight="bold" fill="#D97706">I1: 5사이클 후 완료 (지연=5사이클)</text>
+
+  <!-- 설명 박스 -->
+  <rect x="80" y="320" width="560" height="44" fill="#FFF7ED" rx="4" stroke="#FED7AA"/>
+  <text x="350" y="337" text-anchor="middle" font-size="10" font-weight="bold" fill="#9A3412">핵심 관찰: I1 하나만 보면 5사이클이 걸립니다 (지연, Latency)</text>
+  <text x="350" y="355" text-anchor="middle" font-size="9" fill="#7C2D12">하지만 다른 명령어들이 동시에 진행된다면? → Step 3에서 확인</text>
+
+  <!-- 세로 점선 (C1 위치) -->
+  <line x1="150" y1="60" x2="150" y2="300" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="4,2"/>
+</svg>

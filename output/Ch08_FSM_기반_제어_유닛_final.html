@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 08 — FSM 기반 제어 유닛</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 08</span>
+  <h1>FSM 기반 제어 유닛</h1>
+  <p class="chapter-intro">
+    Ch07에서 우리는 멀티사이클 데이터패스를 완성했습니다. IR, MDR, A, B, ALUOut이라는 다섯 개의 중간 레지스터가
+    사이클 경계마다 데이터를 안전하게 보존하는 방법을 배웠습니다. 하지만 그 데이터패스는 아직 움직이지 않습니다.
+    누군가가 매 클럭마다 "지금은 명령어를 인출하라", "지금은 ALU를 동작시켜라", "지금은 레지스터에 결과를 써라"
+    하고 지시해야 합니다. 이 챕터에서는 그 지휘자, 즉 <strong>유한 상태 기계(FSM, Finite State Machine)</strong>
+    기반 제어 유닛을 설계하고 SystemVerilog로 구현합니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: Moore FSM과 Mealy FSM의 차이를 출력 조건으로 설명할 수 있다. (이해)</li>
+    <li><strong>LO-2</strong>: 멀티사이클 FSM의 상태 전이도를 명령어 타입별로 그릴 수 있다. (이해/적용)</li>
+    <li><strong>LO-3</strong>: 각 FSM 상태에서 필요한 제어 신호를 데이터패스 추적으로 결정할 수 있다. (적용)</li>
+    <li><strong>LO-4</strong>: always_ff + always_comb 이중 블록 FSM을 SystemVerilog로 구현할 수 있다. (적용)</li>
+    <li><strong>LO-5</strong>: 멀티사이클 CPU를 통합하여 시뮬레이션으로 검증할 수 있다. (적용)</li>
+    <li><strong>LO-6</strong>: CPI를 계산하고 단일 사이클 대비 처리량 트레이드오프를 분석할 수 있다. (분석)</li>
+    <li><strong>LO-7</strong>: 하드와이어드 제어와 마이크로프로그래밍 제어의 장단점을 비교할 수 있다. (평가)</li>
+  </ul>
+</nav>
+
+<section id="chapter-intro-narrative">
+  <p>
+    오케스트라에서 바이올린, 첼로, 오보에 주자들이 모두 자리에 앉아 악기를 준비했습니다.
+    하지만 지휘자가 없다면 어떻게 될까요? 각 연주자는 언제 연주를 시작해야 할지 모릅니다.
+    Ch07의 데이터패스가 바로 이 상태입니다. ALU, 메모리, 레지스터 파일이라는 훌륭한 연주자들이 준비되어 있지만,
+    지휘자가 없어 아무것도 할 수 없습니다. 이 챕터의 주인공은 그 지휘자, FSM 제어 유닛입니다.
+  </p>
+  <p>
+    FSM 제어 유닛은 연주하지 않습니다. 지시만 합니다. 매 클럭 사이클마다 현재 상태를 파악하고,
+    어떤 제어 신호를 활성화할지 결정하며, 다음 상태로 전이합니다. 이 단순한 원리가
+    17개의 상태와 13개의 제어 신호로 완성된 RV32I 멀티사이클 CPU의 두뇌가 됩니다.
+  </p>
+</section>
+
+<!-- ========== 8.1절 ========== -->
+<section id="sec-08-1">
+  <h2>8.1 유한 상태 기계 제어 원리</h2>
+
+  <p>
+    "Ch07에서 우리는 데이터패스를 설계했습니다. 이제 그 데이터패스에 생명을 불어넣는 제어 유닛이 필요합니다."
+    제어 유닛이 없는 데이터패스는 마치 엔진은 있지만 운전자가 없는 자동차와 같습니다.
+    하드웨어 자원은 갖추어져 있지만, 무엇을 언제 어떻게 작동시킬지를 결정하는 주체가 없습니다.
+  </p>
+
+  <h3>8.1.1 FSM의 정의와 구성 요소</h3>
+  <p>
+    유한 상태 기계(Finite State Machine, FSM)는 유한 개의 상태(State)를 가지며,
+    입력에 따라 상태 간을 전이(Transition)하면서 출력(Output)을 생성하는 순차 논리 회로입니다.
+    FSM을 구성하는 다섯 가지 요소는 다음과 같습니다.
+  </p>
+  <ul>
+    <li><strong>상태 집합 S</strong>: FSM이 취할 수 있는 모든 상태의 집합. 우리 CPU에서는 S0(IF)부터 S16(WB_JALR)까지 17개입니다.</li>
+    <li><strong>입력 집합 I</strong>: 상태 전이를 결정하는 외부 입력. 명령어의 opcode, funct3, ALU 플래그(zero, lt) 등입니다.</li>
+    <li><strong>출력 집합 O</strong>: FSM이 생성하는 출력. 데이터패스를 제어하는 13개의 제어 신호입니다.</li>
+    <li><strong>전이 함수 δ</strong>: 현재 상태와 입력을 받아 다음 상태를 결정합니다. δ(현재 상태, 입력) = 다음 상태.</li>
+    <li><strong>출력 함수 λ</strong>: 상태(또는 상태+입력)로부터 출력을 결정합니다.</li>
+  </ul>
+
+  <h3>8.1.2 Moore FSM vs Mealy FSM</h3>
+  <p>
+    FSM에는 두 가지 중요한 유형이 있으며, 이 둘의 차이는 출력이 무엇에 의존하는가입니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>구분</th>
+        <th>Moore FSM</th>
+        <th>Mealy FSM</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>출력 의존</td>
+        <td>현재 상태만</td>
+        <td>현재 상태 + 입력</td>
+      </tr>
+      <tr>
+        <td>출력 함수</td>
+        <td>λ(현재 상태)</td>
+        <td>λ(현재 상태, 입력)</td>
+      </tr>
+      <tr>
+        <td>출력 안정성</td>
+        <td>클럭 에지 후 안정</td>
+        <td>입력 변화에 즉시 반응</td>
+      </tr>
+      <tr>
+        <td>상태 수</td>
+        <td>일반적으로 더 많음</td>
+        <td>일반적으로 더 적음</td>
+      </tr>
+      <tr>
+        <td>타이밍</td>
+        <td>안전, 예측 가능</td>
+        <td>조합 경로 길어질 위험</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    우리의 제어 유닛에는 <strong>Moore FSM</strong>을 선택합니다. 그 이유는 타이밍 안전성입니다.
+    Mealy FSM에서는 출력(제어 신호)이 입력(opcode 등)에 즉시 반응합니다.
+    만약 opcode를 가지는 IR 레지스터에 글리치(Glitch, 순간적인 신호 변동)가 발생한다면,
+    제어 신호도 즉시 변동되어 데이터패스에 오동작을 유발할 수 있습니다.
+    Moore FSM은 출력이 오직 현재 상태에만 의존하므로, 상태 레지스터가 안정된 후 출력도 안정됩니다.
+    FPGA 합성 관점에서도 Moore FSM은 타이밍 분석이 더 단순하고 예측 가능합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch08_sec01_fsm_concept.svg" alt="Moore FSM 원리 다이어그램">
+    <figcaption>그림 8.1: Moore FSM 원리 — 출력(제어 신호)은 현재 상태에만 의존하며, 입력(opcode)은 다음 상태 결정에만 사용된다.</figcaption>
+  </figure>
+
+  <aside class="faq">
+    <h4>❓ 수강생 단골 질문: Moore와 Mealy 중 어느 것이 더 빠른가요?</h4>
+    <p>
+      상태 수만 보면 Mealy가 유리해 보입니다. 같은 기능을 더 적은 상태로 구현할 수 있기 때문입니다.
+      하지만 "빠르다"는 것은 클럭 주파수로 결정됩니다. Mealy FSM에서는 출력 경로에
+      입력 신호의 조합 논리가 추가됩니다. 즉, 상태 레지스터 → 출력 로직 → 데이터패스 → 다시 FSM 입력으로
+      이어지는 긴 조합 논리 경로가 생성되어 오히려 최대 클럭 주파수(Fmax, Maximum Clock Frequency)가 낮아질 수 있습니다.
+      <strong>제어 유닛에서는 Moore FSM이 타이밍과 안전성 측면에서 표준적 선택입니다.</strong>
+    </p>
+  </aside>
+
+  <h3>8.1.3 상태 전이도 읽는 법</h3>
+  <p>
+    상태 전이도(State Transition Diagram)는 FSM의 동작을 시각적으로 표현한 그래프입니다.
+    읽는 방법은 간단합니다.
+  </p>
+  <ul>
+    <li><strong>타원(원)</strong>: 하나의 상태를 나타냅니다. 내부에 상태 이름과 Moore FSM의 경우 출력값이 표시됩니다.</li>
+    <li><strong>화살표</strong>: 상태 전이를 나타냅니다. 화살표 위에 전이 조건(입력)이 적혀 있습니다.</li>
+    <li><strong>이중 타원</strong>: 초기 상태(또는 리셋 후 첫 상태)를 나타내기도 합니다.</li>
+  </ul>
+  <p>
+    예를 들어 2상태 FSM을 생각해봅시다. S0에서 입력이 0이면 S0에 머물고, 입력이 1이면 S1으로 전이합니다.
+    S1에서는 항상 S0으로 복귀합니다. S0의 출력은 0, S1의 출력은 1입니다.
+    우리 멀티사이클 CPU도 이와 같은 원리로 동작합니다. 단지 상태가 17개이고
+    전이 조건이 opcode(7비트)이며, 출력이 13개의 제어 신호일 뿐입니다.
+  </p>
+
+  <aside class="tip">
+    <h4>💡 실무 팁: FSM vs always_comb 단순 디코더의 차이</h4>
+    <p>
+      "제어 신호를 결정하는 것은 그냥 combinational 디코더로 만들면 안 되나요?"
+      라는 질문을 자주 받습니다. 단일 사이클 CPU에서는 그렇게 했습니다.
+      하지만 멀티사이클에서는 동일한 opcode에 대해 여러 클럭 사이클에 걸쳐
+      <em>다른</em> 제어 신호를 내보내야 합니다. 예를 들어 LW 명령어는
+      5개의 서로 다른 상태(IF→ID→EX_LOAD→MEM_LD→WB_LD)를 거칩니다.
+      <strong>FSM은 "지금 어느 단계인가"라는 시퀀셜(Sequential) 정보를 상태 레지스터에 기억합니다.
+      순수 조합 논리 디코더는 이 기억 능력이 없으므로 멀티사이클 제어가 불가능합니다.</strong>
+    </p>
+  </aside>
+
+  <h3>8.1.4 명령어별 사이클 수 미리 보기</h3>
+  <p>
+    FSM 설계에 앞서 각 명령어 타입이 몇 개의 상태(사이클)를 거치는지 미리 파악하면
+    전체 구조를 이해하는 데 도움이 됩니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어 타입</th>
+        <th>상태 경로</th>
+        <th>사이클 수</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>R-type (ADD, SUB 등)</td>
+        <td>IF → ID → EX_R → WB_RI</td>
+        <td>4</td>
+      </tr>
+      <tr>
+        <td>I-type 연산 (ADDI 등)</td>
+        <td>IF → ID → EX_I → WB_RI</td>
+        <td>4</td>
+      </tr>
+      <tr>
+        <td>Load (LW)</td>
+        <td>IF → ID → EX_LOAD → MEM_LD → WB_LD</td>
+        <td>5</td>
+      </tr>
+      <tr>
+        <td>Store (SW)</td>
+        <td>IF → ID → EX_ST → MEM_ST</td>
+        <td>4</td>
+      </tr>
+      <tr>
+        <td>Branch (BEQ/BNE 등)</td>
+        <td>IF → ID → EX_BR</td>
+        <td>3</td>
+      </tr>
+      <tr>
+        <td>LUI / AUIPC</td>
+        <td>IF → ID → EX_LUI(AUIPC) → WB_RI</td>
+        <td>4</td>
+      </tr>
+      <tr>
+        <td>JAL</td>
+        <td>IF → ID → EX_JAL → WB_JAL</td>
+        <td>4</td>
+      </tr>
+      <tr>
+        <td>JALR</td>
+        <td>IF → ID → EX_JALR → WB_JALR</td>
+        <td>4</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    흥미로운 점은 Branch 명령어가 R-type보다 1사이클 적다는 것입니다.
+    EX_BR 단계에서 비교(ALU 연산)와 분기 결정이 동시에 이루어지고,
+    별도의 Write-Back이 필요하지 않기 때문입니다. 이에 대한 자세한 설명은 8.2절에서 다룹니다.
+  </p>
+</section>
+
+<!-- ========== 8.2절 ========== -->
+<section id="sec-08-2">
+  <h2>8.2 17개 FSM 상태 설계 — Gradual Reveal</h2>
+
+  <p>
+    이 절에서 17개의 FSM 상태를 설계합니다. 처음 보면 압도적으로 느껴질 수 있습니다.
+    하지만 모든 상태는 데이터패스를 보고 기계적으로 도출할 수 있습니다.
+    겁먹지 마십시오. 공통 상태 2개에서 시작하여 명령어 타입별로 하나씩 추가해 나가겠습니다.
+  </p>
+
+  <aside class="metacognition">
+    <h4>🔍 스스로 점검: 데이터패스를 보고 제어 신호를 찾는 3단계 방법</h4>
+    <ol>
+      <li><strong>데이터가 어디서 어디로 흐르는가?</strong> — 이 사이클에서 어떤 값이 어떤 레지스터/메모리로 이동해야 하는가를 파악합니다.</li>
+      <li><strong>어떤 MUX를 거치는가?</strong> — 데이터 경로상의 모든 MUX를 찾습니다. (i_or_d, alu_src_a, alu_src_b, mem_to_reg, pc_src)</li>
+      <li><strong>MUX를 올바른 방향으로 설정하는 신호는 무엇인가?</strong> — 각 MUX의 선택 신호를 결정합니다. 그것이 이 상태의 제어 신호 값입니다.</li>
+    </ol>
+    <p>이 3단계를 모든 상태에 반복 적용하면 제어 신호 표가 자동으로 완성됩니다.</p>
+  </aside>
+
+  <h3>8.2.1 Step 1: 공통 상태 — IF와 ID</h3>
+  <p>
+    모든 명령어는 반드시 IF(명령어 인출)와 ID(디코딩 및 레지스터 읽기) 단계를 거칩니다.
+    이 두 상태는 opcode에 관계없이 동일하게 동작하므로 먼저 설계합니다.
+  </p>
+
+  <h4>S0: IF — 명령어 인출 (Instruction Fetch)</h4>
+  <p>
+    IF 단계의 목적은 두 가지입니다. PC가 가리키는 메모리 주소에서 명령어를 읽어 IR에 저장하고,
+    동시에 PC를 PC+4로 갱신하여 다음 명령어를 준비합니다.
+    데이터패스를 따라가보면: PC → 메모리 주소 MUX(i_or_d=0) → 명령어 메모리 →
+    IR 레지스터(ir_write=1). 동시에 ALU에서 PC+4를 계산(alu_src_a=PC, alu_src_b=4, alu_op=ADD)하여
+    PC를 갱신(pc_write=1, pc_src=00).
+  </p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>mem_read</td><td>1</td><td>명령어 메모리 읽기</td></tr>
+      <tr><td>ir_write</td><td>1</td><td>IR 레지스터에 명령어 저장</td></tr>
+      <tr><td>pc_write</td><td>1</td><td>PC ← PC+4 갱신</td></tr>
+      <tr><td>i_or_d</td><td>0</td><td>메모리 주소 = PC (명령어 주소)</td></tr>
+      <tr><td>alu_src_a</td><td>0</td><td>ALU 입력 A = PC</td></tr>
+      <tr><td>alu_src_b</td><td>01</td><td>ALU 입력 B = 상수 4</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD (PC + 4)</td></tr>
+      <tr><td>pc_src</td><td>00</td><td>PC 소스 = ALU 직접 출력 (PC+4)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S1: ID — 디코딩 및 레지스터 읽기 (Instruction Decode)</h4>
+  <p>
+    ID 단계에서는 IR에 저장된 명령어를 해석하고, rs1/rs2 레지스터를 읽어 A/B 레지스터에 래치합니다.
+    레지스터 파일은 항상 읽기 상태이므로(비동기 읽기) 별도의 제어 신호 없이
+    rs1_addr/rs2_addr만 제공하면 자동으로 읽힙니다. A/B 레지스터도 매 사이클 자동으로 래치됩니다.
+  </p>
+  <p>
+    <strong>LUI 특별 처리</strong>: opcode가 LUI일 때는 rs1 필드가 의미 없습니다(LUI는 즉치값만 사용).
+    이 단계에서 <code>rs1_addr = (opcode == OP_LUI) ? 5'd0 : ir[19:15]</code> 로직을 추가하면
+    A 레지스터에 x0 (= 0)이 래치됩니다. 이렇게 하면 EX_LUI 단계에서
+    ALU가 0 + imm_U를 계산하여 자연스럽게 LUI 동작을 구현할 수 있습니다.
+  </p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>0</td><td>(PC — 분기 주소 미리 계산 준비용, 실제 사용 안 함)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (향후 활용 가능)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD</td></tr>
+      <tr><td>나머지</td><td>0</td><td>이 단계에서는 메모리/레지스터 쓰기 없음</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2.2 Step 2: R-type 및 I-type 경로</h3>
+  <p>
+    ID 단계 이후, opcode가 R-type이면 EX_R → WB_RI로,
+    I-type 연산이면 EX_I → WB_RI로 진행합니다. WB_RI는 두 경로가 공유합니다.
+  </p>
+
+  <h4>S2: EX_R — R-type 실행</h4>
+  <p>A 레지스터(rs1)와 B 레지스터(rs2)를 ALU에 입력하여 funct3/funct7에 따라 연산합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (rs1)</td></tr>
+      <tr><td>alu_src_b</td><td>00</td><td>B 레지스터 (rs2)</td></tr>
+      <tr><td>alu_op</td><td>10</td><td>funct3/funct7 의존 연산</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S3: EX_I — I-type 연산 실행</h4>
+  <p>A 레지스터(rs1)와 imm_ext(I-type 즉치값)를 ALU에 입력합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (rs1)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (I-type)</td></tr>
+      <tr><td>alu_op</td><td>10</td><td>funct3 의존 연산</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S12: WB_RI — R/I/LUI/AUIPC Write-Back</h4>
+  <p>ALUOut 레지스터의 값을 rd에 씁니다. R-type, I-type, LUI, AUIPC 명령어가 공통으로 사용합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>reg_write</td><td>1</td><td>rd에 결과 저장</td></tr>
+      <tr><td>mem_to_reg</td><td>00</td><td>쓰기 데이터 = ALUOut</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2.3 Step 3: Load 및 Store 경로</h3>
+
+  <h4>S4: EX_LOAD — Load 주소 계산</h4>
+  <p>rs1 + imm_I를 계산하여 메모리 주소를 ALUOut에 저장합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (rs1)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (I-type 오프셋)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD (주소 계산)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S5: MEM_LD — Load 메모리 읽기</h4>
+  <p>ALUOut이 가리키는 데이터 메모리 주소에서 값을 읽어 MDR에 저장합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>mem_read</td><td>1</td><td>데이터 메모리 읽기</td></tr>
+      <tr><td>i_or_d</td><td>1</td><td>메모리 주소 = ALUOut (데이터 주소)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S6: WB_LD — Load Write-Back</h4>
+  <p>MDR의 값을 rd에 씁니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>reg_write</td><td>1</td><td>rd에 로드한 데이터 저장</td></tr>
+      <tr><td>mem_to_reg</td><td>01</td><td>쓰기 데이터 = MDR</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S7: EX_ST — Store 주소 계산</h4>
+  <p>rs1 + imm_S를 계산합니다. imm_S는 S-type 즉치값으로 즉치수 생성기가 올바르게 변환합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (rs1)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (S-type 오프셋)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S8: MEM_ST — Store 메모리 쓰기</h4>
+  <p>ALUOut 주소의 메모리에 B 레지스터(rs2) 값을 씁니다. 이후 바로 S0(IF)로 복귀합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>mem_write</td><td>1</td><td>데이터 메모리 쓰기</td></tr>
+      <tr><td>i_or_d</td><td>1</td><td>메모리 주소 = ALUOut</td></tr>
+    </tbody>
+  </table>
+
+  <h3>8.2.4 Step 4: Branch, LUI, AUIPC, Jump 경로 (전체 완성)</h3>
+
+  <aside class="tip">
+    <h4>💡 Ch07 데이터패스 소급 보완: old_pc_reg와 alu_src_a 2비트 확장</h4>
+    <p>
+      JAL과 AUIPC가 올바르게 동작하려면 "JAL/AUIPC 명령어 자신의 PC"가 필요합니다.
+      문제는 IF 단계에서 PC가 PC+4로 갱신된 후 EX_JAL 단계로 진입한다는 것입니다.
+      이때 PC 레지스터 값은 이미 PC+4이므로, 이를 그대로 사용하면 점프 목표 주소가 4만큼 틀립니다.
+    </p>
+    <p>
+      해결책: Ch07 데이터패스에 <code>old_pc_reg</code>를 추가합니다. 이 레지스터는
+      IF 단계에서 PC가 PC+4로 갱신되기 직전의 원본 PC 값을 저장합니다.
+    </p>
+    <pre><code class="language-systemverilog">// Ch07 데이터패스에 추가 — old_pc_reg
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      old_pc_reg &lt;= 32'd0;
+   else if (ir_write)   // IF 단계에서만 갱신 (ir_write가 활성일 때)
+      old_pc_reg &lt;= pc_reg;  // PC가 PC+4로 바뀌기 전 원본 PC 캡처
+end</code></pre>
+    <p>
+      이에 따라 <code>alu_src_a</code>를 1비트에서 <strong>2비트로 확장</strong>합니다:
+    </p>
+    <ul>
+      <li><code>2'b00</code>: PC 레지스터 (현재 PC — IF 단계에서 PC+4 계산용)</li>
+      <li><code>2'b01</code>: old_pc_reg (원본 PC — JAL, AUIPC에서 명령어 자신의 주소)</li>
+      <li><code>2'b10</code>: A 레지스터 (rs1 값 — 대부분의 EX 단계)</li>
+    </ul>
+    <p>이것이 Ch07 데이터패스에 추가되는 유일한 보완 사항입니다.</p>
+  </aside>
+
+
+
+  <h4>S9: EX_BR — Branch 비교 및 분기 (3사이클 설계)</h4>
+  <p>
+    Branch 명령어는 R-type보다 사이클 수가 적습니다. 그 이유는 Write-Back이 없기 때문입니다.
+    EX_BR 단계 하나에서 세 가지 작업이 동시에 이루어집니다:
+  </p>
+  <ol>
+    <li>ALU: A - B (SUB) 연산 → alu_zero, alu_lt/alu_ltu 플래그 생성</li>
+    <li>별도 덧셈기(branch_adder): old_pc_reg + imm_B → 분기 목표 주소 계산 (ALU와 독립적으로 동시 계산)</li>
+    <li>branch_taken 판단: funct3에 따라 BEQ/BNE/BLT/BGE/BLTU/BGEU 조건 평가 → pc_write_cond와 AND</li>
+  </ol>
+  <p>
+    <strong>설계 핵심</strong>: 분기 목표 주소(old_pc_reg + imm_B)는 ALU가 A-B 비교에 사용 중이므로
+    ALU로 계산할 수 없습니다. 데이터패스에 별도의 소형 덧셈기(branch_adder)를 추가하여
+    ALU와 병렬로 계산합니다. branch_adder의 입력은 C-3에서 소개하는 old_pc_reg(JAL 명령어 자신의 PC)와
+    즉치수 생성기의 imm_B 출력입니다. 이 결과는 pc_src=2'b10으로 선택됩니다.
+  </p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (rs1)</td></tr>
+      <tr><td>alu_src_b</td><td>00</td><td>B 레지스터 (rs2)</td></tr>
+      <tr><td>alu_op</td><td>01</td><td>SUB (비교 → zero/lt 플래그)</td></tr>
+      <tr><td>pc_write_cond</td><td>1</td><td>조건 만족 시 PC 갱신</td></tr>
+      <tr><td>pc_src</td><td>10</td><td>PC 소스 = branch_adder 출력 (old_pc_reg + imm_B)</td></tr>
+    </tbody>
+  </table>
+
+  <aside class="faq">
+    <h4>❓ 수강생 단골 질문: Branch는 왜 3사이클인가요? R-type보다 빠른 건가요?</h4>
+    <p>
+      정확합니다. Branch(BEQ/BNE 등)는 IF→ID→EX_BR 3단계로 완료됩니다.
+      R-type은 IF→ID→EX_R→WB_RI 4단계입니다.
+      <strong>Branch가 더 적은 사이클을 쓰는 이유는 결과값을 레지스터 파일에 저장하지 않기 때문입니다.</strong>
+      R-type은 연산 결과를 rd에 써야 하는 WB 단계가 필요하지만,
+      Branch는 "분기 조건이 성립하면 PC를 바꾼다"는 것이 전부입니다.
+      단, Branch가 3사이클이라고 해서 항상 더 빠른 것은 아닙니다.
+      전체 프로그램의 처리량은 CPI와 Fmax를 함께 고려해야 합니다 (8.5절 참조).
+    </p>
+  </aside>
+
+  <h4>S10: EX_LUI — LUI 실행</h4>
+  <p>
+    LUI는 20비트 즉치값을 12비트 왼쪽으로 시프트한 값(imm_U)을 rd에 저장합니다.
+    ID 단계에서 rs1_addr을 5'd0으로 강제했으므로 A 레지스터에는 x0 = 0이 래치되어 있습니다.
+    따라서 ALU에서 0 + imm_U를 계산하면 자연스럽게 LUI 결과가 나옵니다.
+  </p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (= x0 = 0, ID에서 강제)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (U-type)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD (0 + imm_U = imm_U)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S11: EX_AUIPC — AUIPC 실행</h4>
+  <p>AUIPC는 현재 명령어의 PC + imm_U를 rd에 저장합니다. PC 상대 주소 계산에 사용됩니다.
+  old_pc_reg를 사용하여 명령어 자신의 원본 PC를 기준으로 계산합니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>01</td><td>old_pc_reg (명령어 자신의 원본 PC)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (U-type)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD (old_pc_reg + imm_U)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S13: EX_JAL — JAL 실행</h4>
+  <p>
+    JAL은 old_pc_reg + imm_J를 점프 목표 주소로 계산합니다.
+    동시에 복귀 주소(PC+4)를 rd에 저장해야 합니다.
+    IF 단계에서 이미 PC는 PC+4로 갱신되었으므로, WB_JAL 단계에서 mem_to_reg=10으로
+    현재 PC 레지스터 값(이미 PC+4)을 rd에 씁니다.
+    점프 목표 주소 계산에는 old_pc_reg를 사용하여 JAL 명령어 자신의 원본 PC를 기준으로 합니다.
+  </p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>01</td><td>old_pc_reg (JAL 명령어 자신의 원본 PC)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (J-type)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD (old_pc_reg + imm_J)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S14: WB_JAL — JAL Write-Back 및 PC 갱신</h4>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>reg_write</td><td>1</td><td>rd = 복귀 주소</td></tr>
+      <tr><td>mem_to_reg</td><td>10</td><td>쓰기 데이터 = PC (이미 PC+4)</td></tr>
+      <tr><td>pc_write</td><td>1</td><td>PC ← 점프 목표 주소</td></tr>
+      <tr><td>pc_src</td><td>01</td><td>PC 소스 = ALUOut (PC+imm_J)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>S15: EX_JALR — JALR 실행</h4>
+  <p>rs1 + imm_I를 점프 목표 주소로 계산합니다. JALR은 레지스터 간접 점프입니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>alu_src_a</td><td>1</td><td>A 레지스터 (rs1)</td></tr>
+      <tr><td>alu_src_b</td><td>10</td><td>imm_ext (I-type)</td></tr>
+      <tr><td>alu_op</td><td>00</td><td>ADD (rs1 + imm_I)</td></tr>
+    </tbody>
+  </table>
+
+  <aside class="tip">
+    <h4>💡 실무 팁: JALR 하위 비트 클리어</h4>
+    <p>
+      RISC-V 스펙에 따르면 JALR의 점프 목표 주소는 <code>(rs1 + imm_I) &amp; ~1</code>로
+      최하위 비트를 0으로 클리어해야 합니다 (명령어는 반드시 2바이트 정렬).
+      교재에서는 메모리가 4바이트 정렬되어 있다고 가정하므로 이 처리를 생략합니다.
+      실제 칩 구현이나 리눅스 커널 부팅을 목표로 한다면 데이터패스에
+      <code>alu_result &amp; 32'hFFFFFFFE</code> 마스킹을 추가해야 합니다.
+    </p>
+  </aside>
+
+  <h4>S16: WB_JALR — JALR Write-Back 및 PC 갱신</h4>
+  <p>JAL의 WB_JAL과 동일한 제어 신호를 사용합니다. ALUOut에는 rs1+imm_I가 저장되어 있습니다.</p>
+  <table>
+    <thead><tr><th>제어 신호</th><th>값</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td>reg_write</td><td>1</td><td>rd = 복귀 주소 (PC+4)</td></tr>
+      <tr><td>mem_to_reg</td><td>10</td><td>쓰기 데이터 = PC (이미 PC+4)</td></tr>
+      <tr><td>pc_write</td><td>1</td><td>PC ← ALUOut (rs1+imm_I)</td></tr>
+      <tr><td>pc_src</td><td>01</td><td>PC 소스 = ALUOut</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>pc_src 인코딩 최종 정의</strong>: Ch08에서 pc_src는 3가지 값을 사용합니다.
+    <code>2'b00</code> = ALU 직접 출력 (IF 단계에서 PC+4 계산),
+    <code>2'b01</code> = ALUOut (분기 점프 목표 주소 — EX_JAL, EX_JALR, WB_JAL, WB_JALR),
+    <code>2'b10</code> = branch_adder 출력 (old_pc_reg + imm_B — EX_BR에서만 사용).
+    Ch07 설계 시 pc_src=2'b10이 MIPS 방식의 잔재로 정의되어 있었다면 이 값으로 재정의합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch08_sec02_fsm_all_states.svg" alt="전체 FSM 상태 전이도">
+    <figcaption>그림 8.2: RV32I 멀티사이클 FSM 전체 상태 전이도 — 17개 상태, 명령어 타입별 색상 구분. 모든 경로는 S0(IF)에서 시작하여 S1(ID)을 거쳐 명령어별 마지막 상태에서 다시 S0으로 복귀한다.</figcaption>
+  </figure>
+
+  <p>
+    <strong>8.2절 소결</strong>: 지금까지 17개의 FSM 상태 전체를 살펴보았습니다. 핵심은 세 가지입니다:
+    ① 모든 명령어는 IF(S0)와 ID(S1)를 공유한다.
+    ② 각 상태의 제어 신호는 데이터패스를 추적하면 기계적으로 도출된다.
+    ③ branch_adder가 분기 목표 주소를 ALU와 독립적으로 계산하며, old_pc_reg가 JAL/AUIPC의
+    정확한 PC 기준점을 제공한다. 다음 절에서 이를 SystemVerilog로 구현합니다.
+  </p>
+</section>
+
+<!-- ========== 8.3절 ========== -->
+<section id="sec-08-3">
+  <h2>8.3 FSM 제어 유닛 SystemVerilog 구현</h2>
+
+  <p>
+    이제 8.2절에서 설계한 17개 상태의 FSM을 SystemVerilog로 구현합니다.
+    멀티사이클 FSM의 구현 패턴은 산업 표준적으로 <strong>always_ff + always_comb 이중 블록</strong>을 사용합니다.
+    두 블록의 역할을 명확히 이해하는 것이 핵심입니다.
+  </p>
+
+  <h3>8.3.1 이중 블록 FSM 패턴</h3>
+  <ul>
+    <li>
+      <strong>always_ff (순차 로직)</strong>: 현재 상태(current_state) 레지스터 역할.
+      클럭 상승 에지마다 next_state를 current_state로 래치합니다.
+      리셋(rst_n=0) 시 S_IF로 초기화합니다.
+    </li>
+    <li>
+      <strong>always_comb (조합 로직 #1) — 출력 로직</strong>: 현재 상태(current_state)만을 보고
+      13개의 제어 신호를 결정합니다. Moore FSM이므로 입력(opcode)은 여기서 사용하지 않습니다.
+    </li>
+    <li>
+      <strong>always_comb (조합 로직 #2) — 다음 상태 로직</strong>: 현재 상태와 opcode를 보고
+      next_state를 결정합니다.
+    </li>
+  </ul>
+
+  <aside class="tip">
+    <h4>💡 실무 팁: 래치 경고(latch inferred)가 나왔다면?</h4>
+    <p>
+      Vivado에서 "Inferred latch for signal …" 경고가 나왔다면? 이것은 SystemVerilog로 FSM을
+      처음 구현할 때 가장 흔히 마주치는 경고입니다 — 여러분이 처음이 아닙니다.
+      전문 엔지니어도 처음에는 같은 경고를 만납니다. 이 경고는 <code>always_comb</code> 내부의
+      case문에서 어떤 경우에 출력 신호가 할당되지 않았을 때 발생합니다.
+      해결 방법은 두 가지입니다: ① case문 진입 전에 <strong>모든 출력 신호에 기본값을 먼저 할당</strong>하고,
+      ② <strong>default 분기</strong>를 반드시 추가합니다.
+      이 두 가지가 모두 있어야 래치를 완전히 방지할 수 있습니다.
+      아래 코드에서 <code>always_comb begin // 기본값: 모든 제어 신호 비활성</code> 부분이 이에 해당합니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <h4>❓ 수강생 단골 질문: typedef enum이 정말 필요한가요? 숫자로 해도 되지 않나요?</h4>
+    <p>
+      숫자로도 동작은 합니다. <code>localparam S_IF = 5'd0;</code> 식으로 정의해도 됩니다.
+      하지만 <code>typedef enum</code>을 사용하면 세 가지 큰 이점이 있습니다.
+      ① <strong>가독성</strong>: 파형 뷰어(Verdi, Vivado Simulator)에서 상태가 숫자 대신
+      "S_IF", "S_EX_R" 텍스트로 표시됩니다.
+      ② <strong>오타 방지</strong>: 컴파일러가 유효하지 않은 상태값 사용 시 오류를 냅니다.
+      ③ <strong>유지보수성</strong>: 상태를 추가하거나 삭제할 때 숫자 재배열이 불필요합니다.
+      실무에서는 <code>typedef enum</code>이 표준입니다.
+    </p>
+  </aside>
+
+  <h3>8.3.2 완전한 FSM 제어 유닛 구현</h3>
+
+  <p>
+    아래 코드가 길어 보일 수 있습니다. 하지만 구조는 단순합니다: 하나의 case문으로 각 상태에서
+    어떤 신호를 켤지 나열한 것입니다. S_IF 케이스를 완전히 이해했다면 나머지 16개는 같은 방식으로
+    읽힙니다. 지금 당장 모든 줄을 이해하지 않아도 됩니다 — 먼저 전체 구조를 파악하고,
+    필요한 부분을 8.2절 제어 신호 표와 대조하며 확인하십시오.
+  </p>
+
+  <pre><code class="language-systemverilog">// ch08_fsm_controller.sv
+// RV32I 멀티사이클 FSM 제어 유닛 (Moore FSM)
+// IEEE 1800-2017 준수
+
+module fsm_controller (
+   input  logic        clk,
+   input  logic        rst_n,         // 액티브 로우 리셋
+   input  logic [6:0]  opcode,        // ir_reg[6:0]
+   input  logic [2:0]  funct3,        // ir_reg[14:12]
+   input  logic        alu_zero,      // ALU zero 플래그 (BEQ/BNE)
+   input  logic        alu_lt,        // ALU less-than 플래그 (BLT/BGE, 부호 있는 비교)
+   input  logic        alu_ltu,       // ALU less-than unsigned 플래그 (BLTU/BGEU, 무부호 비교)
+
+   // 제어 신호 출력 (Ch07 데이터패스와 연결)
+   output logic        pc_write,      // PC 무조건 쓰기
+   output logic        pc_write_cond, // 조건부 PC 쓰기 (branch_taken과 AND)
+   output logic        i_or_d,        // 메모리 주소: 0=PC, 1=ALUOut
+   output logic        mem_read,      // 메모리 읽기 인에이블
+   output logic        mem_write,     // 메모리 쓰기 인에이블
+   output logic        ir_write,      // IR 레지스터 쓰기
+   output logic        reg_write,     // 레지스터 파일 쓰기
+   output logic [1:0]  mem_to_reg,    // WB 데이터: 00=ALUOut, 01=MDR, 10=PC
+   output logic [1:0]  alu_src_a,     // ALU A: 00=PC, 01=old_pc_reg, 10=A 레지스터
+   output logic [1:0]  alu_src_b,     // ALU B: 00=B reg, 01=상수4, 10=imm_ext
+   output logic [1:0]  alu_op,        // ALU 제어: 00=ADD, 01=SUB, 10=funct 의존
+   output logic [1:0]  pc_src,        // PC 소스: 00=ALU직접(PC+4), 01=ALUOut
+   output logic        branch_taken   // 분기 조건 성립 여부
+);
+
+   // ---------------------------------------------------------------
+   // FSM 상태 정의 (typedef enum — 파형 디버깅에 상태 이름 표시)
+   // ---------------------------------------------------------------
+   typedef enum logic [4:0] {
+      S_IF       = 5'd0,   // 명령어 인출
+      S_ID       = 5'd1,   // 디코딩 및 레지스터 읽기
+      S_EX_R     = 5'd2,   // R-type 실행
+      S_EX_I     = 5'd3,   // I-type 연산 실행
+      S_EX_LOAD  = 5'd4,   // Load 주소 계산
+      S_MEM_LD   = 5'd5,   // Load 메모리 읽기
+      S_WB_LD    = 5'd6,   // Load Write-Back
+      S_EX_ST    = 5'd7,   // Store 주소 계산
+      S_MEM_ST   = 5'd8,   // Store 메모리 쓰기
+      S_EX_BR    = 5'd9,   // Branch 비교 및 분기 결정
+      S_EX_LUI   = 5'd10,  // LUI 실행 (0 + imm_U)
+      S_EX_AUIPC = 5'd11,  // AUIPC 실행 (PC + imm_U)
+      S_WB_RI    = 5'd12,  // R/I/LUI/AUIPC Write-Back
+      S_EX_JAL   = 5'd13,  // JAL 목표 주소 계산
+      S_WB_JAL   = 5'd14,  // JAL Write-Back 및 PC 갱신
+      S_EX_JALR  = 5'd15,  // JALR 목표 주소 계산
+      S_WB_JALR  = 5'd16   // JALR Write-Back 및 PC 갱신
+   } state_t;
+
+   state_t current_state, next_state;
+
+   // ---------------------------------------------------------------
+   // opcode 상수 정의 (RV32I 기본 명령어 세트)
+   // ---------------------------------------------------------------
+   localparam OP_R      = 7'b0110011; // R-type (ADD, SUB, AND, OR 등)
+   localparam OP_I_ALU  = 7'b0010011; // I-type 연산 (ADDI, ANDI 등)
+   localparam OP_LOAD   = 7'b0000011; // Load (LW, LH, LB 등)
+   localparam OP_STORE  = 7'b0100011; // Store (SW, SH, SB 등)
+   localparam OP_BRANCH = 7'b1100011; // Branch (BEQ, BNE, BLT 등)
+   localparam OP_LUI    = 7'b0110111; // LUI
+   localparam OP_AUIPC  = 7'b0010111; // AUIPC
+   localparam OP_JAL    = 7'b1101111; // JAL
+   localparam OP_JALR   = 7'b1100111; // JALR
+
+   // ---------------------------------------------------------------
+   // 상태 레지스터 — 순차 로직 (always_ff)
+   // ---------------------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         current_state &lt;= S_IF;  // 리셋 시 명령어 인출 상태로 초기화
+      else
+         current_state &lt;= next_state;
+   end
+
+   // ---------------------------------------------------------------
+   // 다음 상태 로직 — 조합 로직 (always_comb)
+   // current_state + opcode → next_state
+   // ---------------------------------------------------------------
+   always_comb begin
+      case (current_state)
+         S_IF: next_state = S_ID;  // 항상 ID로 진행
+
+         S_ID: begin
+            // opcode에 따라 해당 실행 단계로 분기
+            case (opcode)
+               OP_R:      next_state = S_EX_R;
+               OP_I_ALU:  next_state = S_EX_I;
+               OP_LOAD:   next_state = S_EX_LOAD;
+               OP_STORE:  next_state = S_EX_ST;
+               OP_BRANCH: next_state = S_EX_BR;
+               OP_LUI:    next_state = S_EX_LUI;
+               OP_AUIPC:  next_state = S_EX_AUIPC;
+               OP_JAL:    next_state = S_EX_JAL;
+               OP_JALR:   next_state = S_EX_JALR;
+               default:   next_state = S_IF;  // 미지원 명령어: 재시작
+            endcase
+         end
+
+         // 각 실행 단계에서 다음 단계로 순차 전이
+         S_EX_R:    next_state = S_WB_RI;
+         S_EX_I:    next_state = S_WB_RI;
+         S_EX_LOAD: next_state = S_MEM_LD;
+         S_MEM_LD:  next_state = S_WB_LD;
+         S_WB_LD:   next_state = S_IF;   // Load 완료 → 다음 명령어
+         S_EX_ST:   next_state = S_MEM_ST;
+         S_MEM_ST:  next_state = S_IF;   // Store 완료 → 다음 명령어
+         S_EX_BR:   next_state = S_IF;   // Branch 완료 → 다음 명령어
+         S_EX_LUI:  next_state = S_WB_RI;
+         S_EX_AUIPC:next_state = S_WB_RI;
+         S_WB_RI:   next_state = S_IF;
+         S_EX_JAL:  next_state = S_WB_JAL;
+         S_WB_JAL:  next_state = S_IF;
+         S_EX_JALR: next_state = S_WB_JALR;
+         S_WB_JALR: next_state = S_IF;
+
+         default: next_state = S_IF;  // 예외: 안전하게 IF로 복귀
+      endcase
+   end
+
+   // ---------------------------------------------------------------
+   // 분기 조건 판단 — funct3에 따라 branch_taken 결정
+   // (Moore FSM의 예외: branch_taken은 입력 의존이지만,
+   //  pc_write_cond와 AND되어 실제 PC 갱신을 제어함)
+   // ---------------------------------------------------------------
+   always_comb begin
+      case (funct3)
+         3'b000: branch_taken = alu_zero;        // BEQ: rs1 == rs2
+         3'b001: branch_taken = ~alu_zero;       // BNE: rs1 != rs2
+         3'b100: branch_taken = alu_lt;          // BLT: rs1 &lt; rs2 (부호 있는 비교)
+         3'b101: branch_taken = ~alu_lt;         // BGE: rs1 &gt;= rs2 (부호 있는 비교)
+         3'b110: branch_taken = alu_ltu;         // BLTU: rs1 &lt; rs2 (무부호 비교, alu_ltu 사용)
+         3'b111: branch_taken = ~alu_ltu;        // BGEU: rs1 &gt;= rs2 (무부호 비교, alu_ltu 사용)
+         default: branch_taken = 1'b0;
+      endcase
+   end
+
+   // 주의: BLT/BGE는 부호 있는 비교(alu_lt), BLTU/BGEU는 무부호 비교(alu_ltu)를 사용합니다.
+   // ALU에서 두 플래그를 모두 출력해야 하며, 데이터패스에서 alu_ltu 포트를 연결해야 합니다.
+
+   // ---------------------------------------------------------------
+   // 출력 로직 — Moore FSM: 현재 상태만으로 제어 신호 결정
+   // 패턴: 먼저 모든 신호에 기본값(0) 설정 → case에서 override
+   // ---------------------------------------------------------------
+   always_comb begin
+      // --- 기본값: 모든 제어 신호 비활성 (래치 방지) ---
+      pc_write      = 1'b0;
+      pc_write_cond = 1'b0;
+      i_or_d        = 1'b0;
+      mem_read      = 1'b0;
+      mem_write     = 1'b0;
+      ir_write      = 1'b0;
+      reg_write     = 1'b0;
+      mem_to_reg    = 2'b00;
+      alu_src_a     = 1'b0;
+      alu_src_b     = 2'b00;
+      alu_op        = 2'b00;
+      pc_src        = 2'b00;
+
+      case (current_state)
+         // --- S0: IF — 명령어 인출 + PC+4 계산 ---
+         S_IF: begin
+            mem_read  = 1'b1;   // 명령어 메모리 읽기
+            ir_write  = 1'b1;   // IR에 명령어 저장
+            pc_write  = 1'b1;   // PC &lt;- PC+4
+            alu_src_a = 2'b00;  // ALU A = PC (현재 PC 레지스터)
+            alu_src_b = 2'b01;  // ALU B = 4
+            alu_op    = 2'b00;  // ADD
+            pc_src    = 2'b00;  // PC 소스 = ALU 직접 (PC+4)
+         end
+
+         // --- S1: ID — 레지스터 읽기 (A, B 자동 래치) ---
+         S_ID: begin
+            // 레지스터 파일은 비동기 읽기 — 별도 인에이블 불필요
+            // A, B 레지스터는 매 사이클 자동으로 rs1, rs2 값을 래치
+            // alu_src_a/alu_src_b 설정은 branch_adder 없이 분기 주소를 미리 계산하는
+            // 최적화 방향을 염두에 둔 것. 현재 구현에서는 branch_adder를 사용하므로 미사용.
+            alu_src_a = 2'b00;  // PC (분기 주소 계산 준비 — 현재 미사용)
+            alu_src_b = 2'b10;  // imm_ext
+            alu_op    = 2'b00;  // ADD
+         end
+
+         // --- S2: EX_R — R-type ALU 연산 ---
+         S_EX_R: begin
+            alu_src_a = 2'b10;  // rs1 (A 레지스터)
+            alu_src_b = 2'b00;  // rs2
+            alu_op    = 2'b10;  // funct3/funct7 의존
+         end
+
+         // --- S3: EX_I — I-type ALU 연산 ---
+         S_EX_I: begin
+            alu_src_a = 2'b10;  // rs1 (A 레지스터)
+            alu_src_b = 2'b10;  // imm_ext (I-type)
+            alu_op    = 2'b10;  // funct3 의존
+         end
+
+         // --- S4: EX_LOAD — Load 주소 계산 (rs1 + imm_I) ---
+         S_EX_LOAD: begin
+            alu_src_a = 2'b10;  // rs1 (A 레지스터)
+            alu_src_b = 2'b10;  // imm_ext (I-type)
+            alu_op    = 2'b00;  // ADD
+         end
+
+         // --- S5: MEM_LD — 데이터 메모리 읽기 ---
+         S_MEM_LD: begin
+            mem_read = 1'b1;    // 데이터 메모리 읽기
+            i_or_d   = 1'b1;    // 주소 = ALUOut
+         end
+
+         // --- S6: WB_LD — Load Write-Back (MDR → rd) ---
+         S_WB_LD: begin
+            reg_write  = 1'b1;   // rd에 쓰기
+            mem_to_reg = 2'b01;  // 데이터 = MDR
+         end
+
+         // --- S7: EX_ST — Store 주소 계산 (rs1 + imm_S) ---
+         S_EX_ST: begin
+            alu_src_a = 2'b10;  // rs1 (A 레지스터)
+            alu_src_b = 2'b10;  // imm_ext (S-type)
+            alu_op    = 2'b00;  // ADD
+         end
+
+         // --- S8: MEM_ST — 데이터 메모리 쓰기 ---
+         S_MEM_ST: begin
+            mem_write = 1'b1;   // 데이터 메모리 쓰기
+            i_or_d    = 1'b1;   // 주소 = ALUOut
+         end
+
+         // --- S9: EX_BR — Branch 비교 및 분기 결정 ---
+         S_EX_BR: begin
+            alu_src_a     = 2'b10;  // rs1 (A 레지스터)
+            alu_src_b     = 2'b00;  // rs2 (B 레지스터)
+            alu_op        = 2'b01;  // SUB → zero/lt/ltu 플래그 생성
+            pc_write_cond = 1'b1;   // 조건부 PC 갱신 (branch_taken과 AND)
+            pc_src        = 2'b10;  // PC 소스 = branch_adder 출력 (old_pc_reg + imm_B)
+         end
+
+         // --- S10: EX_LUI — LUI (A=0 + imm_U) ---
+         S_EX_LUI: begin
+            alu_src_a = 2'b10;  // A 레지스터 (ID에서 x0=0 강제, A=0)
+            alu_src_b = 2'b10;  // imm_ext (U-type)
+            alu_op    = 2'b00;  // ADD (0 + imm_U)
+         end
+
+         // --- S11: EX_AUIPC — AUIPC (old_pc_reg + imm_U) ---
+         S_EX_AUIPC: begin
+            alu_src_a = 2'b01;  // old_pc_reg (명령어 자신의 원본 PC)
+            alu_src_b = 2'b10;  // imm_ext (U-type)
+            alu_op    = 2'b00;  // ADD
+         end
+
+         // --- S12: WB_RI — R/I/LUI/AUIPC Write-Back ---
+         S_WB_RI: begin
+            reg_write  = 1'b1;   // rd에 쓰기
+            mem_to_reg = 2'b00;  // 데이터 = ALUOut
+         end
+
+         // --- S13: EX_JAL — JAL 목표 주소 (old_pc_reg + imm_J) ---
+         S_EX_JAL: begin
+            alu_src_a = 2'b01;  // old_pc_reg (JAL 명령어 자신의 원본 PC)
+            alu_src_b = 2'b10;  // imm_ext (J-type)
+            alu_op    = 2'b00;  // ADD
+         end
+
+         // --- S14: WB_JAL — JAL Write-Back + PC 갱신 ---
+         S_WB_JAL: begin
+            reg_write  = 1'b1;   // rd = PC+4 (복귀 주소)
+            mem_to_reg = 2'b10;  // 데이터 = PC 레지스터 (이미 PC+4)
+            pc_write   = 1'b1;   // PC &lt;- ALUOut (점프 목표)
+            pc_src     = 2'b01;  // ALUOut
+         end
+
+         // --- S15: EX_JALR — JALR 목표 주소 (rs1 + imm_I) ---
+         S_EX_JALR: begin
+            alu_src_a = 2'b10;  // A 레지스터 (rs1)
+            alu_src_b = 2'b10;  // imm_ext (I-type)
+            alu_op    = 2'b00;  // ADD
+         end
+
+         // --- S16: WB_JALR — JALR Write-Back + PC 갱신 ---
+         S_WB_JALR: begin
+            reg_write  = 1'b1;   // rd = PC+4
+            mem_to_reg = 2'b10;  // 데이터 = PC 레지스터
+            pc_write   = 1'b1;   // PC &lt;- ALUOut (rs1+imm_I)
+            pc_src     = 2'b01;  // ALUOut
+         end
+
+         default: begin
+            // 기본값 유지 — next_state 로직에서 S_IF로 복귀
+         end
+      endcase
+   end
+
+endmodule</code></pre>
+
+  <aside class="tip">
+    <h4>💡 면접 준비 포인트: 하드와이어드 제어 vs 마이크로프로그래밍</h4>
+    <p>
+      위에서 구현한 FSM 방식이 바로 <strong>하드와이어드(Hardwired) 제어</strong>입니다.
+      이 구현이 왜 하드와이어드인지, 마이크로프로그래밍과 어떻게 다른지에 대한 완전한 면접 준비는
+      <strong>8.6절 면접 포인트</strong>를 참조하십시오. 핵심만 간단히 기억하면 됩니다:
+      하드와이어드는 게이트/FSM으로, 마이크로프로그래밍은 ROM에서 읽어 제어 신호를 생성합니다.
+    </p>
+  </aside>
+
+  <p>
+    <strong>8.3절 소결</strong>: FSM 코드 구조를 요약합니다.
+    <code>always_ff</code>는 상태를 기억하고, <code>always_comb</code>는 두 가지 일을 합니다 —
+    현재 상태로 제어 신호를 출력하고(출력 로직), 현재 상태와 opcode로 다음 상태를 결정합니다(전이 로직).
+    기본값 선설정 패턴은 래치를 방지합니다. <code>typedef enum</code>은 파형 뷰어에서 상태 이름을 보여줍니다.
+  </p>
+
+  <h3>8.3.3 ALU 제어 유닛</h3>
+  <p>
+    FSM 제어 유닛이 출력하는 alu_op[1:0]은 추상적인 명령입니다. 실제 ALU는 4비트 alu_ctrl을 입력받습니다.
+    alu_op를 받아 funct3/funct7로 세부 연산을 결정하는 별도 모듈을 구현합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// ch08_alu_control.sv
+// ALU 제어 유닛 — FSM의 alu_op + funct3/funct7 → 4비트 ALU 연산 코드
+// alu_op 의미: 00=ADD 강제, 01=SUB 강제, 10=명령어 의존
+
+module alu_control (
+   input  logic [1:0]  alu_op,     // FSM에서 출력한 추상 ALU 명령
+   input  logic [2:0]  funct3,     // 명령어 funct3 필드
+   input  logic        funct7_b5,  // ir_reg[30]: ADD/SUB, SRL/SRA 구분
+   output logic [3:0]  alu_ctrl    // 실제 ALU 연산 코드 (Ch04 ALU 입력)
+);
+   // alu_ctrl 인코딩 (Ch04 ALU와 동일하게 유지)
+   // 4'b0000=ADD, 4'b0001=SUB, 4'b0010=AND, 4'b0011=OR
+   // 4'b0100=XOR, 4'b0101=SLL, 4'b0110=SRL, 4'b0111=SRA
+   // 4'b1000=SLT (부호), 4'b1001=SLTU (무부호)
+
+   always_comb begin
+      case (alu_op)
+         2'b00: alu_ctrl = 4'b0000;  // ADD 강제 (IF, EX_LOAD, EX_ST 등)
+         2'b01: alu_ctrl = 4'b0001;  // SUB 강제 (Branch 비교)
+         2'b10: begin                 // 명령어 funct3/funct7 의존 (R/I-type)
+            case (funct3)
+               3'b000: alu_ctrl = funct7_b5 ? 4'b0001 : 4'b0000; // SUB/ADD
+               3'b001: alu_ctrl = 4'b0101;  // SLL
+               3'b010: alu_ctrl = 4'b1000;  // SLT (부호)
+               3'b011: alu_ctrl = 4'b1001;  // SLTU (무부호)
+               3'b100: alu_ctrl = 4'b0100;  // XOR
+               3'b101: alu_ctrl = funct7_b5 ? 4'b0111 : 4'b0110; // SRA/SRL
+               3'b110: alu_ctrl = 4'b0011;  // OR
+               3'b111: alu_ctrl = 4'b0010;  // AND
+               default: alu_ctrl = 4'b0000;
+            endcase
+         end
+         default: alu_ctrl = 4'b0000;
+      endcase
+   end
+endmodule</code></pre>
+
+</section>
+
+<!-- ========== 8.4절 ========== -->
+<section id="sec-08-4">
+  <h2>8.4 멀티사이클 CPU 통합 및 시뮬레이션</h2>
+
+  <p>
+    두 챕터에 걸쳐 설계한 데이터패스와 FSM이 지금 하나의 CPU로 합쳐집니다.
+    <strong>멀티사이클 CPU가 처음 실행되는 순간입니다.</strong>
+    Ch07의 데이터패스와 Ch08의 FSM 제어 유닛이 하나의 CPU로 합쳐졌습니다. 이 순간을 즐기십시오.
+    통합 후에는 시뮬레이션으로 FSM 상태 전이가 올바른지 검증합니다.
+  </p>
+
+  <h3>8.4.1 멀티사이클 Top 모듈</h3>
+
+  <pre><code class="language-systemverilog">// ch08_multicycle_top.sv
+// RV32I 멀티사이클 CPU 최상위 모듈
+// 데이터패스 (Ch07) + FSM 제어 유닛 (Ch08) 연결
+
+module multicycle_top (
+   input  logic        clk,
+   input  logic        rst_n
+);
+
+   // 내부 연결 신호 (FSM → 데이터패스)
+   logic        pc_write, pc_write_cond, i_or_d;
+   logic        mem_read, mem_write, ir_write, reg_write;
+   logic [1:0]  mem_to_reg, alu_src_b, alu_op, pc_src;
+   logic [1:0]  alu_src_a;  // 2비트 확장 (00=PC, 01=old_pc_reg, 10=A 레지스터)
+   logic        branch_taken;
+
+   // 데이터패스 → FSM
+   logic [6:0]  opcode;
+   logic [2:0]  funct3;
+   logic        alu_zero, alu_lt, alu_ltu;
+
+   // ALU 제어
+   logic [1:0]  alu_op_fsm;
+   logic [3:0]  alu_ctrl;
+   logic [1:0]  alu_src_a_w;  // 2비트 확장된 alu_src_a
+
+   // FSM 제어 유닛 인스턴스
+   fsm_controller u_fsm (
+      .clk          (clk),
+      .rst_n        (rst_n),
+      .opcode       (opcode),
+      .funct3       (funct3),
+      .alu_zero     (alu_zero),
+      .alu_lt       (alu_lt),
+      .alu_ltu      (alu_ltu),
+      .pc_write     (pc_write),
+      .pc_write_cond(pc_write_cond),
+      .i_or_d       (i_or_d),
+      .mem_read     (mem_read),
+      .mem_write    (mem_write),
+      .ir_write     (ir_write),
+      .reg_write    (reg_write),
+      .mem_to_reg   (mem_to_reg),
+      .alu_src_a    (alu_src_a),
+      .alu_src_b    (alu_src_b),
+      .alu_op       (alu_op_fsm),
+      .pc_src       (pc_src),
+      .branch_taken (branch_taken)
+   );
+
+   // ALU 제어 유닛 인스턴스
+   alu_control u_alu_ctrl (
+      .alu_op    (alu_op_fsm),
+      .funct3    (funct3),
+      .funct7_b5 (/* ir_reg[30] — 데이터패스에서 연결 */),
+      .alu_ctrl  (alu_ctrl)
+   );
+
+   // 데이터패스 인스턴스 (Ch07에서 설계한 모듈)
+   multicycle_datapath u_datapath (
+      .clk          (clk),
+      .rst_n        (rst_n),
+      // 제어 입력
+      .pc_write     (pc_write),
+      .pc_write_cond(pc_write_cond),
+      .branch_taken (branch_taken),
+      .i_or_d       (i_or_d),
+      .mem_read     (mem_read),
+      .mem_write    (mem_write),
+      .ir_write     (ir_write),
+      .reg_write    (reg_write),
+      .mem_to_reg   (mem_to_reg),
+      .alu_src_a    (alu_src_a),
+      .alu_src_b    (alu_src_b),
+      .alu_ctrl     (alu_ctrl),
+      .pc_src       (pc_src),
+      // 상태 출력 (FSM 입력으로 연결)
+      .opcode       (opcode),
+      .funct3       (funct3),
+      .alu_zero     (alu_zero),
+      .alu_lt       (alu_lt),
+      .alu_ltu      (alu_ltu)
+   );
+
+endmodule</code></pre>
+
+  <h3>8.4.2 검증용 명령어 시퀀스</h3>
+  <p>
+    시뮬레이션에서 검증할 명령어 시퀀스는 아래와 같습니다. 각 명령어가 올바른 FSM 상태 경로를 따라
+    실행되는지 파형으로 확인합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">// ch08_multicycle_tb.sv — 테스트벤치
+
+module multicycle_tb;
+   logic clk, rst_n;
+
+   // 클럭 생성 (10ns 주기)
+   initial clk = 0;
+   always #5 clk = ~clk;
+
+   // DUT 인스턴스
+   multicycle_top u_dut (
+      .clk   (clk),
+      .rst_n (rst_n)
+   );
+
+   // 검증 시퀀스
+   // 메모리 초기화는 데이터패스 내부 unified_memory에서 수행
+   // 명령어 메모리 (주소 0x00~):
+   //   0x00: addi x1, x0, 5    // x1 = 5
+   //   0x04: addi x2, x0, 3    // x2 = 3
+   //   0x08: add  x3, x1, x2   // x3 = 8 (R-type, 4사이클)
+   //   0x0C: sw   x3, 0(x0)    // mem[0] = 8 (Store, 4사이클)
+   //   0x10: lw   x4, 0(x0)    // x4 = 8 (Load, 5사이클)
+   //   0x14: beq  x1, x2, 8    // not taken (Branch, 3사이클)
+   //   0x18: beq  x3, x3, 8    // taken: PC = 0x20 (Branch, 3사이클)
+   //   0x1C: addi x5, x0, 99   // 실행되면 안 됨 (skipped)
+   //   0x20: jal  x6, 4        // x6=0x24, PC=0x24 (JAL, 4사이클)
+   //   0x24: jalr x7, x6, 0    // x7=0x28, PC=x6+0=0x24 (무한루프)
+
+   initial begin
+      rst_n = 0;
+      repeat(2) @(posedge clk);
+      rst_n = 1;
+
+      // 충분한 사이클 실행
+      repeat(80) @(posedge clk);
+
+      $display("=== 시뮬레이션 완료 ===");
+      $finish;
+   end
+
+   // 자동 검증 — current_state 및 레지스터 값 모니터링
+   // (실제 신호명은 계층적 경로로 접근)
+   initial begin
+      $monitor("t=%0t state=%s pc=%h x3=%h x4=%h",
+               $time,
+               u_dut.u_fsm.current_state.name(), // enum 이름 출력
+               u_dut.u_datapath.pc_reg,
+               u_dut.u_datapath.u_regfile.regs[3],
+               u_dut.u_datapath.u_regfile.regs[4]);
+   end
+
+   // VCD 파형 덤프 (Vivado/VCS 시뮬레이션)
+   initial begin
+      $dumpfile("ch08_multicycle.vcd");
+      $dumpvars(0, multicycle_tb);
+   end
+endmodule</code></pre>
+
+  <h3>8.4.3 시뮬레이션 파형에서 확인할 핵심 포인트</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어</th>
+        <th>예상 상태 시퀀스</th>
+        <th>확인 항목</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>addi x1, x0, 5</td>
+        <td>S_IF → S_ID → S_EX_I → S_WB_RI</td>
+        <td>4사이클 후 x1=5</td>
+      </tr>
+      <tr>
+        <td>add x3, x1, x2</td>
+        <td>S_IF → S_ID → S_EX_R → S_WB_RI</td>
+        <td>4사이클 후 x3=8</td>
+      </tr>
+      <tr>
+        <td>sw x3, 0(x0)</td>
+        <td>S_IF → S_ID → S_EX_ST → S_MEM_ST</td>
+        <td>4사이클 후 mem[0]=8</td>
+      </tr>
+      <tr>
+        <td>lw x4, 0(x0)</td>
+        <td>S_IF → S_ID → S_EX_LOAD → S_MEM_LD → S_WB_LD</td>
+        <td>5사이클 후 x4=8</td>
+      </tr>
+      <tr>
+        <td>beq x1, x2, 8 (not taken)</td>
+        <td>S_IF → S_ID → S_EX_BR</td>
+        <td>3사이클, PC 변경 없음</td>
+      </tr>
+      <tr>
+        <td>beq x3, x3, 8 (taken)</td>
+        <td>S_IF → S_ID → S_EX_BR</td>
+        <td>3사이클, PC = 0x20</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../figures/ch08_sec04_fsm_waveform.svg" alt="FSM 상태 전이 파형">
+    <figcaption>그림 8.3: add x3, x1, x2 실행 시 FSM 파형 — 4개의 클럭 사이클에 걸쳐 S_IF → S_ID → S_EX_R → S_WB_RI 순서로 상태가 전이되며, 4번째 사이클 끝에 x3에 결과가 저장된다.</figcaption>
+  </figure>
+
+  <aside class="metacognition">
+    <h4>🔍 스스로 점검: 시뮬레이션 파형에서 FSM 상태 추적하는 방법</h4>
+    <p>
+      Verdi 또는 Vivado 시뮬레이터에서 <code>current_state</code> 신호를 파형 창에 추가하십시오.
+      <code>typedef enum</code>을 사용했다면 숫자 대신 "S_IF", "S_EX_R" 같은 텍스트로 표시됩니다.
+      확인해야 할 사항:
+    </p>
+    <ul>
+      <li>reset 해제 후 첫 번째 상태가 S_IF인가?</li>
+      <li>addi 명령어에서 S_ID 이후 S_EX_I로 전이되는가? (S_EX_R이 아닌지 주의)</li>
+      <li>lw 명령어가 정확히 5사이클을 소모하는가?</li>
+      <li>beq taken 시 다음 S_IF에서 PC가 분기 목표 주소로 변경되는가?</li>
+    </ul>
+  </aside>
+
+  <aside class="instructor-tip">
+    <h4>📌 강사 꿀팁: 래치 경고 라이브 시연</h4>
+    <p>
+      수업에서 가장 효과적인 시연 중 하나는 의도적으로 래치 경고를 유발한 후 수정하는 과정입니다.
+      <code>always_comb</code> 출력 로직 블록에서 기본값 할당 줄을 삭제하고 합성하면
+      "Warning: Inferred latch for signal …" 메시지가 수십 개 나타납니다.
+      그 다음 기본값 할당을 복구하면 모든 경고가 사라집니다.
+      학생들이 직접 경고 메시지를 읽고 해결하는 경험을 쌓는 것이 중요합니다.
+    </p>
+  </aside>
+</section>
+
+<!-- ========== 8.5절 ========== -->
+<section id="sec-08-5">
+  <h2>8.5 성능 비교 — 단일 사이클 vs 멀티사이클</h2>
+
+  <p>
+    멀티사이클 CPU는 단일 사이클보다 항상 느린가요? 그렇지 않습니다.
+    성능은 두 가지 요소의 곱으로 결정됩니다: <strong>클럭 주파수(Fmax)</strong>와 <strong>CPI(사이클/명령어)</strong>.
+    처리량(Throughput) = Fmax / CPI_avg. 단일 사이클은 CPI=1이지만 Fmax가 낮고,
+    멀티사이클은 CPI&gt;1이지만 Fmax가 높습니다.
+  </p>
+
+  <h3>8.5.1 CPI 계산 방법론</h3>
+  <p>
+    CPI(Cycles Per Instruction, 명령어당 사이클 수)는 명령어 타입별 사이클 수와
+    프로그램 내 명령어 비율(Mix)의 가중 평균으로 계산합니다.
+  </p>
+  <p>CPI_avg = Σ (CPI_i × 비율_i)</p>
+
+  <h3>8.5.2 CPI 비교표</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>명령어 타입</th>
+        <th>단일 사이클 CPI</th>
+        <th>멀티사이클 CPI</th>
+        <th>FSM 상태 경로</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>R-type</td>
+        <td>1</td>
+        <td>4</td>
+        <td>IF→ID→EX_R→WB_RI</td>
+      </tr>
+      <tr>
+        <td>I-type 연산</td>
+        <td>1</td>
+        <td>4</td>
+        <td>IF→ID→EX_I→WB_RI</td>
+      </tr>
+      <tr>
+        <td>Load</td>
+        <td>1</td>
+        <td>5</td>
+        <td>IF→ID→EX_LOAD→MEM_LD→WB_LD</td>
+      </tr>
+      <tr>
+        <td>Store</td>
+        <td>1</td>
+        <td>4</td>
+        <td>IF→ID→EX_ST→MEM_ST</td>
+      </tr>
+      <tr>
+        <td>Branch</td>
+        <td>1</td>
+        <td>3</td>
+        <td>IF→ID→EX_BR</td>
+      </tr>
+      <tr>
+        <td>LUI / AUIPC</td>
+        <td>1</td>
+        <td>4</td>
+        <td>IF→ID→EX_LUI(AUIPC)→WB_RI</td>
+      </tr>
+      <tr>
+        <td>JAL / JALR</td>
+        <td>1</td>
+        <td>4</td>
+        <td>IF→ID→EX_JAL(JALR)→WB_JAL(JALR)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>8.5.3 가중 평균 CPI 계산 예시</h3>
+  <p>
+    일반적인 RISC-V 프로그램의 명령어 분포를 R:I:Load:Store:Branch = 40%:20%:20%:10%:10%로 가정합니다.
+  </p>
+  <p>
+    CPI_avg = 4×0.40 + 4×0.20 + 5×0.20 + 4×0.10 + 3×0.10<br>
+    = 1.6 + 0.8 + 1.0 + 0.4 + 0.3 = <strong>4.1</strong>
+  </p>
+
+  <h3>8.5.4 Fmax 비교 및 처리량 분석</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>구분</th>
+        <th>단일 사이클 (Ch06)</th>
+        <th>멀티사이클 (Ch07-08)</th>
+        <th>파이프라인 (Ch09~)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CPI (평균)</td>
+        <td>1.0</td>
+        <td>4.1</td>
+        <td>~1.0 (이상적)</td>
+      </tr>
+      <tr>
+        <td>Fmax (예상, Basys 3)</td>
+        <td>~25 MHz</td>
+        <td>~50 MHz</td>
+        <td>~100 MHz</td>
+      </tr>
+      <tr>
+        <td>처리량 (백만 명령어/초, MIPS, Million Instructions Per Second — 아키텍처 MIPS와 별개)</td>
+        <td>25 / 1.0 = 25</td>
+        <td>50 / 4.1 ≈ 12.2</td>
+        <td>100 / 1.0 = 100</td>
+      </tr>
+      <tr>
+        <td>LUT 사용량</td>
+        <td>~1,850</td>
+        <td>~1,200</td>
+        <td>~2,400</td>
+      </tr>
+      <tr>
+        <td>임계 경로</td>
+        <td>IF+EX+MEM+WB 전체</td>
+        <td>한 단계(IF 또는 EX)</td>
+        <td>한 스테이지</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    위 표에서 놀라운 사실이 드러납니다. <strong>멀티사이클이 단일 사이클보다 처리량이 낮습니다!</strong>
+    Fmax가 2배가 되어도 CPI가 4.1배이므로 처리량은 25 vs 12.2 MIPS로 단일 사이클이 유리합니다.
+    멀티사이클의 Fmax가 단일 사이클 CPI_avg 배수(= 4.1배)를 초과해야 비로소 멀티사이클이 유리해집니다.
+    즉, 단일 사이클 Fmax가 25MHz라면 멀티사이클이 25 × 4.1 = 102.5 MHz 이상이어야 합니다.
+    FPGA에서 이는 쉽지 않습니다.
+  </p>
+  <p>
+    <strong>그렇다면 멀티사이클의 진정한 가치는 무엇인가?</strong>
+    처리량이 아니라 <em>자원 절감</em>과 <em>교육적 단계</em>입니다.
+    단일 사이클 대비 LUT 사용량이 약 35% 줄어듭니다(메모리 하나로 통합, MUX 공유).
+    더 중요하게는, 멀티사이클의 각 FSM 상태가 파이프라인의 각 스테이지와 1:1 대응하므로
+    파이프라인 이해를 위한 완벽한 전 단계 학습이 됩니다.
+    성능만을 위해서라면 파이프라인이 필요합니다.
+  </p>
+
+  <aside class="interview">
+    <h4>🎯 면접 포인트: CPI와 IPC의 관계</h4>
+    <p>
+      IPC(Instructions Per Cycle) = 1 / CPI입니다. 단일 사이클: IPC=1, CPI=1.
+      멀티사이클: IPC≈0.24, CPI≈4.1. 이상적 파이프라인: IPC→1, CPI→1.
+      슈퍼스칼라(Superscalar) 프로세서는 IPC&gt;1을 달성합니다 (예: IPC=4, CPI=0.25).
+      현대 고성능 CPU의 설계 목표는 IPC 극대화이며, 이는 Out-of-Order 실행,
+      분기 예측, 다중 발행(Multiple Issue) 기법으로 구현됩니다.
+    </p>
+  </aside>
+</section>
+
+<!-- ========== 8.6절 ========== -->
+<section id="sec-08-6">
+  <h2>8.6 마이크로프로그래밍 개요</h2>
+
+  <p>
+    우리가 구현한 FSM은 <strong>하드와이어드(Hardwired) 제어</strong> 방식입니다.
+    상태 전이와 출력이 게이트와 플립플롭으로 물리적으로 고정되어 있습니다.
+    마이크로프로그래밍(Microprogramming)은 다른 접근입니다.
+  </p>
+  <p>
+    비유하자면, 하드와이어드 제어는 <strong>레시피를 완전히 외운 요리사</strong>입니다.
+    레시피 없이도 즉시 요리할 수 있어 빠르지만, 레시피가 바뀌면 다시 처음부터 외워야 합니다.
+    마이크로프로그래밍은 <strong>레시피 책을 읽으며 요리하는 요리사</strong>입니다.
+    책(ROM)만 바꾸면 다른 요리가 가능하지만, 매번 책을 읽는 시간이 걸립니다.
+  </p>
+  <p>
+    마이크로프로그래밍 방식에서는 FSM 상태 번호(마이크로프로그램 카운터)가
+    ROM의 주소로 사용됩니다. ROM의 각 행에는 해당 상태에서 출력해야 할
+    제어 신호 패턴(마이크로명령어)이 저장되어 있습니다.
+    상태 전이도 ROM에서 읽어옵니다(다음 주소 필드).
+  </p>
+
+  <figure>
+    <img src="../figures/ch08_sec06_microprogramming.svg" alt="마이크로프로그래밍 ROM 구조">
+    <figcaption>그림 8.4: 마이크로프로그래밍 ROM 구조 — 상태 주소로 ROM을 참조하여 제어 신호를 읽어 출력한다. 하드와이어드 대비 ROM 접근 지연이 추가된다.</figcaption>
+  </figure>
+
+  <p>
+    현대 프로세서에서의 위치: RISC-V, ARM Cortex 계열은 명령어 집합이 단순하고 정형적이므로
+    하드와이어드 제어가 표준입니다. x86/x86-64는 복잡하고 가변 길이인 CISC 명령어를
+    내부적으로 단순한 마이크로오퍼레이션(μop)으로 변환하는 데 마이크로코드를 활용합니다.
+    Intel CPU의 마이크로코드는 펌웨어 업데이트로 패치 가능하며, 이것이 Spectre/Meltdown
+    취약점 수정에 활용되었습니다.
+  </p>
+
+  <aside class="interview">
+    <h4>🎯 면접 포인트 #11 (완전 버전): 하드와이어드 vs 마이크로프로그래밍</h4>
+    <p><strong>4단계 답변 구조:</strong></p>
+    <ol>
+      <li><strong>정의</strong>: 하드와이어드는 FSM/게이트로 제어 신호를 생성. 마이크로프로그래밍은 ROM(마이크로코드)에서 읽어 생성.</li>
+      <li><strong>장단점 비교</strong>: 하드와이어드 — 빠름(게이트 지연), 수정 불가. 마이크로프로그래밍 — 유연함, ROM 접근 지연.</li>
+      <li><strong>실사례</strong>: RISC-V→하드와이어드, x86→마이크로코드(복잡 명령어는 μop으로 분해). Intel 마이크로코드는 펌웨어로 업데이트 가능.</li>
+      <li><strong>RISC-V 선택 근거</strong>: 명령어 집합이 정형적이고 수가 적어 FSM으로 완전히 구현 가능. CPI 최소화와 Fmax 극대화가 목표이므로 하드와이어드 최적.</li>
+    </ol>
+  </aside>
+</section>
+
+<!-- ========== 8.7절 ========== -->
+<section id="sec-08-7">
+  <h2>8.7 요약 및 다음 단계</h2>
+
+  <h3>핵심 개념 정리</h3>
+  <ul>
+    <li><strong>Moore FSM</strong>: 출력이 현재 상태에만 의존. 제어 유닛에 선택되는 이유는 타이밍 안전성.</li>
+    <li><strong>always_ff + always_comb 이중 블록</strong>: 상태 레지스터(순차)와 출력/전이 로직(조합)을 분리하는 산업 표준 패턴.</li>
+    <li><strong>기본값 선설정</strong>: always_comb에서 래치 경고를 방지하려면 case문 전에 모든 출력에 기본값을 할당해야 함.</li>
+    <li><strong>17개 상태 설계 원칙</strong>: 데이터패스에서 데이터 흐름을 추적 → MUX 경로 확인 → 제어 신호 결정.</li>
+    <li><strong>Branch 3사이클</strong>: Write-Back 불필요, EX_BR에서 비교+분기 결정 동시 수행.</li>
+    <li><strong>CPI_avg = 4.1</strong> (일반적 명령어 믹스 기준). 멀티사이클의 가치는 처리량보다 자원 절감과 교육적 역할.</li>
+    <li><strong>하드와이어드 vs 마이크로프로그래밍</strong>: RISC-V는 하드와이어드. x86은 복잡 명령어에 마이크로코드 활용.</li>
+  </ul>
+
+  <h3>FSM 상태 ↔ 파이프라인 스테이지 1:1 대응</h3>
+  <p>
+    이 대응표는 Ch09(파이프라인)로 가는 핵심 교량입니다. 지금 이해해두면 파이프라인이 훨씬 쉬워집니다.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>멀티사이클 FSM 상태</th>
+        <th>파이프라인 스테이지</th>
+        <th>역할</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>S0: IF</td>
+        <td>IF (Instruction Fetch)</td>
+        <td>명령어 인출, PC+4</td>
+      </tr>
+      <tr>
+        <td>S1: ID</td>
+        <td>ID (Instruction Decode)</td>
+        <td>디코딩, 레지스터 읽기</td>
+      </tr>
+      <tr>
+        <td>S2~S9, S10~S13, S15: EX_*</td>
+        <td>EX (Execute)</td>
+        <td>ALU 연산, 주소 계산</td>
+      </tr>
+      <tr>
+        <td>S5: MEM_LD, S8: MEM_ST</td>
+        <td>MEM (Memory Access)</td>
+        <td>메모리 읽기/쓰기</td>
+      </tr>
+      <tr>
+        <td>S6: WB_LD, S12: WB_RI, S14: WB_JAL, S16: WB_JALR</td>
+        <td>WB (Write Back)</td>
+        <td>레지스터에 결과 저장</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>핵심 연결 문장</strong>:
+    멀티사이클 CPU는 한 명령어를 한 번에 하나씩 FSM 상태로 순서대로 실행합니다.
+    파이프라인은 각 FSM 상태를 동시에 다른 명령어에 적용합니다.
+    <strong>즉, 멀티사이클의 각 상태가 파이프라인의 각 스테이지가 됩니다.</strong>
+    멀티사이클에서 S_IF, S_ID, S_EX_R, S_WB_RI가 하나의 명령어를 위해 순서대로 동작한다면,
+    파이프라인에서는 사이클 1에 명령어 A가 IF, 명령어 B가 ID, 명령어 C가 EX, 명령어 D가 WB를
+    <em>동시에</em> 실행합니다.
+  </p>
+
+  <h3>자가 점검 질문</h3>
+  <ol>
+    <li>Moore FSM에서 current_state가 S_EX_R이고 opcode가 갑자기 바뀌었다면, 출력 제어 신호는 변하는가?</li>
+    <li>always_comb 블록에서 기본값 할당을 삭제하면 어떤 합성 경고가 발생하며, 그 이유는 무엇인가?</li>
+    <li>LW 명령어가 5사이클을 소모하는데, LH(Load Halfword)는 몇 사이클인가? FSM 상태 경로를 그려보시오.</li>
+    <li>BEQ가 not taken일 때와 taken일 때 모두 3사이클인 이유를 설명하시오.</li>
+    <li>JALR 명령어 실행 후 rd에는 어떤 값이 저장되며, PC는 어디를 가리키는가?</li>
+  </ol>
+
+  <p>
+    이제 여러분은 멀티사이클 CPU를 완전히 이해하고 구현했습니다.
+    17개 FSM 상태를 설계하고, SystemVerilog로 구현하고, 시뮬레이션으로 검증했습니다.
+    <strong>파이프라인 학습을 위한 모든 준비가 갖추어졌습니다.</strong>
+    Part 3을 통해 여러분은 단순 데이터패스에서 완전한 멀티사이클 CPU로 발전했습니다.
+  </p>
+
+  <p>
+    <strong>Ch09 예고</strong>: 다음 챕터에서 우리는 FSM 상태를 겹쳐 실행합니다.
+    사이클 1에서 명령어 A가 S_IF를 실행하는 동안, 동시에 명령어 B는 S_ID를,
+    명령어 C는 S_EX를, 명령어 D는 S_WB를 실행합니다.
+    이것이 파이프라인입니다. 멀티사이클을 완전히 이해한 여러분에게 파이프라인은
+    "상태들을 시간 축으로 겹치는 것"으로 이해될 것입니다.
+  </p>
+</section>
+
+<!-- ========== 연습문제 ========== -->
+<section id="exercises">
+  <h2>연습문제</h2>
+
+  <ol>
+    <li>
+      <strong>[기억]</strong>
+      멀티사이클 FSM에서 모든 명령어가 공통으로 거치는 두 상태의 이름과 번호를 쓰고,
+      각 상태에서 반드시 활성화되어야 하는 제어 신호를 두 개씩 나열하시오.
+    </li>
+
+    <li>
+      <strong>[이해]</strong>
+      Moore FSM과 Mealy FSM의 출력 의존성 차이를 수식으로 표현하고,
+      제어 유닛 설계에서 Moore FSM을 선택하는 타이밍 안전성 근거를 두 가지 이상 설명하시오.
+    </li>
+
+    <li>
+      <strong>[이해]</strong>
+      Branch 명령어(BEQ, BNE 등)가 멀티사이클에서 R-type 명령어보다 적은 사이클(3 vs 4)을
+      소모하는 이유를 데이터패스 관점에서 설명하시오.
+      Branch taken과 not taken 모두 동일한 사이클 수를 소모하는 이유도 함께 설명하시오.
+    </li>
+
+    <li>
+      <strong>[적용]</strong>
+      BLT 명령어(부호 있는 비교, rs1 &lt; rs2이면 분기)의 FSM 상태 경로와
+      각 상태에서 설정해야 할 제어 신호를 아래 빈칸 형식으로 완성하시오.
+      <pre><code class="language-systemverilog">// BLT 명령어: if (rs1 &lt; rs2) PC &lt;- PC + imm_B
+// S0(IF): mem_read=___, ir_write=___, pc_write=___
+// S1(ID): alu_src_a=___, alu_src_b=___
+// S9(EX_BR): alu_src_a=___, alu_src_b=___, alu_op=___
+//            pc_write_cond=___, pc_src=___
+//            branch_taken = (funct3==3'b100) ? ___ : 0</code></pre>
+    </li>
+
+    <li>
+      <strong>[적용]</strong>
+      아래 어셈블리 프로그램을 작성하고 시뮬레이션으로 FSM 상태 전이가 올바른지 검증하시오.
+      <pre><code class="language-systemverilog">// 검증 목표: BEQ taken 확인
+addi x1, x0, 5    // x1 = 5
+addi x2, x0, 5    // x2 = 5
+beq  x1, x2, 8    // taken: PC = (beq 주소) + 8
+// 이 줄은 실행되면 안 됨 (skipped)
+addi x3, x0, 99</code></pre>
+      (a) 각 명령어 실행 시 FSM 상태 전이 시퀀스를 나열하시오.
+      (b) 총 소요 사이클 수를 계산하시오.
+      (c) BEQ 실행 후 PC가 올바른 목표 주소를 가리키는지 파형으로 확인하시오.
+    </li>
+
+    <li>
+      <strong>[분석]</strong>
+      다음 명령어 믹스에서 멀티사이클 CPU의 평균 CPI를 계산하고,
+      클럭 주파수가 60MHz일 때의 처리량(MIPS)을 구하시오.
+      단일 사이클 CPU가 30MHz로 동작할 때와 처리량을 비교하여
+      어떤 조건에서 멀티사이클이 유리한지 분석하시오.
+      <br>명령어 믹스: LW 30%, ADD/SUB 40%, BEQ 20%, SW 10%
+    </li>
+
+    <li>
+      <strong>[평가]</strong>
+      어떤 응용 분야(임베디드 시스템, 고성능 서버, 실시간 제어 등)에서
+      멀티사이클 CPU가 단일 사이클 또는 파이프라인 대비 선택될 수 있는지
+      처리량, 자원 사용량, 설계 복잡도 세 가지 관점에서 논하시오.
+      또한 파이프라인이 멀티사이클과 단일 사이클 두 방식 모두를 능가하는
+      이유를 CPI와 Fmax 측면에서 설명하시오.
+    </li>
+  </ol>
+</section>
+
+<!-- ========== 전체 소스 코드 섹션 ========== -->
+<section id="full-source">
+  <h2>전체 소스 코드</h2>
+
+  <p>
+    이 절의 코드는 지금 당장 전부 이해하지 않아도 됩니다.
+    앞서 설명한 내용을 종합한 참고 자료로 활용하십시오.
+    직접 타이핑하며 익히는 것이 가장 효과적입니다.
+    코드에 대한 궁금증이 생기면 해당 절로 돌아가 설명을 확인하십시오.
+  </p>
+
+  <h3>ch08_fsm_controller.sv</h3>
+  <pre><code class="language-systemverilog">// ch08_fsm_controller.sv — RV32I 멀티사이클 FSM 제어 유닛 (완전 버전)
+// IEEE 1800-2017, 들여쓰기 3칸, snake_case, 한국어 주석
+
+module fsm_controller (
+   input  logic        clk,
+   input  logic        rst_n,
+   input  logic [6:0]  opcode,
+   input  logic [2:0]  funct3,
+   input  logic        alu_zero,
+   input  logic        alu_lt,        // 부호 있는 less-than
+   input  logic        alu_ltu,       // 무부호 less-than (BLTU/BGEU용)
+   output logic        pc_write,
+   output logic        pc_write_cond,
+   output logic        i_or_d,
+   output logic        mem_read,
+   output logic        mem_write,
+   output logic        ir_write,
+   output logic        reg_write,
+   output logic [1:0]  mem_to_reg,
+   output logic [1:0]  alu_src_a,     // 00=PC, 01=old_pc_reg, 10=A 레지스터
+   output logic [1:0]  alu_src_b,
+   output logic [1:0]  alu_op,
+   output logic [1:0]  pc_src,
+   output logic        branch_taken
+);
+   typedef enum logic [4:0] {
+      S_IF=5'd0, S_ID=5'd1, S_EX_R=5'd2, S_EX_I=5'd3,
+      S_EX_LOAD=5'd4, S_MEM_LD=5'd5, S_WB_LD=5'd6,
+      S_EX_ST=5'd7, S_MEM_ST=5'd8, S_EX_BR=5'd9,
+      S_EX_LUI=5'd10, S_EX_AUIPC=5'd11, S_WB_RI=5'd12,
+      S_EX_JAL=5'd13, S_WB_JAL=5'd14,
+      S_EX_JALR=5'd15, S_WB_JALR=5'd16
+   } state_t;
+
+   state_t current_state, next_state;
+
+   localparam OP_R=7'b0110011, OP_I_ALU=7'b0010011;
+   localparam OP_LOAD=7'b0000011, OP_STORE=7'b0100011;
+   localparam OP_BRANCH=7'b1100011, OP_LUI=7'b0110111;
+   localparam OP_AUIPC=7'b0010111, OP_JAL=7'b1101111;
+   localparam OP_JALR=7'b1100111;
+
+   always_ff @(posedge clk or negedge rst_n)
+      if (!rst_n) current_state &lt;= S_IF;
+      else        current_state &lt;= next_state;
+
+   always_comb begin
+      case (current_state)
+         S_IF: next_state = S_ID;
+         S_ID: case (opcode)
+            OP_R: next_state=S_EX_R; OP_I_ALU: next_state=S_EX_I;
+            OP_LOAD: next_state=S_EX_LOAD; OP_STORE: next_state=S_EX_ST;
+            OP_BRANCH: next_state=S_EX_BR; OP_LUI: next_state=S_EX_LUI;
+            OP_AUIPC: next_state=S_EX_AUIPC; OP_JAL: next_state=S_EX_JAL;
+            OP_JALR: next_state=S_EX_JALR;
+            default: next_state=S_IF;
+         endcase
+         S_EX_R,S_EX_I,S_EX_LUI,S_EX_AUIPC: next_state=S_WB_RI;
+         S_EX_LOAD: next_state=S_MEM_LD;
+         S_MEM_LD:  next_state=S_WB_LD;
+         S_WB_LD, S_MEM_ST, S_EX_BR, S_WB_RI, S_WB_JAL, S_WB_JALR:
+            next_state=S_IF;
+         S_EX_ST:   next_state=S_MEM_ST;
+         S_EX_JAL:  next_state=S_WB_JAL;
+         S_EX_JALR: next_state=S_WB_JALR;
+         default:   next_state=S_IF;
+      endcase
+   end
+
+   always_comb begin
+      case (funct3)
+         3'b000: branch_taken = alu_zero;     // BEQ
+         3'b001: branch_taken = ~alu_zero;    // BNE
+         3'b100: branch_taken = alu_lt;       // BLT (부호)
+         3'b101: branch_taken = ~alu_lt;      // BGE (부호)
+         3'b110: branch_taken = alu_ltu;      // BLTU (무부호)
+         3'b111: branch_taken = ~alu_ltu;     // BGEU (무부호)
+         default: branch_taken = 1'b0;
+      endcase
+   end
+
+   always_comb begin
+      {pc_write,pc_write_cond,i_or_d,mem_read,mem_write,
+       ir_write,reg_write,mem_to_reg,alu_src_a,alu_src_b,
+       alu_op,pc_src} = '0;
+      // branch_taken은 위의 funct3 always_comb 블록에서만 구동 (이중 구동 방지)
+      case (current_state)
+         S_IF: begin
+            mem_read=1; ir_write=1; pc_write=1;
+            alu_src_a=2'b00; alu_src_b=2'b01; pc_src=2'b00;  // PC
+         end
+         S_ID: begin alu_src_a=2'b00; alu_src_b=2'b10; end  // don't care (미사용)
+         S_EX_R: begin alu_src_a=2'b10; alu_op=2'b10; end
+         S_EX_I: begin alu_src_a=2'b10; alu_src_b=2'b10; alu_op=2'b10; end
+         S_EX_LOAD,S_EX_ST: begin alu_src_a=2'b10; alu_src_b=2'b10; end
+         S_MEM_LD: begin mem_read=1; i_or_d=1; end
+         S_WB_LD: begin reg_write=1; mem_to_reg=2'b01; end
+         S_MEM_ST: begin mem_write=1; i_or_d=1; end
+         S_EX_BR: begin
+            alu_src_a=2'b10; alu_op=2'b01;  // rs1, SUB
+            pc_write_cond=1; pc_src=2'b10;   // branch_adder 출력
+         end
+         S_EX_LUI: begin alu_src_a=2'b10; alu_src_b=2'b10; end     // A=x0=0
+         S_EX_AUIPC: begin alu_src_a=2'b01; alu_src_b=2'b10; end  // old_pc_reg
+         S_WB_RI: begin reg_write=1; end
+         S_EX_JAL: begin alu_src_a=2'b01; alu_src_b=2'b10; end    // old_pc_reg
+         S_WB_JAL,S_WB_JALR: begin
+            reg_write=1; mem_to_reg=2'b10;
+            pc_write=1; pc_src=2'b01;
+         end
+         S_EX_JALR: begin alu_src_a=2'b10; alu_src_b=2'b10; end   // rs1
+         default: ;
+      endcase
+   end
+endmodule</code></pre>
+
+  <h3>ch08_alu_control.sv</h3>
+  <pre><code class="language-systemverilog">// ch08_alu_control.sv — ALU 제어 유닛
+module alu_control (
+   input  logic [1:0]  alu_op,
+   input  logic [2:0]  funct3,
+   input  logic        funct7_b5,
+   output logic [3:0]  alu_ctrl
+);
+   always_comb begin
+      case (alu_op)
+         2'b00: alu_ctrl = 4'b0000;  // ADD 강제
+         2'b01: alu_ctrl = 4'b0001;  // SUB 강제
+         2'b10: case (funct3)
+            3'b000: alu_ctrl = funct7_b5 ? 4'b0001 : 4'b0000;
+            3'b001: alu_ctrl = 4'b0101;
+            3'b010: alu_ctrl = 4'b1000;
+            3'b011: alu_ctrl = 4'b1001;
+            3'b100: alu_ctrl = 4'b0100;
+            3'b101: alu_ctrl = funct7_b5 ? 4'b0111 : 4'b0110;
+            3'b110: alu_ctrl = 4'b0011;
+            3'b111: alu_ctrl = 4'b0010;
+            default: alu_ctrl = 4'b0000;
+         endcase
+         default: alu_ctrl = 4'b0000;
+      endcase
+   end
+endmodule</code></pre>
+
+  <h3>ch08_multicycle_top.sv</h3>
+  <pre><code class="language-systemverilog">// ch08_multicycle_top.sv — 멀티사이클 CPU 최상위 (포트 연결)
+module multicycle_top (
+   input  logic clk,
+   input  logic rst_n
+);
+   logic pc_write, pc_write_cond, i_or_d;
+   logic mem_read, mem_write, ir_write, reg_write;
+   logic [1:0] mem_to_reg, alu_src_b, alu_op_w, pc_src;
+   logic [1:0] alu_src_a; logic branch_taken;
+   logic [6:0] opcode; logic [2:0] funct3;
+   logic alu_zero, alu_lt, alu_ltu;
+   logic [3:0] alu_ctrl;
+   logic funct7_b5;
+
+   fsm_controller u_ctrl (
+      .clk(clk), .rst_n(rst_n),
+      .opcode(opcode), .funct3(funct3),
+      .alu_zero(alu_zero), .alu_lt(alu_lt), .alu_ltu(alu_ltu),
+      .pc_write(pc_write), .pc_write_cond(pc_write_cond),
+      .i_or_d(i_or_d), .mem_read(mem_read), .mem_write(mem_write),
+      .ir_write(ir_write), .reg_write(reg_write),
+      .mem_to_reg(mem_to_reg), .alu_src_a(alu_src_a),
+      .alu_src_b(alu_src_b), .alu_op(alu_op_w),
+      .pc_src(pc_src), .branch_taken(branch_taken)
+   );
+
+   alu_control u_alu_ctrl (
+      .alu_op(alu_op_w), .funct3(funct3),
+      .funct7_b5(funct7_b5), .alu_ctrl(alu_ctrl)
+   );
+
+   multicycle_datapath u_dp (
+      .clk(clk), .rst_n(rst_n),
+      .pc_write(pc_write), .pc_write_cond(pc_write_cond),
+      .branch_taken(branch_taken), .i_or_d(i_or_d),
+      .mem_read(mem_read), .mem_write(mem_write),
+      .ir_write(ir_write), .reg_write(reg_write),
+      .mem_to_reg(mem_to_reg), .alu_src_a(alu_src_a),
+      .alu_src_b(alu_src_b), .alu_ctrl(alu_ctrl),
+      .pc_src(pc_src), .opcode(opcode),
+      .funct3(funct3), .funct7_b5(funct7_b5),
+      .alu_zero(alu_zero), .alu_lt(alu_lt), .alu_ltu(alu_ltu)
+   );
+endmodule</code></pre>
+
+</section>
+
+<!-- ========== Highlight.js 스크립트 ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  document.querySelectorAll('code.language-systemverilog').forEach(el => {
+    el.classList.remove('language-systemverilog');
+    el.classList.add('language-verilog');
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

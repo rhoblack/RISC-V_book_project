@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width="960" height="480" font-family="Pretendard, monospace, sans-serif">
+  <rect width="960" height="480" fill="#1E1E2E" rx="10"/>
+  <text x="480" y="28" text-anchor="middle" font-size="15" font-weight="bold" fill="#CDD6F4">FSM 상태 전이 파형 — add x3,x1,x2 실행 (4 사이클)</text>
+
+  <!-- 열 레이블 영역 배경 -->
+  <rect x="0" y="38" width="160" height="430" fill="#181825" rx="0"/>
+  <!-- 파형 배경 -->
+  <rect x="160" y="38" width="800" height="430" fill="#1E1E2E"/>
+
+  <!-- 사이클 구분선과 레이블 -->
+  <line x1="160" y1="38" x2="160" y2="468" stroke="#313244" stroke-width="1"/>
+  <line x1="360" y1="38" x2="360" y2="468" stroke="#313244" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="560" y1="38" x2="560" y2="468" stroke="#313244" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="760" y1="38" x2="760" y2="468" stroke="#313244" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="960" y1="38" x2="960" y2="468" stroke="#313244" stroke-width="1"/>
+  <text x="260" y="52" text-anchor="middle" font-size="11" fill="#6C7086">사이클 1</text>
+  <text x="460" y="52" text-anchor="middle" font-size="11" fill="#6C7086">사이클 2</text>
+  <text x="660" y="52" text-anchor="middle" font-size="11" fill="#6C7086">사이클 3</text>
+  <text x="860" y="52" text-anchor="middle" font-size="11" fill="#6C7086">사이클 4</text>
+
+  <!-- CLK 신호 -->
+  <text x="10" y="85" font-size="11" fill="#A6E3A1">clk</text>
+  <!-- CLK 파형 (4 사이클 = 4개 클럭) -->
+  <polyline points="160,90 160,68 260,68 260,90 360,90 360,68 460,68 460,90 560,90 560,68 660,68 660,90 760,90 760,68 860,68 860,90 960,90" fill="none" stroke="#A6E3A1" stroke-width="2"/>
+
+  <!-- current_state 신호 -->
+  <text x="5" y="135" font-size="11" fill="#CBA6F7">current_state</text>
+  <!-- 상태 버스 파형 (사이클별) -->
+  <!-- 사이클1: S0/IF -->
+  <polygon points="160,118 175,108 345,108 360,118 345,128 175,128" fill="#1E3A5F" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="260" y="122" text-anchor="middle" font-size="10" font-weight="bold" fill="#93C5FD">S0: IF</text>
+  <!-- 사이클2: S1/ID -->
+  <polygon points="360,118 375,108 545,108 560,118 545,128 375,128" fill="#1E3A5F" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="460" y="122" text-anchor="middle" font-size="10" font-weight="bold" fill="#93C5FD">S1: ID</text>
+  <!-- 사이클3: S2/EX_R -->
+  <polygon points="560,118 575,108 745,108 760,118 745,128 575,128" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="660" y="122" text-anchor="middle" font-size="10" font-weight="bold" fill="#93C5FD">S2: EX_R</text>
+  <!-- 사이클4: S12/WB_RI -->
+  <polygon points="760,118 775,108 945,108 960,118 945,128 775,128" fill="#1E3A5F" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="860" y="122" text-anchor="middle" font-size="10" font-weight="bold" fill="#93C5FD">S12: WB_RI</text>
+
+  <!-- mem_read 신호 -->
+  <text x="10" y="170" font-size="11" fill="#F38BA8">mem_read</text>
+  <polyline points="160,180 360,180 360,162 560,162 560,180 960,180" fill="none" stroke="#F38BA8" stroke-width="2"/>
+  <text x="260" y="176" text-anchor="middle" font-size="9" fill="#F38BA8">1</text>
+  <text x="460" y="176" text-anchor="middle" font-size="9" fill="#6C7086">0</text>
+
+  <!-- ir_write 신호 -->
+  <text x="10" y="210" font-size="11" fill="#FAB387">ir_write</text>
+  <polyline points="160,220 360,220 360,202 560,202 560,220 960,220" fill="none" stroke="#FAB387" stroke-width="2"/>
+  <text x="260" y="216" text-anchor="middle" font-size="9" fill="#FAB387">1</text>
+
+  <!-- pc_write 신호 -->
+  <text x="10" y="250" font-size="11" fill="#A6E3A1">pc_write</text>
+  <polyline points="160,260 360,260 360,242 560,242 560,260 960,260" fill="none" stroke="#A6E3A1" stroke-width="2"/>
+  <text x="260" y="256" text-anchor="middle" font-size="9" fill="#A6E3A1">1</text>
+
+  <!-- alu_src_a 신호 -->
+  <text x="5" y="290" font-size="11" fill="#89DCEB">alu_src_a</text>
+  <polyline points="160,300 360,300 360,300 460,300 460,282 760,282 760,300 960,300" fill="none" stroke="#89DCEB" stroke-width="2"/>
+  <text x="610" y="278" text-anchor="middle" font-size="9" fill="#89DCEB">1 (A reg)</text>
+  <text x="260" y="296" text-anchor="middle" font-size="9" fill="#6C7086">0 (PC)</text>
+
+  <!-- reg_write 신호 -->
+  <text x="5" y="330" font-size="11" fill="#F9E2AF">reg_write</text>
+  <polyline points="160,340 760,340 760,322 960,322 960,340" fill="none" stroke="#F9E2AF" stroke-width="2"/>
+  <text x="860" y="318" text-anchor="middle" font-size="9" fill="#F9E2AF">1</text>
+
+  <!-- ALUOut 값 버스 -->
+  <text x="10" y="375" font-size="11" fill="#CDD6F4">ALUOut</text>
+  <line x1="160" y1="385" x2="660" y2="385" stroke="#6C7086" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <polygon points="660,375 675,365 945,365 960,375 945,385 675,385" fill="#2A2A3E" stroke="#CDD6F4" stroke-width="1.5"/>
+  <text x="800" y="379" text-anchor="middle" font-size="10" fill="#CDD6F4">rs1 + rs2 결과</text>
+
+  <!-- rd 레지스터 값 -->
+  <text x="10" y="415" font-size="11" fill="#CDD6F4">x3 (rd)</text>
+  <line x1="160" y1="425" x2="760" y2="425" stroke="#6C7086" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <polygon points="760,415 775,405 945,405 960,415 945,425 775,425" fill="#2A2A3E" stroke="#A6E3A1" stroke-width="1.5"/>
+  <text x="860" y="419" text-anchor="middle" font-size="10" fill="#A6E3A1">x1 + x2 = 8</text>
+
+  <!-- 단계 설명 -->
+  <text x="260" y="455" text-anchor="middle" font-size="10" fill="#6C7086">명령어 인출</text>
+  <text x="460" y="455" text-anchor="middle" font-size="10" fill="#6C7086">레지스터 읽기</text>
+  <text x="660" y="455" text-anchor="middle" font-size="10" fill="#6C7086">ALU 연산</text>
+  <text x="860" y="455" text-anchor="middle" font-size="10" fill="#6C7086">레지스터 쓰기</text>
+
+  <!-- 수평 구분선 -->
+  <line x1="0" y1="100" x2="960" y2="100" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="143" x2="960" y2="143" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="190" x2="960" y2="190" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="230" x2="960" y2="230" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="270" x2="960" y2="270" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="310" x2="960" y2="310" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="350" x2="960" y2="350" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="395" x2="960" y2="395" stroke="#313244" stroke-width="0.5"/>
+  <line x1="0" y1="435" x2="960" y2="435" stroke="#313244" stroke-width="0.5"/>
+</svg>

@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 11 — 제어 해저드와 분기 처리</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 11</span>
+  <h1>제어 해저드와 분기 처리</h1>
+  <p class="chapter-intro">
+    Chapter 10에서 데이터 해저드를 포워딩과 스톨로 해결했다면, 이 챕터에서는 파이프라인의 두 번째 적(敵)인
+    <strong>제어 해저드(Control Hazard)</strong>에 맞서 싸웁니다.
+    분기(branch)와 점프(jump) 명령어가 "다음에 실행할 명령어의 주소"를 바꿀 때 발생하는 이 문제를 분석하고,
+    flush 메커니즘, 정적/동적 분기 예측, 그리고 JAL/JALR 처리까지 완전히 해결하는 과정을 학습합니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>제어 해저드의 발생 원인과 페널티(penalty)를 분기 판정 시점에 따라 분석할 수 있다.</li>
+    <li>EX 스테이지 분기 판정 시 flush 대상 파이프라인 레지스터를 식별하고, flush 로직을 SystemVerilog로 구현할 수 있다.</li>
+    <li>Predict-Not-Taken 정적 분기 예측의 동작 원리와 성능 영향을 수식으로 분석할 수 있다.</li>
+    <li>2-bit 포화 카운터 기반 BHT(Branch History Table)의 상태 전이와 Basys 3 자원 소요량을 평가할 수 있다.</li>
+    <li>JAL과 JALR 명령어의 처리 방식 차이를 파이프라인 관점에서 설명하고, 포워딩 의존성을 분석할 수 있다.</li>
+    <li>flush와 stall이 동시에 발생하는 중첩 해저드에서 우선순위 규칙을 적용할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 11.1절 시작 ========== -->
+<section id="sec-11-1">
+  <h2>11.1 제어 해저드의 발생 원인</h2>
+
+  <p>
+    Chapter 10에서 데이터 해저드를 정복한 직후 이 챕터를 펼친 독자는, 잠시 긴장을 풀어도 좋습니다.
+    제어 해저드의 핵심 개념은 데이터 해저드보다 단순합니다. 그 이유는 명확합니다.
+    데이터 해저드는 "어떤 레지스터에 어떤 값이 언제 준비되는가"라는 복잡한 의존성 분석이 필요했지만,
+    제어 해저드는 "다음에 fetch할 명령어의 주소(PC)를 아직 모른다"라는 단 하나의 문제에서 출발합니다.
+  </p>
+
+  <h3>파이프라인에서 PC 갱신의 딜레마</h3>
+
+  <p>
+    5단계 파이프라인 프로세서에서 <strong>프로그램 카운터(PC, Program Counter)</strong>는 매 사이클마다 다음 명령어의 주소를 결정합니다.
+    산술/논리 명령어와 로드/스토어 명령어의 경우, 다음 PC는 단순히 <code>PC + 4</code>입니다.
+    이 예측이 정확하므로 파이프라인은 아무런 문제 없이 매 사이클 새로운 명령어를 fetch할 수 있습니다.
+  </p>
+
+  <p>
+    그러나 <strong>분기 명령어(Branch Instruction)</strong>와 <strong>점프 명령어(Jump Instruction)</strong>는 이 가정을 무너뜨립니다.
+    <code>BEQ x1, x2, target</code>과 같은 분기 명령어는, 두 레지스터의 값을 비교한 결과에 따라
+    <code>PC + 4</code> 또는 <code>target</code> 중 하나로 점프합니다.
+    문제는, 이 비교 결과가 확정되는 시점이 IF 스테이지가 아니라 최소 EX 스테이지 이후라는 점입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 고속도로에서 분기점(IC)에 접근하고 있다고 상상해 보십시오.
+    네비게이션이 "직진할지, 우회전할지"를 아직 계산 중인데, 자동차는 이미 분기점에 도착했습니다.
+    일단 직진했는데, 네비게이션이 "우회전이었습니다"라고 알려주면, 되돌아가야 합니다.
+    파이프라인에서 이 "되돌아가는 비용"이 바로 <strong>제어 해저드 페널티(Control Hazard Penalty)</strong>입니다.
+    이 비유에는 한계가 있습니다. 실제 파이프라인에서는 물리적으로 "되돌아가는" 것이 아니라,
+    잘못 진입한 명령어를 무효화(flush)하고 올바른 명령어를 새로 fetch하는 방식으로 처리합니다.
+  </div>
+
+  <h3>제어 해저드의 정의</h3>
+
+  <p>
+    <strong>제어 해저드(Control Hazard)</strong>란, 분기 또는 점프 명령어의 실행으로 인해
+    다음에 fetch할 명령어의 주소(PC)가 현재 사이클에서 결정되지 않아 발생하는 파이프라인 정지 또는 낭비를 말합니다.
+    데이터 해저드(Data Hazard)가 "값"의 의존성이라면, 제어 해저드는 "주소"의 의존성입니다.
+  </p>
+
+  <p>
+    RV32I에서 제어 해저드를 유발하는 명령어는 세 가지 그룹입니다:
+  </p>
+
+  <table>
+    <tr>
+      <th>그룹</th>
+      <th>명령어</th>
+      <th>유형</th>
+      <th>대상 주소 계산 방식</th>
+    </tr>
+    <tr>
+      <td>조건 분기</td>
+      <td>BEQ, BNE, BLT, BGE, BLTU, BGEU</td>
+      <td>B 타입</td>
+      <td>PC + imm (조건 충족 시)</td>
+    </tr>
+    <tr>
+      <td>무조건 점프 (직접)</td>
+      <td>JAL</td>
+      <td>J 타입</td>
+      <td>PC + imm (항상)</td>
+    </tr>
+    <tr>
+      <td>무조건 점프 (간접)</td>
+      <td>JALR</td>
+      <td>I 타입</td>
+      <td>rs1 + imm (항상)</td>
+    </tr>
+  </table>
+
+  <h3>분기 판정 시점과 페널티의 관계</h3>
+
+  <p>
+    제어 해저드 페널티의 크기는 <strong>분기 결과가 확정되는 스테이지</strong>에 의해 결정됩니다.
+    분기 결과가 늦게 확정될수록, 그 사이에 잘못 fetch된 명령어의 수가 늘어나므로 페널티가 커집니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>분기 판정 스테이지</th>
+      <th>페널티 (사이클)</th>
+      <th>flush 대상</th>
+      <th>복잡도</th>
+    </tr>
+    <tr>
+      <td>MEM (기본 구현)</td>
+      <td>3</td>
+      <td>IF/ID, ID/EX, EX/MEM</td>
+      <td>낮음</td>
+    </tr>
+    <tr>
+      <td><strong>EX (이 책의 선택)</strong></td>
+      <td><strong>2</strong></td>
+      <td><strong>IF/ID, ID/EX</strong></td>
+      <td><strong>중간</strong></td>
+    </tr>
+    <tr>
+      <td>ID (고급 구현)</td>
+      <td>1</td>
+      <td>IF/ID</td>
+      <td>높음</td>
+    </tr>
+  </table>
+
+  <p>
+    이 책에서는 <strong>EX 스테이지에서 분기 결과를 판정</strong>하는 방식을 기본 구현으로 채택합니다.
+    EX 스테이지에는 이미 ALU가 있으므로, 두 레지스터 값의 비교와 분기 대상 주소 계산을
+    추가 하드웨어 없이 수행할 수 있어 구현 복잡도와 페널티 사이의 균형이 좋기 때문입니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec01_control_hazard_origin.svg" alt="제어 해저드 발생 원인: BEQ 분기 성공 시 잘못 fetch된 명령어 파이프라인 다이어그램">
+    <figcaption>그림 11.1: 제어 해저드 발생 원인. BEQ가 EX 스테이지에서 분기 성공으로 판정되기까지, 2개의 잘못된 명령어가 이미 파이프라인에 진입한다.</figcaption>
+  </figure>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 데이터 해저드에서는 포워딩으로 대부분 해결했는데, 제어 해저드에서는 왜 포워딩이 안 되나요?</p>
+    <p><strong>A:</strong> 포워딩은 "값이 존재하지만 아직 레지스터 파일에 기록되지 않은 경우"에 그 값을 미리 전달하는 기법입니다.
+    제어 해저드의 문제는 "값"이 아니라 "주소"입니다. 분기 명령어가 EX 스테이지에 도달하기 전까지는
+    분기 대상 주소 자체가 존재하지 않으므로, 전달할 "값"이 없습니다.
+    다만, 분기 예측이라는 다른 접근법으로 이 문제를 완화할 수 있으며, 11.4절과 11.5절에서 다룹니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      여기까지 읽었다면, 다음 질문에 답해 보십시오:
+      (1) 5단계 파이프라인에서 분기 판정을 MEM 스테이지에서 수행하면, 최대 몇 사이클의 페널티가 발생하는가?
+      (2) 제어 해저드를 유발하는 RV32I 명령어 3가지 그룹은 무엇인가?
+      (3) 분기 판정 스테이지를 앞당기면 페널티는 줄지만, 어떤 비용이 증가하는가?
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 11.1절 끝 ========== -->
+
+<!-- ========== 11.2절 시작 ========== -->
+<section id="sec-11-2">
+  <h2>11.2 분기 결과를 EX 스테이지에서 처리</h2>
+
+  <p>
+    11.1절에서 분기 판정 시점이 페널티를 결정한다는 것을 확인했습니다.
+    이 절에서는 우리의 파이프라인이 EX 스테이지에서 분기 결과를 확정하도록 설계하고,
+    이를 통해 <strong>MEM 판정 대비 1사이클의 페널티를 절감</strong>하는 방법을 구체적으로 살펴봅니다.
+  </p>
+
+  <h3>EX 스테이지 분기 판정의 원리</h3>
+
+  <p>
+    EX 스테이지에서 분기를 판정하려면 두 가지 연산이 필요합니다:
+  </p>
+
+  <ol>
+    <li><strong>분기 조건 비교</strong>: <code>rs1</code>과 <code>rs2</code>의 값을 비교하여 분기 조건(BEQ, BNE 등)의 성립 여부를 판정합니다.
+        이 비교는 ALU 또는 별도의 비교기(comparator)를 사용합니다.</li>
+    <li><strong>분기 대상 주소 계산</strong>: B 타입 명령어의 경우 <code>PC + imm</code>을 덧셈기(adder)로 계산합니다.
+        이 덧셈기는 ALU와 별도로 배치하거나, ALU를 재사용할 수 있습니다.</li>
+  </ol>
+
+  <p>
+    두 연산이 모두 완료되면, <strong>분기 성공(Taken)</strong> 여부와 <strong>분기 대상 주소(Branch Target)</strong>가 확정됩니다.
+    이 정보를 파이프라인 제어 로직에 전달하여, 잘못 fetch된 명령어를 무효화하고 올바른 주소에서 fetch를 재개합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec02_branch_ex_stage.svg" alt="분기 판정 위치에 따른 페널티 비교: MEM 판정 3사이클 vs EX 판정 2사이클">
+    <figcaption>그림 11.2: 분기 판정 위치에 따른 페널티 비교. EX 스테이지 판정은 MEM 판정 대비 1사이클 페널티를 절감한다.</figcaption>
+  </figure>
+
+  <h3>EX 스테이지 분기 판정 하드웨어</h3>
+
+  <p>
+    분기 조건 비교를 위한 하드웨어는 <code>funct3</code> 필드에 따라 6가지 비교 연산을 수행해야 합니다.
+    다음은 분기 판정 로직의 핵심 부분입니다:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// 분기 조건 판정 (EX 스테이지)
+logic branch_cond;
+
+always_comb begin
+   branch_cond = 1'b0;
+   case (ex_funct3)
+      3'b000: branch_cond = (ex_rs1_data == ex_rs2_data);   // BEQ
+      3'b001: branch_cond = (ex_rs1_data != ex_rs2_data);   // BNE
+      3'b100: branch_cond = ($signed(ex_rs1_data) <
+                             $signed(ex_rs2_data));          // BLT
+      3'b101: branch_cond = ($signed(ex_rs1_data) >=
+                             $signed(ex_rs2_data));          // BGE
+      3'b110: branch_cond = (ex_rs1_data < ex_rs2_data);    // BLTU
+      3'b111: branch_cond = (ex_rs1_data >= ex_rs2_data);   // BGEU
+      default: branch_cond = 1'b0;
+   endcase
+end
+
+// 분기 성공 여부
+assign branch_taken = (ex_branch &amp; branch_cond) | ex_jal | ex_jalr;
+  </code></pre>
+
+  <p>
+    여기서 중요한 점은 <code>ex_rs1_data</code>와 <code>ex_rs2_data</code>가 <strong>포워딩 적용 후의 값</strong>이어야 한다는 것입니다.
+    Chapter 10에서 설계한 포워딩 유닛이 EX 스테이지에 올바른 값을 공급해야만, 분기 조건 비교가 정확합니다.
+    이것이 데이터 해저드 해결과 제어 해저드 해결이 서로 연결되는 지점입니다.
+  </p>
+
+  <h3>ID 스테이지 분기 판정 (고급 구현)</h3>
+
+  <p>
+    페널티를 1사이클로 더 줄이고 싶다면, 분기 판정을 <strong>ID 스테이지</strong>로 이동할 수 있습니다.
+    ID 스테이지에서 레지스터 파일의 출력을 바로 비교기에 연결하면, 분기 결과를 1사이클 일찍 확정할 수 있습니다.
+  </p>
+
+  <p>
+    그러나 ID 스테이지 판정에는 다음과 같은 추가 복잡성이 수반됩니다:
+  </p>
+
+  <ul>
+    <li><strong>포워딩 확장</strong>: EX→ID, MEM→ID 포워딩 경로를 추가해야 합니다. 포워딩 유닛의 복잡도가 크게 증가합니다.</li>
+    <li><strong>추가 스톨</strong>: EX 스테이지에서 결과가 생성되는 명령어 직후에 분기 명령어가 오면, 포워딩으로도 해결할 수 없어 1사이클 스톨이 필요합니다.
+        이는 Load-Use 해저드와 유사한 새로운 스톨 조건입니다.</li>
+    <li><strong>x0 포워딩 방지</strong>: <code>rd = x0</code>인 명령어의 결과를 포워딩하지 않도록 ID 단계 포워딩에서도 검사해야 합니다.</li>
+    <li><strong>별도 비교기 필요</strong>: ALU는 EX 스테이지에 있으므로, ID 스테이지에 별도의 비교기(32비트 등호/부등호/부호 비교)를 추가해야 합니다.</li>
+    <li><strong>임계 경로 영향</strong>: 레지스터 파일 읽기 → 포워딩 MUX → 비교기 → PC 선택이 ID 스테이지의 조합 논리 경로에 추가되어, 최대 클럭 주파수가 감소할 수 있습니다.</li>
+  </ul>
+
+  <p>
+    이러한 복잡성 때문에 교육용 프로세서에서는 EX 스테이지 판정이 더 적합합니다.
+    실무에서도 ID 판정은 주로 분기 예측과 함께 사용되며, 단독으로 사용하는 경우는 드뭅니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      상용 프로세서(ARM Cortex-A 시리즈, RISC-V BOOM 등)에서는 분기 판정을 EX가 아닌 더 뒤 스테이지에서 수행하면서도,
+      분기 예측기(Branch Predictor)로 페널티를 최소화하는 전략을 사용합니다.
+      예측이 맞으면 페널티가 0이고, 틀릴 때만 페널티가 발생하므로, 예측 정확도가 95%를 넘으면 판정 시점 자체의 중요성은 크게 줄어듭니다.
+      이 책의 11.5절에서 소개하는 2-bit 예측기도 반복 루프에서 90% 이상의 정확도를 달성할 수 있습니다.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: 분기 페널티를 줄이는 방법 3가지를 말해 보세요.</strong><br>
+      A: (1) 분기 판정 스테이지를 앞당깁니다 (EX→ID). 하드웨어 복잡도가 증가하지만 페널티가 감소합니다.
+      (2) 분기 예측(Branch Prediction)을 사용합니다. 정적 예측(Predict-Not-Taken, Predict-Taken)과
+      동적 예측(BHT, 상관 예측기 등)이 있습니다.
+      (3) 지연 분기(Delayed Branch)를 사용합니다. MIPS에서 사용했던 기법으로, 분기 명령어 다음 슬롯에
+      항상 실행되는 명령어를 배치합니다. RISC-V는 이 방식을 채택하지 않았습니다.
+      면접에서는 각 방법의 장단점까지 설명할 수 있어야 합니다.
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 11.2절 끝 ========== -->
+
+<!-- ========== 11.3절 시작 ========== -->
+<section id="sec-11-3">
+  <h2>11.3 Flush 메커니즘 설계</h2>
+
+  <p>
+    분기가 성공(Taken)하면, 분기 명령어 이후에 이미 파이프라인에 진입한 명령어들은 잘못된 명령어입니다.
+    이들을 무효화하는 것이 <strong>플러시(Flush)</strong> 메커니즘입니다.
+    EX 스테이지에서 분기를 판정하는 경우, flush 대상은 IF/ID 레지스터와 ID/EX 레지스터 두 곳입니다.
+  </p>
+
+  <h3>Flush의 동작 원리</h3>
+
+  <p>
+    Flush는 개념적으로 단순합니다: 파이프라인 레지스터 안의 <strong>제어 신호</strong>를 모두 0으로 클리어하면,
+    해당 명령어는 아무런 동작도 수행하지 않는 <strong>버블(Bubble)</strong>, 즉 <code>NOP</code>와 동일한 상태가 됩니다.
+    레지스터에 쓰기(RegWrite = 0), 메모리에 쓰기(MemWrite = 0), 분기(Branch = 0) 등 모든 제어 신호가 비활성화되므로,
+    flush된 명령어는 파이프라인을 통과하면서 아무런 부작용(side effect)도 남기지 않습니다.
+  </p>
+
+  <p>
+    동시에, <strong>PC에는 분기 대상 주소(branch_target)</strong>를 기록합니다.
+    다음 사이클부터 이 주소에서 올바른 명령어를 fetch하게 됩니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec03_flush_mechanism.svg" alt="Flush 메커니즘: IF/ID 및 ID/EX 파이프라인 레지스터 무효화와 PC 갱신">
+    <figcaption>그림 11.3: Flush 메커니즘. EX 스테이지에서 분기 성공이 판정되면, IF/ID와 ID/EX 레지스터를 클리어하고 PC에 분기 대상 주소를 기록한다.</figcaption>
+  </figure>
+
+  <h3>Flush 로직 SystemVerilog 구현</h3>
+
+  <p>
+    IF/ID 파이프라인 레지스터에 flush 기능을 추가하는 방법은 간단합니다.
+    기존의 <code>always_ff</code> 블록에 flush 조건을 추가하면 됩니다:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// IF/ID 파이프라인 레지스터 (flush 기능 포함)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n) begin
+      if_id_pc    &lt;= 32'b0;
+      if_id_instr &lt;= 32'h0000_0013;  // NOP (ADDI x0, x0, 0)
+   end
+   else if (if_id_flush) begin
+      // Flush: 제어 신호를 NOP으로 초기화
+      if_id_pc    &lt;= 32'b0;
+      if_id_instr &lt;= 32'h0000_0013;  // NOP
+   end
+   else if (if_id_write) begin
+      // 정상 동작 또는 Stall 시 홀드
+      if_id_pc    &lt;= if_pc;
+      if_id_instr &lt;= if_instr;
+   end
+   // if_id_write = 0이면 현재 값 유지 (스톨)
+end
+  </code></pre>
+
+  <p>
+    여기서 주목할 점은 <code>if_id_flush</code>와 <code>if_id_write</code>의 <strong>우선순위</strong>입니다.
+    <code>if_id_flush</code>가 <code>if_id_write</code>보다 우선하도록 코딩해야 합니다.
+    즉, flush 요청이 있으면 write 여부와 관계없이 레지스터를 클리어합니다.
+    이것이 "flush가 stall보다 우선한다"는 규칙의 하드웨어 구현입니다.
+  </p>
+
+  <p>
+    ID/EX 파이프라인 레지스터도 동일한 패턴으로 구현합니다. 다만 ID/EX에는 제어 신호 필드가 더 많으므로,
+    flush 시 모든 제어 신호(RegWrite, MemWrite, MemRead, Branch, ALUSrc 등)를 0으로 클리어해야 합니다.
+  </p>
+
+  <h3>Flush와 NOP의 차이</h3>
+
+  <p>
+    "Flush"와 "NOP 삽입"은 결과적으로 같은 효과(명령어 무효화)를 냅니다만, 구현 관점에서 차이가 있습니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>구분</th>
+      <th>NOP 삽입 (소프트웨어)</th>
+      <th>Flush (하드웨어)</th>
+    </tr>
+    <tr>
+      <td>주체</td>
+      <td>컴파일러/어셈블러가 NOP 명령어를 미리 삽입</td>
+      <td>하드웨어가 실행 중 동적으로 무효화</td>
+    </tr>
+    <tr>
+      <td>코드 크기</td>
+      <td>증가 (추가 NOP이 메모리에 저장)</td>
+      <td>변화 없음</td>
+    </tr>
+    <tr>
+      <td>유연성</td>
+      <td>정적 (컴파일 시점에 결정)</td>
+      <td>동적 (실행 시점에 결정)</td>
+    </tr>
+  </table>
+
+  <p>
+    현대 프로세서에서는 하드웨어 flush가 표준이며, NOP 삽입은 교육 목적으로만 사용됩니다.
+    Chapter 9에서 "해저드 없는 파이프라인"을 NOP으로 구현했던 것은 개념 이해를 위한 것이었고,
+    이제부터는 모두 하드웨어 flush로 대체합니다.
+  </p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      학생들이 flush 구현에서 가장 많이 하는 실수는 "데이터 경로까지 클리어"하는 것입니다.
+      Flush는 <strong>제어 신호만</strong> 클리어하면 충분합니다. 데이터 경로(rs1_data, rs2_data, imm 등)에
+      남아 있는 값은 제어 신호가 0이므로 어디에도 기록되지 않습니다.
+      시뮬레이션 파형에서 flush 후 데이터 경로에 "쓰레기 값"이 보여도 정상이라는 점을 미리 안내하면
+      불필요한 디버깅 시간을 절약할 수 있습니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Flush와 Stall이 동시에 발생하면 어떻게 하나요?</p>
+    <p><strong>A:</strong> 이것은 매우 좋은 질문이며, 실제 구현에서 가장 흔한 버그 원인 중 하나입니다.
+    예를 들어, <code>LW x5, 0(x10)</code> 직후에 <code>BEQ x5, x6, target</code>이 오면,
+    Load-Use 해저드(스톨 필요)와 제어 해저드(분기 성공 시 flush 필요)가 동시에 발생할 수 있습니다.
+    이 경우 <strong>Flush가 Stall보다 우선</strong>합니다. 분기가 성공했다면, 스톨 대상인 BEQ 자체가
+    flush되어야 하므로 스톨할 이유가 없습니다. 11.7절에서 이 시나리오를 테스트벤치로 검증합니다.
+    이 우선순위 규칙은 그림 11.5(11.7절)에서 표로 정리합니다.</p>
+  </aside>
+
+</section>
+<!-- ========== 11.3절 끝 ========== -->
+
+<!-- ========== 11.4절 시작 ========== -->
+<section id="sec-11-4">
+  <h2>11.4 정적 분기 예측: Predict-Not-Taken</h2>
+
+  <p>
+    EX 스테이지에서 분기를 판정하면 2사이클 페널티가 발생합니다.
+    그러나 이 페널티는 <strong>분기가 성공(Taken)했을 때만</strong> 발생한다는 점에 주목하십시오.
+    만약 분기가 실패(Not-Taken)했다면, <code>PC + 4</code>에서 fetch한 명령어가 정확하므로 페널티는 0입니다.
+  </p>
+
+  <p>
+    이 관찰에서 <strong>Predict-Not-Taken(분기하지 않을 것으로 예측)</strong> 전략이 탄생합니다.
+    파이프라인은 모든 분기 명령어에 대해 "분기하지 않을 것"이라고 가정하고,
+    <code>PC + 4</code>에서 계속 명령어를 fetch합니다.
+    예측이 맞으면(실제로 Not-Taken) 페널티 0, 예측이 틀리면(실제로 Taken) 2사이클 페널티를 지불합니다.
+  </p>
+
+  <h3>Predict-Not-Taken의 동작</h3>
+
+  <p>
+    이 전략에서는 별도의 예측 하드웨어가 필요하지 않습니다.
+    파이프라인의 기본 동작인 <code>PC ← PC + 4</code>가 곧 "Not-Taken 예측"이기 때문입니다.
+    EX 스테이지에서 분기 결과가 확정된 후, 실제로 Taken이었다면 그때 flush와 PC 갱신을 수행합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec04_predict_not_taken.svg" alt="Predict-Not-Taken 전략: 예측 성공(페널티 0)과 예측 실패(페널티 2) 비교">
+    <figcaption>그림 11.4: Predict-Not-Taken 전략. 분기 Not-Taken 시 페널티 0, Taken 시 2사이클 페널티가 발생한다.</figcaption>
+  </figure>
+
+  <h3>성능 영향 분석</h3>
+
+  <p>
+    Predict-Not-Taken 전략의 성능을 수식으로 분석해 봅시다.
+    평균 CPI(Cycles Per Instruction)는 다음과 같이 계산됩니다:
+  </p>
+
+  <p>
+    <strong>CPI = 1 + (분기 명령어 비율) × (분기 성공률) × (페널티)</strong>
+  </p>
+
+  <p>
+    일반적인 프로그램의 통계를 적용하면:
+  </p>
+
+  <ul>
+    <li>분기 명령어 비율: 약 15~25% (평균 20%)</li>
+    <li>분기 성공률 (Taken Rate): 약 60~70% (루프의 backward branch는 거의 항상 Taken)</li>
+    <li>EX 스테이지 판정 시 페널티: 2사이클</li>
+  </ul>
+
+  <p>
+    따라서: <strong>CPI = 1 + 0.20 × 0.60 × 2 = 1.24</strong>
+  </p>
+
+  <p>
+    이는 이상적인 CPI = 1 대비 <strong>24%의 성능 저하</strong>를 의미합니다.
+    Load-Use 스톨(Chapter 10)과 합치면, 실제 CPI는 1.3 이상으로 올라갈 수 있습니다.
+    이 성능 손실을 줄이기 위해 11.5절에서 동적 분기 예측을 소개합니다.
+  </p>
+
+  <h3>왜 Predict-Taken이 아닌가?</h3>
+
+  <p>
+    "분기가 성공할 확률이 더 높다면, Predict-Taken이 나은 것 아닌가?"라는 질문이 나올 수 있습니다.
+    이론적으로는 맞지만, 하드웨어 구현에서는 차이가 있습니다.
+    Predict-Taken을 구현하려면 IF 스테이지에서 이미 <strong>분기 대상 주소(branch target)</strong>를 알아야 합니다.
+    그러나 IF 스테이지에서는 명령어를 아직 디코딩하지 않았으므로, 분기 대상 주소를 계산할 수 없습니다.
+    BTB(Branch Target Buffer)와 같은 추가 하드웨어 없이는 Predict-Taken을 구현할 수 없으며,
+    이는 11.5절의 동적 분기 예측 영역에 해당합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      Predict-Not-Taken은 가장 단순한 분기 예측이지만, <strong>루프에서 특히 불리</strong>합니다.
+      <code>for</code> 루프의 마지막에 있는 backward branch는 루프가 반복되는 동안 항상 Taken이고,
+      루프를 빠져나갈 때만 Not-Taken입니다. 100번 반복하는 루프에서 99번 예측 실패가 발생합니다.
+      이것이 동적 분기 예측의 핵심 동기입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      다음 프로그램의 분기 예측 성능을 직접 계산해 보십시오:
+      10번 반복하는 루프에서, 루프 끝의 BNE 명령어는 9번 Taken, 1번 Not-Taken입니다.
+      Predict-Not-Taken 전략에서 (1) 예측 성공 횟수와 (2) 총 페널티 사이클은 얼마인가?
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 11.4절 끝 ========== -->
+
+<!-- ========== 11.5절 시작 ========== -->
+<section id="sec-11-5">
+  <h2>11.5 동적 분기 예측 (선택 구현)</h2>
+
+  <p>
+    정적 분기 예측의 한계를 극복하기 위해, <strong>동적 분기 예측(Dynamic Branch Prediction)</strong>은
+    프로그램의 <strong>실행 이력(history)</strong>을 기반으로 분기 결과를 예측합니다.
+    이 절에서는 가장 기본적이면서도 효과적인 <strong>2-bit 포화 카운터(2-bit Saturating Counter)</strong> 기반
+    <strong>분기 이력 테이블(BHT, Branch History Table)</strong>을 설계합니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 날씨 예보관을 떠올려 보십시오.
+    매일 아침 "오늘 비가 올까?"를 예측합니다.
+    1-bit 예보관은 "어제 비가 왔으니 오늘도 비"라고 단순하게 예측합니다.
+    그러나 장마철에 하루 화창한 날이 있다고 바로 "내일부터 맑음"으로 예측을 바꾸면 정확도가 떨어집니다.
+    2-bit 예보관은 "연속 이틀 맑아야 예측을 바꾸겠다"는 히스테리시스(hysteresis)를 가집니다.
+    이것이 2-bit 포화 카운터의 핵심 아이디어입니다.
+    물론 이 비유에는 한계가 있습니다. 실제 분기 예측은 날씨보다 훨씬 규칙적인 패턴(루프 등)을 대상으로 하므로,
+    적절한 예측기만 있으면 90% 이상의 정확도를 달성할 수 있습니다.
+  </div>
+
+  <h3>1-bit 예측기의 한계</h3>
+
+  <p>
+    먼저 1-bit 예측기를 생각해 봅시다. 1-bit 예측기는 "마지막 분기 결과"를 그대로 다음 예측에 사용합니다.
+    상태는 두 가지: Not-Taken(0)과 Taken(1)입니다.
+  </p>
+
+  <p>
+    이중 루프(nested loop)에서 1-bit 예측기의 문제점이 드러납니다.
+    내부 루프가 끝나고 외부 루프로 돌아올 때, 내부 루프의 마지막 분기(Not-Taken)가 예측기를 NT로 바꿉니다.
+    그런데 다음 외부 루프 반복에서 내부 루프에 다시 진입하면, 첫 번째 분기가 Taken인데 예측이 NT이므로 실패합니다.
+    이처럼 <strong>루프 경계에서 매번 2번의 예측 실패</strong>가 발생합니다.
+  </p>
+
+  <h3>2-bit 포화 카운터</h3>
+
+  <p>
+    2-bit 포화 카운터는 4가지 상태를 가집니다:
+  </p>
+
+  <table>
+    <tr>
+      <th>상태 값</th>
+      <th>이름</th>
+      <th>예측</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td><code>00</code></td>
+      <td>Strongly Not-Taken</td>
+      <td>Not-Taken</td>
+      <td>연속 Not-Taken 이력. 확신도 높음</td>
+    </tr>
+    <tr>
+      <td><code>01</code></td>
+      <td>Weakly Not-Taken</td>
+      <td>Not-Taken</td>
+      <td>Not-Taken이지만 확신도 낮음</td>
+    </tr>
+    <tr>
+      <td><code>10</code></td>
+      <td>Weakly Taken</td>
+      <td>Taken</td>
+      <td>Taken이지만 확신도 낮음</td>
+    </tr>
+    <tr>
+      <td><code>11</code></td>
+      <td>Strongly Taken</td>
+      <td>Taken</td>
+      <td>연속 Taken 이력. 확신도 높음</td>
+    </tr>
+  </table>
+
+  <p>
+    핵심은 <strong>"한 번의 예측 실패로 즉시 반전하지 않는다"</strong>는 것입니다.
+    Strongly Taken(11) 상태에서 Not-Taken이 한 번 발생하면 Weakly Taken(10)으로 이동하지만,
+    여전히 Taken으로 예측합니다. 연속 두 번 Not-Taken이 발생해야 Not-Taken(01 또는 00)으로 전환됩니다.
+    이 히스테리시스 특성 덕분에 이중 루프 경계에서의 오예측이 1번으로 줄어듭니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec05_2bit_counter.svg" alt="2-bit 포화 카운터 상태 전이도와 BHT/BTB 구조">
+    <figcaption>그림 11.5: 2-bit 포화 카운터 상태 전이도(상단)와 BHT/BTB 구조(하단). BHT는 PC[9:2]로 인덱싱하여 256 엔트리를 관리한다.</figcaption>
+  </figure>
+
+  <h3>BHT 하드웨어 설계</h3>
+
+  <p>
+    BHT는 <strong>PC의 하위 비트를 인덱스</strong>로 사용하여 2-bit 카운터 배열에 접근하는 구조입니다.
+    태그(tag) 비교를 하지 않으므로, 서로 다른 분기 명령어가 같은 엔트리를 공유할 수 있습니다(aliasing).
+    이 aliasing은 정확도를 다소 떨어뜨리지만, 하드웨어를 극적으로 단순화합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// BHT: 256 엔트리, PC[9:2]로 인덱싱
+logic [1:0] bht [256];
+
+// 예측 (IF 스테이지, 조합 논리)
+assign predict_taken = bht[if_pc[9:2]][1];  // MSB = 1이면 Taken
+
+// 갱신 (EX 스테이지 결과 반영)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n) begin
+      for (int i = 0; i &lt; 256; i++)
+         bht[i] &lt;= 2'b01;  // 초기값: Weakly Not-Taken
+   end
+   else if (ex_branch_valid) begin
+      if (ex_branch_taken &amp;&amp; bht[ex_pc[9:2]] &lt; 2'b11)
+         bht[ex_pc[9:2]] &lt;= bht[ex_pc[9:2]] + 2'b01;  // 증가
+      else if (!ex_branch_taken &amp;&amp; bht[ex_pc[9:2]] > 2'b00)
+         bht[ex_pc[9:2]] &lt;= bht[ex_pc[9:2]] - 2'b01;  // 감소
+   end
+end
+  </code></pre>
+
+  <h3>Basys 3 자원 소요량</h3>
+
+  <p>
+    256 엔트리 × 2-bit = 512 비트. Basys 3의 Artix-7 FPGA에서 이는 <strong>LUTRAM(분산 RAM) 1~2개 슬라이스</strong>로 구현됩니다.
+    전체 LUT 예산(20,800개)의 0.01% 미만이므로, BHT 추가에 따른 자원 부담은 무시할 수 있습니다.
+  </p>
+
+  <table>
+    <tr>
+      <th>BHT 크기</th>
+      <th>엔트리 수</th>
+      <th>총 비트</th>
+      <th>LUTRAM 슬라이스</th>
+      <th>LUT 사용률</th>
+    </tr>
+    <tr>
+      <td>64 엔트리</td>
+      <td>64</td>
+      <td>128 bit</td>
+      <td>~1</td>
+      <td>&lt; 0.01%</td>
+    </tr>
+    <tr>
+      <td><strong>256 엔트리 (권장)</strong></td>
+      <td>256</td>
+      <td>512 bit</td>
+      <td>~2</td>
+      <td>&lt; 0.01%</td>
+    </tr>
+    <tr>
+      <td>1024 엔트리</td>
+      <td>1024</td>
+      <td>2048 bit</td>
+      <td>~8</td>
+      <td>&lt; 0.05%</td>
+    </tr>
+  </table>
+
+  <p>
+    256 엔트리를 권장하는 이유는, 대부분의 교육용 프로그램(버블 정렬, 피보나치 등)의 분기 명령어 수가
+    256개 이하이며, 더 큰 BHT는 aliasing을 줄이지만 성능 향상이 미미하기 때문입니다.
+  </p>
+
+  <h3>BTB (Branch Target Buffer) 기초</h3>
+
+  <p>
+    BHT가 "분기할 것인가?"를 예측한다면, <strong>BTB(Branch Target Buffer)</strong>는
+    "분기한다면 어디로 갈 것인가?"를 저장합니다.
+    BTB는 작은 캐시와 유사한 구조로, 분기 명령어의 PC를 태그로 사용하여 분기 대상 주소를 저장합니다.
+  </p>
+
+  <p>
+    BHT와 BTB를 조합하면 IF 스테이지에서 분기 예측과 대상 주소를 동시에 제공할 수 있으므로,
+    예측이 맞을 때 페널티가 0이 됩니다. 그러나 BTB는 이 책의 범위를 넘어서는 심화 주제이므로,
+    개념만 소개하고 구현은 선택 과제로 남깁니다.
+  </p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: 분기 예측 방법을 아는 대로 설명해 보세요.</strong> (면접 빈출 Top 5)<br>
+      A: (1) <strong>정적 예측</strong>: Predict-Not-Taken, Predict-Taken, backward branch는 Taken/forward는 Not-Taken.
+      (2) <strong>1-bit 예측기</strong>: 마지막 결과를 그대로 사용. 이중 루프에서 약점.
+      (3) <strong>2-bit 포화 카운터</strong>(BHT): 히스테리시스로 이중 루프 경계 오예측 감소.
+      (4) <strong>상관 예측기(Correlating Predictor)</strong>: 다른 분기의 결과도 참조. (m,n) 예측기.
+      (5) <strong>토너먼트 예측기(Tournament Predictor)</strong>: 지역/전역 예측기를 메타 예측기로 선택.
+      (6) <strong>신경망 예측기(Neural Branch Predictor)</strong>: 퍼셉트론 기반 (AMD Zen 시리즈에서 사용).
+      교재 범위는 (1)~(3)이며, (4)~(6)은 Chapter 23에서 개요만 소개합니다.
+    </p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      현대 고성능 프로세서의 분기 예측 정확도는 97~99%에 달합니다.
+      그럼에도 "나머지 1~3%"가 성능에 미치는 영향은 무시할 수 없습니다.
+      10단계 이상 깊은 파이프라인에서는 예측 실패 시 10+ 사이클의 페널티가 발생하기 때문입니다.
+      2-bit 포화 카운터는 간단하지만, 실제 상용 프로세서에서는 TAGE(TAgged GEometric history)와 같은
+      훨씬 정교한 예측기가 사용됩니다.
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 11.5절 끝 ========== -->
+
+<!-- ========== 11.6절 시작 ========== -->
+<section id="sec-11-6">
+  <h2>11.6 JAL/JALR 처리</h2>
+
+  <p>
+    지금까지는 조건 분기(B 타입) 명령어의 제어 해저드를 다루었습니다.
+    이 절에서는 <strong>무조건 점프 명령어</strong>인 <code>JAL</code>과 <code>JALR</code>의 처리 방식을 살펴봅니다.
+    두 명령어 모두 "항상 점프"한다는 공통점이 있지만, 대상 주소의 계산 방식이 근본적으로 다르므로 파이프라인에서의 처리도 달라집니다.
+  </p>
+
+  <h3>JAL: PC 상대 무조건 점프</h3>
+
+  <p>
+    <code>JAL rd, offset</code> 명령어는 다음 두 가지 동작을 수행합니다:
+  </p>
+
+  <ol>
+    <li><strong>rd ← PC + 4</strong>: 현재 명령어의 다음 주소(복귀 주소)를 rd에 저장합니다.</li>
+    <li><strong>PC ← PC + imm</strong>: 현재 PC에 즉치수(offset)를 더한 주소로 점프합니다.</li>
+  </ol>
+
+  <p>
+    JAL의 핵심 특성은 대상 주소가 <strong>PC 상대(PC-relative)</strong>라는 점입니다.
+    즉, <code>PC + imm</code>을 계산하는 데 레지스터 값이 필요하지 않습니다.
+    이 계산은 IF 스테이지의 PC와 ID 스테이지에서 추출한 즉치수만 있으면 수행 가능하므로,
+    이론적으로 <strong>ID 스테이지에서 점프 대상 주소를 확정</strong>할 수 있습니다.
+  </p>
+
+  <p>
+    ID 스테이지에서 JAL을 감지하면:
+  </p>
+
+  <ul>
+    <li><strong>PC ← ID_PC + imm</strong> (점프 대상 주소를 PC에 기록)</li>
+    <li><strong>IF/ID flush</strong> (JAL 다음에 잘못 fetch된 1개 명령어를 무효화)</li>
+    <li>페널티: <strong>1사이클</strong></li>
+  </ul>
+
+  <p>
+    혹은 EX 스테이지에서 처리하면 2사이클 페널티가 되지만 구현이 더 단순합니다.
+    이 책에서는 일관성을 위해 <strong>EX 스테이지에서 JAL을 처리</strong>하되,
+    ID 스테이지로 최적화하는 방법도 함께 소개합니다.
+  </p>
+
+  <h3>JALR: 레지스터 기반 간접 점프</h3>
+
+  <p>
+    <code>JALR rd, rs1, offset</code> 명령어는:
+  </p>
+
+  <ol>
+    <li><strong>rd ← PC + 4</strong>: 복귀 주소를 rd에 저장합니다.</li>
+    <li><strong>PC ← (rs1 + imm) &amp; ~1</strong>: rs1 값에 즉치수를 더하고, LSB를 0으로 클리어한 주소로 점프합니다.</li>
+  </ol>
+
+  <p>
+    JALR의 핵심 차이점은 대상 주소 계산에 <strong>rs1 레지스터의 값</strong>이 필요하다는 것입니다.
+    rs1 값은 ID 스테이지에서 레지스터 파일로부터 읽거나 포워딩으로 받아야 합니다.
+    특히, 직전 명령어가 rs1에 값을 쓰는 경우, <strong>EX-EX 포워딩</strong>이 필요하며,
+    직전 명령어가 <code>LW</code>(로드)인 경우 <strong>Load-Use 스톨</strong>까지 발생할 수 있습니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// JALR 대상 주소 계산 (EX 스테이지)
+// rs1_data는 포워딩 유닛을 통해 최신 값이 공급되어야 함
+always_comb begin
+   if (ex_jalr)
+      branch_target = (ex_rs1_data + ex_imm) &amp; 32'hFFFF_FFFE;
+   else
+      branch_target = ex_pc + ex_imm;  // B 타입 및 JAL
+end
+  </code></pre>
+
+  <p>
+    LSB를 0으로 클리어하는 <code>&amp; 32'hFFFF_FFFE</code> 연산은 RISC-V 스펙의 요구사항입니다.
+    RV32I에서 모든 명령어는 4바이트 정렬(4-byte aligned)되어야 하므로, 하위 2비트가 <code>00</code>이어야 합니다.
+    그러나 RISC-V에는 2바이트 압축 명령어(C 확장)가 있으므로, 스펙은 LSB만 클리어하도록 정의합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec06_jal_jalr_handling.svg" alt="JAL(ID 단계 1사이클 페널티) vs JALR(EX 단계 2사이클 페널티) 파이프라인 비교">
+    <figcaption>그림 11.6: JAL과 JALR의 파이프라인 처리 비교. JAL은 PC+imm만 필요하므로 일찍 처리 가능하고, JALR은 rs1 값이 필요하므로 포워딩 의존성이 발생한다.</figcaption>
+  </figure>
+
+  <h3>JALR과 포워딩 유닛의 연계</h3>
+
+  <p>
+    JALR은 rs1 값에 의존하므로, Chapter 10에서 설계한 포워딩 유닛과 긴밀하게 연동해야 합니다.
+    다음 코드 시퀀스를 생각해 보십시오:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// 포워딩이 필요한 JALR 시나리오
+ADD  x1, x2, x3      // EX 스테이지에서 x1 = x2 + x3 계산
+JALR x0, x1, 0       // x1 값 필요 → EX-EX 포워딩 발생
+  </code></pre>
+
+  <p>
+    <code>ADD</code>가 EX 스테이지에서 결과를 생성하는 동일 사이클에 <code>JALR</code>도 EX 스테이지에 있으므로,
+    포워딩 유닛이 <code>ADD</code>의 ALU 결과를 <code>JALR</code>의 rs1 입력으로 전달해야 합니다.
+    이것은 Chapter 10에서 이미 구현한 EX-EX 포워딩 경로와 동일하며, 추가 하드웨어가 필요하지 않습니다.
+  </p>
+
+  <p>
+    그러나 다음 시퀀스에서는 스톨이 필요합니다:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// 스톨이 필요한 JALR 시나리오
+LW   x1, 0(x10)      // MEM 스테이지에서 x1 로드
+JALR x0, x1, 0       // x1 값 필요 → Load-Use 스톨 1사이클
+  </code></pre>
+
+  <p>
+    이 경우 <code>LW</code>의 결과는 MEM 스테이지 이후에야 사용 가능하므로, JALR은 1사이클 스톨 후 MEM-EX 포워딩으로 값을 받습니다.
+    이미 Chapter 10의 Load-Use 스톨 감지 로직이 이 상황을 처리하므로, JALR을 위한 별도의 스톨 로직은 필요하지 않습니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> <code>JALR x0, x1, 0</code>에서 rd가 x0인데, x0에 복귀 주소를 쓰는 것인가요?</p>
+    <p><strong>A:</strong> x0은 하드와이어드 0 레지스터이므로, 실제로는 아무것도 기록되지 않습니다.
+    이것은 "복귀 주소가 필요 없는 점프"를 의미하며, 함수로부터의 복귀(<code>RET</code>)를 구현할 때 사용됩니다.
+    RISC-V의 의사 명령어(pseudo-instruction) <code>RET</code>은 <code>JALR x0, x1, 0</code>으로 확장됩니다.
+    즉, x1(ra 레지스터)에 저장된 복귀 주소로 점프하되, 새로운 복귀 주소는 저장하지 않습니다.</p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      JAL과 JALR의 차이를 학생들에게 설명할 때, <strong>함수 호출 규약(calling convention)</strong>과 연결하면 이해도가 높아집니다.
+      <code>JAL ra, func</code>은 함수 호출(CALL)이고, <code>JALR x0, ra, 0</code>은 함수 복귀(RET)입니다.
+      JAL이 "직접 전화 걸기"라면, JALR은 "전화번호부(레지스터)를 보고 전화 걸기"입니다.
+      함수 포인터, 가상 함수 테이블(vtable) 등이 JALR을 사용하는 대표적 사례입니다.
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 11.6절 끝 ========== -->
+
+<!-- ========== 11.7절 시작 ========== -->
+<section id="sec-11-7">
+  <h2>11.7 제어 해저드 테스트벤치</h2>
+
+  <p>
+    이 절에서는 11.2~11.6절에서 설계한 제어 해저드 처리 로직을 검증하는 테스트벤치를 작성합니다.
+    제어 해저드 테스트벤치의 핵심은 <strong>분기 성공/실패 시나리오를 망라</strong>하고,
+    특히 <strong>데이터 해저드와 제어 해저드가 중첩되는 경우</strong>(flush와 stall 동시 발생)를
+    올바르게 처리하는지 확인하는 것입니다.
+  </p>
+
+  <h3>테스트 시나리오 설계</h3>
+
+  <p>
+    다음 6가지 시나리오를 체계적으로 검증합니다:
+  </p>
+
+  <table>
+    <tr>
+      <th>#</th>
+      <th>시나리오</th>
+      <th>기대 동작</th>
+      <th>검증 포인트</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>BEQ Taken (rs1 == rs2)</td>
+      <td>branch_taken=1, flush 발생</td>
+      <td>branch_target 정확성</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>BEQ Not-Taken (rs1 != rs2)</td>
+      <td>branch_taken=0, flush 미발생</td>
+      <td>정상 파이프라인 진행</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>BNE Taken (음수 오프셋)</td>
+      <td>branch_taken=1, backward branch</td>
+      <td>음수 즉치수 처리</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>JAL 무조건 점프</td>
+      <td>항상 taken, PC+imm</td>
+      <td>branch_target = PC + offset</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>JALR 간접 점프</td>
+      <td>항상 taken, (rs1+imm)&amp;~1</td>
+      <td>LSB 클리어, 포워딩 값 사용</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>Load-Use + Branch Taken</td>
+      <td>Flush 우선 (스톨 무시)</td>
+      <td>pc_write=1, if_id_flush=1</td>
+    </tr>
+  </table>
+
+  <h3>Flush/Stall 우선순위 규칙 표</h3>
+
+  <p>
+    시나리오 6은 이 챕터에서 가장 중요한 검증 항목입니다.
+    flush와 stall이 동시에 발생할 때의 우선순위 규칙을 다시 한번 명확히 정리합니다:
+  </p>
+
+  <figure>
+    <img src="../figures/ch11_sec07_flush_stall_priority.svg" alt="Flush와 Stall 동시 발생 시 우선순위 결정 규칙 표">
+    <figcaption>그림 11.7: Flush와 Stall 동시 발생 시 우선순위 결정 규칙. Flush는 항상 Stall보다 우선한다.</figcaption>
+  </figure>
+
+  <h3>테스트벤치 핵심 코드</h3>
+
+  <p>
+    테스트벤치의 전체 코드는 <code>code_examples/ch11_control_hazard_tb.sv</code>에 있습니다.
+    여기서는 시나리오 6(중첩 해저드)의 핵심 부분을 살펴봅니다:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// 시나리오 6: Load-Use + Branch Taken (Flush 우선 확인)
+// Load-Use 조건 설정
+id_ex_mem_read = 1'b1;     // Load 명령어가 ID/EX에 있음
+id_ex_rd       = 5'd5;     // Load의 rd = x5
+if_id_rs1      = 5'd5;     // 다음 명령어가 x5를 사용 → 스톨 조건
+
+// 동시에 분기 성공
+ex_branch   = 1'b1;
+ex_funct3   = 3'b000;      // BEQ
+ex_rs1_data = 32'h7;
+ex_rs2_data = 32'h7;       // 같은 값 → Taken
+
+#1;  // 조합 논리 안정화
+
+// 검증: Flush가 Stall보다 우선
+assert(pc_write == 1'b1)     // PC 갱신 허용 (스톨이면 0)
+assert(if_id_flush == 1'b1)  // IF/ID flush (스톨이면 0)
+assert(id_ex_flush == 1'b1)  // ID/EX flush
+  </code></pre>
+
+  <p>
+    핵심 검증 포인트는 <code>pc_write</code>가 1이라는 것입니다.
+    만약 스톨이 우선했다면 <code>pc_write = 0</code>(PC 홀드)이 되어,
+    분기 대상 주소로의 점프가 1사이클 지연됩니다. 이는 프로그램의 올바른 실행을 보장하지 못합니다.
+  </p>
+
+  <h3>시뮬레이션 실행</h3>
+
+  <p>
+    테스트벤치를 실행하는 방법은 다음과 같습니다:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// Vivado Simulator
+xvlog ch11_branch_control.sv ch11_hazard_control_unit.sv ch11_control_hazard_tb.sv
+xelab -debug typical control_hazard_tb
+xsim control_hazard_tb -runall
+
+// VCS
+vcs -sverilog ch11_branch_control.sv ch11_hazard_control_unit.sv ch11_control_hazard_tb.sv
+./simv
+  </code></pre>
+
+  <p>
+    모든 테스트가 통과하면 다음과 같은 출력이 나타납니다:
+  </p>
+
+  <pre><code>
+--- 테스트 1: BEQ Taken ---
+[PASS] BEQ Taken
+
+--- 테스트 2: BEQ Not-Taken ---
+[PASS] BEQ Not-Taken
+
+--- 테스트 3: BNE Taken ---
+[PASS] BNE Taken
+
+--- 테스트 4: JAL ---
+[PASS] JAL
+
+--- 테스트 5: JALR ---
+[PASS] JALR
+
+--- 테스트 6: JALR LSB 클리어 ---
+[PASS] JALR LSB clear
+
+--- 테스트 7: Load-Use + Branch (Flush 우선) ---
+[PASS] Flush 우선순위 확인: pc_write=1, if_id_flush=1
+
+========================================
+  테스트 완료: PASS=7, FAIL=0
+========================================
+
+*** 모든 테스트 통과! ***
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      실무 프로젝트에서는 분기 테스트를 수동 시나리오만으로는 충분하지 않습니다.
+      <strong>riscv-tests</strong> 공식 테스트 스위트에는 모든 분기 조건(BEQ, BNE, BLT, BGE, BLTU, BGEU)과
+      JAL/JALR의 다양한 엣지 케이스를 검증하는 테스트가 포함되어 있습니다.
+      Chapter 21에서 이 테스트 스위트를 FPGA 위에서 실행하는 방법을 다룹니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>
+      테스트벤치에 다음 시나리오를 추가해 보십시오:
+      (1) BLT(signed less than) 분기에서 음수 값 비교 (예: x1=-5, x2=3, 기대: Taken)
+      (2) JALR에서 rs1=0xFFFFFFFF, imm=1일 때 대상 주소는? (오버플로 + LSB 클리어)
+      (3) 분기 명령어의 rd가 x0인 경우, 포워딩이 발생하지 않는지 확인
+    </p>
+  </aside>
+
+</section>
+<!-- ========== 11.7절 끝 ========== -->
+
+<!-- ========== 11.8절 시작 ========== -->
+<section id="sec-11-8">
+  <h2>11.8 본 챕터 요약 및 다음 단계</h2>
+
+  <p>
+    이 챕터에서는 파이프라인 프로세서의 두 번째 해저드인 제어 해저드를 분석하고 해결했습니다.
+    Chapter 10의 데이터 해저드 해결과 합쳐, 우리의 파이프라인은 이제 대부분의 프로그램을 올바르게 실행할 수 있습니다.
+  </p>
+
+</section>
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>제어 해저드</strong>는 분기/점프 명령어의 대상 주소가 IF 스테이지에서 결정되지 않아 발생한다. 페널티는 분기 판정 스테이지에 따라 결정된다.</li>
+    <li><strong>EX 스테이지 분기 판정</strong>은 2사이클 페널티를 초래하며, ALU 또는 별도 비교기로 구현한다. ID 스테이지 판정은 1사이클이지만 포워딩 확장과 추가 스톨이 필요하다.</li>
+    <li><strong>Flush 메커니즘</strong>은 파이프라인 레지스터의 제어 신호를 0으로 클리어하여, 잘못 fetch된 명령어를 버블(NOP)로 변환한다.</li>
+    <li><strong>Predict-Not-Taken</strong>은 추가 하드웨어 없이 구현 가능하지만, 루프의 backward branch에서 높은 오예측률을 보인다.</li>
+    <li><strong>2-bit 포화 카운터 BHT</strong>는 히스테리시스 특성으로 이중 루프 경계의 오예측을 줄인다. 256 엔트리 기준 Basys 3 자원 소요는 무시할 수 있다.</li>
+    <li><strong>JAL</strong>은 PC 상대 주소로 점프하므로 ID 스테이지에서 조기 처리가 가능하고, <strong>JALR</strong>은 rs1 값이 필요하므로 포워딩 의존성이 존재한다.</li>
+    <li><strong>Flush는 Stall보다 항상 우선</strong>한다. 분기 성공 시, 스톨 대상 명령어도 flush되므로 스톨할 필요가 없다.</li>
+    <li>데이터 해저드(Ch10)와 제어 해저드(Ch11)의 통합 처리에서, <strong>통합 해저드 제어 유닛</strong>이 우선순위 규칙에 따라 pc_write, if_id_flush, id_ex_flush 신호를 생성한다.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li>
+      <strong>[기억]</strong> 5단계 파이프라인에서 분기 판정을 EX 스테이지에서 수행할 때, 분기 성공 시 flush 대상 파이프라인 레지스터 2개의 이름을 쓰시오.
+    </li>
+    <li>
+      <strong>[이해]</strong> Predict-Not-Taken 전략에서, 100번 반복하는 루프의 끝에 있는 BNE 명령어에 대해
+      (a) 예측 성공 횟수, (b) 예측 실패 횟수, (c) 총 페널티 사이클(EX 판정, 2사이클 페널티)을 각각 계산하시오.
+    </li>
+    <li>
+      <strong>[적용]</strong> 다음 코드 시퀀스에서 발생하는 해저드의 종류와 처리 방법을 설명하시오.
+      <pre><code class="language-systemverilog">
+LW   x5, 0(x10)     // 명령어 1
+BEQ  x5, x6, target // 명령어 2
+ADD  x7, x8, x9     // 명령어 3
+      </code></pre>
+      힌트: (a) 분기가 Not-Taken인 경우와 (b) Taken인 경우를 각각 분석하시오.
+    </li>
+    <li>
+      <strong>[분석]</strong> 2-bit 포화 카운터 BHT에서 초기 상태가 <code>01</code>(Weakly Not-Taken)일 때,
+      분기 결과 시퀀스 T, T, NT, T, T, T, NT, NT에 대해 (a) 각 단계의 상태 전이와 (b) 예측 정확도(%)를 구하시오.
+    </li>
+    <li>
+      <strong>[분석]</strong> 프로그램의 분기 명령어 비율이 18%, 분기 성공률이 65%이며,
+      EX 스테이지 판정(페널티 2사이클)을 사용할 때의 CPI를 구하시오.
+      Load-Use 스톨 비율이 5%(1사이클 페널티)일 때, 전체 CPI는 얼마인가?
+    </li>
+    <li>
+      <strong>[평가]</strong> ID 스테이지에서 분기 판정을 수행하도록 설계를 변경한다면,
+      (a) 추가로 필요한 하드웨어 요소 3가지를 나열하고,
+      (b) Basys 3의 최대 클럭 주파수에 미치는 영향을 예측하시오.
+      (c) EX 판정 + 2-bit BHT 예측기 조합과 비교하여, 어느 설계가 더 유리한지 논증하시오.
+    </li>
+    <li>
+      <strong>[적용]</strong> <code>ch11_branch_control.sv</code>에 BLT와 BGEU 분기 조건의 테스트 케이스를
+      테스트벤치에 추가하시오. 특히 부호 있는(signed) 비교에서 음수 값을 포함하는 경우를 검증하시오.
+    </li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    Chapter 12에서는 <strong>구조적 해저드(Structural Hazard)</strong>와 <strong>WB-ID 포워딩</strong>을 다루고,
+    Chapter 9~11에서 설계한 모든 요소를 하나로 통합하여 <strong>완전한 5단계 파이프라인 프로세서</strong>를 완성합니다.
+    이 챕터에서 배운 flush/stall 우선순위 규칙과 분기 처리 로직이
+    전체 파이프라인 통합의 핵심 구성 요소가 됩니다.
+    최종적으로 버블 정렬 알고리즘을 파이프라인 프로세서에서 실행하여,
+    단일 사이클, 멀티사이클과의 성능 비교를 통해 파이프라인의 진정한 가치를 체감하게 될 것입니다.
+  </p>
+</section>
+
+</body>
+</html>

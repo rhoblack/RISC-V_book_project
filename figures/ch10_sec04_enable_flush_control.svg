@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540"
+     font-family="'Pretendard', 'Noto Sans KR', sans-serif">
+
+  <!-- 배경 -->
+  <rect width="960" height="540" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 바 -->
+  <rect x="0" y="0" width="960" height="44" fill="#1E3A8A" rx="8"/>
+  <rect x="0" y="36" width="960" height="8" fill="#1E3A8A"/>
+  <text x="480" y="27" text-anchor="middle" fill="white" font-size="15" font-weight="bold">스톨 제어 신호 연결도</text>
+
+  <!-- 화살표 마커 -->
+  <defs>
+    <marker id="aRed" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#DC2626"/>
+    </marker>
+    <marker id="aBlue" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#2563EB"/>
+    </marker>
+    <marker id="aDarkBlue" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#1E3A8A"/>
+    </marker>
+    <marker id="aGray" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#64748B"/>
+    </marker>
+    <marker id="aAmber" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L0,7 L8,3.5 z" fill="#D97706"/>
+    </marker>
+  </defs>
+
+  <!-- ======== 파이프라인 레지스터 5개 (가로 배열) ======== -->
+
+  <!-- PC 레지스터 -->
+  <rect x="20" y="54" width="100" height="80" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="5"/>
+  <rect x="20" y="54" width="100" height="22" fill="#2563EB" rx="5"/>
+  <rect x="20" y="66" width="100" height="10" fill="#2563EB"/>
+  <text x="70" y="68" text-anchor="middle" fill="white" font-size="10" font-weight="bold">PC</text>
+  <text x="70" y="90" text-anchor="middle" fill="#1E40AF" font-size="9">pc_reg</text>
+  <text x="70" y="104" text-anchor="middle" fill="#1E40AF" font-size="8.5">32비트</text>
+  <!-- en 포트 (아래) -->
+  <rect x="35" y="134" width="60" height="18" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="3,2" rx="3"/>
+  <text x="65" y="147" text-anchor="middle" fill="#DC2626" font-size="8.5" font-weight="bold">en (pc_write)</text>
+  <!-- 연결선 en 포트 위로 -->
+  <line x1="70" y1="134" x2="70" y2="134" stroke="#DC2626" stroke-width="1"/>
+
+  <!-- IF/ID 레지스터 -->
+  <rect x="200" y="54" width="120" height="80" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="5"/>
+  <rect x="200" y="54" width="120" height="22" fill="#2563EB" rx="5"/>
+  <rect x="200" y="66" width="120" height="10" fill="#2563EB"/>
+  <text x="260" y="68" text-anchor="middle" fill="white" font-size="10" font-weight="bold">IF/ID 레지스터</text>
+  <text x="260" y="90" text-anchor="middle" fill="#1E40AF" font-size="8.5">instr / pc</text>
+  <text x="260" y="104" text-anchor="middle" fill="#1E40AF" font-size="8.5">pc_plus4</text>
+  <!-- en 포트 -->
+  <rect x="210" y="134" width="100" height="18" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="3,2" rx="3"/>
+  <text x="260" y="147" text-anchor="middle" fill="#DC2626" font-size="8.5" font-weight="bold">en (if_id_write)</text>
+
+  <!-- ID/EX 레지스터 -->
+  <rect x="400" y="54" width="128" height="80" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="5"/>
+  <rect x="400" y="54" width="128" height="22" fill="#2563EB" rx="5"/>
+  <rect x="400" y="66" width="128" height="10" fill="#2563EB"/>
+  <text x="464" y="68" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ID/EX 레지스터</text>
+  <text x="464" y="90" text-anchor="middle" fill="#1E40AF" font-size="8">rs1/rs2_data, imm_ext</text>
+  <text x="464" y="103" text-anchor="middle" fill="#1E40AF" font-size="8">rs1/rs2/rd_addr, ctrl</text>
+  <!-- flush 포트 -->
+  <rect x="410" y="134" width="108" height="18" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" stroke-dasharray="3,2" rx="3"/>
+  <text x="464" y="147" text-anchor="middle" fill="#2563EB" font-size="8.5" font-weight="bold">flush (id_ex_flush)</text>
+
+  <!-- EX/MEM 레지스터 -->
+  <rect x="610" y="54" width="128" height="80" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="5"/>
+  <rect x="610" y="54" width="128" height="22" fill="#2563EB" rx="5"/>
+  <rect x="610" y="66" width="128" height="10" fill="#2563EB"/>
+  <text x="674" y="68" text-anchor="middle" fill="white" font-size="10" font-weight="bold">EX/MEM 레지스터</text>
+  <text x="674" y="90" text-anchor="middle" fill="#1E40AF" font-size="8">alu_result, rs2_data</text>
+  <text x="674" y="103" text-anchor="middle" fill="#1E40AF" font-size="8">rd_addr, ctrl_mem</text>
+  <!-- en=1 (항상) -->
+  <rect x="626" y="134" width="96" height="18" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="674" y="147" text-anchor="middle" fill="#166534" font-size="8.5" font-weight="bold">en = 1 (항상 활성)</text>
+
+  <!-- MEM/WB 레지스터 -->
+  <rect x="816" y="54" width="128" height="80" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" rx="5"/>
+  <rect x="816" y="54" width="128" height="22" fill="#2563EB" rx="5"/>
+  <rect x="816" y="66" width="128" height="10" fill="#2563EB"/>
+  <text x="880" y="68" text-anchor="middle" fill="white" font-size="10" font-weight="bold">MEM/WB 레지스터</text>
+  <text x="880" y="90" text-anchor="middle" fill="#1E40AF" font-size="8">read_data, alu_result</text>
+  <text x="880" y="103" text-anchor="middle" fill="#1E40AF" font-size="8">rd_addr, ctrl_wb</text>
+  <!-- en=1 (항상) -->
+  <rect x="832" y="134" width="96" height="18" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="880" y="147" text-anchor="middle" fill="#166534" font-size="8.5" font-weight="bold">en = 1 (항상 활성)</text>
+
+  <!-- 데이터 흐름 화살표 (레지스터 사이) -->
+  <line x1="120" y1="94" x2="200" y2="94" stroke="#3B82F6" stroke-width="2" marker-end="url(#aBlue)"/>
+  <line x1="320" y1="94" x2="400" y2="94" stroke="#3B82F6" stroke-width="2" marker-end="url(#aBlue)"/>
+  <line x1="528" y1="94" x2="610" y2="94" stroke="#3B82F6" stroke-width="2" marker-end="url(#aBlue)"/>
+  <line x1="738" y1="94" x2="816" y2="94" stroke="#3B82F6" stroke-width="2" marker-end="url(#aBlue)"/>
+
+  <!-- 스테이지 레이블 -->
+  <text x="160" y="86" text-anchor="middle" fill="#64748B" font-size="8.5">IF 스테이지</text>
+  <text x="360" y="86" text-anchor="middle" fill="#64748B" font-size="8.5">ID 스테이지</text>
+  <text x="569" y="86" text-anchor="middle" fill="#64748B" font-size="8.5">EX 스테이지</text>
+  <text x="777" y="86" text-anchor="middle" fill="#64748B" font-size="8.5">MEM 스테이지</text>
+  <text x="954" y="86" text-anchor="end" fill="#64748B" font-size="8.5">WB</text>
+
+  <!-- Ch09 예약 포트 강조 박스 -->
+  <rect x="28" y="128" width="87" height="30" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="4,2" rx="4"/>
+  <text x="70" y="170" text-anchor="middle" fill="#D97706" font-size="8" font-weight="bold">Ch09 예약 →</text>
+  <text x="70" y="181" text-anchor="middle" fill="#D97706" font-size="8" font-weight="bold">Ch10 연결!</text>
+
+  <rect x="207" y="128" width="110" height="30" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="4,2" rx="4"/>
+  <text x="260" y="170" text-anchor="middle" fill="#D97706" font-size="8" font-weight="bold">Ch09 예약 →</text>
+  <text x="260" y="181" text-anchor="middle" fill="#D97706" font-size="8" font-weight="bold">Ch10 연결!</text>
+
+  <rect x="407" y="128" width="115" height="30" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="4,2" rx="4"/>
+  <text x="464" y="170" text-anchor="middle" fill="#D97706" font-size="8" font-weight="bold">Ch09 예약 →</text>
+  <text x="464" y="181" text-anchor="middle" fill="#D97706" font-size="8" font-weight="bold">Ch10 연결!</text>
+
+  <!-- ======== Hazard Detection Unit ======== -->
+  <rect x="60" y="320" width="500" height="120" fill="#FEF3C7" stroke="#D97706" stroke-width="2" rx="6"/>
+  <rect x="60" y="320" width="500" height="26" fill="#D97706" rx="6"/>
+  <rect x="60" y="336" width="500" height="10" fill="#D97706"/>
+  <text x="310" y="337" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Hazard Detection Unit</text>
+
+  <!-- HDU 입력 -->
+  <text x="80" y="365" fill="#92400E" font-size="9.5" font-weight="bold">입력 신호:</text>
+  <text x="80" y="381" fill="#78350F" font-size="9">• id_ex_rd_addr  (ID/EX 레지스터의 rd 주소)</text>
+  <text x="80" y="396" fill="#78350F" font-size="9">• id_ex_mem_read (LW 명령어 감지 플래그)</text>
+  <text x="80" y="411" fill="#78350F" font-size="9">• if_id_rs1, if_id_rs2 (IF/ID 레지스터의 rs1, rs2 주소)</text>
+
+  <!-- HDU 출력 -->
+  <text x="330" y="365" fill="#92400E" font-size="9.5" font-weight="bold">출력:</text>
+  <text x="330" y="381" fill="#78350F" font-size="9">stall = (id_ex_mem_read) AND</text>
+  <text x="330" y="396" fill="#78350F" font-size="9">        ((id_ex_rd_addr == if_id_rs1) OR</text>
+  <text x="330" y="411" fill="#78350F" font-size="9">         (id_ex_rd_addr == if_id_rs2))</text>
+
+  <!-- stall 신호 출력선 -->
+  <line x1="310" y1="320" x2="310" y2="280" stroke="#475569" stroke-width="2"/>
+  <text x="318" y="302" fill="#475569" font-size="9" font-weight="bold">stall</text>
+
+  <!-- NOT 게이트 1 (pc_write) -->
+  <polygon points="290,254 330,260 290,266" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <circle cx="332" cy="260" r="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="270" y="263" text-anchor="end" fill="#DC2626" font-size="8.5" font-weight="bold">NOT</text>
+  <line x1="310" y1="280" x2="310" y2="266" stroke="#475569" stroke-width="1.5"/>
+
+  <!-- NOT 게이트 2 (if_id_write) -->
+  <polygon points="170,254 210,260 170,266" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <circle cx="212" cy="260" r="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="150" y="263" text-anchor="end" fill="#DC2626" font-size="8.5" font-weight="bold">NOT</text>
+
+  <!-- stall → NOT 1 분기선 -->
+  <line x1="310" y1="280" x2="190" y2="280" stroke="#475569" stroke-width="1.5"/>
+  <line x1="190" y1="280" x2="190" y2="266" stroke="#475569" stroke-width="1.5"/>
+
+  <!-- NOT 1 출력 → PC en 포트 -->
+  <line x1="336" y1="260" x2="400" y2="260" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="400" y1="260" x2="400" y2="240" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="400" y1="240" x2="70" y2="240" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="70" y1="240" x2="70" y2="152" stroke="#DC2626" stroke-width="2" marker-end="url(#aRed)"/>
+  <rect x="98" y="232" width="112" height="13" fill="#FEE2E2" rx="2"/>
+  <text x="154" y="242" text-anchor="middle" fill="#DC2626" font-size="8.5" font-weight="bold">pc_write = ~stall → PC 동결</text>
+
+  <!-- NOT 2 출력 → IF/ID en 포트 -->
+  <line x1="216" y1="260" x2="240" y2="260" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="240" y1="260" x2="240" y2="244" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="240" y1="244" x2="260" y2="244" stroke="#DC2626" stroke-width="2" stroke-dasharray="4,2"/>
+  <line x1="260" y1="244" x2="260" y2="152" stroke="#DC2626" stroke-width="2" marker-end="url(#aRed)"/>
+  <rect x="268" y="236" width="128" height="13" fill="#FEE2E2" rx="2"/>
+  <text x="332" y="246" text-anchor="middle" fill="#DC2626" font-size="8.5" font-weight="bold">if_id_write = ~stall → IF/ID 동결</text>
+
+  <!-- stall 직접 → ID/EX flush 포트 (파란선) -->
+  <line x1="310" y1="280" x2="420" y2="280" stroke="#2563EB" stroke-width="2.5"/>
+  <line x1="420" y1="280" x2="420" y2="248" stroke="#2563EB" stroke-width="2.5"/>
+  <line x1="420" y1="248" x2="464" y2="248" stroke="#2563EB" stroke-width="2.5"/>
+  <line x1="464" y1="248" x2="464" y2="152" stroke="#2563EB" stroke-width="2.5" marker-end="url(#aBlue)"/>
+  <rect x="430" y="262" width="148" height="13" fill="#DBEAFE" rx="2"/>
+  <text x="504" y="272" text-anchor="middle" fill="#2563EB" font-size="8.5" font-weight="bold">id_ex_flush = stall → NOP 버블 삽입</text>
+
+  <!-- HDU 입력선 연결 -->
+  <!-- if_id_rs1, if_id_rs2 from IF/ID -->
+  <line x1="260" y1="134" x2="260" y2="320" stroke="#D97706" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#aAmber)"/>
+  <text x="268" y="220" fill="#D97706" font-size="7.5">if_id_rs1</text>
+  <text x="268" y="230" fill="#D97706" font-size="7.5">if_id_rs2</text>
+
+  <!-- id_ex_rd_addr, id_ex_mem_read from ID/EX -->
+  <line x1="464" y1="134" x2="464" y2="320" stroke="#D97706" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#aAmber)"/>
+  <text x="472" y="220" fill="#D97706" font-size="7.5">id_ex_rd_addr</text>
+  <text x="472" y="230" fill="#D97706" font-size="7.5">id_ex_mem_read</text>
+
+  <!-- ======== EX/MEM, MEM/WB 항상 활성 설명 ======== -->
+  <rect x="590" y="320" width="355" height="120" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5" rx="6"/>
+  <text x="768" y="338" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">EX/MEM, MEM/WB 레지스터</text>
+  <line x1="606" y1="344" x2="934" y2="344" stroke="#BBF7D0" stroke-width="1"/>
+  <text x="768" y="360" text-anchor="middle" fill="#166534" font-size="10">항상 en = 1로 고정</text>
+  <text x="768" y="376" text-anchor="middle" fill="#166534" font-size="9.5">• 스톨 시 PC, IF/ID만 동결</text>
+  <text x="768" y="392" text-anchor="middle" fill="#166534" font-size="9.5">• EX/MEM, MEM/WB는 계속 진행</text>
+  <text x="768" y="408" text-anchor="middle" fill="#166534" font-size="9.5">• ID/EX만 NOP 버블로 교체</text>
+  <text x="768" y="426" text-anchor="middle" fill="#64748B" font-size="8.5" font-style="italic">flush = 모든 ctrl 신호를 0으로 클리어</text>
+
+  <!-- 하단 요약 -->
+  <rect x="8" y="458" width="944" height="72" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1" rx="5"/>
+  <text x="480" y="475" text-anchor="middle" fill="#1E3A8A" font-size="11" font-weight="bold">Ch09 예약 포트 → Ch10 연결 요약</text>
+  <text x="20" y="492" fill="#334155" font-size="10">• PC.en = pc_write = ~stall         → 스톨 시 PC 동결 (PC 갱신 억제)</text>
+  <text x="20" y="507" fill="#334155" font-size="10">• IF/ID.en = if_id_write = ~stall   → 스톨 시 IF/ID 현재 값 유지 (동일 명령어 재래치 방지)</text>
+  <text x="20" y="522" fill="#334155" font-size="10">• ID/EX.flush = id_ex_flush = stall → 스톨 시 ID/EX NOP 삽입 (버블 생성, 모든 ctrl=0)</text>
+
+</svg>

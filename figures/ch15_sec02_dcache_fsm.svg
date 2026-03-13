@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" width="900" height="640">
+  <defs>
+    <style>
+      text { font-family: Pretendard, 'Noto Sans KR', sans-serif; }
+      .state-box { rx: 12; ry: 12; }
+      .state-label { font-size: 13px; font-weight: bold; }
+      .state-sub { font-size: 10px; }
+      .arrow-label { font-size: 10px; fill: #374151; }
+      .section-label { font-size: 11px; font-weight: bold; }
+      .cycle-badge { font-size: 10px; font-weight: bold; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#EF4444"/>
+    </marker>
+    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16A34A"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="900" height="640" fill="#F8FAFC" rx="12" ry="12"/>
+
+  <!-- 제목 -->
+  <text x="450" y="32" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">D-Cache FSM 상태 전이 다이어그램 (Ch15 수정본)</text>
+  <text x="450" y="52" text-anchor="middle" font-size="11" fill="#64748B">초록: Ch14와 동일 상태 | 빨강: Ch15 신규 추가 상태 | 빨간 화살표: Dirty Miss 경로 (22사이클)</text>
+
+  <!-- ── 범례 ── -->
+  <rect x="30" y="65" width="16" height="16" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5" rx="3"/>
+  <text x="52" y="77" font-size="10" fill="#374151">Ch14 동일 상태</text>
+  <rect x="155" y="65" width="16" height="16" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="3"/>
+  <text x="177" y="77" font-size="10" fill="#374151">Ch15 신규 상태</text>
+  <line x1="280" y1="73" x2="310" y2="73" stroke="#EF4444" stroke-width="2" marker-end="url(#arrowhead-red)"/>
+  <text x="315" y="77" font-size="10" fill="#374151">Dirty Miss 경로</text>
+  <line x1="415" y1="73" x2="445" y2="73" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowhead-blue)"/>
+  <text x="450" y="77" font-size="10" fill="#374151">Clean Miss 경로</text>
+  <line x1="555" y1="73" x2="585" y2="73" stroke="#16A34A" stroke-width="2" marker-end="url(#arrowhead-green)"/>
+  <text x="590" y="77" font-size="10" fill="#374151">공통 경로</text>
+
+  <!-- ══ 상태 노드 ══ -->
+
+  <!-- IDLE (중앙 상단) -->
+  <rect x="370" y="100" width="160" height="60" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="12" ry="12"/>
+  <text x="450" y="126" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">S_IDLE</text>
+  <text x="450" y="144" text-anchor="middle" font-size="10" fill="#16A34A">요청 없음 / Hit 복귀</text>
+
+  <!-- TAG_CHECK (중앙) -->
+  <rect x="370" y="220" width="160" height="60" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="12" ry="12"/>
+  <text x="450" y="246" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">S_TAG_CHECK</text>
+  <text x="450" y="264" text-anchor="middle" font-size="10" fill="#16A34A">1사이클 | Hit→IDLE</text>
+
+  <!-- WAIT_WB_GRANT (왼쪽) — 신규 -->
+  <rect x="100" y="340" width="160" height="62" fill="#FEE2E2" stroke="#EF4444" stroke-width="2" rx="12" ry="12"/>
+  <text x="180" y="365" text-anchor="middle" font-size="12" font-weight="bold" fill="#991B1B">S_WAIT_WB_GRANT</text>
+  <text x="180" y="383" text-anchor="middle" font-size="10" fill="#EF4444">Write-Back 버스 승인 대기</text>
+  <text x="180" y="396" text-anchor="middle" font-size="10" fill="#EF4444">(0~N사이클, 가변)</text>
+
+  <!-- WRITE_BACK (왼쪽) -->
+  <rect x="100" y="460" width="160" height="60" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="12" ry="12"/>
+  <text x="180" y="486" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">S_WRITE_BACK</text>
+  <text x="180" y="504" text-anchor="middle" font-size="10" fill="#16A34A">8-beat 쓰기 + DRAIN</text>
+
+  <!-- WAIT_REFILL_GNT (오른쪽) — 신규 -->
+  <rect x="640" y="340" width="160" height="62" fill="#FEE2E2" stroke="#EF4444" stroke-width="2" rx="12" ry="12"/>
+  <text x="720" y="365" text-anchor="middle" font-size="12" font-weight="bold" fill="#991B1B">S_WAIT_REFILL_GNT</text>
+  <text x="720" y="383" text-anchor="middle" font-size="10" fill="#EF4444">REFILL 버스 승인 대기</text>
+  <text x="720" y="396" text-anchor="middle" font-size="10" fill="#EF4444">(0~N사이클, 가변)</text>
+
+  <!-- REFILL (오른쪽) -->
+  <rect x="640" y="460" width="160" height="60" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="12" ry="12"/>
+  <text x="720" y="486" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">S_REFILL</text>
+  <text x="720" y="504" text-anchor="middle" font-size="10" fill="#16A34A">8-beat 읽기 + DRAIN</text>
+
+  <!-- UPDATE (하단 중앙) -->
+  <rect x="370" y="560" width="160" height="60" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" rx="12" ry="12"/>
+  <text x="450" y="586" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532D">S_UPDATE</text>
+  <text x="450" y="604" text-anchor="middle" font-size="10" fill="#16A34A">Tag/Valid/Dirty 갱신 | 1사이클</text>
+
+  <!-- ══ 화살표 ══ -->
+
+  <!-- IDLE → TAG_CHECK (cpu_req) -->
+  <line x1="450" y1="160" x2="450" y2="218" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="460" y="194" font-size="10" fill="#374151">cpu_req=1</text>
+
+  <!-- TAG_CHECK → IDLE (cache_hit) -->
+  <path d="M 530 250 Q 610 250 610 190 Q 610 130 530 130" fill="none" stroke="#16A34A" stroke-width="2" marker-end="url(#arrowhead-green)"/>
+  <text x="620" y="200" font-size="10" fill="#16A34A">cache_hit=1</text>
+
+  <!-- TAG_CHECK → WAIT_WB_GRANT (Dirty Miss) 빨강 -->
+  <path d="M 400 280 L 260 371" fill="none" stroke="#EF4444" stroke-width="2.5" marker-end="url(#arrowhead-red)"/>
+  <text x="290" y="320" font-size="10" fill="#EF4444">!hit &amp;&amp;</text>
+  <text x="290" y="333" font-size="10" fill="#EF4444">replace_dirty</text>
+
+  <!-- TAG_CHECK → WAIT_REFILL_GNT (Clean Miss) 파랑 -->
+  <path d="M 500 280 L 640 371" fill="none" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrowhead-blue)"/>
+  <text x="550" y="320" font-size="10" fill="#2563EB">!hit &amp;&amp;</text>
+  <text x="550" y="333" font-size="10" fill="#2563EB">!replace_dirty</text>
+
+  <!-- WAIT_WB_GRANT → WRITE_BACK (mem_grant) 빨강 -->
+  <line x1="180" y1="402" x2="180" y2="458" stroke="#EF4444" stroke-width="2" marker-end="url(#arrowhead-red)"/>
+  <text x="185" y="435" font-size="10" fill="#EF4444">mem_grant=1</text>
+
+  <!-- WRITE_BACK → WAIT_REFILL_GNT (8 beats 완료) 빨강 -->
+  <path d="M 260 490 Q 450 510 640 371" fill="none" stroke="#EF4444" stroke-width="2" marker-end="url(#arrowhead-red)"/>
+  <text x="430" y="540" font-size="10" fill="#EF4444">ack &amp;&amp; word_cnt==7</text>
+
+  <!-- WAIT_REFILL_GNT → REFILL (mem_grant) 파랑 -->
+  <line x1="720" y1="402" x2="720" y2="458" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowhead-blue)"/>
+  <text x="726" y="435" font-size="10" fill="#2563EB">mem_grant=1</text>
+
+  <!-- REFILL → UPDATE (8 beats 완료) 공통 -->
+  <path d="M 640 490 L 530 568" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="560" y="525" font-size="10" fill="#374151">ack &amp;&amp; word_cnt==7</text>
+
+  <!-- UPDATE → IDLE -->
+  <path d="M 450 560 L 450 162" fill="none" stroke="#374151" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrowhead)"/>
+  <text x="355" y="400" font-size="10" fill="#374151">→ S_IDLE</text>
+
+  <!-- ══ 사이클 수 레이블 ══ -->
+  <!-- Dirty Miss 경로 22사이클 표시 -->
+  <rect x="30" y="590" width="310" height="42" fill="#FFF7F7" stroke="#EF4444" stroke-width="1" rx="6"/>
+  <text x="40" y="607" font-size="11" font-weight="bold" fill="#991B1B">Dirty Miss 총 페널티: 22사이클</text>
+  <text x="40" y="623" font-size="10" fill="#374151">1+1+8+1(DRAIN)+1+8+1(DRAIN)+1 = 22</text>
+
+  <!-- Clean Miss 경로 12사이클 표시 -->
+  <rect x="560" y="590" width="310" height="42" fill="#EFF6FF" stroke="#2563EB" stroke-width="1" rx="6"/>
+  <text x="570" y="607" font-size="11" font-weight="bold" fill="#1D4ED8">Clean Miss 총 페널티: 12사이클</text>
+  <text x="570" y="623" font-size="10" fill="#374151">1+1+8+1(DRAIN)+1 = 12</text>
+
+  <!-- BRAM DRAIN 주석 -->
+  <rect x="340" y="590" width="220" height="42" fill="#FFFBEB" stroke="#D97706" stroke-width="1" rx="6"/>
+  <text x="450" y="607" text-anchor="middle" font-size="10" font-weight="bold" fill="#92400E">BRAM 동기 읽기</text>
+  <text x="450" y="621" text-anchor="middle" font-size="10" fill="#374151">DRAIN = mem_ctrl 내부 처리</text>
+  <text x="450" y="633" text-anchor="middle" font-size="10" fill="#374151">D-Cache는 ack 8회로 완료 판정</text>
+</svg>

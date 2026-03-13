@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" font-family="Pretendard, sans-serif">
+  <rect width="1000" height="650" fill="#F8FAFC" rx="12"/>
+  <text x="500" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">단일 사이클 vs 멀티사이클 데이터패스 비교</text>
+
+  <!-- 비교 표 헤더 -->
+  <rect x="50" y="55" width="200" height="40" rx="4" fill="#475569"/>
+  <text x="150" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">비교 항목</text>
+
+  <rect x="250" y="55" width="350" height="40" rx="4" fill="#DC2626"/>
+  <text x="425" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">단일 사이클 (Single-Cycle)</text>
+
+  <rect x="600" y="55" width="350" height="40" rx="4" fill="#059669"/>
+  <text x="775" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">멀티사이클 (Multicycle)</text>
+
+  <!-- Row 1: 메모리 -->
+  <rect x="50" y="95" width="200" height="50" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="118" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">메모리 구조</text>
+  <rect x="250" y="95" width="350" height="50" fill="#FEF2F2" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="115" text-anchor="middle" font-size="11" fill="#475569">IMEM + DMEM 분리 (2개)</text>
+  <text x="425" y="132" text-anchor="middle" font-size="10" fill="#DC2626">Harvard 구조</text>
+  <rect x="600" y="95" width="350" height="50" fill="#ECFDF5" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="115" text-anchor="middle" font-size="11" fill="#475569">통합 메모리 1개 (공유)</text>
+  <text x="775" y="132" text-anchor="middle" font-size="10" fill="#059669">Princeton 구조 가능</text>
+
+  <!-- Row 2: ALU -->
+  <rect x="50" y="145" width="200" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="175" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">ALU</text>
+  <rect x="250" y="145" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="165" text-anchor="middle" font-size="11" fill="#475569">ALU 1개 + PC Adder 별도</text>
+  <text x="425" y="182" text-anchor="middle" font-size="10" fill="#DC2626">하드웨어 2개 필요</text>
+  <rect x="600" y="145" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="165" text-anchor="middle" font-size="11" fill="#475569">ALU 1개로 모든 연산 처리</text>
+  <text x="775" y="182" text-anchor="middle" font-size="10" fill="#059669">PC+4도 ALU로 계산</text>
+
+  <!-- Row 3: 중간 레지스터 -->
+  <rect x="50" y="195" width="200" height="50" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="218" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">중간 레지스터</text>
+  <rect x="250" y="195" width="350" height="50" fill="#FEF2F2" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="218" text-anchor="middle" font-size="11" fill="#475569">없음 (조합 논리 직결)</text>
+  <text x="425" y="235" text-anchor="middle" font-size="10" fill="#6B7280">한 사이클에 모두 완료</text>
+  <rect x="600" y="195" width="350" height="50" fill="#ECFDF5" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="218" text-anchor="middle" font-size="11" fill="#475569">IR, MDR, A, B, ALUOut (5개)</text>
+  <text x="775" y="235" text-anchor="middle" font-size="10" fill="#059669">단계 간 결과 보존 필수</text>
+
+  <!-- Row 4: MUX -->
+  <rect x="50" y="245" width="200" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="275" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">MUX (멀티플렉서)</text>
+  <rect x="250" y="245" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="265" text-anchor="middle" font-size="11" fill="#475569">ASel, BSel, PCSel, WBSel</text>
+  <text x="425" y="282" text-anchor="middle" font-size="10" fill="#6B7280">4개</text>
+  <rect x="600" y="245" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="265" text-anchor="middle" font-size="11" fill="#475569">IorD, ALUSrcA, ALUSrcB, PCSrc, MemtoReg</text>
+  <text x="775" y="282" text-anchor="middle" font-size="10" fill="#D97706">5개 이상 (자원 공유 대가)</text>
+
+  <!-- Row 5: 제어 방식 -->
+  <rect x="50" y="295" width="200" height="50" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="325" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">제어 방식</text>
+  <rect x="250" y="295" width="350" height="50" fill="#FEF2F2" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="318" text-anchor="middle" font-size="11" fill="#475569">조합 논리 (Combinational)</text>
+  <text x="425" y="335" text-anchor="middle" font-size="10" fill="#6B7280">간단한 진리표</text>
+  <rect x="600" y="295" width="350" height="50" fill="#ECFDF5" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="318" text-anchor="middle" font-size="11" fill="#475569">FSM (Finite State Machine)</text>
+  <text x="775" y="335" text-anchor="middle" font-size="10" fill="#059669">상태별 제어 신호 -- Ch08 설계</text>
+
+  <!-- Row 6: 클럭 주기 -->
+  <rect x="50" y="345" width="200" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="375" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">클럭 주기</text>
+  <rect x="250" y="345" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="365" text-anchor="middle" font-size="11" fill="#475569">최장 경로(LW) 기준: ~800 ps</text>
+  <text x="425" y="382" text-anchor="middle" font-size="10" fill="#DC2626">빠른 명령어에 클럭 낭비</text>
+  <rect x="600" y="345" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="365" text-anchor="middle" font-size="11" fill="#475569">최장 단계 기준: ~200 ps</text>
+  <text x="775" y="382" text-anchor="middle" font-size="10" fill="#059669">클럭 주파수 약 4배 향상</text>
+
+  <!-- Row 7: CPI -->
+  <rect x="50" y="395" width="200" height="50" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="418" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">CPI</text>
+  <text x="150" y="435" text-anchor="middle" font-size="9" fill="#6B7280">(Cycles Per Instruction)</text>
+  <rect x="250" y="395" width="350" height="50" fill="#FEF2F2" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="418" text-anchor="middle" font-size="11" fill="#475569">항상 1</text>
+  <text x="425" y="435" text-anchor="middle" font-size="10" fill="#059669">모든 명령어 1사이클 완료</text>
+  <rect x="600" y="395" width="350" height="50" fill="#ECFDF5" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="418" text-anchor="middle" font-size="11" fill="#475569">3~5 (명령어마다 다름)</text>
+  <text x="775" y="435" text-anchor="middle" font-size="10" fill="#D97706">R:4, LW:5, SW:4, Branch:3</text>
+
+  <!-- Row 8: 하드웨어 면적 -->
+  <rect x="50" y="445" width="200" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="150" y="475" text-anchor="middle" font-size="12" font-weight="600" fill="#1E293B">하드웨어 면적</text>
+  <rect x="250" y="445" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="425" y="468" text-anchor="middle" font-size="11" fill="#475569">큼 (IMEM + DMEM + ALU + Adder)</text>
+  <text x="425" y="485" text-anchor="middle" font-size="10" fill="#DC2626">자원 중복</text>
+  <rect x="600" y="445" width="350" height="50" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="775" y="468" text-anchor="middle" font-size="11" fill="#475569">작음 (공유 Memory + 공유 ALU)</text>
+  <text x="775" y="485" text-anchor="middle" font-size="10" fill="#059669">면적 절감 (레지스터 추가 비용은 적음)</text>
+
+  <!-- 핵심 수식 박스 -->
+  <rect x="50" y="515" width="900" height="55" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="500" y="540" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">성능 비교 공식: 실행 시간 = 명령어 수 x CPI x 클럭 주기</text>
+  <text x="500" y="560" text-anchor="middle" font-size="12" fill="#475569">단일 사이클: CPI=1, T_clk=긴  |  멀티사이클: CPI=3~5, T_clk=짧은  -->  전체 성능은 명령어 믹스에 의존</text>
+
+  <!-- 결론 -->
+  <rect x="50" y="585" width="900" height="50" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <text x="500" y="607" text-anchor="middle" font-size="13" font-weight="600" fill="#92400E">트레이드오프: 멀티사이클은 면적을 줄이고 클럭을 높이지만, CPI > 1 이므로 전체 성능은 반드시 더 좋지는 않다.</text>
+  <text x="500" y="625" text-anchor="middle" font-size="12" fill="#92400E">--> 이 한계를 극복하는 방법이 바로 파이프라인 (Part 4)이다!</text>
+</svg>

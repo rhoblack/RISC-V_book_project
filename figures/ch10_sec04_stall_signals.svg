@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="360" viewBox="0 0 800 360" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, 'Noto Sans KR', monospace">
+  <rect width="800" height="360" fill="#F8FAFC" rx="8"/>
+  <text x="400" y="26" text-anchor="middle" font-size="15" font-weight="700" fill="#1E293B">스톨 제어 신호 타이밍 파형</text>
+  <text x="400" y="43" text-anchor="middle" font-size="11" fill="#64748B">LW → ADD 시퀀스: C4에서 1사이클 스톨 발생 (pc_en=0, if_id_en=0, id_ex_flush=1)</text>
+
+  <!-- 스톨 구간 강조 배경 -->
+  <rect x="325" y="55" width="130" height="295" fill="#FEF2F2" opacity="0.6"/>
+  <text x="390" y="70" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">STALL</text>
+
+  <!-- 사이클 헤더 -->
+  <rect x="130" y="55" width="640" height="24" fill="#1E40AF" rx="3"/>
+  <text x="162" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C1</text>
+  <text x="227" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C2</text>
+  <text x="292" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C3</text>
+  <text x="390" y="71" text-anchor="middle" font-size="10" font-weight="600" fill="#FCA5A5">C4(STALL)</text>
+  <text x="487" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C5</text>
+  <text x="552" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C6</text>
+  <text x="617" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C7</text>
+  <text x="682" y="71" text-anchor="middle" font-size="11" font-weight="600" fill="white">C8</text>
+
+  <!-- 신호 이름 배경 -->
+  <rect x="5" y="55" width="122" height="295" fill="#EFF6FF" rx="3" stroke="#BFDBFE" stroke-width="1"/>
+
+  <!-- clk 파형 -->
+  <text x="65" y="107" text-anchor="middle" font-size="10" font-weight="600" fill="#374151">clk</text>
+  <polyline points="130,92 130,100 162,100 162,88 227,88 227,100 292,100 292,88 357,88 357,100 422,100 422,88 487,88 487,100 552,100 552,88 617,88 617,100 682,100 682,88 747,88 747,100 770,100" fill="none" stroke="#374151" stroke-width="1.5"/>
+
+  <!-- PC 신호 -->
+  <text x="65" y="138" text-anchor="middle" font-size="10" font-weight="600" fill="#1D4ED8">PC</text>
+  <text x="65" y="150" text-anchor="middle" font-size="8" fill="#64748B">(pc_en)</text>
+  <rect x="130" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="162" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=0</text>
+  <rect x="195" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="227" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=4</text>
+  <rect x="260" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="292" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=8</text>
+  <rect x="325" y="122" width="130" height="22" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="2" stroke-dasharray="4,2"/>
+  <text x="390" y="137" text-anchor="middle" font-size="8" font-weight="600" fill="#DC2626">PC=8 (동결)</text>
+  <rect x="455" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="487" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=12</text>
+  <rect x="520" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="552" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=16</text>
+  <rect x="585" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="617" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=20</text>
+  <rect x="650" y="122" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="682" y="137" text-anchor="middle" font-size="9" fill="#1D4ED8">PC=24</text>
+
+  <!-- IF/ID instr -->
+  <text x="65" y="170" text-anchor="middle" font-size="10" font-weight="600" fill="#1D4ED8">IF/ID</text>
+  <text x="65" y="182" text-anchor="middle" font-size="8" fill="#64748B">instr</text>
+  <rect x="130" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="162" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">LW</text>
+  <rect x="195" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="227" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">ADD</text>
+  <rect x="260" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="292" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">SUB</text>
+  <rect x="325" y="158" width="130" height="22" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.5" rx="2" stroke-dasharray="4,2"/>
+  <text x="390" y="173" text-anchor="middle" font-size="8" font-weight="600" fill="#DC2626">ADD (동결)</text>
+  <rect x="455" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="487" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">SUB</text>
+  <rect x="520" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="552" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">AND</text>
+  <rect x="585" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="617" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">OR</text>
+  <rect x="650" y="158" width="65" height="22" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1" rx="2"/>
+  <text x="682" y="173" text-anchor="middle" font-size="8" fill="#1D4ED8">XOR</text>
+
+  <!-- pc_en 파형 -->
+  <text x="65" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#16A34A">pc_en</text>
+  <polyline points="130,200 325,200 325,218 455,218 455,200 770,200" fill="none" stroke="#16A34A" stroke-width="2.5"/>
+  <text x="227" y="198" text-anchor="middle" font-size="10" fill="#16A34A">1</text>
+  <text x="390" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">0</text>
+  <text x="612" y="198" text-anchor="middle" font-size="10" fill="#16A34A">1</text>
+
+  <!-- if_id_en 파형 -->
+  <text x="65" y="242" text-anchor="middle" font-size="9" font-weight="600" fill="#16A34A">if_id_en</text>
+  <polyline points="130,233 325,233 325,250 455,250 455,233 770,233" fill="none" stroke="#16A34A" stroke-width="2.5"/>
+  <text x="227" y="231" text-anchor="middle" font-size="10" fill="#16A34A">1</text>
+  <text x="390" y="247" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">0</text>
+  <text x="612" y="231" text-anchor="middle" font-size="10" fill="#16A34A">1</text>
+
+  <!-- id_ex_flush 파형 -->
+  <text x="65" y="274" text-anchor="middle" font-size="9" font-weight="600" fill="#DC2626">id_ex</text>
+  <text x="65" y="286" text-anchor="middle" font-size="9" font-weight="600" fill="#DC2626">_flush</text>
+  <polyline points="130,283 325,283 325,266 455,266 455,283 770,283" fill="none" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="227" y="281" text-anchor="middle" font-size="10" fill="#16A34A">0</text>
+  <text x="390" y="271" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">1</text>
+  <text x="612" y="281" text-anchor="middle" font-size="10" fill="#16A34A">0</text>
+
+  <!-- forward_b -->
+  <text x="65" y="316" text-anchor="middle" font-size="9" font-weight="600" fill="#D97706">forward_b</text>
+  <text x="65" y="328" text-anchor="middle" font-size="8" fill="#64748B">[1:0]</text>
+  <rect x="130" y="303" width="195" height="22" fill="#F0FDF4" stroke="#4ADE80" stroke-width="1" rx="2"/>
+  <text x="227" y="318" text-anchor="middle" font-size="8" fill="#374151">00 (reg file)</text>
+  <rect x="325" y="303" width="130" height="22" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" rx="2" stroke-dasharray="4,2"/>
+  <text x="390" y="318" text-anchor="middle" font-size="8" fill="#9CA3AF">버블(무관)</text>
+  <rect x="455" y="303" width="65" height="22" fill="#FEF9C3" stroke="#F59E0B" stroke-width="1.5" rx="2"/>
+  <text x="487" y="318" text-anchor="middle" font-size="8" font-weight="600" fill="#B45309">10 (MEM)</text>
+  <rect x="520" y="303" width="65" height="22" fill="#F0FDF4" stroke="#4ADE80" stroke-width="1" rx="2"/>
+  <text x="552" y="318" text-anchor="middle" font-size="8" fill="#374151">00</text>
+  <rect x="585" y="303" width="65" height="22" fill="#F0FDF4" stroke="#4ADE80" stroke-width="1" rx="2"/>
+  <text x="617" y="318" text-anchor="middle" font-size="8" fill="#374151">00</text>
+  <rect x="650" y="303" width="65" height="22" fill="#F0FDF4" stroke="#4ADE80" stroke-width="1" rx="2"/>
+  <text x="682" y="318" text-anchor="middle" font-size="8" fill="#374151">00</text>
+
+  <!-- 범례 -->
+  <rect x="10" y="337" width="780" height="18" fill="#F1F5F9" rx="3" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="20" y="350" font-size="8.5" fill="#374151">C4: pc_en=0(PC 동결), if_id_en=0(IF/ID 동결), id_ex_flush=1(NOP 버블 삽입). C5: ADD EX에서 forward_b=2b10으로 LW 결과(MEM-EX 포워딩) 수신</text>
+</svg>

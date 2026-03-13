@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 480" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="850" height="480" fill="#F8FAFC" rx="8"/>
+
+  <!-- 제목 -->
+  <text x="425" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1E293B">Vivado FPGA 합성 플로우 — 주요 단계와 최적화 포인트</text>
+  <text x="425" y="50" text-anchor="middle" font-size="12" fill="#64748B">RTL 소스에서 비트스트림 생성까지의 전체 과정</text>
+
+  <!-- 단계 1: RTL 소스 -->
+  <rect x="30" y="90" width="140" height="70" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="100" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#2563EB">RTL 소스</text>
+  <text x="100" y="136" text-anchor="middle" font-size="10" fill="#1E293B">SystemVerilog</text>
+  <text x="100" y="150" text-anchor="middle" font-size="9" fill="#64748B">.sv 파일</text>
+
+  <!-- 화살표 1→2 -->
+  <line x1="170" y1="125" x2="205" y2="125" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- 단계 2: Synthesis -->
+  <rect x="210" y="80" width="140" height="90" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="3" filter="url(#shadow)"/>
+  <text x="280" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Synthesis</text>
+  <text x="280" y="123" text-anchor="middle" font-size="10" fill="#1E293B">합성(Synthesis)</text>
+  <text x="280" y="140" text-anchor="middle" font-size="9" fill="#64748B">RTL → 넷리스트</text>
+  <text x="280" y="155" text-anchor="middle" font-size="9" fill="#DC2626">★ 최적화 핵심</text>
+
+  <!-- 화살표 2→3 -->
+  <line x1="350" y1="125" x2="385" y2="125" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- 단계 3: Implementation -->
+  <rect x="390" y="80" width="140" height="90" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="3" filter="url(#shadow)"/>
+  <text x="460" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Implementation</text>
+  <text x="460" y="118" text-anchor="middle" font-size="10" fill="#1E293B">구현(배치·배선)</text>
+  <text x="460" y="135" text-anchor="middle" font-size="9" fill="#64748B">Place &amp; Route</text>
+  <text x="460" y="150" text-anchor="middle" font-size="9" fill="#64748B">Opt / Power Opt</text>
+  <text x="460" y="165" text-anchor="middle" font-size="9" fill="#DC2626">★ 타이밍 클로저</text>
+
+  <!-- 화살표 3→4 -->
+  <line x1="530" y1="125" x2="565" y2="125" stroke="#2563EB" stroke-width="2" marker-end="url(#arrowB)"/>
+
+  <!-- 단계 4: Bitstream -->
+  <rect x="570" y="90" width="130" height="70" rx="8" fill="#F0FDF4" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="635" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#059669">Bitstream</text>
+  <text x="635" y="136" text-anchor="middle" font-size="10" fill="#1E293B">비트스트림 생성</text>
+  <text x="635" y="150" text-anchor="middle" font-size="9" fill="#64748B">.bit 파일</text>
+
+  <!-- 화살표 4→5 -->
+  <line x1="700" y1="125" x2="725" y2="125" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+
+  <!-- 단계 5: FPGA -->
+  <rect x="730" y="90" width="100" height="70" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2" filter="url(#shadow)"/>
+  <text x="780" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#D97706">FPGA</text>
+  <text x="780" y="136" text-anchor="middle" font-size="10" fill="#1E293B">Basys 3</text>
+  <text x="780" y="150" text-anchor="middle" font-size="9" fill="#64748B">XC7A35T</text>
+
+  <!-- XDC 제약 파일 (위에서 합성/구현에 입력) -->
+  <rect x="290" y="10" width="120" height="45" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="350" y="30" text-anchor="middle" font-size="11" font-weight="600" fill="#DC2626">XDC 제약</text>
+  <text x="350" y="45" text-anchor="middle" font-size="9" fill="#64748B">타이밍 / 핀 배치</text>
+  <line x1="350" y1="55" x2="350" y2="78" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowB)"/>
+
+  <!-- 합성 옵션 상세 박스 -->
+  <rect x="30" y="210" width="380" height="250" rx="8" fill="white" stroke="#2563EB" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="220" y="235" text-anchor="middle" font-size="14" font-weight="700" fill="#2563EB">Synthesis 전략 옵션</text>
+
+  <!-- Flow_PerfOptimized_high -->
+  <rect x="50" y="250" width="340" height="32" rx="4" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+  <text x="60" y="270" font-size="11" font-weight="600" fill="#1E293B">Flow_PerfOptimized_high</text>
+  <text x="380" y="270" text-anchor="end" font-size="10" fill="#059669">성능 우선 ★</text>
+
+  <!-- Flow_AreaOptimized_high -->
+  <rect x="50" y="290" width="340" height="32" rx="4" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+  <text x="60" y="310" font-size="11" font-weight="600" fill="#1E293B">Flow_AreaOptimized_high</text>
+  <text x="380" y="310" text-anchor="end" font-size="10" fill="#D97706">면적 우선</text>
+
+  <!-- Retiming -->
+  <rect x="50" y="330" width="340" height="32" rx="4" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1"/>
+  <text x="60" y="350" font-size="11" font-weight="600" fill="#1E293B">Retiming (SYNTH_DESIGN -retiming)</text>
+  <text x="380" y="350" text-anchor="end" font-size="10" fill="#059669">FF 재배치</text>
+
+  <!-- Resource Sharing -->
+  <rect x="50" y="370" width="340" height="32" rx="4" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1"/>
+  <text x="60" y="390" font-size="11" font-weight="600" fill="#1E293B">Resource Sharing</text>
+  <text x="380" y="390" text-anchor="end" font-size="10" fill="#D97706">ALU 공유</text>
+
+  <!-- FSM Encoding -->
+  <rect x="50" y="410" width="340" height="32" rx="4" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1"/>
+  <text x="60" y="430" font-size="11" font-weight="600" fill="#1E293B">FSM Encoding: one_hot / sequential</text>
+  <text x="380" y="430" text-anchor="end" font-size="10" fill="#64748B">FSM 인코딩</text>
+
+  <!-- 구현 옵션 상세 박스 -->
+  <rect x="440" y="210" width="390" height="250" rx="8" fill="white" stroke="#059669" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="635" y="235" text-anchor="middle" font-size="14" font-weight="700" fill="#059669">Implementation 전략 옵션</text>
+
+  <rect x="460" y="250" width="350" height="32" rx="4" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1"/>
+  <text x="470" y="270" font-size="11" font-weight="600" fill="#1E293B">Performance_ExplorePostRoutePhysOpt</text>
+  <text x="800" y="270" text-anchor="end" font-size="10" fill="#059669">타이밍 우선 ★</text>
+
+  <rect x="460" y="290" width="350" height="32" rx="4" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1"/>
+  <text x="470" y="310" font-size="11" font-weight="600" fill="#1E293B">Area_ExploreSequential</text>
+  <text x="800" y="310" text-anchor="end" font-size="10" fill="#D97706">면적 우선</text>
+
+  <rect x="460" y="330" width="350" height="32" rx="4" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="350" font-size="11" font-weight="600" fill="#1E293B">opt_design -directive Explore</text>
+  <text x="800" y="350" text-anchor="end" font-size="10" fill="#64748B">로직 최적화</text>
+
+  <rect x="460" y="370" width="350" height="32" rx="4" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="390" font-size="11" font-weight="600" fill="#1E293B">place_design -directive ExtraTimingOpt</text>
+  <text x="800" y="390" text-anchor="end" font-size="10" fill="#64748B">배치 최적화</text>
+
+  <rect x="460" y="410" width="350" height="32" rx="4" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1"/>
+  <text x="470" y="430" font-size="11" font-weight="600" fill="#1E293B">phys_opt_design -directive AggressiveExplore</text>
+  <text x="800" y="430" text-anchor="end" font-size="10" fill="#DC2626">물리 최적화</text>
+</svg>

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" font-family="Pretendard, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <marker id="arr-g" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arr-r" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="arr-o" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#D97706"/>
+    </marker>
+  </defs>
+
+  <rect width="800" height="600" fill="#FAFBFF" rx="12"/>
+  <text x="400" y="35" text-anchor="middle" font-size="18" font-weight="700" fill="#1F2937">MESI 프로토콜 상태 전이도</text>
+
+  <!-- M State -->
+  <circle cx="200" cy="150" r="55" fill="#FEF2F2" stroke="#DC2626" stroke-width="3"/>
+  <text x="200" y="145" text-anchor="middle" font-size="28" font-weight="700" fill="#DC2626">M</text>
+  <text x="200" y="168" text-anchor="middle" font-size="11" fill="#7F1D1D">Modified</text>
+
+  <!-- E State -->
+  <circle cx="600" cy="150" r="55" fill="#ECFDF5" stroke="#059669" stroke-width="3"/>
+  <text x="600" y="145" text-anchor="middle" font-size="28" font-weight="700" fill="#059669">E</text>
+  <text x="600" y="168" text-anchor="middle" font-size="11" fill="#065F46">Exclusive</text>
+
+  <!-- S State -->
+  <circle cx="200" cy="420" r="55" fill="#DBEAFE" stroke="#2563EB" stroke-width="3"/>
+  <text x="200" y="415" text-anchor="middle" font-size="28" font-weight="700" fill="#2563EB">S</text>
+  <text x="200" y="438" text-anchor="middle" font-size="11" fill="#1E40AF">Shared</text>
+
+  <!-- I State -->
+  <circle cx="600" cy="420" r="55" fill="#F3F4F6" stroke="#6B7280" stroke-width="3"/>
+  <text x="600" y="415" text-anchor="middle" font-size="28" font-weight="700" fill="#6B7280">I</text>
+  <text x="600" y="438" text-anchor="middle" font-size="11" fill="#374151">Invalid</text>
+
+  <!-- M → S: 다른 코어 Read (BusRd) -->
+  <path d="M 200 205 L 200 365" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="75" y="265" width="140" height="36" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="145" y="280" text-anchor="middle" font-size="10" fill="#2563EB">BusRd / Flush</text>
+  <text x="145" y="294" text-anchor="middle" font-size="10" fill="#6B7280">(다른 코어 Read)</text>
+
+  <!-- E → M: 로컬 Write -->
+  <path d="M 545 150 L 255 150" fill="none" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-r)"/>
+  <rect x="335" y="120" width="130" height="36" rx="4" fill="white" stroke="#DC2626" stroke-width="1"/>
+  <text x="400" y="135" text-anchor="middle" font-size="10" fill="#DC2626">PrWr (로컬 Write)</text>
+  <text x="400" y="149" text-anchor="middle" font-size="10" fill="#6B7280">무음(Silent) 전이</text>
+
+  <!-- E → S: 다른 코어 Read -->
+  <path d="M 560 190 L 250 390" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="350" y="268" width="130" height="36" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="415" y="283" text-anchor="middle" font-size="10" fill="#2563EB">BusRd / Supply</text>
+  <text x="415" y="297" text-anchor="middle" font-size="10" fill="#6B7280">(다른 코어 Read)</text>
+
+  <!-- I → E: Read Miss, 다른 캐시에 없음 -->
+  <path d="M 600 365 L 600 205" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arr-g)"/>
+  <rect x="610" y="265" width="160" height="36" rx="4" fill="white" stroke="#059669" stroke-width="1"/>
+  <text x="690" y="280" text-anchor="middle" font-size="10" fill="#059669">PrRd / BusRd</text>
+  <text x="690" y="294" text-anchor="middle" font-size="10" fill="#6B7280">(Miss, 단독 보유)</text>
+
+  <!-- I → S: Read Miss, 다른 캐시에 있음 -->
+  <path d="M 545 420 L 255 420" fill="none" stroke="#2563EB" stroke-width="2" marker-end="url(#arr)"/>
+  <rect x="335" y="430" width="140" height="36" rx="4" fill="white" stroke="#2563EB" stroke-width="1"/>
+  <text x="405" y="445" text-anchor="middle" font-size="10" fill="#2563EB">PrRd / BusRd</text>
+  <text x="405" y="459" text-anchor="middle" font-size="10" fill="#6B7280">(Miss, 공유 존재)</text>
+
+  <!-- S → M: 로컬 Write -->
+  <path d="M 210 365 Q 280 280 210 205" fill="none" stroke="#DC2626" stroke-width="2" marker-end="url(#arr-r)"/>
+  <rect x="245" y="255" width="140" height="36" rx="4" fill="white" stroke="#DC2626" stroke-width="1"/>
+  <text x="315" y="270" text-anchor="middle" font-size="10" fill="#DC2626">PrWr / BusRdX</text>
+  <text x="315" y="284" text-anchor="middle" font-size="10" fill="#6B7280">(Invalidate 방송)</text>
+
+  <!-- S → I: 다른 코어 Write -->
+  <path d="M 255 430 Q 400 510 545 430" fill="none" stroke="#6B7280" stroke-width="2" marker-end="url(#arr-o)"/>
+  <rect x="340" y="490" width="140" height="36" rx="4" fill="white" stroke="#D97706" stroke-width="1"/>
+  <text x="410" y="505" text-anchor="middle" font-size="10" fill="#D97706">BusRdX / Invalidate</text>
+  <text x="410" y="519" text-anchor="middle" font-size="10" fill="#6B7280">(다른 코어 Write)</text>
+
+  <!-- M → I: 다른 코어 Write -->
+  <path d="M 240 190 Q 400 80 560 390" fill="none" stroke="#D97706" stroke-width="2" marker-end="url(#arr-o)"/>
+  <rect x="410" y="175" width="140" height="36" rx="4" fill="white" stroke="#D97706" stroke-width="1"/>
+  <text x="480" y="190" text-anchor="middle" font-size="10" fill="#D97706">BusRdX / Flush</text>
+  <text x="480" y="204" text-anchor="middle" font-size="10" fill="#6B7280">(다른 코어 Write)</text>
+
+  <!-- 범례 -->
+  <rect x="50" y="555" width="700" height="35" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="80" y="577" font-size="11" fill="#6B7280">범례:</text>
+  <circle cx="140" cy="572" r="6" fill="#DC2626"/>
+  <text x="152" y="577" font-size="11" fill="#374151">로컬 Write</text>
+  <circle cx="250" cy="572" r="6" fill="#2563EB"/>
+  <text x="262" y="577" font-size="11" fill="#374151">버스 Read</text>
+  <circle cx="350" cy="572" r="6" fill="#059669"/>
+  <text x="362" y="577" font-size="11" fill="#374151">단독 Read</text>
+  <circle cx="460" cy="572" r="6" fill="#D97706"/>
+  <text x="472" y="577" font-size="11" fill="#374151">Invalidate</text>
+  <text x="570" y="577" font-size="11" fill="#6B7280">PrRd/PrWr = 프로세서 요청, BusRd/BusRdX = 버스 트랜잭션</text>
+</svg>

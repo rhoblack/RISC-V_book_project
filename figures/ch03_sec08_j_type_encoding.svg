@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" font-family="Pretendard, -apple-system, sans-serif">
+  <defs>
+    <style>
+      .field-label { font-size: 12px; fill: #1E293B; font-weight: 600; text-anchor: middle; }
+      .title { font-size: 16px; fill: #1E293B; font-weight: 700; }
+      .bit-range { font-size: 9px; fill: #9CA3AF; text-anchor: middle; font-family: 'JetBrains Mono', monospace; }
+      .field-red { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; }
+      .field-blue { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; }
+      .field-green { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .field-amber { fill: #FEF3C7; stroke: #D97706; stroke-width: 2; }
+      .field-rd { fill: #FEE2E2; stroke: #DC2626; stroke-width: 1.5; }
+      .field-opcode { fill: #F1F5F9; stroke: #475569; stroke-width: 1.5; }
+      .note { font-size: 10px; fill: #6B7280; }
+    </style>
+  </defs>
+
+  <text x="400" y="25" text-anchor="middle" class="title">J 타입 명령어 인코딩 (J-Type Encoding) — JAL 비트 재배열</text>
+
+  <!-- Bit positions -->
+  <text x="80" y="50" class="bit-range">31</text>
+  <text x="170" y="50" class="bit-range">30          21</text>
+  <text x="330" y="50" class="bit-range">20</text>
+  <text x="410" y="50" class="bit-range">19    12</text>
+  <text x="530" y="50" class="bit-range">11   7</text>
+  <text x="670" y="50" class="bit-range">6      0</text>
+
+  <!-- Encoding fields -->
+  <rect x="60" y="60" width="35" height="45" rx="4" class="field-red"/>
+  <rect x="95" y="60" width="210" height="45" rx="4" class="field-blue"/>
+  <rect x="305" y="60" width="45" height="45" rx="4" class="field-amber"/>
+  <rect x="350" y="60" width="120" height="45" rx="4" class="field-green"/>
+  <rect x="470" y="60" width="110" height="45" rx="4" class="field-rd"/>
+  <rect x="580" y="60" width="180" height="45" rx="4" class="field-opcode"/>
+
+  <text x="78" y="87" class="field-label" style="fill:#DC2626; font-size:10px;">imm[20]</text>
+  <text x="200" y="87" class="field-label" style="fill:#2563EB;">imm[10:1]</text>
+  <text x="328" y="87" class="field-label" style="fill:#D97706; font-size:10px;">imm[11]</text>
+  <text x="410" y="87" class="field-label" style="fill:#059669;">imm[19:12]</text>
+  <text x="525" y="87" class="field-label" style="fill:#DC2626;">rd</text>
+  <text x="670" y="87" class="field-label" style="fill:#475569;">opcode</text>
+
+  <text x="670" y="123" class="bit-range" style="font-size:11px; fill:#2563EB;">1101111</text>
+
+  <!-- Reassembled immediate -->
+  <text x="400" y="150" text-anchor="middle" style="font-size:13px; fill:#1E293B; font-weight:700;">재조합된 즉치수 (21비트, imm[0]=0)</text>
+
+  <rect x="80" y="162" width="40" height="32" rx="3" class="field-red"/>
+  <rect x="120" y="162" width="160" height="32" rx="3" class="field-green"/>
+  <rect x="280" y="162" width="40" height="32" rx="3" class="field-amber"/>
+  <rect x="320" y="162" width="200" height="32" rx="3" class="field-blue"/>
+  <rect x="520" y="162" width="40" height="32" rx="3" style="fill:#F3F4F6; stroke:#9CA3AF; stroke-width:1.5;"/>
+
+  <text x="100" y="183" style="font-size:11px; fill:#DC2626; font-weight:600; text-anchor:middle;">20</text>
+  <text x="200" y="183" style="font-size:11px; fill:#059669; font-weight:600; text-anchor:middle;">19  18  ...  13  12</text>
+  <text x="300" y="183" style="font-size:11px; fill:#D97706; font-weight:600; text-anchor:middle;">11</text>
+  <text x="420" y="183" style="font-size:11px; fill:#2563EB; font-weight:600; text-anchor:middle;">10  9  8  ...  2  1</text>
+  <text x="540" y="183" style="font-size:10px; fill:#9CA3AF; font-weight:600; text-anchor:middle;">0</text>
+
+  <!-- Legend -->
+  <rect x="60" y="210" width="680" height="60" rx="6" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="400" y="230" text-anchor="middle" style="font-size:12px; fill:#1E293B; font-weight:600;">B 타입과의 패턴 비교</text>
+  <text x="80" y="250" class="note" style="font-size:11px;">B 타입: imm[12|10:5| |4:1|11] → 13비트 범위 (+-4KB)</text>
+  <text x="80" y="265" class="note" style="font-size:11px;">J 타입: imm[20|10:1|11|19:12] → 21비트 범위 (+-1MB) — 부호 비트(MSB)는 동일하게 비트 [31]에 위치</text>
+</svg>

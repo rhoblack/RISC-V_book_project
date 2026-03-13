@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 14 — L1 데이터 캐시와 쓰기 정책</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 14</span>
+  <h1>L1 데이터 캐시와 쓰기 정책</h1>
+  <p class="chapter-intro">Chapter 13에서 설계한 L1 명령어 캐시(I-Cache)는 읽기 전용이었기에 비교적 단순하였습니다. 그러나 데이터 캐시(D-Cache)는 Load뿐 아니라 Store 명령어도 처리해야 하므로, "쓰기를 어떻게 처리할 것인가"라는 근본적인 설계 질문이 추가됩니다. 이 챕터에서는 Write-Through와 Write-Back 정책을 비교하고, Dirty 비트 기반 Write-Back 캐시를 설계하며, 2-Way 세트 연관(Set-Associative) 구조와 LRU 교체 정책까지 구현합니다. 최종적으로 D-Cache를 파이프라인 MEM 스테이지에 연동하여 dcache_stall 신호로 파이프라인을 제어하는 방법을 학습합니다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>Write-Through와 Write-Back 쓰기 정책의 차이를 <strong>비교 분석</strong>할 수 있다.</li>
+    <li>Dirty 비트를 포함한 Write-Back 직접 매핑 캐시를 SystemVerilog로 <strong>설계</strong>할 수 있다.</li>
+    <li>2-Way 세트 연관 캐시와 LRU 교체 정책을 <strong>구현</strong>할 수 있다.</li>
+    <li>D-Cache를 파이프라인 MEM 스테이지에 연동하여 <code>dcache_stall</code> 신호를 <strong>설계</strong>할 수 있다.</li>
+    <li>히트/미스/Dirty Eviction 시나리오를 테스트벤치로 <strong>검증</strong>할 수 있다.</li>
+    <li>단일 코어에서의 I-Cache/D-Cache 일관성(Coherence) 이슈를 <strong>설명</strong>할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 14.1절 시작 ========== -->
+<section id="sec-14-1">
+  <h2>14.1 데이터 캐시 특수성: 쓰기 처리</h2>
+
+  <p>Chapter 13에서 우리는 L1 명령어 캐시(I-Cache)를 설계하였습니다. I-Cache는 프로세서가 실행할 명령어를 저장하는 <strong>읽기 전용</strong> 캐시였습니다. 프로그램 코드는 실행 중에 변경되지 않으므로, I-Cache는 히트(Hit) 시 데이터를 즉시 반환하고 미스(Miss) 시 하위 메모리에서 캐시 라인을 채우면 되었습니다. 쓰기에 대한 고려가 전혀 필요 없었던 것입니다.</p>
+
+  <p>그러나 <strong>데이터 캐시(Data Cache, D-Cache)</strong>는 상황이 근본적으로 다릅니다. RV32I 프로세서의 MEM 스테이지에서는 Load 명령어(LW, LH, LB 등)로 데이터를 <strong>읽을</strong> 뿐 아니라, Store 명령어(SW, SH, SB)로 데이터를 <strong>쓰기</strong>도 합니다. 캐시에 데이터를 쓸 때, 하위 메모리(Main Memory)와의 일관성을 어떻게 유지할 것인지가 D-Cache 설계의 핵심 과제입니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 도서관에서 책을 <em>빌려 읽기만</em> 하는 것(I-Cache)과, 책에 <em>메모를 하면서</em> 읽는 것(D-Cache)의 차이를 생각해 보십시오. 메모를 했다면, 반납할 때 원본에 그 수정을 반영해야 할지, 아니면 매번 메모할 때마다 원본도 함께 수정해야 할지를 결정해야 합니다. 이것이 바로 쓰기 정책(Write Policy)의 문제입니다. 단, 이 비유에서 도서관 사서(메모리 컨트롤러)가 항상 최신 원본을 관리한다는 전제가 실제 하드웨어와 완전히 대응하지는 않습니다.
+  </div>
+
+  <h3>Write-Through 정책</h3>
+
+  <p><strong>Write-Through(즉시 기록)</strong> 정책은 가장 직관적인 방법입니다. CPU가 Store 명령어를 실행하면, 캐시와 하위 메모리에 <strong>동시에</strong> 데이터를 기록합니다. 이 방식의 최대 장점은 <strong>일관성 보장이 간단하다</strong>는 점입니다. 캐시와 메모리의 내용이 항상 동일하므로, 캐시 라인을 교체(Eviction)할 때 별도의 기록 작업이 필요 없습니다.</p>
+
+  <p>그러나 치명적인 단점이 있습니다. <strong>매 Store 명령어마다 느린 하위 메모리에 접근해야 합니다.</strong> 프로그램에서 Store 명령어가 빈번하게 실행되면(예: 배열 초기화, 스택 프레임 생성), 메모리 트래픽이 급증하여 성능이 크게 저하됩니다. 이를 완화하기 위해 <strong>쓰기 버퍼(Write Buffer)</strong>를 도입할 수 있지만, 근본적인 트래픽 문제는 해결되지 않습니다.</p>
+
+  <h3>Write-Back 정책</h3>
+
+  <p><strong>Write-Back(지연 기록)</strong> 정책은 Store 명령어 실행 시 <strong>캐시에만</strong> 데이터를 기록하고, 하위 메모리 기록은 나중으로 미루는 방식입니다. 대신, 수정된 캐시 라인에 <strong>Dirty 비트(Dirty Bit)</strong>라는 1비트 플래그를 설정하여 "이 라인은 메모리와 내용이 다르다"는 사실을 기록합니다.</p>
+
+  <p>하위 메모리에 실제로 기록하는 시점은 해당 캐시 라인이 <strong>교체(Eviction)</strong>될 때입니다. 새로운 데이터로 캐시 라인을 채우기 전에, 기존 라인의 Dirty 비트가 설정되어 있으면 먼저 하위 메모리에 기록(Write-Back)한 후 새 데이터를 채웁니다. Dirty 비트가 0이면(Clean 라인) 바로 새 데이터를 덮어쓸 수 있습니다.</p>
+
+  <figure>
+    <img src="../figures/ch14_sec01_write_policy_comparison.svg" alt="Write-Through vs Write-Back 비교 다이어그램">
+    <figcaption>그림 14.1: Write-Through와 Write-Back 정책 비교. Write-Through는 매 쓰기마다 메모리에 접근하지만, Write-Back은 Eviction 시에만 메모리에 기록하여 트래픽을 크게 줄인다.</figcaption>
+  </figure>
+
+  <h3>성능 비교와 설계 결정</h3>
+
+  <p>아래 표는 두 정책의 핵심 특성을 비교합니다.</p>
+
+  <table>
+    <tr>
+      <th>항목</th>
+      <th>Write-Through</th>
+      <th>Write-Back</th>
+    </tr>
+    <tr>
+      <td><strong>쓰기 지연</strong></td>
+      <td>매 Store마다 메모리 접근 (느림)</td>
+      <td>캐시에만 기록 (빠름, 1사이클)</td>
+    </tr>
+    <tr>
+      <td><strong>메모리 트래픽</strong></td>
+      <td>높음 (Store 빈도에 비례)</td>
+      <td>낮음 (Eviction 시에만)</td>
+    </tr>
+    <tr>
+      <td><strong>일관성 유지</strong></td>
+      <td>간단 (항상 동기화)</td>
+      <td>복잡 (Dirty 비트 관리 필요)</td>
+    </tr>
+    <tr>
+      <td><strong>Dirty 비트</strong></td>
+      <td>불필요</td>
+      <td>필수 (라인당 1비트)</td>
+    </tr>
+    <tr>
+      <td><strong>Eviction 비용</strong></td>
+      <td>0 (바로 덮어쓰기)</td>
+      <td>Dirty 시 Write-Back 필요</td>
+    </tr>
+    <tr>
+      <td><strong>구현 복잡도</strong></td>
+      <td>낮음</td>
+      <td>중간 (FSM 상태 추가)</td>
+    </tr>
+    <tr>
+      <td><strong>실무 채택</strong></td>
+      <td>L1 일부, 임베디드</td>
+      <td>대부분의 고성능 L1/L2 캐시</td>
+    </tr>
+  </table>
+
+  <p>우리 교재에서는 <strong>Write-Back 정책</strong>을 채택합니다. 그 이유는 세 가지입니다. 첫째, 현대 프로세서의 대다수가 L1 D-Cache에 Write-Back을 사용하므로 실무와 가까운 설계 경험을 제공합니다. 둘째, Basys 3 보드에서 외부 메모리 접근은 여러 사이클이 소요되므로 메모리 트래픽을 줄이는 것이 성능에 유리합니다. 셋째, Dirty 비트와 Eviction 로직을 구현하는 것 자체가 캐시 설계의 핵심 역량이므로 교육적 가치가 높습니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>Write-Through는 구현이 단순하여 <strong>소형 임베디드 프로세서</strong>나 <strong>검증 초기 단계</strong>에서 자주 사용됩니다. ARM Cortex-M 시리즈의 일부 모델이 대표적인 예입니다. 설계 일정이 빠듯하거나 면적 제약이 심한 경우, Write-Through로 먼저 구현하고 성능 이슈가 확인되면 Write-Back으로 전환하는 전략이 현실적입니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Write-Through에서 쓰기 버퍼(Write Buffer)를 사용하면 Write-Back만큼 빨라지지 않나요?</p>
+    <p><strong>A:</strong> 쓰기 버퍼는 CPU가 메모리 쓰기 완료를 기다리지 않도록 하여 성능을 개선합니다. 그러나 버퍼가 가득 차면 CPU는 여전히 대기해야 하고, 연속적인 Store 명령어에서는 병목이 발생합니다. Write-Back은 같은 캐시 라인에 대한 다수의 Store를 한 번의 Write-Back으로 합칠 수 있어(Write Combining 효과), 근본적으로 메모리 트래픽이 적습니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> Write-Through와 Write-Back의 차이를 설명하고, 각각 어떤 상황에서 유리한지 비교하시오.</p>
+    <p><strong>A:</strong> Write-Through는 매 쓰기마다 캐시와 메모리를 동시에 갱신하여 일관성 보장이 간단하지만 메모리 트래픽이 높습니다. Write-Back은 캐시에만 쓰고 Dirty 비트로 표시한 뒤 Eviction 시에만 메모리에 기록하여 트래픽을 줄이지만 일관성 관리가 복잡합니다. 고성능 프로세서의 L1 캐시는 대부분 Write-Back, 소형 임베디드나 I/O 영역에는 Write-Through가 적합합니다. 멀티코어에서는 Write-Back 시 스누프(Snoop) 프로토콜이 추가로 필요합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: 프로그램이 같은 메모리 주소에 10번 연속으로 Store를 수행할 때, Write-Through와 Write-Back 각각에서 하위 메모리 접근 횟수는 몇 회인가?</p>
+  </aside>
+</section>
+<!-- ========== 14.1절 끝 ========== -->
+
+
+<!-- ========== 14.2절 시작 ========== -->
+<section id="sec-14-2">
+  <h2>14.2 Write-Back 캐시 설계</h2>
+
+  <p>14.1절에서 Write-Back 정책의 원리와 장점을 이해하였습니다. 이제 이를 실제 하드웨어로 구현합니다. 이 절에서는 먼저 직접 매핑(Direct-Mapped) 구조의 Write-Back D-Cache를 설계합니다. Chapter 13의 I-Cache와 비교하여, <strong>Dirty 비트</strong>와 <strong>Eviction 로직</strong>이 추가되는 과정을 단계적으로 살펴보겠습니다.</p>
+
+  <h3>캐시 구조: I-Cache에서 D-Cache로</h3>
+
+  <p>Chapter 13에서 설계한 직접 매핑 I-Cache의 구조를 떠올려 봅시다. 각 캐시 라인은 <strong>Valid 비트</strong>, <strong>Tag</strong>, <strong>Data 블록</strong>으로 구성되어 있었습니다. D-Cache에서는 여기에 <strong>Dirty 비트</strong> 1비트가 추가됩니다.</p>
+
+  <table>
+    <tr>
+      <th>필드</th>
+      <th>I-Cache (Ch13)</th>
+      <th>D-Cache (Ch14)</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td>Valid</td>
+      <td>1비트</td>
+      <td>1비트</td>
+      <td>라인이 유효한지 표시</td>
+    </tr>
+    <tr>
+      <td><strong>Dirty</strong></td>
+      <td>없음</td>
+      <td><strong>1비트</strong></td>
+      <td>메모리와 다른 데이터 보유 여부</td>
+    </tr>
+    <tr>
+      <td>Tag</td>
+      <td>20비트</td>
+      <td>20비트</td>
+      <td>주소 상위 비트 (라인 식별)</td>
+    </tr>
+    <tr>
+      <td>Data Block</td>
+      <td>32바이트</td>
+      <td>32바이트</td>
+      <td>8 워드 (256비트)</td>
+    </tr>
+  </table>
+
+  <p>Dirty 비트의 동작 규칙은 간단합니다. 캐시 라인에 <strong>Store가 수행되면 Dirty = 1</strong>로 설정합니다. 메모리에서 <strong>새로 Refill된 라인은 Dirty = 0</strong>(Clean)입니다. Eviction 시 <strong>Dirty = 1이면 메모리에 Write-Back</strong>하고, <strong>Dirty = 0이면 그냥 버립니다</strong>.</p>
+
+  <figure>
+    <img src="../figures/ch14_sec02_writeback_cache_structure.svg" alt="Write-Back Direct-Mapped D-Cache 구조">
+    <figcaption>그림 14.2: Write-Back 직접 매핑 D-Cache 구조. I-Cache 대비 Dirty 비트가 추가되었으며, 미스 시 Dirty 라인은 메모리에 먼저 기록(Write-Back)한 후 새 데이터를 채운다(Refill).</figcaption>
+  </figure>
+
+  <h3>FSM 기반 캐시 제어기</h3>
+
+  <p>Write-Back D-Cache는 미스 처리 과정이 I-Cache보다 복잡합니다. 미스 발생 시 교체 대상 라인이 Dirty인지 확인하고, Dirty이면 먼저 메모리에 기록한 후 새 데이터를 채워야 합니다. 이 다단계 처리를 체계적으로 관리하기 위해 <strong>유한 상태 기계(FSM)</strong>를 사용합니다.</p>
+
+  <p>D-Cache FSM은 다섯 가지 상태를 가집니다.</p>
+
+  <table>
+    <tr>
+      <th>상태</th>
+      <th>동작</th>
+      <th>stall 출력</th>
+    </tr>
+    <tr>
+      <td><code>S_IDLE</code></td>
+      <td>CPU 요청 대기</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td><code>S_TAG_CHECK</code></td>
+      <td>Tag 비교, Hit/Miss 판정</td>
+      <td>Hit 시 0, Miss 시 1</td>
+    </tr>
+    <tr>
+      <td><code>S_WRITE_BACK</code></td>
+      <td>Dirty 라인을 메모리에 기록 (8 워드 전송)</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>S_REFILL</code></td>
+      <td>메모리에서 새 캐시 라인 읽기 (8 워드 전송)</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td><code>S_UPDATE</code></td>
+      <td>Tag/Valid/Dirty 갱신, IDLE 복귀</td>
+      <td>1 (다음 사이클에 0)</td>
+    </tr>
+  </table>
+
+  <p>이 다섯 상태의 전이도는 14.5절 그림 14.5에서 상세히 확인할 수 있습니다. 먼저 아래 경로 목록으로 흐름을 파악한 후, 14.5절에서 파형과 함께 재확인하기 바랍니다.</p>
+
+  <p>상태 전이는 세 가지 경로로 나뉩니다.</p>
+
+  <ol>
+    <li><strong>Hit 경로:</strong> IDLE → TAG_CHECK → IDLE (1사이클, stall 없음)</li>
+    <li><strong>Clean Miss 경로:</strong> IDLE → TAG_CHECK → REFILL → UPDATE → IDLE</li>
+    <li><strong>Dirty Miss 경로:</strong> IDLE → TAG_CHECK → WRITE_BACK → REFILL → UPDATE → IDLE</li>
+  </ol>
+
+  <h3>SystemVerilog 구현</h3>
+
+  <p>아래는 직접 매핑 Write-Back D-Cache의 핵심 구현입니다. 128 라인 × 32바이트/라인 = 4KB 용량으로, Basys 3 BRAM 자원으로 충분히 구현 가능합니다.</p>
+
+  <pre><code class="language-systemverilog">
+module dcache_direct_mapped_wb #(
+   parameter ADDR_WIDTH   = 32,
+   parameter CACHE_LINES  = 128,          // 128 라인
+   parameter BLOCK_WORDS  = 8,            // 라인당 8 워드 (32바이트)
+   parameter INDEX_WIDTH  = $clog2(CACHE_LINES),  // 7비트
+   parameter OFFSET_WIDTH = $clog2(BLOCK_WORDS) + 2, // 5비트
+   parameter TAG_WIDTH    = ADDR_WIDTH - INDEX_WIDTH - OFFSET_WIDTH
+)(
+   input  logic                    clk,
+   input  logic                    rst_n,
+   // CPU 인터페이스
+   input  logic                    cpu_req_i,
+   input  logic                    cpu_write_i,
+   input  logic [ADDR_WIDTH-1:0]   cpu_addr_i,
+   input  logic [31:0]             cpu_wdata_i,
+   input  logic [3:0]              cpu_byte_en_i,
+   output logic [31:0]             cpu_rdata_o,
+   output logic                    dcache_stall_o,
+   // 메모리 인터페이스
+   output logic                    mem_req_o,
+   output logic                    mem_write_o,
+   output logic [ADDR_WIDTH-1:0]   mem_addr_o,
+   output logic [31:0]             mem_wdata_o,
+   input  logic [31:0]             mem_rdata_i,
+   input  logic                    mem_ready_i
+);
+   // 주소 필드 분해
+   logic [TAG_WIDTH-1:0]    addr_tag;
+   logic [INDEX_WIDTH-1:0]  addr_index;
+   logic [2:0]              addr_word_offset;
+
+   assign addr_tag         = cpu_addr_i[31:12];
+   assign addr_index       = cpu_addr_i[11:5];
+   assign addr_word_offset = cpu_addr_i[4:2];
+
+   // 캐시 저장소
+   logic                  valid_array [0:CACHE_LINES-1];
+   logic                  dirty_array [0:CACHE_LINES-1]; // ★ Dirty 비트
+   logic [TAG_WIDTH-1:0]  tag_array   [0:CACHE_LINES-1];
+   logic [31:0]           data_array  [0:CACHE_LINES-1][0:BLOCK_WORDS-1];
+
+   // 히트/미스 판정
+   logic cache_hit, cache_dirty;
+   assign cache_hit   = valid_array[addr_index] &amp;&amp;
+                         (tag_array[addr_index] == addr_tag);
+   assign cache_dirty = valid_array[addr_index] &amp;&amp;
+                         dirty_array[addr_index];
+
+   // FSM 상태 정의
+   typedef enum logic [2:0] {
+      S_IDLE, S_TAG_CHECK, S_WRITE_BACK, S_REFILL, S_UPDATE
+   } state_t;
+   state_t state, next_state;
+   // ... (전체 코드는 code_examples/ch14_dcache_direct_mapped_wb.sv 참조)
+endmodule
+  </code></pre>
+
+  <p><strong>코드 분석 포인트:</strong></p>
+
+  <p><strong>1. Dirty 비트 배열:</strong> <code>dirty_array</code>는 각 캐시 라인의 수정 여부를 추적합니다. Store 히트 시 해당 라인의 Dirty 비트를 1로 설정하고, Refill 후에는 0으로 초기화합니다. 이 1비트가 Write-Back 캐시의 핵심입니다.</p>
+
+  <p><strong>2. 바이트 인에이블:</strong> <code>cpu_byte_en_i</code>는 SB(1바이트), SH(2바이트), SW(4바이트) 명령어에 따라 캐시 라인의 특정 바이트만 수정할 수 있게 합니다. 전체 워드가 아닌 부분 쓰기를 지원하는 것은 실무에서 필수적입니다.</p>
+
+  <p><strong>3. Eviction 주소 생성:</strong> Write-Back 시 메모리 주소는 <strong>기존 Tag + 현재 Index + 워드 카운터</strong>로 조합됩니다. 새로 요청된 주소의 Tag가 아니라 교체되는 라인의 Tag를 사용해야 하는 점에 주의하십시오. 이것은 초보자가 가장 자주 실수하는 부분입니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>Vivado에서 큰 배열(<code>data_array</code>)을 합성할 때, 자동으로 BRAM으로 추론되지 않는 경우가 있습니다. <code>(* ram_style = "block" *)</code> 합성 속성을 배열 선언 앞에 추가하면 BRAM 추론을 강제할 수 있습니다. 반대로, Valid/Dirty/Tag 배열처럼 작은 배열은 LUTRAM으로 추론되어도 문제 없습니다.</p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>학생들이 FSM 상태 전이를 혼동하는 경우가 많습니다. 특히 "Miss인데 Dirty가 아닌 경우"에 WRITE_BACK을 건너뛰고 바로 REFILL로 가야 하는 분기를 놓치기 쉽습니다. 수업에서는 <strong>세 가지 경로를 색상별로 구분한 상태 전이도</strong>를 칠판에 먼저 그리고, 각 경로에 해당하는 메모리 접근 시나리오를 구체적으로 설명하세요.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 질문에 답해 보십시오: 캐시가 비어 있는 초기 상태에서 첫 번째 Load가 발생하면, FSM은 어떤 경로를 따르는가? Dirty 비트와 Valid 비트는 각각 어떤 값인가?</p>
+  </aside>
+</section>
+<!-- ========== 14.2절 끝 ========== -->
+
+
+<!-- ========== 14.3절 시작 ========== -->
+<section id="sec-14-3">
+  <h2>14.3 세트 연관 캐시 (2-Way)</h2>
+
+  <p>14.2절의 직접 매핑 캐시는 구현이 단순하지만, 치명적인 약점이 있습니다. 같은 인덱스에 매핑되는 두 주소가 번갈아 접근되면, 매번 캐시 미스가 발생하는 <strong>충돌 미스(Conflict Miss)</strong>가 일어납니다. 예를 들어, 주소 A와 주소 B가 같은 캐시 라인 인덱스를 갖는다면, A를 접근할 때 B를 교체하고, B를 접근할 때 A를 교체하는 무한 반복(핑퐁 현상)이 발생합니다.</p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 직접 매핑 캐시는 각 학생에게 <em>지정석 하나</em>만 배정하는 것과 같습니다. 두 학생이 같은 자리에 배정되면 한 명이 계속 쫓겨납니다. 세트 연관 캐시는 지정석을 <em>두 개(또는 그 이상)</em> 제공하여, 같은 자리에 배정된 학생 두 명이 나란히 앉을 수 있게 합니다. 이것이 바로 2-Way 세트 연관(Set-Associative) 구조입니다. 단, 세 번째 학생이 오면 기존 두 명 중 하나를 내보내야 하며, "누구를 내보낼 것인가"를 결정하는 것이 <strong>교체 정책(Replacement Policy)</strong>입니다. 단, 이 비유에서 "누가 더 최근에 앉았는가"라는 LRU 판단이 하드웨어에서는 1비트 플래그로 구현된다는 점은 이 비유가 포착하지 못합니다.
+  </div>
+
+  <h3>2-Way Set-Associative 구조</h3>
+
+  <p>2-Way 세트 연관 캐시에서는 하나의 <strong>세트(Set)</strong>에 <strong>2개의 Way</strong>가 존재합니다. 동일 인덱스를 갖는 두 개의 서로 다른 Tag가 동시에 캐시에 저장될 수 있으므로, 충돌 미스가 크게 줄어듭니다.</p>
+
+  <p>구조 파라미터를 정리합니다.</p>
+
+  <table>
+    <tr>
+      <th>파라미터</th>
+      <th>직접 매핑 (14.2절)</th>
+      <th>2-Way 세트 연관 (14.3절)</th>
+    </tr>
+    <tr>
+      <td>총 용량</td>
+      <td>4KB (128 라인 × 32B)</td>
+      <td>4KB (64 세트 × 2 Way × 32B)</td>
+    </tr>
+    <tr>
+      <td>세트 수</td>
+      <td>128</td>
+      <td>64</td>
+    </tr>
+    <tr>
+      <td>Way 수</td>
+      <td>1</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>Index 비트</td>
+      <td>7비트 [11:5]</td>
+      <td>6비트 [10:5]</td>
+    </tr>
+    <tr>
+      <td>Tag 비트</td>
+      <td>20비트 [31:12]</td>
+      <td>21비트 [31:11]</td>
+    </tr>
+    <tr>
+      <td>Offset 비트</td>
+      <td>5비트 [4:0]</td>
+      <td>5비트 [4:0]</td>
+    </tr>
+    <tr>
+      <td>Tag 비교기</td>
+      <td>1개</td>
+      <td>2개 (병렬)</td>
+    </tr>
+  </table>
+
+  <p>총 용량이 동일한 4KB임을 주목하십시오. 세트 수가 반으로 줄었지만 Way가 2개이므로 전체 저장 용량은 같습니다. 대신 Index 비트가 1비트 줄고 Tag 비트가 1비트 늘어, 각 Way마다 21비트 Tag 비교기가 필요합니다. <strong>하드웨어 비용(비교기 2개)이 증가하지만, 충돌 미스 감소로 히트율이 향상되는 것이 세트 연관 캐시의 핵심 트레이드오프</strong>입니다.</p>
+
+  <figure>
+    <img src="../figures/ch14_sec03_2way_set_associative.svg" alt="2-Way Set-Associative Cache 구조">
+    <figcaption>그림 14.3: 2-Way 세트 연관 캐시 구조. 각 세트에 Way 0과 Way 1이 있으며, 두 Tag 비교기가 병렬로 동작하여 어느 Way에서 히트되었는지 판정한다. LRU 비트 배열이 교체 대상을 결정한다.</figcaption>
+  </figure>
+
+  <h3>히트 판정 로직</h3>
+
+  <p>2-Way 캐시에서는 <strong>두 개의 Tag 비교기가 병렬로 동작</strong>합니다. Way 0의 Tag와 Way 1의 Tag를 동시에 비교하여, 둘 중 하나라도 일치하면 히트입니다. SystemVerilog로 표현하면 다음과 같습니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 히트/미스 판정 (2-Way 병렬 비교)
+logic hit_way0, hit_way1;
+logic cache_hit;
+logic hit_way_sel; // 히트된 Way 선택
+
+assign hit_way0 = valid_array[0][addr_index] &amp;&amp;
+                  (tag_array[0][addr_index] == addr_tag);
+assign hit_way1 = valid_array[1][addr_index] &amp;&amp;
+                  (tag_array[1][addr_index] == addr_tag);
+assign cache_hit   = hit_way0 || hit_way1;
+assign hit_way_sel = hit_way1; // Way1 히트이면 1, Way0 히트이면 0
+  </code></pre>
+
+  <p><code>hit_way_sel</code>은 히트된 Way를 가리키는 인덱스로, 데이터를 읽거나 쓸 Way를 선택하는 데 사용됩니다. 두 Way 모두 미스이면 <code>cache_hit</code>이 0이 되어 미스 처리 FSM이 동작합니다.</p>
+
+  <h3>LRU 교체 정책</h3>
+
+  <p>미스 발생 시 2개의 Way 중 <strong>어느 쪽을 교체할 것인가</strong>를 결정해야 합니다. 가장 널리 사용되는 정책이 <strong>LRU(Least Recently Used, 최소 최근 사용)</strong>입니다. "가장 오래전에 접근된 Way를 교체한다"는 원칙으로, 시간적 지역성(Temporal Locality)의 원리에 근거합니다.</p>
+
+  <p>2-Way의 경우, LRU 구현이 매우 간단합니다. 세트당 <strong>1비트</strong>만 있으면 됩니다. 이 비트는 "어느 Way가 LRU인가"를 가리킵니다.</p>
+
+  <ul>
+    <li>Way 0에 접근(히트 또는 Refill)하면: LRU 비트 = 1 (Way 1이 LRU가 됨)</li>
+    <li>Way 1에 접근하면: LRU 비트 = 0 (Way 0이 LRU가 됨)</li>
+    <li>미스 발생 시: LRU 비트가 가리키는 Way를 교체</li>
+  </ul>
+
+  <pre><code class="language-systemverilog">
+// LRU 비트: 세트당 1비트 (0=Way0이 LRU, 1=Way1이 LRU)
+logic lru_array [0:NUM_SETS-1];
+
+// 교체 대상 Way 결정
+logic replace_way_sel;
+assign replace_way_sel = lru_array[addr_index];
+
+// LRU 갱신 (히트 시)
+always_ff @(posedge clk) begin
+   if (cache_hit)
+      lru_array[addr_index] &lt;= hit_way_sel ? 1'b0 : 1'b1;
+end
+  </code></pre>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 4-Way 이상에서도 LRU를 이렇게 간단히 구현할 수 있나요?</p>
+    <p><strong>A:</strong> 아닙니다. N-Way에서 정확한 LRU를 구현하려면 세트당 log<sub>2</sub>(N!) 비트가 필요합니다. 4-Way의 경우 세트당 약 5비트, 8-Way는 15비트 이상이 필요하여 하드웨어 비용이 급증합니다. 실무에서는 <strong>Pseudo-LRU(Tree-PLRU)</strong>나 <strong>RRIP(Re-Reference Interval Prediction)</strong> 같은 근사 알고리즘을 사용합니다. 2-Way는 1비트 LRU가 정확한 LRU와 동일하므로 가장 효율적입니다.</p>
+  </aside>
+
+  <h3>2-Way D-Cache 전체 구현</h3>
+
+  <p><strong>교체 Way 래치(Latched Replace Way):</strong> TAG_CHECK 상태에서 교체 대상 Way를 결정하는 <code>replace_way_sel</code>은 조합 논리이므로, 상태가 S_WRITE_BACK이나 S_REFILL로 전이한 후에도 주소 입력이 바뀌면 값이 달라질 수 있습니다. 따라서 TAG_CHECK 시점의 결정을 레지스터(<code>latched_replace_way</code>)에 보관하여, 이후 상태에서 일관되게 사용합니다.</p>
+
+  <p>14.2절의 직접 매핑 캐시를 2-Way로 확장한 전체 코드는 <code>code_examples/ch14_dcache_2way_wb.sv</code>에 수록하였습니다. 핵심 변경 사항은 다음 네 가지입니다.</p>
+
+  <ol>
+    <li><strong>저장소 이중화:</strong> <code>valid_array</code>, <code>dirty_array</code>, <code>tag_array</code>, <code>data_array</code> 모두 Way 차원이 추가됩니다.</li>
+    <li><strong>병렬 Tag 비교:</strong> 두 Way의 Tag를 동시에 비교하는 조합 로직이 추가됩니다.</li>
+    <li><strong>LRU 배열:</strong> 세트당 1비트 LRU 배열과 갱신 로직이 추가됩니다.</li>
+    <li><strong>교체 Way 래치:</strong> TAG_CHECK 상태에서 결정된 교체 대상 Way를 래치하여, WRITE_BACK과 REFILL 상태에서 일관되게 사용합니다.</li>
+  </ol>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> Direct-Mapped 캐시와 N-Way Set-Associative 캐시의 장단점을 비교하시오.</p>
+    <p><strong>A:</strong> Direct-Mapped는 구현이 단순하고 접근 지연이 짧지만(Tag 비교기 1개), 충돌 미스에 취약합니다. N-Way Set-Associative는 충돌 미스를 N배 줄이지만, N개의 Tag 비교기와 교체 정책 로직이 필요하여 면적과 지연이 증가합니다. Fully-Associative는 충돌 미스가 없지만, 모든 라인에 비교기가 필요하여 비현실적입니다. 실무에서 L1 캐시는 주로 <strong>2-Way ~ 8-Way</strong>를 사용합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>다음 시나리오를 추적해 보십시오: 2-Way 캐시(64세트)에서 주소 0x1000, 0x2000, 0x3000을 순서대로 Load합니다. 세 주소 모두 같은 세트에 매핑된다고 가정할 때, 세 번째 접근에서 어느 Way가 교체되며, LRU 비트는 어떻게 변화하는가?</p>
+  </aside>
+</section>
+<!-- ========== 14.3절 끝 ========== -->
+
+
+<!-- ========== 14.4절 시작 ========== -->
+<section id="sec-14-4">
+  <h2>14.4 D-Cache와 파이프라인 MEM 스테이지 연동</h2>
+
+  <p>캐시 모듈 자체를 설계하였으니, 이제 이를 5단계 파이프라인 프로세서의 <strong>MEM 스테이지</strong>에 연결해야 합니다. Chapter 13에서 I-Cache를 IF 스테이지에 연결하고 <code>icache_stall</code> 신호로 파이프라인을 제어하였습니다. D-Cache도 동일한 원리로 <code>dcache_stall</code> 신호를 생성하여 파이프라인을 제어합니다.</p>
+
+  <h3>MEM 스테이지에서의 D-Cache 접근</h3>
+
+  <p>MEM 스테이지에서 D-Cache가 접근되는 경우는 두 가지입니다.</p>
+
+  <ol>
+    <li><strong>Load 명령어 (LW, LH, LB, LHU, LBU):</strong> ALU가 계산한 유효 주소(Effective Address)를 D-Cache에 전달하여 데이터를 읽습니다.</li>
+    <li><strong>Store 명령어 (SW, SH, SB):</strong> 유효 주소와 레지스터 데이터를 D-Cache에 전달하여 데이터를 씁니다.</li>
+  </ol>
+
+  <p>Load/Store가 아닌 명령어(ALU 연산, 분기 등)는 D-Cache에 접근하지 않으므로 <code>cpu_req_i = 0</code>입니다.</p>
+
+  <p>Byte Enable 신호(<code>cpu_byte_en_i</code>)는 MEM 스테이지의 제어 유닛이 <code>funct3</code> 필드를 해석하여 생성합니다. SW(funct3=010)는 <code>4'b1111</code>, SH(funct3=001)는 <code>4'b0011</code>, SB(funct3=000)는 <code>4'b0001</code>을 출력합니다. 이 신호가 D-Cache 내부에서 특정 바이트만 수정하는 데 사용됩니다.</p>
+
+  <h3>dcache_stall 신호의 동작</h3>
+
+  <p>D-Cache에서 히트가 발생하면 1사이클 내에 데이터가 반환되므로, 파이프라인은 정상적으로 진행됩니다. 그러나 <strong>미스가 발생하면</strong> 메모리에서 캐시 라인을 채우는 동안(수십 사이클) 파이프라인 전체를 정지시켜야 합니다.</p>
+
+  <p><code>dcache_stall</code> 신호가 활성화(1)되면 다음 동작이 수행됩니다.</p>
+
+  <ul>
+    <li><strong>PC:</strong> 현재 값 유지 (Hold)</li>
+    <li><strong>IF/ID 레지스터:</strong> 현재 값 유지 (Hold)</li>
+    <li><strong>ID/EX 레지스터:</strong> 현재 값 유지 (Hold)</li>
+    <li><strong>EX/MEM 레지스터:</strong> 현재 값 유지 (Hold)</li>
+    <li><strong>MEM/WB 레지스터:</strong> 현재 값 유지 (Hold) — D-Cache 결과 대기</li>
+  </ul>
+
+  <p>즉, <strong>전체 파이프라인이 동결(Freeze)</strong>됩니다. I-Cache 스톨과의 차이점은, I-Cache 스톨은 IF 단계에서만 발생하지만, D-Cache 스톨은 MEM 단계에서 발생하여 <strong>모든 스테이지</strong>를 멈춘다는 점입니다.</p>
+
+  <figure>
+    <img src="../figures/ch14_sec04_dcache_pipeline_integration.svg" alt="D-Cache와 파이프라인 MEM 스테이지 연동">
+    <figcaption>그림 14.4: D-Cache 스톨 시 파이프라인 동결. dcache_stall이 활성화되면 PC와 모든 파이프라인 레지스터가 현재 값을 유지하여 전체 파이프라인이 정지한다.</figcaption>
+  </figure>
+
+  <h3>파이프라인 제어 로직 수정</h3>
+
+  <p>Chapter 10~12에서 설계한 파이프라인 제어 로직에 D-Cache 스톨을 통합합니다. 기존의 <code>stall</code> 신호(Load-Use 해저드)와 <code>flush</code> 신호(분기 예측 실패)에 <code>dcache_stall</code>을 추가해야 합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 파이프라인 제어 신호 통합
+// 기존 Load-Use 스톨 + I-Cache 스톨 + D-Cache 스톨
+logic pipeline_stall;
+assign pipeline_stall = load_use_stall ||
+                        icache_stall   ||
+                        dcache_stall;
+
+// PC 제어
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      pc &lt;= 32'h0000_0000;
+   else if (!pipeline_stall) begin
+      if (branch_taken)
+         pc &lt;= branch_target;
+      else
+         pc &lt;= pc + 32'd4;
+   end
+   // pipeline_stall이면 pc 유지 (암묵적)
+end
+
+// 파이프라인 레지스터 제어 (IF/ID 예시)
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n)
+      if_id_reg &lt;= '0;
+   else if (flush_if_id)
+      if_id_reg &lt;= '0;     // Flush 우선
+   else if (!pipeline_stall)
+      if_id_reg &lt;= if_id_next; // 정상 진행
+   // pipeline_stall이면 유지 (암묵적)
+end
+  </code></pre>
+
+  <h3>icache_stall과 dcache_stall의 우선순위</h3>
+
+  <p>I-Cache 스톨과 D-Cache 스톨이 동시에 발생할 수 있는가요? 이론적으로는 가능합니다. IF 단계의 명령어 인출이 I-Cache 미스를 유발하는 동시에, MEM 단계의 Load/Store가 D-Cache 미스를 유발하는 상황입니다. 이 경우 두 스톨을 OR 조합하면 자연스럽게 처리됩니다. 두 캐시 모두 미스를 해결할 때까지 파이프라인은 정지 상태를 유지하며, 먼저 해결된 캐시부터 다음 동작이 가능해집니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>상용 프로세서에서는 I-Cache 미스와 D-Cache 미스를 <strong>동시에</strong> 처리하는 <strong>비차단(Non-Blocking) 캐시</strong>를 사용합니다. Miss Status Holding Register(MSHR)를 도입하여 여러 미스를 병렬로 처리합니다. 우리 설계에서는 단순화를 위해 차단(Blocking) 캐시를 사용하지만, 이 개념은 Ch23(성능 최적화)에서 다시 다룹니다.</p>
+  </aside>
+
+  <h3>성능 영향 분석</h3>
+
+  <p>D-Cache 스톨이 프로세서 성능에 미치는 영향을 정량적으로 분석해 봅시다. 이상적인 5단계 파이프라인의 CPI(Cycles Per Instruction)는 1.0입니다. 캐시 미스에 의한 CPI 증가분은 다음과 같이 계산됩니다.</p>
+
+  <p><strong>CPI = 1.0 + (Load/Store 빈도) × (D-Cache 미스율) × (미스 페널티)</strong></p>
+
+  <p>예를 들어, Load/Store 빈도가 30%, D-Cache 미스율이 5%, Clean Miss 페널티가 18사이클이라면:</p>
+
+  <p>CPI = 1.0 + 0.30 × 0.05 × 18 = 1.0 + 0.27 = <strong>1.27</strong></p>
+
+  <p>5%의 미스율이 CPI를 27% 증가시킵니다. Dirty Miss의 비율이 높아지면 페널티가 34사이클로 증가하여 성능 저하가 더 심해집니다. 이것이 <strong>캐시 히트율 최적화가 프로세서 성능에 결정적인 이유</strong>입니다.</p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> D-Cache 스톨 중에 인터럽트가 발생하면 어떻게 되나요?</p>
+    <p><strong>A:</strong> 좋은 질문입니다. 일반적으로 캐시 미스 처리가 완료된 후에 인터럽트를 처리합니다. 캐시 Refill은 원자적(Atomic)으로 수행되어야 하기 때문입니다. 중간에 인터럽트를 받으면 Refill 상태가 불완전해져 캐시 일관성이 깨질 수 있습니다. 이 주제는 Chapter 19(예외/인터럽트 통합)에서 더 자세히 다룹니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>파이프라인에서 Load-Use 스톨(Ch10)과 D-Cache 미스 스톨이 동시에 발생하는 것이 가능한가? 가능하다면 어떤 상황인가? 불가능하다면 그 이유는?</p>
+  </aside>
+</section>
+<!-- ========== 14.4절 끝 ========== -->
+
+
+<!-- ========== 14.5절 시작 ========== -->
+<section id="sec-14-5">
+  <h2>14.5 D-Cache 시뮬레이션 및 테스트벤치</h2>
+
+  <p>설계가 완료되었으니 검증으로 넘어갑니다. 캐시 설계에서 검증은 특히 중요합니다. 왜냐하면 캐시 버그는 <strong>간헐적으로 발생</strong>하여 디버깅이 매우 어렵기 때문입니다. 정상적으로 보이는 프로그램이 특정 메모리 접근 패턴에서만 오동작하는 증상은, 대부분 캐시 제어 로직의 미묘한 오류에서 비롯됩니다.</p>
+
+  <h3>검증 전략: 시나리오 기반 테스트</h3>
+
+  <p>D-Cache 테스트벤치는 다음 여섯 가지 핵심 시나리오를 반드시 검증해야 합니다.</p>
+
+  <table>
+    <tr>
+      <th>#</th>
+      <th>시나리오</th>
+      <th>검증 포인트</th>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td><strong>Cold Miss</strong> (첫 접근)</td>
+      <td>빈 캐시에서 Refill 동작, Valid 비트 설정</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><strong>Cache Hit</strong> (재접근)</td>
+      <td>Tag 매칭, 1사이클 응답, stall=0</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><strong>Write Hit</strong></td>
+      <td>Dirty 비트 설정, 데이터 갱신, Read-Back 확인</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><strong>Clean Miss</strong> (같은 세트, 다른 Way)</td>
+      <td>Way 1 할당, LRU 갱신</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><strong>Dirty Eviction</strong></td>
+      <td>LRU Way의 Write-Back, Refill, 메모리 검증</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><strong>바이트 단위 쓰기</strong></td>
+      <td>byte_en에 따른 부분 쓰기, 나머지 바이트 보존</td>
+    </tr>
+  </table>
+
+  <h3>테스트벤치 구조</h3>
+
+  <p>테스트벤치는 DUT(Design Under Test)인 <code>dcache_2way_wb</code>와 간이 메모리 모델(Fake Memory)로 구성됩니다. 간이 메모리는 설정 가능한 지연(Latency)을 시뮬레이션하여, 캐시 FSM이 메모리 응답을 올바르게 대기하는지 확인합니다.</p>
+
+  <pre><code class="language-systemverilog">
+// 간이 메모리 모델: MEM_LATENCY 사이클 지연 후 응답
+localparam MEM_LATENCY = 2;
+logic [31:0] main_memory [0:65535]; // 256KB
+
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n) begin
+      mem_ready     &lt;= 1'b0;
+      mem_delay_cnt &lt;= 0;
+   end else if (mem_req) begin
+      if (mem_delay_cnt &lt; MEM_LATENCY - 1) begin
+         mem_delay_cnt &lt;= mem_delay_cnt + 1;
+         mem_ready     &lt;= 1'b0;
+      end else begin
+         mem_ready     &lt;= 1'b1;
+         mem_delay_cnt &lt;= 0;
+         if (mem_write)
+            main_memory[mem_addr[17:2]] &lt;= mem_wdata;
+         else
+            mem_rdata &lt;= main_memory[mem_addr[17:2]];
+      end
+   end else begin
+      mem_ready     &lt;= 1'b0;
+      mem_delay_cnt &lt;= 0;
+   end
+end
+  </code></pre>
+
+  <h3>파형 검증 포인트</h3>
+
+  <p>시뮬레이션 파형에서 확인해야 할 핵심 신호와 기대 동작을 정리합니다.</p>
+
+  <figure>
+    <img src="../figures/ch14_sec05_dcache_fsm.svg" alt="D-Cache FSM 상태 전이도">
+    <figcaption>그림 14.5: D-Cache FSM 상태 전이도와 사이클 분석. Hit 경로(녹색), Clean Miss 경로(황색), Dirty Miss 경로(적색)를 구분하여 각 경로의 사이클 수를 확인한다.</figcaption>
+  </figure>
+
+  <p><strong>시나리오 5 (Dirty Eviction) 파형 추적:</strong></p>
+
+  <ol>
+    <li><strong>TAG_CHECK:</strong> 히트 실패, 교체 대상 Way의 Dirty=1 확인 → WRITE_BACK 진입</li>
+    <li><strong>WRITE_BACK:</strong> <code>mem_write_o=1</code>, <code>word_cnt</code>가 0~7까지 증가하며 8워드를 메모리에 기록. 이때 <code>mem_addr_o</code>는 <strong>기존 Tag</strong>의 주소임을 확인</li>
+    <li><strong>REFILL:</strong> <code>mem_write_o=0</code>, <code>word_cnt</code>가 다시 0~7까지 증가하며 8워드를 메모리에서 읽기. 이때 <code>mem_addr_o</code>는 <strong>새 Tag</strong>의 주소</li>
+    <li><strong>UPDATE:</strong> Valid=1, Dirty=0, Tag 갱신 확인</li>
+    <li><strong>IDLE 복귀:</strong> <code>dcache_stall=0</code> 확인, 다음 파이프라인 사이클 진행</li>
+  </ol>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>학생들에게 시뮬레이션 결과를 제출할 때, 반드시 <strong>세 가지 경로(Hit/Clean Miss/Dirty Miss)의 파형 캡처</strong>를 포함하도록 안내하세요. 특히 Dirty Eviction 시 <code>mem_addr_o</code>가 기존 Tag에서 새 Tag로 전환되는 시점을 표시하게 하면, FSM 동작의 이해도를 확인할 수 있습니다.</p>
+  </aside>
+
+  <h3>테스트벤치 실행</h3>
+
+  <p>전체 테스트벤치 코드는 <code>code_examples/ch14_dcache_tb.sv</code>에 수록하였습니다. 실행 방법은 다음과 같습니다.</p>
+
+  <pre><code class="language-systemverilog">
+# VCS 실행
+vcs -sverilog ch14_dcache_2way_wb.sv ch14_dcache_tb.sv \
+    -o dcache_sim +vcs+vcdpluson
+./dcache_sim
+
+# Vivado Simulator 실행
+xvlog --sv ch14_dcache_2way_wb.sv ch14_dcache_tb.sv
+xelab dcache_tb -s dcache_sim
+xsim dcache_sim --runall --wdb dcache_tb.wdb
+  </code></pre>
+
+  <p>테스트 통과 기준은 모든 시나리오에서 <code>[PASS]</code> 메시지가 출력되는 것입니다. 하나라도 <code>[FAIL]</code>이 있으면 해당 시나리오의 파형을 분석하여 원인을 찾아야 합니다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>실무에서 캐시 검증은 <strong>무작위 테스트(Random Test)</strong>와 <strong>커버리지 기반 검증(Coverage-Driven Verification)</strong>을 조합합니다. 시나리오 기반 테스트로 핵심 경로를 먼저 검증한 뒤, 무작위 주소/데이터/바이트 인에이블 조합으로 10만 회 이상 반복하여 코너 케이스를 발견합니다. SystemVerilog의 <code>$urandom_range</code> 함수를 활용하면 간단히 무작위 테스트를 구성할 수 있습니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>테스트벤치에서 누락하기 쉬운 시나리오를 하나 더 생각해 보십시오. 예를 들어, "두 Way가 모두 Valid이고 둘 다 Dirty인 상태에서 미스가 발생하면?" 이 시나리오가 올바르게 동작하는지 파형으로 확인할 수 있겠습니까?</p>
+  </aside>
+</section>
+<!-- ========== 14.5절 끝 ========== -->
+
+
+<!-- ========== 14.6절 시작 ========== -->
+<section id="sec-14-6">
+  <h2>14.6 캐시 일관성 맛보기</h2>
+
+  <p>지금까지 우리는 I-Cache(Ch13)와 D-Cache(Ch14)를 독립적으로 설계하였습니다. 두 캐시는 각각 IF 스테이지와 MEM 스테이지에 연결되어 독립적으로 동작합니다. 그런데 한 가지 미묘한 문제가 있습니다. <strong>동일한 메모리 주소를 I-Cache와 D-Cache가 동시에 보유할 수 있으며, 두 캐시의 내용이 다를 수 있다</strong>는 점입니다.</p>
+
+  <h3>단일 코어에서의 일관성 이슈</h3>
+
+  <p>이 문제가 실제로 발생하는 대표적인 사례는 <strong>자기 수정 코드(Self-Modifying Code)</strong>입니다. 프로그램이 Store 명령어로 <strong>명령어 영역의 메모리 주소</strong>에 새 값을 쓰는 경우를 생각해 봅시다.</p>
+
+  <ol>
+    <li>D-Cache에 새 명령어 코드가 기록됩니다 (Write-Back이므로 메모리에는 아직 반영되지 않음).</li>
+    <li>I-Cache에는 해당 주소의 <strong>옛 명령어</strong>가 여전히 캐싱되어 있습니다.</li>
+    <li>프로세서가 해당 주소의 명령어를 실행하면, <strong>옛 명령어</strong>가 실행됩니다.</li>
+  </ol>
+
+  <p>이것이 <strong>캐시 일관성(Cache Coherence)</strong> 문제입니다. 단일 코어에서도 I-Cache와 D-Cache가 분리된 하버드 구조에서는 이 문제가 발생할 수 있습니다.</p>
+
+  <figure>
+    <img src="../figures/ch14_sec06_cache_coherence_issue.svg" alt="I-Cache/D-Cache 일관성 이슈">
+    <figcaption>그림 14.6: 단일 코어에서의 I-Cache/D-Cache 일관성 문제. D-Cache가 0x1000 주소에 새 명령어를 기록하였지만, I-Cache에는 여전히 옛 명령어가 캐싱되어 있다.</figcaption>
+  </figure>
+
+  <h3>RISC-V의 해결 방법: FENCE.I</h3>
+
+  <p>RISC-V ISA는 이 문제를 <strong>FENCE.I</strong> 명령어로 해결합니다. FENCE.I는 "명령어 캐시를 무효화(Invalidate)하라"는 의미입니다. 자기 수정 코드를 수행한 후 FENCE.I를 실행하면, I-Cache의 모든(또는 관련) 라인이 무효화되어 다음 명령어 인출 시 메모리에서 최신 데이터를 가져옵니다.</p>
+
+  <pre><code class="language-systemverilog">
+// RISC-V 어셈블리: 자기 수정 코드 패턴
+sw   x5, 0(x10)     // x10이 가리키는 주소에 새 명령어 기록 (D-Cache)
+fence.i              // I-Cache 무효화
+jalr x0, 0(x10)     // 수정된 주소로 점프 → 새 명령어 실행
+  </code></pre>
+
+  <p>우리 설계에서 FENCE.I의 하드웨어 구현은 비교적 간단합니다. <strong>I-Cache의 모든 Valid 비트를 0으로 리셋</strong>하면 됩니다. 이후 IF 스테이지에서 명령어를 인출할 때 모든 접근이 미스가 되어, 메모리에서 최신 데이터를 다시 가져옵니다.</p>
+
+  <p>아래 코드는 FENCE.I 처리의 개념을 보여주는 의사코드(Pseudo-code)입니다. 실제 구현은 I-Cache 모듈의 리셋 로직과 통합됩니다.</p>
+
+  <pre><code class="language-systemverilog">
+// FENCE.I 처리: I-Cache 전체 무효화
+always_ff @(posedge clk or negedge rst_n) begin
+   if (!rst_n) begin
+      for (int i = 0; i &lt; CACHE_LINES; i++)
+         icache_valid[i] &lt;= 1'b0;
+   end else if (fence_i_execute) begin
+      // FENCE.I 명령어 감지 시 전체 무효화
+      for (int i = 0; i &lt; CACHE_LINES; i++)
+         icache_valid[i] &lt;= 1'b0;
+   end else if (/* 정상 Refill 조건 — 의사코드 */) begin
+      // ...
+   end
+end
+  </code></pre>
+
+  <h3>멀티코어에서의 캐시 일관성 (예고)</h3>
+
+  <p>단일 코어에서의 일관성 문제는 FENCE.I로 비교적 간단히 해결됩니다. 그러나 <strong>멀티코어(Multi-Core)</strong> 환경에서는 문제가 훨씬 복잡해집니다. 코어 A의 D-Cache가 수정한 데이터를, 코어 B의 D-Cache가 옛 데이터로 보유하고 있을 수 있기 때문입니다. 이를 해결하기 위해 <strong>MESI 프로토콜</strong>, <strong>스누프(Snoop) 버스</strong>, <strong>디렉토리 기반 프로토콜</strong> 등의 하드웨어 메커니즘이 필요합니다.</p>
+
+  <p>멀티코어 캐시 일관성에 대한 본격적인 논의는 <strong>Chapter 25 — 멀티코어와 캐시 일관성 기초</strong>에서 다룹니다. 현재 단계에서는 "단일 코어에서도 I-Cache와 D-Cache 간의 일관성 문제가 존재하며, FENCE.I로 해결한다"는 점만 기억하면 충분합니다.</p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> 캐시 일관성(Cache Coherence)이란 무엇이며, 왜 필요한가?</p>
+    <p><strong>A:</strong> 캐시 일관성은 같은 메모리 주소에 대해 모든 관찰자(I-Cache, D-Cache, 다른 코어)가 동일한 최신 값을 볼 수 있도록 보장하는 것입니다. 단일 코어에서는 I-Cache와 D-Cache 분리로 인한 자기 수정 코드 문제에서 발생하며 FENCE.I로 해결합니다. 멀티코어에서는 MESI 등의 프로토콜이 필요합니다. 일관성이 없으면 프로그램이 올바른 결과를 보장할 수 없습니다.</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 일반적인 C 프로그램에서 자기 수정 코드를 사용하는 경우가 있나요?</p>
+    <p><strong>A:</strong> 직접적인 자기 수정 코드는 드물지만, <strong>JIT(Just-In-Time) 컴파일러</strong>가 대표적인 예입니다. Java Virtual Machine이나 JavaScript 엔진(V8)은 실행 중에 기계어 코드를 생성하여 메모리에 쓰고 실행합니다. 또한 <strong>동적 라이브러리 로딩</strong>, <strong>디버거의 브레이크포인트 삽입</strong>도 유사한 패턴입니다. 이 모든 경우에 FENCE.I(또는 동등한 캐시 동기화 명령어)가 필요합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>FENCE.I가 I-Cache 전체를 무효화하면, 직후에 모든 명령어 인출이 Cold Miss가 됩니다. 이 성능 비용은 얼마나 될까요? FENCE.I의 사용 빈도가 낮다면 전체 성능에 미치는 영향은 어느 정도일까요?</p>
+  </aside>
+</section>
+<!-- ========== 14.6절 끝 ========== -->
+
+
+<!-- ========== 14.7절 시작 ========== -->
+<section id="sec-14-7">
+  <h2>14.7 본 챕터 요약 및 다음 단계</h2>
+
+  <p>이 챕터에서는 L1 데이터 캐시(D-Cache)의 설계를 완성하였습니다. Chapter 13의 읽기 전용 I-Cache에서 한 단계 나아가, <strong>쓰기 처리</strong>라는 근본적인 설계 과제를 해결하는 과정을 다루었습니다.</p>
+  <p>Write-Back 정책의 Dirty 비트, 5-state FSM, 2-Way LRU까지 익혔다면, 여러분은 현대 고성능 프로세서의 L1 캐시 핵심 구조를 직접 손으로 구현한 것입니다. 테스트벤치에서 Dirty Eviction이 정상 동작하는 <code>[PASS]</code> 메시지를 확인하는 순간의 성취감을 오래 기억하십시오.</p>
+  <p>Chapter 15에서는 이 캐시들을 메모리 컨트롤러와 연결하고, I-Cache와 D-Cache를 통합한 전체 시스템에서 CPI를 측정합니다. 지금까지 분리되어 있던 설계 요소들이 하나의 완성된 프로세서로 수렴하는 과정을 경험하게 됩니다.</p>
+</section>
+
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>Write-Through vs Write-Back:</strong> Write-Through는 매 Store마다 메모리에 동시 기록하여 일관성이 간단하지만 트래픽이 높다. Write-Back은 캐시에만 쓰고 Dirty 비트로 추적하여 Eviction 시에만 메모리에 기록하므로 트래픽이 낮지만 구현이 복잡하다.</li>
+    <li><strong>Dirty 비트:</strong> Write-Back 캐시에서 수정된 라인을 표시하는 1비트 플래그. Store 히트 시 1로 설정, Refill 시 0으로 초기화. Eviction 시 Dirty=1이면 메모리에 Write-Back이 필요하다.</li>
+    <li><strong>D-Cache FSM:</strong> IDLE → TAG_CHECK → (Hit: IDLE / Clean Miss: REFILL → UPDATE → IDLE / Dirty Miss: WRITE_BACK → REFILL → UPDATE → IDLE)의 세 가지 경로로 동작한다.</li>
+    <li><strong>2-Way Set-Associative:</strong> 각 세트에 2개의 Way를 두어 충돌 미스를 줄인다. Tag 비교기 2개와 LRU 비트(세트당 1비트)가 추가된다.</li>
+    <li><strong>LRU 교체 정책:</strong> 2-Way에서는 세트당 1비트로 정확한 LRU를 구현할 수 있다. 접근된 Way의 반대편을 LRU로 표시한다.</li>
+    <li><strong>dcache_stall:</strong> D-Cache 미스 시 전체 파이프라인을 동결시키는 신호. PC와 모든 파이프라인 레지스터를 Hold한다.</li>
+    <li><strong>캐시 일관성:</strong> 하버드 구조에서 I-Cache와 D-Cache 간의 일관성은 FENCE.I 명령어(I-Cache 전체 무효화)로 해결한다.</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> Write-Back 캐시에서 Dirty 비트가 1로 설정되는 시점과 0으로 리셋되는 시점을 각각 설명하시오.</li>
+    <li><strong>[이해]</strong> 4KB 직접 매핑 캐시(128 라인 × 32바이트)에서, 주소 <code>0x0001_2345</code>의 Tag, Index, Offset 값을 계산하시오.</li>
+    <li><strong>[적용]</strong> D-Cache FSM에서, Dirty Miss가 발생하고 메모리 응답이 매 워드당 2사이클(총 8워드)인 경우, Write-Back + Refill에 소요되는 총 사이클 수를 계산하시오.</li>
+    <li><strong>[분석]</strong> 2-Way 세트 연관 캐시와 동일 용량의 직접 매핑 캐시를 비교할 때, Tag 비교기 개수, Tag 비트 수, 세트 수가 각각 어떻게 변하는지 분석하시오. 하드웨어 비용 증가를 정량적으로 서술하시오.</li>
+    <li><strong>[분석]</strong> 프로그램이 배열 <code>int A[4096]</code>를 순차적으로 초기화할 때(4096회 SW 실행), 4KB Write-Through 캐시와 4KB Write-Back 캐시에서 각각 메모리 쓰기 트래픽(바이트 수)이 얼마인지 계산하시오. (힌트: Write-Back에서는 Eviction 횟수를 고려하시오.)</li>
+    <li><strong>[평가]</strong> 우리 설계에서 D-Cache를 4-Way로 확장한다면, LRU 구현 비용이 어떻게 변하는가? Tree-PLRU 방식으로 근사할 경우 세트당 필요한 비트 수를 구하고, 정확한 LRU와의 히트율 차이에 대해 논의하시오.</li>
+    <li><strong>[평가]</strong> 비차단(Non-Blocking) 캐시와 차단(Blocking) 캐시의 차이를 설명하고, 우리 설계에서 비차단 캐시를 도입하면 어떤 하드웨어 구조 변경이 필요한지 서술하시오.</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>Chapter 15에서는 <strong>메모리 컨트롤러와 캐시-메모리 인터페이스</strong>를 다룹니다. 현재까지 D-Cache의 메모리 인터페이스는 간이 메모리 모델과 연결되어 있었습니다. 다음 챕터에서는 캐시 미스 처리 FSM을 정교하게 설계하고, 버스트 전송(Burst Transfer)으로 캐시 라인 채움 효율을 높이며, I-Cache와 D-Cache를 통합한 전체 캐시 시뮬레이션에서 CPI와 히트율을 측정합니다. 이 인터페이스가 Chapter 16에서 AMBA AHB 버스로 교체되는 출발점이 됩니다.</p>
+</section>
+
+
+<!-- ========== 전체 소스 코드 섹션 ========== -->
+<section class="full-source-code">
+  <h2>전체 소스 코드</h2>
+  <p>지금 당장 전부 이해하지 않아도 됩니다. 각 절 학습 후 참조용으로 활용하세요. 코드를 처음 접할 때는 전체 구조만 파악하고, 이해가 어려운 부분은 해당 절을 다시 읽으면서 맞춰 보십시오.</p>
+
+  <h3>ch14_dcache_direct_mapped_wb.sv — Write-Back 직접 매핑 D-Cache</h3>
+  <pre><code class="language-systemverilog">// ============================================================================
+// Chapter 14 — Write-Back Direct-Mapped D-Cache
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// 설명: Write-Back 정책을 사용하는 직접 매핑 데이터 캐시
+//       Dirty 비트를 통해 수정된 캐시 라인을 추적하고,
+//       Eviction 시 메모리에 기록(Write-Back)합니다.
+// 파라미터:
+//   ADDR_WIDTH  = 32비트 주소
+//   CACHE_LINES = 128 (캐시 라인 수)
+//   BLOCK_WORDS = 8  (캐시 라인당 워드 수 = 32바이트)
+// 합성 대상: Xilinx Basys 3 (XC7A35T)
+// ============================================================================
+
+module dcache_direct_mapped_wb #(
+   parameter ADDR_WIDTH   = 32,
+   parameter CACHE_LINES  = 128,          // 캐시 라인 수
+   parameter BLOCK_WORDS  = 8,            // 라인당 워드 수 (32바이트)
+   parameter INDEX_WIDTH  = $clog2(CACHE_LINES),  // 7비트
+   parameter OFFSET_WIDTH = $clog2(BLOCK_WORDS) + 2, // 5비트 (워드 오프셋 + 바이트 오프셋)
+   parameter TAG_WIDTH    = ADDR_WIDTH - INDEX_WIDTH - OFFSET_WIDTH // 20비트
+)(
+   input  logic                    clk,
+   input  logic                    rst_n,
+
+   // CPU 인터페이스 (MEM 스테이지)
+   input  logic                    cpu_req_i,      // 캐시 요청
+   input  logic                    cpu_write_i,    // 1=쓰기, 0=읽기
+   input  logic [ADDR_WIDTH-1:0]   cpu_addr_i,     // 주소
+   input  logic [31:0]             cpu_wdata_i,    // 쓰기 데이터
+   input  logic [3:0]              cpu_byte_en_i,  // 바이트 인에이블
+   output logic [31:0]             cpu_rdata_o,    // 읽기 데이터
+   output logic                    dcache_stall_o, // 스톨 신호
+
+   // 메모리 인터페이스 (하위 메모리)
+   output logic                    mem_req_o,      // 메모리 요청
+   output logic                    mem_write_o,    // 메모리 쓰기
+   output logic [ADDR_WIDTH-1:0]   mem_addr_o,     // 메모리 주소
+   output logic [31:0]             mem_wdata_o,    // 메모리 쓰기 데이터
+   input  logic [31:0]             mem_rdata_i,    // 메모리 읽기 데이터
+   input  logic                    mem_ready_i     // 메모리 준비 완료
+);
+
+   // 주소 필드 분해
+   logic [TAG_WIDTH-1:0]    addr_tag;
+   logic [INDEX_WIDTH-1:0]  addr_index;
+   logic [2:0]              addr_word_offset; // 블록 내 워드 인덱스
+
+   assign addr_tag         = cpu_addr_i[ADDR_WIDTH-1 : INDEX_WIDTH+OFFSET_WIDTH];
+   assign addr_index       = cpu_addr_i[INDEX_WIDTH+OFFSET_WIDTH-1 : OFFSET_WIDTH];
+   assign addr_word_offset = cpu_addr_i[OFFSET_WIDTH-1 : 2]; // 워드 오프셋
+
+   // 캐시 저장소: Valid, Dirty, Tag, Data
+   logic                         valid_array [0:CACHE_LINES-1];
+   logic                         dirty_array [0:CACHE_LINES-1];
+   logic [TAG_WIDTH-1:0]         tag_array   [0:CACHE_LINES-1];
+   logic [31:0]                  data_array  [0:CACHE_LINES-1][0:BLOCK_WORDS-1];
+
+   // 히트/미스 판정
+   logic cache_hit;
+   logic cache_dirty;
+
+   assign cache_hit   = valid_array[addr_index] &amp;&amp;
+                         (tag_array[addr_index] == addr_tag);
+   assign cache_dirty = valid_array[addr_index] &amp;&amp; dirty_array[addr_index];
+
+   // FSM 상태 정의
+   typedef enum logic [2:0] {
+      S_IDLE,        // 대기 상태
+      S_TAG_CHECK,   // 태그 비교
+      S_WRITE_BACK,  // Dirty 라인 메모리 기록
+      S_REFILL,      // 메모리에서 캐시 라인 읽기
+      S_UPDATE       // 캐시 갱신 완료
+   } state_t;
+
+   state_t state, next_state;
+
+   // 워드 카운터: Write-Back/Refill 시 블록 내 워드 인덱스
+   logic [2:0] word_cnt;
+   logic       word_cnt_done;
+
+   assign word_cnt_done = (word_cnt == BLOCK_WORDS - 1) &amp;&amp; mem_ready_i;
+
+   // FSM: 상태 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         state &lt;= S_IDLE;
+      else
+         state &lt;= next_state;
+   end
+
+   // FSM: 다음 상태 로직
+   always_comb begin
+      next_state = state;
+      case (state)
+         S_IDLE: begin
+            if (cpu_req_i)
+               next_state = S_TAG_CHECK;
+         end
+         S_TAG_CHECK: begin
+            if (cache_hit)
+               next_state = S_IDLE;      // 히트: 즉시 완료
+            else if (cache_dirty)
+               next_state = S_WRITE_BACK; // 미스 + Dirty: 먼저 기록
+            else
+               next_state = S_REFILL;     // 미스 + Clean: 바로 채움
+         end
+         S_WRITE_BACK: begin
+            if (word_cnt_done)
+               next_state = S_REFILL;     // Write-Back 완료 후 Refill
+         end
+         S_REFILL: begin
+            if (word_cnt_done)
+               next_state = S_UPDATE;     // Refill 완료
+         end
+         S_UPDATE: begin
+            next_state = S_IDLE;          // 캐시 갱신 후 복귀
+         end
+         default: next_state = S_IDLE;
+      endcase
+   end
+
+   // 워드 카운터 제어
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         word_cnt &lt;= 3'b0;
+      end else begin
+         case (state)
+            S_WRITE_BACK, S_REFILL: begin
+               if (mem_ready_i)
+                  word_cnt &lt;= word_cnt + 3'b1;
+            end
+            default: word_cnt &lt;= 3'b0;
+         endcase
+      end
+   end
+
+   // 캐시 데이터 갱신 (Write Hit 및 Refill)
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         for (int i = 0; i &lt; CACHE_LINES; i++) begin
+            valid_array[i] &lt;= 1'b0;
+            dirty_array[i] &lt;= 1'b0;
+         end
+      end else begin
+         case (state)
+            S_TAG_CHECK: begin
+               if (cache_hit &amp;&amp; cpu_write_i) begin
+                  if (cpu_byte_en_i[0]) data_array[addr_index][addr_word_offset][7:0]   &lt;= cpu_wdata_i[7:0];
+                  if (cpu_byte_en_i[1]) data_array[addr_index][addr_word_offset][15:8]  &lt;= cpu_wdata_i[15:8];
+                  if (cpu_byte_en_i[2]) data_array[addr_index][addr_word_offset][23:16] &lt;= cpu_wdata_i[23:16];
+                  if (cpu_byte_en_i[3]) data_array[addr_index][addr_word_offset][31:24] &lt;= cpu_wdata_i[31:24];
+                  dirty_array[addr_index] &lt;= 1'b1; // Dirty 표시
+               end
+            end
+            S_REFILL: begin
+               if (mem_ready_i)
+                  data_array[addr_index][word_cnt] &lt;= mem_rdata_i;
+            end
+            S_UPDATE: begin
+               valid_array[addr_index] &lt;= 1'b1;
+               dirty_array[addr_index] &lt;= 1'b0; // 새로 채운 라인은 Clean
+               tag_array[addr_index]   &lt;= addr_tag;
+               // Store 미스였다면 새 데이터도 기록
+               if (cpu_write_i) begin
+                  if (cpu_byte_en_i[0]) data_array[addr_index][addr_word_offset][7:0]   &lt;= cpu_wdata_i[7:0];
+                  if (cpu_byte_en_i[1]) data_array[addr_index][addr_word_offset][15:8]  &lt;= cpu_wdata_i[15:8];
+                  if (cpu_byte_en_i[2]) data_array[addr_index][addr_word_offset][23:16] &lt;= cpu_wdata_i[23:16];
+                  if (cpu_byte_en_i[3]) data_array[addr_index][addr_word_offset][31:24] &lt;= cpu_wdata_i[31:24];
+                  dirty_array[addr_index] &lt;= 1'b1;
+               end
+            end
+            default: ;
+         endcase
+      end
+   end
+
+   // 출력 로직
+   assign cpu_rdata_o  = data_array[addr_index][addr_word_offset];
+   assign dcache_stall_o = (state != S_IDLE) &amp;&amp;
+                           !(state == S_TAG_CHECK &amp;&amp; cache_hit);
+
+   // 메모리 인터페이스
+   always_comb begin
+      mem_req_o   = 1'b0;
+      mem_write_o = 1'b0;
+      mem_addr_o  = '0;
+      mem_wdata_o = '0;
+      case (state)
+         S_WRITE_BACK: begin
+            mem_req_o   = 1'b1;
+            mem_write_o = 1'b1;
+            mem_addr_o  = {tag_array[addr_index], addr_index, word_cnt, 2'b00};
+            mem_wdata_o = data_array[addr_index][word_cnt];
+         end
+         S_REFILL: begin
+            mem_req_o   = 1'b1;
+            mem_write_o = 1'b0;
+            mem_addr_o  = {addr_tag, addr_index, word_cnt, 2'b00};
+         end
+         default: ;
+      endcase
+   end
+
+endmodule</code></pre>
+
+  <h3>ch14_dcache_2way_wb.sv — 2-Way 세트 연관 Write-Back D-Cache</h3>
+  <pre><code class="language-systemverilog">// ============================================================================
+// Chapter 14 — 2-Way Set-Associative Write-Back D-Cache
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// 구성: 64 sets x 2 ways x 32 bytes/line = 4KB 총 용량
+//       Tag 21비트, Index 6비트, Offset 5비트
+//       Pseudo-LRU: 세트당 1비트
+// ============================================================================
+
+module dcache_2way_wb #(
+   parameter ADDR_WIDTH   = 32,
+   parameter NUM_SETS     = 64,           // 세트 수
+   parameter NUM_WAYS     = 2,            // Way 수
+   parameter BLOCK_WORDS  = 8,            // 라인당 워드 수 (32바이트)
+   parameter INDEX_WIDTH  = $clog2(NUM_SETS),    // 6비트
+   parameter OFFSET_WIDTH = $clog2(BLOCK_WORDS) + 2, // 5비트
+   parameter TAG_WIDTH    = ADDR_WIDTH - INDEX_WIDTH - OFFSET_WIDTH // 21비트
+)(
+   input  logic                    clk,
+   input  logic                    rst_n,
+
+   // CPU 인터페이스
+   input  logic                    cpu_req_i,
+   input  logic                    cpu_write_i,
+   input  logic [ADDR_WIDTH-1:0]   cpu_addr_i,
+   input  logic [31:0]             cpu_wdata_i,
+   input  logic [3:0]              cpu_byte_en_i,
+   output logic [31:0]             cpu_rdata_o,
+   output logic                    dcache_stall_o,
+
+   // 메모리 인터페이스
+   output logic                    mem_req_o,
+   output logic                    mem_write_o,
+   output logic [ADDR_WIDTH-1:0]   mem_addr_o,
+   output logic [31:0]             mem_wdata_o,
+   input  logic [31:0]             mem_rdata_i,
+   input  logic                    mem_ready_i
+);
+
+   // 주소 필드 분해
+   logic [TAG_WIDTH-1:0]    addr_tag;
+   logic [INDEX_WIDTH-1:0]  addr_index;
+   logic [2:0]              addr_word_offset;
+
+   assign addr_tag         = cpu_addr_i[ADDR_WIDTH-1 : INDEX_WIDTH+OFFSET_WIDTH];
+   assign addr_index       = cpu_addr_i[INDEX_WIDTH+OFFSET_WIDTH-1 : OFFSET_WIDTH];
+   assign addr_word_offset = cpu_addr_i[OFFSET_WIDTH-1 : 2];
+
+   // 캐시 저장소: Way 0, Way 1
+   logic                         valid_array [0:NUM_WAYS-1][0:NUM_SETS-1];
+   logic                         dirty_array [0:NUM_WAYS-1][0:NUM_SETS-1];
+   logic [TAG_WIDTH-1:0]         tag_array   [0:NUM_WAYS-1][0:NUM_SETS-1];
+   logic [31:0]                  data_array  [0:NUM_WAYS-1][0:NUM_SETS-1][0:BLOCK_WORDS-1];
+   logic lru_array [0:NUM_SETS-1]; // LRU 비트: 세트당 1비트
+
+   // 히트/미스 판정 (Way 0, Way 1 동시 비교)
+   logic hit_way0, hit_way1;
+   logic cache_hit;
+   logic hit_way_sel;     // 히트된 Way
+   logic replace_way_sel; // 교체 대상 Way
+   logic replace_dirty;
+
+   assign hit_way0 = valid_array[0][addr_index] &amp;&amp;
+                     (tag_array[0][addr_index] == addr_tag);
+   assign hit_way1 = valid_array[1][addr_index] &amp;&amp;
+                     (tag_array[1][addr_index] == addr_tag);
+   assign cache_hit      = hit_way0 || hit_way1;
+   assign hit_way_sel    = hit_way1; // Way1 히트이면 1
+   assign replace_way_sel = lru_array[addr_index];
+   assign replace_dirty   = valid_array[replace_way_sel][addr_index] &amp;&amp;
+                            dirty_array[replace_way_sel][addr_index];
+
+   // FSM 상태 정의
+   typedef enum logic [2:0] {
+      S_IDLE, S_TAG_CHECK, S_WRITE_BACK, S_REFILL, S_UPDATE
+   } state_t;
+
+   state_t state, next_state;
+   logic [2:0] word_cnt;
+   logic       word_cnt_done;
+   logic       latched_replace_way; // 교체 Way 래치
+
+   assign word_cnt_done = (word_cnt == BLOCK_WORDS - 1) &amp;&amp; mem_ready_i;
+
+   // FSM: 상태 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) state &lt;= S_IDLE;
+      else        state &lt;= next_state;
+   end
+
+   // FSM: 다음 상태 로직
+   always_comb begin
+      next_state = state;
+      case (state)
+         S_IDLE:      if (cpu_req_i) next_state = S_TAG_CHECK;
+         S_TAG_CHECK: begin
+            if (cache_hit)       next_state = S_IDLE;
+            else if (replace_dirty) next_state = S_WRITE_BACK;
+            else                 next_state = S_REFILL;
+         end
+         S_WRITE_BACK: if (word_cnt_done) next_state = S_REFILL;
+         S_REFILL:     if (word_cnt_done) next_state = S_UPDATE;
+         S_UPDATE:     next_state = S_IDLE;
+         default:      next_state = S_IDLE;
+      endcase
+   end
+
+   // 워드 카운터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) word_cnt &lt;= 3'b0;
+      else begin
+         case (state)
+            S_WRITE_BACK, S_REFILL: if (mem_ready_i) word_cnt &lt;= word_cnt + 3'b1;
+            default: word_cnt &lt;= 3'b0;
+         endcase
+      end
+   end
+
+   // 교체 Way 래치
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) latched_replace_way &lt;= 1'b0;
+      else if (state == S_TAG_CHECK &amp;&amp; !cache_hit)
+         latched_replace_way &lt;= replace_way_sel;
+   end
+
+   // 캐시 데이터 갱신
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         for (int w = 0; w &lt; NUM_WAYS; w++)
+            for (int s = 0; s &lt; NUM_SETS; s++) begin
+               valid_array[w][s] &lt;= 1'b0;
+               dirty_array[w][s] &lt;= 1'b0;
+            end
+         for (int s = 0; s &lt; NUM_SETS; s++) lru_array[s] &lt;= 1'b0;
+      end else begin
+         case (state)
+            S_TAG_CHECK: begin
+               if (cache_hit) begin
+                  lru_array[addr_index] &lt;= hit_way_sel ? 1'b0 : 1'b1; // LRU 갱신
+                  if (cpu_write_i) begin
+                     if (cpu_byte_en_i[0]) data_array[hit_way_sel][addr_index][addr_word_offset][7:0]   &lt;= cpu_wdata_i[7:0];
+                     if (cpu_byte_en_i[1]) data_array[hit_way_sel][addr_index][addr_word_offset][15:8]  &lt;= cpu_wdata_i[15:8];
+                     if (cpu_byte_en_i[2]) data_array[hit_way_sel][addr_index][addr_word_offset][23:16] &lt;= cpu_wdata_i[23:16];
+                     if (cpu_byte_en_i[3]) data_array[hit_way_sel][addr_index][addr_word_offset][31:24] &lt;= cpu_wdata_i[31:24];
+                     dirty_array[hit_way_sel][addr_index] &lt;= 1'b1;
+                  end
+               end
+            end
+            S_REFILL: begin
+               if (mem_ready_i)
+                  data_array[latched_replace_way][addr_index][word_cnt] &lt;= mem_rdata_i;
+            end
+            S_UPDATE: begin
+               valid_array[latched_replace_way][addr_index] &lt;= 1'b1;
+               dirty_array[latched_replace_way][addr_index] &lt;= 1'b0;
+               tag_array[latched_replace_way][addr_index]   &lt;= addr_tag;
+               lru_array[addr_index] &lt;= latched_replace_way ? 1'b0 : 1'b1;
+               if (cpu_write_i) begin
+                  if (cpu_byte_en_i[0]) data_array[latched_replace_way][addr_index][addr_word_offset][7:0]   &lt;= cpu_wdata_i[7:0];
+                  if (cpu_byte_en_i[1]) data_array[latched_replace_way][addr_index][addr_word_offset][15:8]  &lt;= cpu_wdata_i[15:8];
+                  if (cpu_byte_en_i[2]) data_array[latched_replace_way][addr_index][addr_word_offset][23:16] &lt;= cpu_wdata_i[23:16];
+                  if (cpu_byte_en_i[3]) data_array[latched_replace_way][addr_index][addr_word_offset][31:24] &lt;= cpu_wdata_i[31:24];
+                  dirty_array[latched_replace_way][addr_index] &lt;= 1'b1;
+               end
+            end
+            default: ;
+         endcase
+      end
+   end
+
+   // 출력 로직
+   assign cpu_rdata_o = cache_hit ?
+      data_array[hit_way_sel][addr_index][addr_word_offset] :
+      data_array[latched_replace_way][addr_index][addr_word_offset];
+   assign dcache_stall_o = (state != S_IDLE) &amp;&amp;
+                           !(state == S_TAG_CHECK &amp;&amp; cache_hit);
+
+   // 메모리 인터페이스
+   always_comb begin
+      mem_req_o   = 1'b0;
+      mem_write_o = 1'b0;
+      mem_addr_o  = '0;
+      mem_wdata_o = '0;
+      case (state)
+         S_WRITE_BACK: begin
+            mem_req_o   = 1'b1;
+            mem_write_o = 1'b1;
+            mem_addr_o  = {tag_array[latched_replace_way][addr_index], addr_index, word_cnt, 2'b00};
+            mem_wdata_o = data_array[latched_replace_way][addr_index][word_cnt];
+         end
+         S_REFILL: begin
+            mem_req_o   = 1'b1;
+            mem_write_o = 1'b0;
+            mem_addr_o  = {addr_tag, addr_index, word_cnt, 2'b00};
+         end
+         default: ;
+      endcase
+   end
+
+endmodule</code></pre>
+
+  <h3>ch14_dcache_tb.sv — D-Cache 테스트벤치</h3>
+  <pre><code class="language-systemverilog">// ============================================================================
+// Chapter 14 — D-Cache 테스트벤치
+// RISC-V 프로세서 설계 완전정복
+// ============================================================================
+// 시나리오: 히트, Clean 미스, Dirty 미스(Eviction), LRU 교체
+// ============================================================================
+`timescale 1ns / 1ps
+
+module dcache_tb;
+
+   localparam ADDR_WIDTH  = 32;
+   localparam NUM_SETS    = 64;
+   localparam BLOCK_WORDS = 8;
+   localparam CLK_PERIOD  = 10; // 100 MHz
+   localparam MEM_LATENCY = 2;  // 메모리 응답 지연 (사이클)
+
+   logic                    clk, rst_n;
+   logic                    cpu_req, cpu_write;
+   logic [ADDR_WIDTH-1:0]   cpu_addr;
+   logic [31:0]             cpu_wdata, cpu_rdata;
+   logic [3:0]              cpu_byte_en;
+   logic                    dcache_stall;
+   logic                    mem_req, mem_write;
+   logic [ADDR_WIDTH-1:0]   mem_addr;
+   logic [31:0]             mem_wdata, mem_rdata;
+   logic                    mem_ready;
+
+   dcache_2way_wb #(
+      .ADDR_WIDTH(ADDR_WIDTH), .NUM_SETS(NUM_SETS), .BLOCK_WORDS(BLOCK_WORDS)
+   ) u_dcache (
+      .clk(clk), .rst_n(rst_n),
+      .cpu_req_i(cpu_req), .cpu_write_i(cpu_write),
+      .cpu_addr_i(cpu_addr), .cpu_wdata_i(cpu_wdata),
+      .cpu_byte_en_i(cpu_byte_en), .cpu_rdata_o(cpu_rdata),
+      .dcache_stall_o(dcache_stall),
+      .mem_req_o(mem_req), .mem_write_o(mem_write),
+      .mem_addr_o(mem_addr), .mem_wdata_o(mem_wdata),
+      .mem_rdata_i(mem_rdata), .mem_ready_i(mem_ready)
+   );
+
+   initial clk = 1'b0;
+   always #(CLK_PERIOD/2) clk = ~clk;
+
+   // 간이 메모리 모델
+   logic [31:0] main_memory [0:65535];
+   int          mem_delay_cnt;
+
+   initial begin
+      for (int i = 0; i &lt; 65536; i++)
+         main_memory[i] = i * 4;
+   end
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         mem_ready &lt;= 1'b0; mem_rdata &lt;= '0; mem_delay_cnt &lt;= 0;
+      end else begin
+         if (mem_req) begin
+            if (mem_delay_cnt &lt; MEM_LATENCY - 1) begin
+               mem_delay_cnt &lt;= mem_delay_cnt + 1;
+               mem_ready     &lt;= 1'b0;
+            end else begin
+               mem_ready     &lt;= 1'b1;
+               mem_delay_cnt &lt;= 0;
+               if (mem_write) main_memory[mem_addr[17:2]] &lt;= mem_wdata;
+               else           mem_rdata &lt;= main_memory[mem_addr[17:2]];
+            end
+         end else begin
+            mem_ready &lt;= 1'b0; mem_delay_cnt &lt;= 0;
+         end
+      end
+   end
+
+   int test_pass_cnt = 0;
+   int test_fail_cnt = 0;
+
+   task automatic cache_read(input logic [31:0] addr, output logic [31:0] rdata);
+      @(posedge clk); cpu_req &lt;= 1'b1; cpu_write &lt;= 1'b0;
+      cpu_addr &lt;= addr; cpu_byte_en &lt;= 4'hF;
+      @(posedge clk); cpu_req &lt;= 1'b0;
+      while (dcache_stall) @(posedge clk);
+      rdata = cpu_rdata;
+   endtask
+
+   task automatic cache_write(input logic [31:0] addr, input logic [31:0] wdata, input logic [3:0] byte_en);
+      @(posedge clk); cpu_req &lt;= 1'b1; cpu_write &lt;= 1'b1;
+      cpu_addr &lt;= addr; cpu_wdata &lt;= wdata; cpu_byte_en &lt;= byte_en;
+      @(posedge clk); cpu_req &lt;= 1'b0;
+      while (dcache_stall) @(posedge clk);
+   endtask
+
+   task automatic check_result(input string test_name, input logic [31:0] actual, input logic [31:0] expected);
+      if (actual === expected) begin
+         $display("[PASS] %s: got 0x%08h", test_name, actual); test_pass_cnt++;
+      end else begin
+         $display("[FAIL] %s: expected 0x%08h, got 0x%08h", test_name, expected, actual);
+         test_fail_cnt++;
+      end
+   endtask
+
+   logic [31:0] read_data;
+
+   initial begin
+      $display("D-Cache 2-Way Write-Back 테스트 시작");
+      rst_n = 1'b0; cpu_req = 1'b0; cpu_write = 1'b0;
+      cpu_addr = '0; cpu_wdata = '0; cpu_byte_en = '0;
+      repeat (5) @(posedge clk); rst_n = 1'b1; repeat (3) @(posedge clk);
+
+      $display("\n--- 시나리오 1: Cold Miss ---");
+      cache_read(32'h0000_0100, read_data);
+      check_result("Cold Miss Read @0x100", read_data, main_memory[32'h100 &gt;&gt; 2]);
+
+      $display("\n--- 시나리오 2: Cache Hit ---");
+      cache_read(32'h0000_0100, read_data);
+      check_result("Cache Hit Read @0x100", read_data, main_memory[32'h100 &gt;&gt; 2]);
+
+      $display("\n--- 시나리오 3: Write Hit ---");
+      cache_write(32'h0000_0100, 32'hDEAD_BEEF, 4'hF);
+      cache_read(32'h0000_0100, read_data);
+      check_result("Write Hit + Read Back @0x100", read_data, 32'hDEAD_BEEF);
+
+      $display("\n--- 시나리오 4: Same Set, Way 1 Allocation ---");
+      cache_read(32'h0010_0100, read_data);
+      check_result("Way 1 Alloc @0x100100", read_data, main_memory[32'h100100 &gt;&gt; 2]);
+
+      $display("\n--- 시나리오 5: Dirty Eviction ---");
+      cache_read(32'h0020_0100, read_data);
+      check_result("Dirty Eviction + Refill @0x200100", read_data, main_memory[32'h200100 &gt;&gt; 2]);
+      check_result("Write-Back 검증 @0x100", main_memory[32'h100 &gt;&gt; 2], 32'hDEAD_BEEF);
+
+      $display("\n--- 시나리오 6: Byte Write ---");
+      cache_write(32'h0010_0100, 32'h0000_00AB, 4'b0001);
+      cache_read(32'h0010_0100, read_data);
+      $display("  Byte write result: 0x%08h", read_data);
+
+      repeat (5) @(posedge clk);
+      $display("\n테스트 결과: %0d PASS, %0d FAIL", test_pass_cnt, test_fail_cnt);
+      if (test_fail_cnt == 0) $display("모든 테스트를 통과하였습니다!");
+      else                    $display("%0d개의 테스트가 실패하였습니다.", test_fail_cnt);
+      $finish;
+   end
+
+   initial begin $dumpfile("dcache_tb.vcd"); $dumpvars(0, dcache_tb); end
+   initial begin #1_000_000; $display("[TIMEOUT]"); $finish; end
+
+endmodule</code></pre>
+</section>
+<!-- ========== 전체 소스 코드 섹션 끝 ========== -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script>
+  document.querySelectorAll('code.language-systemverilog').forEach(el => {
+    el.classList.remove('language-systemverilog');
+    el.classList.add('language-verilog');
+  });
+  hljs.highlightAll();
+</script>
+</body>
+</html>
