@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 500" width="1200" height="500">
+  <defs>
+    <style>
+      .title { font-size: 20px; font-weight: bold; fill: #2563EB; font-family: Pretendard, sans-serif; }
+      .label { font-size: 13px; fill: #1F2937; font-family: Pretendard, sans-serif; }
+      .box-title { font-size: 12px; font-weight: bold; fill: #FFFFFF; font-family: Pretendard, sans-serif; }
+      .code { font-size: 11px; fill: #1F2937; font-family: monospace; }
+      .arrow { stroke: #2563EB; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .box-before { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; }
+      .box-after { fill: #3B82F6; stroke: #2563EB; stroke-width: 2; }
+      .linker { fill: #60A5FA; stroke: #2563EB; stroke-width: 2; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2563EB" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="600" y="35" text-anchor="middle" class="title">링커의 역할 — 목적 파일 → 실행 파일</text>
+
+  <!-- ===== LEFT: 링커 전 ===== -->
+  <g id="before">
+    <!-- Header -->
+    <text x="200" y="85" text-anchor="middle" class="label" font-weight="bold">링커 전</text>
+
+    <!-- Object files -->
+    <rect x="80" y="110" width="100" height="60" class="box-before" rx="5"/>
+    <text x="130" y="138" text-anchor="middle" class="box-title">main.o</text>
+    <text x="130" y="158" text-anchor="middle" class="code" font-size="10">main() 함수</text>
+
+    <rect x="200" y="110" width="100" height="60" class="box-before" rx="5"/>
+    <text x="250" y="138" text-anchor="middle" class="box-title">driver.o</text>
+    <text x="250" y="158" text-anchor="middle" class="code" font-size="10">uart_putchar()</text>
+
+    <rect x="320" y="110" width="100" height="60" class="box-before" rx="5"/>
+    <text x="370" y="138" text-anchor="middle" class="box-title">startup.o</text>
+    <text x="370" y="158" text-anchor="middle" class="code" font-size="10">_start 레이블</text>
+
+    <!-- Question mark -->
+    <text x="225" y="230" text-anchor="middle" class="label" font-weight="bold" font-size="14">주소가 결정되지 않음?</text>
+    <text x="225" y="260" text-anchor="middle" class="label" font-size="11">어디에 배치할 것인가?</text>
+  </g>
+
+  <!-- ===== MIDDLE: 링커 & 링커 스크립트 ===== -->
+  <g id="linker">
+    <!-- Linker icon -->
+    <circle cx="600" cy="170" r="35" class="linker"/>
+    <text x="600" y="175" text-anchor="middle" class="box-title" font-size="20">⚙️</text>
+
+    <!-- Linker script -->
+    <rect x="550" y="230" width="100" height="50" class="box-before" rx="5"/>
+    <text x="600" y="250" text-anchor="middle" class="code" font-size="10">MEMORY {</text>
+    <text x="600" y="265" text-anchor="middle" class="code" font-size="9">IMEM: 0x8000_0000</text>
+
+    <!-- Arrows pointing to linker -->
+    <path d="M 180 140 Q 500 160 565 160" class="arrow"/>
+    <path d="M 300 140 Q 500 165 565 165" class="arrow"/>
+    <path d="M 420 140 Q 500 170 565 170" class="arrow"/>
+
+    <!-- Arrow from linker script to linker -->
+    <path d="M 600 230 L 600 205" class="arrow"/>
+  </g>
+
+  <!-- ===== RIGHT: 링커 후 ===== -->
+  <g id="after">
+    <!-- Header -->
+    <text x="950" y="85" text-anchor="middle" class="label" font-weight="bold">링커 후</text>
+
+    <!-- Memory map box -->
+    <rect x="850" y="110" width="150" height="220" class="box-after" rx="5"/>
+
+    <!-- IMEM section -->
+    <rect x="860" y="120" width="130" height="50" fill="#2563EB" stroke="none"/>
+    <text x="925" y="138" text-anchor="middle" class="code" font-size="10" fill="white">0x8000_0000</text>
+    <text x="925" y="152" text-anchor="middle" class="code" font-size="9" fill="white">.text (코드)</text>
+    <text x="925" y="165" text-anchor="middle" class="code" font-size="9" fill="white">startup.o + main.o</text>
+
+    <!-- DMEM section -->
+    <rect x="860" y="180" width="130" height="70" fill="#3B82F6" stroke="none"/>
+    <text x="925" y="195" text-anchor="middle" class="code" font-size="10" fill="white">0x8000_4000</text>
+    <text x="925" y="210" text-anchor="middle" class="code" font-size="9" fill="white">.data</text>
+    <text x="925" y="224" text-anchor="middle" class="code" font-size="9" fill="white">.bss</text>
+    <text x="925" y="238" text-anchor="middle" class="code" font-size="9" fill="white">driver.o</text>
+
+    <!-- MMIO section -->
+    <rect x="860" y="260" width="130" height="50" fill="#60A5FA" stroke="none"/>
+    <text x="925" y="278" text-anchor="middle" class="code" font-size="10" fill="white">0xC000_0000</text>
+    <text x="925" y="292" text-anchor="middle" class="code" font-size="9" fill="white">주변 장치</text>
+
+    <!-- Memory range labels -->
+    <text x="850" y="350" class="label" font-size="10">실행 파일 (app.elf)</text>
+    <text x="850" y="370" class="label" font-size="10">모든 주소 결정됨 ✓</text>
+  </g>
+
+  <!-- Arrow from linker to right side -->
+  <path d="M 650 170 L 800 170" class="arrow" stroke-width="3"/>
+  <text x="725" y="160" class="label" font-size="12" font-weight="bold">링커</text>
+
+  <!-- Description box -->
+  <rect x="50" y="410" width="1100" height="70" fill="#F3F4F6" stroke="#2563EB" stroke-width="1" rx="5"/>
+  <text x="600" y="433" text-anchor="middle" class="label" font-weight="bold" font-size="12">링커의 역할:</text>
+  <text x="60" y="455" class="label" font-size="11">1. 목적 파일들을 읽고 (main.o, driver.o, startup.o)</text>
+  <text x="60" y="472" class="label" font-size="11">2. 링커 스크립트에 따라 메모리 주소에 배치 (IMEM → 0x8000_0000, DMEM → 0x8000_4000, MMIO → 0xC000_0000)</text>
+
+</svg>

@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 22 — 소프트웨어 스택 연동</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js atom-one-dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 22</span>
+  <h1>소프트웨어 스택 연동</h1>
+  <p class="chapter-intro">당신이 설계한 RISC-V 프로세서가 이제 진정한 의미의 "컴퓨터"가 되는 순간입니다. 이 챕터에서는 링커 스크립트, C 프로그램 실행 흐름, 그리고 주변 장치 드라이버를 통해 하드웨어와 소프트웨어를 연결하고, 마지막으로 Basys 3 보드에서 C 코드를 직접 실행합니다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>링커 스크립트의 SECTIONS 문법을 이해하고, `.text`/`.data`/`.bss` 메모리 배치를 설계할 수 있다.</li>
+    <li>C 프로그램의 실행 흐름(스타트업 코드 → main() → 무한 루프)을 추적하고, ABI 규약을 설명할 수 있다.</li>
+    <li>MMIO 레지스터 접근으로 UART, GPIO, 타이머 드라이버를 작성할 수 있다.</li>
+    <li>Basys 3에서 C 프로그램을 컴파일, 로드, 실행하고 UART/LED로 동작을 검증할 수 있다.</li>
+    <li>하드웨어와 소프트웨어의 인터페이스를 설계하고, 성능 카운터로 시스템을 평가할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== Section 22.1: 링커 스크립트와 메모리 맵 ========== -->
+<section id="sec-22-1">
+  <h2>22.1 링커 스크립트와 메모리 맵</h2>
+
+  <p>당신은 지금까지 하드웨어를 설계했습니다. Verilog 코드를 합성해서 FPGA 비트스트림을 만들었습니다. 하지만 여기서 새로운 질문이 생깁니다.</p>
+
+  <p><strong>"하드웨어는 완성했어. 그런데 소프트웨어는? C 프로그램은 어떻게 메모리에 배치되고, CPU는 어떻게 첫 명령어를 찾아 실행할까?"</strong></p>
+
+  <p>이 섹션은 그 대답입니다. 바로 **링커 스크립트**가 그 역할을 합니다.</p>
+
+  <h3>메모리 맵의 이해</h3>
+
+  <p>먼저 우리 Basys 3 프로세서의 메모리 구조를 정리합시다. Ch15에서 설계했던 메모리 구조를 떠올려보면:</p>
+
+  <ul>
+    <li><strong>I-Cache (IMEM)</strong>: 주소 0x8000_0000 ~ 0x8000_3FFF (16KB) — 명령어 저장</li>
+    <li><strong>D-Cache (DMEM)</strong>: 주소 0x8000_0000 ~ 0x8000_2000 (8KB, 또는 확장 가능) — 데이터 저장</li>
+    <li><strong>주변 장치 (MMIO)</strong>: 주소 0xC000_0000 이상 — UART, GPIO, 타이머 등</li>
+  </ul>
+
+  <p>C 프로그램도 이 메모리에 배치되어야 합니다. 예를 들어:</p>
+
+  <ul>
+    <li><code>.text</code> 섹션 (코드) → IMEM에 배치</li>
+    <li><code>.data</code> 섹션 (초기화된 전역변수) → DMEM에 배치</li>
+    <li><code>.bss</code> 섹션 (미초기화 전역변수) → DMEM에 배치</li>
+    <li>런타임 스택 → DMEM의 최상단부터 감소 방향</li>
+  </ul>
+
+  <p>**링커 스크립트**는 이 배치를 제어하는 "처방전"입니다. C 코드를 컴파일하는 것만으로는 부족합니다. 링커가 "이 코드는 0x0000_0000에 넣고, 그 데이터는 0x1000_0000에 넣어"라는 지시가 필요합니다.</p>
+
+  <div class="analogy">
+    <strong>비유: 건설 설계도</strong><br/>
+    링커 스크립트는 "건축가가 그리는 설계도"와 같습니다.
+    <ul>
+      <li><strong>건설사</strong> (링커)는 건축 경험이 많지만, 구체적인 지시가 없으면 "이 벽은 어디에 지을까?" 헷갈립니다.</li>
+      <li><strong>설계도</strong> (링커 스크립트)가 있으면 "거실은 1층 앞쪽, 침실은 2층 뒤쪽"이라고 명확히 지정합니다.</li>
+      <li>결과: 설계도 없으면 엉망, 설계도 있으면 예상대로 완성.</li>
+    </ul>
+    <strong>한계:</strong> 실제 건설과 달리, 링커 스크립트는 동적 메모리 할당(malloc)은 관여하지 않습니다. 모든 섹션의 크기가 컴파일 시점에 결정되어야 합니다.<br/>
+  </div>
+
+  <figure>
+    <img src="../figures/ch22_sec01_memory_map.svg" alt="Basys 3 메모리 맵">
+    <figcaption>그림 22.1: Basys 3 메모리 맵 — IMEM(0x8000_0000), DMEM(0x8000_0000, 8KB), 주변 장치(0xC000_0000)</figcaption>
+  </figure>
+
+  <h3>링커 스크립트의 3가지 핵심 요소</h3>
+
+  <p>링커 스크립트는 다음 3가지만 정의하면 됩니다:</p>
+
+  <ol>
+    <li><strong>MEMORY 블록</strong>: 우리 프로세서의 메모리 지도 정의
+      <ul>
+        <li>IMEM: 시작 주소, 크기</li>
+        <li>DMEM: 시작 주소, 크기</li>
+      </ul>
+    </li>
+    <li><strong>SECTIONS 블록</strong>: C 코드의 어느 부분이 어디로 갈 것인가
+      <ul>
+        <li>.text (코드) → IMEM</li>
+        <li>.data (초기화된 데이터) → DMEM</li>
+        <li>.bss (미초기화 데이터) → DMEM</li>
+      </ul>
+    </li>
+    <li><strong>심볼 정의</strong>: 스택 포인터, 힙 포인터 등 런타임 중요 주소</li>
+  </ol>
+
+  <figure>
+    <img src="../figures/ch22_sec01_linker_effect.svg" alt="링커의 역할 — 목적 파일 → 실행 파일">
+    <figcaption>그림 22.1A: 링커의 역할 — 목적 파일을 메모리 주소에 배치</figcaption>
+  </figure>
+
+  <p>여기 우리의 **최소 링커 스크립트 템플릿**입니다:</p>
+
+  <pre><code class="language-bash">/* ch22_linker.ld — RV32I 링커 스크립트 템플릿 */
+
+/* MEMORY: Basys 3의 메모리 구조 정의 */
+MEMORY {
+    IMEM (rx)  : ORIGIN = 0x80000000, LENGTH = 16K   /* 명령어 메모리 */
+    DMEM (rwx) : ORIGIN = 0x80000000, LENGTH = 8K    /* 데이터 메모리 */
+}
+
+/* SECTIONS: C 코드의 어느 부분이 어디로 갈 것인가? */
+SECTIONS {
+    /* 코드 섹션 → IMEM */
+    .text : {
+        *(.text*)           /* 모든 .text 섹션 */
+        *(.rodata*)         /* 읽기전용 데이터 (상수) */
+    } > IMEM
+
+    /* 초기화된 데이터 → DMEM */
+    .data : {
+        *(.data*)
+    } > DMEM
+
+    /* 미초기화 데이터 → DMEM (메모리만 예약, 값은 0으로 초기화) */
+    .bss : {
+        *(.bss*)
+        *(COMMON)
+    } > DMEM
+
+    /* 스택 포인터 초기값 설정 (DMEM 끝) */
+    __stack_end = ORIGIN(DMEM) + LENGTH(DMEM);
+}
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>링커 스크립트는 한 번 작성 후 거의 수정하지 않습니다. 산업 현장에서도 "선배의 링커 스크립트를 복사-붙여넣기"가 표준 관례입니다. 여기서는 원리만 이해하고, 실전에서는 제공된 템플릿을 사용하세요.</p>
+  </aside>
+
+  <h3>실습: 메모리 맵 그리기</h3>
+
+  <p><strong>문제:</strong> 다음 링커 스크립트를 분석하고, 메모리 배치도(주소 범위)를 그리세요.</p>
+
+  <pre><code class="language-bash">MEMORY {
+    IMEM : ORIGIN = 0x80000000, LENGTH = 0x4000
+    DMEM : ORIGIN = 0x80000000, LENGTH = 0x2000
+}
+  </code></pre>
+
+  <p><strong>풀이:</strong></p>
+
+  <ul>
+    <li>IMEM: 0x8000_0000 ~ 0x8000_3FFF (16KB, 0x4000 = 2^14)</li>
+    <li>DMEM: 0x8000_0000 ~ 0x8000_1FFF (8KB, 0x2000 = 2^13)</li>
+  </ul>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>당신이 Ch15에서 배웠던 메모리 설계가 지금 링커 스크립트로 표현되고 있습니다. 다음을 확인해보세요:<br/>
+    • IMEM의 16KB 크기가 명령어 캐시 크기와 일치하나요?<br/>
+    • DMEM의 32KB가 데이터 캐시 + 스택 영역으로 충분한가요?<br/>
+    • 스택과 힙이 충돌할 위험이 없나요?</p>
+  </aside>
+
+</section>
+
+<!-- ========== Section 22.2: C 프로그램 실행 흐름 ========== -->
+<section id="sec-22-2">
+  <h2>22.2 C 프로그램 실행 흐름</h2>
+
+  <p>컴파일러(gcc)가 C 코드를 어셈블리로 바꾸고, 링커(ld)가 메모리에 배치합니다. 하지만 그 후 어떤 일이 일어날까요? CPU가 첫 명령어를 어떻게 찾고 실행할까요?</p>
+
+  <h3>부트스트랩: _start부터 main()까지</h3>
+
+  <p>전원이 켜지면 CPU의 프로그램 카운터(PC)는 0x0000_0000으로 리셋됩니다. 이곳은 IMEM의 시작 주소입니다. CPU가 실행할 첫 명령어가 여기 있어야 합니다.</p>
+
+  <p>문제: C의 `main()` 함수만 있으면, CPU는 main이 어디 있는지 모릅니다. 따라서 **부트스트랩 코드(bootstrap code)**가 필요합니다. 이것을 보통 `_start` 심볼로 표현합니다.</p>
+
+  <figure>
+    <img src="../figures/ch22_sec02_startup_flow.svg" alt="부팅 시퀀스 — 리셋부터 main() 호출까지">
+    <figcaption>그림 22.2A: 부팅 시퀀스 — CPU 리셋부터 main() 호출까지의 7단계</figcaption>
+  </figure>
+
+  <p>부트스트랩의 역할은:</p>
+
+  <ol>
+    <li>스택 포인터(sp = x2 레지스터) 초기화 (링커가 정의한 `__stack_end` 사용)</li>
+    <li>전역 포인터(gp = x3 레지스터) 초기화 (선택사항, 빠른 주소 접근)</li>
+    <li>`.bss` 섹션 0으로 초기화 (C의 static/global 변수들이 0으로 시작되어야 함)</li>
+    <li>`main()` 함수 호출</li>
+    <li>복귀 후 무한 루프 (임베디드 시스템은 "프로그램이 끝나는 일"이 없음)</li>
+  </ol>
+
+  <p>여기 우리의 **스타트업 어셈블리 템플릿**입니다:</p>
+
+  <pre><code class="language-bash">/* ch22_startup.S — RV32I 스타트업 코드 */
+
+.section .text.init    /* 특수 섹션: 맨 앞에 배치됨 */
+.globl _start          /* 링커가 여기를 진입점으로 사용 */
+
+_start:
+    /* 1. 스택 포인터 초기화 */
+    /* __stack_end는 링커 스크립트에서 정의함 */
+    la sp, __stack_end    /* sp ← 링커가 정의한 스택 최상단 주소 */
+
+    /* 2. 전역 포인터 초기화 (선택사항) */
+    /* la gp, __global_pointer$ */
+
+    /* 3. .bss 섹션 0으로 초기화 (링커 심볼 사용) */
+    la a0, __bss_start    /* a0 ← .bss 시작 */
+    la a1, __bss_end      /* a1 ← .bss 끝 */
+    ble a0, a1, _clear_bss_done
+_clear_bss:
+    sw zero, 0(a0)        /* 메모리[a0] ← 0 */
+    addi a0, a0, 4        /* a0 += 4 (다음 4바이트) */
+    blt a0, a1, _clear_bss
+_clear_bss_done:
+
+    /* 4. main() 함수 호출 */
+    /* RISC-V Calling Convention: 반환값은 a0에 저장됨 */
+    jal ra, main          /* ra에 복귀주소 저장하고 main() 점프 */
+
+    /* 5. main() 복귀 후: 무한 루프 */
+    /* (임베디드 시스템은 계속 실행되어야 함) */
+_loop:
+    j _loop               /* 무한 루프 */
+
+.end
+  </code></pre>
+
+  <figure>
+    <img src="../figures/ch22_sec02_stack_init.svg" alt="메모리 레이아웃 — 스택 초기화">
+    <figcaption>그림 22.2B: 메모리 레이아웃 — IMEM, DMEM, 힙, 스택의 배치 및 스택 포인터 초기화</figcaption>
+  </figure>
+
+  <p>이제 간단한 **main() 함수**를 만들어봅시다:</p>
+
+  <pre><code class="language-bash">/* ch22_main_example.c — Hello World 시작 프로그램 */
+
+/* 전역 변수 (C의 모든 글로벌 변수는 .data 또는 .bss에 배치됨) */
+int counter = 42;           /* .data (초기화됨) */
+char buffer[256];           /* .bss (미초기화, 메모리만 예약) */
+
+int main(void) {
+    /* 로컬 변수 (스택에 배치됨) */
+    int x = 10;
+    int y = 20;
+    int result = x + y;
+
+    /* 무한 루프 (임베디드 시스템의 표준) */
+    while (1) {
+        /* 여기서 주변 장치와 상호작용 */
+        /* 다음 섹션에서 배우게 됩니다 */
+    }
+
+    return 0;  /* 도달 불가능 (while(1)이 있으므로) */
+}
+  </code></pre>
+
+  <h3>RISC-V Calling Convention (호출 규약)</h3>
+
+  <p>함수 호출 시 인자와 복귀값이 어느 레지스터에 저장되는지 정의하는 것을 **Calling Convention**이라고 합니다. RISC-V RV32I는 다음을 따릅니다:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>용도</th>
+        <th>레지스터</th>
+        <th>이름</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>인자 1~8</td>
+        <td>x10~x17</td>
+        <td>a0~a7</td>
+        <td>함수의 처음 8개 인자를 이 레지스터로 전달</td>
+      </tr>
+      <tr>
+        <td>복귀값</td>
+        <td>x10, x11</td>
+        <td>a0, a1</td>
+        <td>함수의 반환값 (64비트는 a0:a1에 저장)</td>
+      </tr>
+      <tr>
+        <td>복귀 주소</td>
+        <td>x1</td>
+        <td>ra</td>
+        <td>JAL 명령어가 자동으로 저장</td>
+      </tr>
+      <tr>
+        <td>스택 포인터</td>
+        <td>x2</td>
+        <td>sp</td>
+        <td>스택의 현재 위치 (감소 방향)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="analogy">
+    <strong>비유: 전화 대화의 규칙</strong><br/>
+    Calling Convention은 "전화로 대화할 때의 약속"과 같습니다.
+    <ul>
+      <li><strong>인자 전달</strong>: "목소리 톤(높음, 중간, 낮음)으로 중요도(높음, 중간, 낮음) 전달"이라는 암묵적 약속</li>
+      <li><strong>복귀값</strong>: "답변은 항상 처음 한 문장으로 핵심을 표현한다"는 규칙</li>
+      <li><strong>복귀 주소</strong>: "어디 전화국에서 전화했는지 기록해두고 나중에 그곳으로 콜백"</li>
+    </ul>
+    <strong>한계:</strong> 실제 전화와 달리, 컴퓨터는 모든 레지스터를 저장할 책임이 누구인지 명확히 정의합니다 (caller-saved vs callee-saved).<br/>
+  </div>
+
+  <h3>크로스 컴파일 과정</h3>
+
+  <p>우리가 사용하는 컴파일러는 **크로스 컴파일러(cross compiler)**입니다. 이는 "현재 OS에서 다른 대상 아키텍처의 바이너리를 생성"한다는 뜻입니다.</p>
+
+  <pre><code class="language-bash"># 컴파일 단계별 명령어
+
+# 1. C 코드 전처리 (매크로 전개)
+riscv32-unknown-elf-cpp ch22_main.c -o main.i
+
+# 2. 컴파일 (어셈블리 생성)
+riscv32-unknown-elf-gcc -c main.c -o main.o
+
+# 3. 링킹 (링커 스크립트 적용)
+riscv32-unknown-elf-ld -T ch22_linker.ld main.o -o app.elf
+
+# 4. 바이너리 변환 (ELF → BIN, Vivado 로드용)
+riscv32-unknown-elf-objcopy -O binary app.elf app.bin
+
+# 5. 16진수 변환 (선택사항, IMEM .coe 파일 생성)
+riscv32-unknown-elf-objcopy -O verilog app.elf app.hex
+  </code></pre>
+
+  <figure>
+    <img src="../figures/ch22_sec02_toolchain.svg" alt="크로스컴파일 도구 체인">
+    <figcaption>그림 22.2: 크로스컴파일 도구 체인 — C 코드에서 FPGA 로드까지의 단계</figcaption>
+  </figure>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q: 왜 스타트업 코드가 필요한가요?</strong></p>
+    <p><strong>A:</strong> Linux나 Windows 같은 OS가 있으면 OS가 스택 초기화, 메인 함수 호출 등을 해줍니다. 하지만 Basys 3는 OS가 없으므로, 우리가 직접 해야 합니다. 이것이 "임베디드 프로그래밍"의 특징입니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>"왜 RISC-V는 JAL 명령어에서 복귀 주소를 자동으로 ra 레지스터에 저장하나요?"</strong><br/>
+    → "Calling Convention을 단순화하기 위해서입니다. 모든 함수가 동일한 복귀 메커니즘을 따르므로, 컴파일러가 함수 호출과 복귀를 일관되게 생성할 수 있습니다."</p>
+  </aside>
+
+</section>
+
+<!-- ========== Section 22.3: 주변 장치 드라이버 작성 ========== -->
+<section id="sec-22-3">
+  <h2>22.3 주변 장치 드라이버 작성</h2>
+
+  <p>이제 C 프로그램이 메모리에 배치되고 실행됩니다. 하지만 아무도 프로그램의 결과를 볼 수 없습니다. UART 없이는 "Hello World"를 출력할 수 없고, GPIO 없이는 LED를 켤 수 없습니다.</p>
+
+  <p>이 섹션에서는 **주변 장치 드라이버**를 작성합니다. 드라이버는 "하드웨어 레지스터를 C 함수로 감싸는 것"입니다. 단순하지만 강력합니다.</p>
+
+  <h3>드라이버의 정의</h3>
+
+  <p>드라이버를 단순하게 생각하면:</p>
+
+  <div class="analogy">
+    <strong>비유: 원격 제어와 TV</strong><br/>
+    <ul>
+      <li><strong>하드웨어</strong> (TV): 전원 버튼, 채널 버튼, 음량 다이얼</li>
+      <li><strong>드라이버</strong> (원격 제어): "버튼을 누르면 적외선 신호를 보낸다"는 변환기</li>
+      <li><strong>소프트웨어</strong> (사용자): 손가락으로 버튼을 누르고 → 드라이버가 처리 → TV가 반응</li>
+    </ul>
+    <strong>한계:</strong> 실제 임베디드 드라이버는 에러 처리, 타이밍, 인터럽트 등이 복잡합니다.<br/>
+  </div>
+
+  <figure>
+    <img src="../figures/ch22_sec03_driver_architecture.svg" alt="드라이버 아키텍처 — 3가지 패턴 통일">
+    <figcaption>그림 22.3: 드라이버 아키텍처 — 3개 드라이버(UART, GPIO, Timer)의 통일된 설계 패턴</figcaption>
+  </figure>
+
+  <p>우리의 3단계 드라이버 설계:</p>
+
+  <ol>
+    <li><strong>Step 1: 레지스터 주소 정의</strong> — C 포인터로 메모리 주소 표현</li>
+    <li><strong>Step 2: 레지스터 비트 조작</strong> — 함수로 포장</li>
+    <li><strong>Step 3: 고수준 API</strong> — 사용자가 하드웨어를 몰라도 쓸 수 있게</li>
+  </ol>
+
+  <h3>22.3.1 UART 드라이버 (printf 구현)</h3>
+
+  <p>UART는 **Universal Asynchronous Receiver-Transmitter** — "한 글자씩 직렬로 보내는 통신 장치"입니다. Ch17에서 하드웨어 설계를 배웠습니다. 이제 소프트웨어로 접근합니다.</p>
+
+  <p>UART 메모리 맵 (Ch17 설계 기준):</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>오프셋</th>
+        <th>이름</th>
+        <th>비트</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0x00</td>
+        <td>TX_DATA</td>
+        <td>[7:0]</td>
+        <td>송신 데이터 레지스터 (쓰기)</td>
+      </tr>
+      <tr>
+        <td>0x04</td>
+        <td>STATUS</td>
+        <td>[0] = TX_READY</td>
+        <td>1 = 송신 가능, 0 = 송신 중</td>
+      </tr>
+      <tr>
+        <td>0x04</td>
+        <td>STATUS</td>
+        <td>[1] = RX_VALID</td>
+        <td>1 = 수신 데이터 있음, 0 = 없음</td>
+      </tr>
+      <tr>
+        <td>0x08</td>
+        <td>RX_DATA</td>
+        <td>[7:0]</td>
+        <td>수신 데이터 레지스터 (읽기)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>UART 드라이버 구현:</p>
+
+  <pre><code class="language-bash">/* ch22_uart_driver.c — UART printf 연결 */
+
+/* 레지스터 주소 정의 (메모리 맵) */
+#define UART_BASE 0xC0000000
+#define UART_TX_DATA  ((volatile uint32_t *)(UART_BASE + 0x00))
+#define UART_RX_DATA  ((volatile uint32_t *)(UART_BASE + 0x08))
+#define UART_STATUS   ((volatile uint32_t *)(UART_BASE + 0x04))
+
+/* 하위 레벨: 한 글자 송신 */
+void uart_putchar(char c) {
+    /* TX_READY 폴링 (STATUS 비트[0]이 1일 때까지 대기) */
+    while ((*UART_STATUS & 0x1) == 0) {
+        /* 계속 대기... (송신 중) */
+    }
+    /* 송신 가능하면 데이터 레지스터에 쓰기 */
+    *UART_TX_DATA = (uint32_t)c;
+}
+
+/* 상위 레벨: 문자열 송신 */
+void uart_puts(const char *str) {
+    while (*str != '\0') {
+        uart_putchar(*str);
+        str++;
+    }
+}
+
+/* printf 연결 (C 라이브러리가 호출하는 함수) */
+/* gcc가 printf()를 _write()로 변환 → 우리가 UART로 구현 */
+int _write(int fd, char *buf, int len) {
+    for (int i = 0; i &lt; len; i++) {
+        uart_putchar(buf[i]);
+    }
+    return len;
+}
+  </code></pre>
+
+  <p>**핵심: printf() 연결 원리**</p>
+
+  <p>사용자가 `printf("Hello\n")` 쓰면:</p>
+
+  <ol>
+    <li>C 표준 라이브러리의 printf() 호출</li>
+    <li>내부적으로 `_write(1, "Hello\n", 6)` 호출 (1 = stdout)</li>
+    <li>우리가 _write()를 구현 → uart_putchar() 반복 호출</li>
+    <li>UART 하드웨어가 USB로 PC에 전송</li>
+    <li>PC의 터미널에 "Hello"가 나타남!</li>
+  </ol>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>`volatile` 키워드가 중요합니다. `volatile uint32_t *reg`라고 선언하면 "이 변수는 컴파일러가 최적화하지 마"라고 지시합니다. UART_STATUS는 외부 장치(UART 컨트롤러)가 값을 바꾸므로, 컴파일러의 캐싱은 위험합니다.</p>
+  </aside>
+
+  <h3>22.3.2 GPIO 드라이버 (LED/버튼 제어)</h3>
+
+  <p>GPIO(General-Purpose Input/Output)는 "범용 입출력"입니다. Basys 3의 LED와 버튼을 제어합니다.</p>
+
+  <pre><code class="language-bash">/* ch22_gpio_driver.c — GPIO LED/버튼 제어 */
+
+#define GPIO_BASE 0xC0000010
+#define GPIO_OUT ((volatile uint32_t *)(GPIO_BASE + 0x00))  /* LED 출력 */
+#define GPIO_IN  ((volatile uint32_t *)(GPIO_BASE + 0x04))  /* 버튼 입력 */
+
+/* LED 제어 (LD15~LD0) */
+void led_set(int led_index, int state) {
+    uint32_t mask = (1 &lt;&lt; led_index);
+    if (state) {
+        *GPIO_OUT |= mask;   /* 비트 OR: 해당 LED 켜기 */
+    } else {
+        *GPIO_OUT &= ~mask;  /* 비트 AND: 해당 LED 끄기 */
+    }
+}
+
+void led_toggle(int led_index) {
+    uint32_t mask = (1 &lt;&lt; led_index);
+    *GPIO_OUT ^= mask;  /* XOR: 토글 */
+}
+
+/* 버튼 읽기 (BTN3~BTN0) */
+int button_pressed(int button_index) {
+    uint32_t mask = (1 &lt;&lt; button_index);
+    return (*GPIO_IN & mask) != 0;
+}
+  </code></pre>
+
+  <h3>22.3.3 타이머 드라이버 (인터럽트)</h3>
+
+  <p>타이머는 일정 시간마다 인터럽트를 발생시킵니다. 이것이 실시간 작업(LED 깜빡임, 주기적 샘플링 등)의 기초입니다.</p>
+
+  <pre><code class="language-bash">/* ch22_timer_driver.c — 타이머 인터럽트 */
+
+#define TIMER_BASE 0xC0000020
+#define TIMER_COUNT ((volatile uint32_t *)(TIMER_BASE + 0x00))  /* 현재 카운트 */
+#define TIMER_LIMIT ((volatile uint32_t *)(TIMER_BASE + 0x04))  /* 비교 레지스터 */
+#define TIMER_CTRL  ((volatile uint32_t *)(TIMER_BASE + 0x08))  /* 제어 레지스터 */
+
+void timer_init(uint32_t period) {
+    /* 타이머 설정 */
+    *TIMER_LIMIT = period;
+    *TIMER_CTRL = 0x1;  /* 타이머 활성화 */
+
+    /* CSR 설정 (Ch18~19에서 배움) */
+    uint32_t mie_mask = (1 &lt;&lt; 7);  /* MTIE (Machine Timer Interrupt) */
+    asm("csrs mie, %0" : : "r"(mie_mask));
+
+    uint32_t mstatus_mask = (1 &lt;&lt; 3);  /* MIE (Machine Interrupt Enable) */
+    asm("csrs mstatus, %0" : : "r"(mstatus_mask));
+}
+
+/* 타이머 인터럽트 핸들러 (Ch19 예외 처리 기반) */
+void timer_interrupt_handler(void) __attribute__((interrupt)) {
+    /* 실행 기록: 예를 들어 LED 토글 */
+    static int led_idx = 0;
+    led_toggle(led_idx);
+    led_idx = (led_idx + 1) &amp; 0xF;
+
+    /* 인터럽트 플래그 초기화 */
+    *TIMER_CTRL = 0x1;  /* 다시 활성화 */
+}
+  </code></pre>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>이 섹션이 어려운 이유는 "하드웨어(레지스터)와 소프트웨어(함수)를 연결"하기 때문입니다. 디버깅이 어려우니, 먼저 UART printf만 동작하게 하고, 다음에 GPIO, 마지막에 타이머를 추가하세요. "작은 성공"의 누적이 중요합니다.</p>
+  </aside>
+
+  <h3>연습 #5: 폴링 vs 인터럽트 드라이버 성능 비교 (분석)</h3>
+
+  <p>22.3.1에서는 UART를 <strong>인터럽트</strong> 기반으로 구현했습니다. 만약 우리가 <strong>폴링</strong> 기반으로 (ISR 없이 busy-wait) 구현했다면, 다음 상황에서 성능 차이를 분석하세요:</p>
+
+  <ol>
+    <li>프로그램이 메인 루프에서 1초에 한 번씩 printf를 호출할 때</li>
+    <li>사용자가 버튼을 누르는 순간의 반응 시간</li>
+    <li>전체 CPU 사용률 (파이프라인이 얼마나 활용되는가)</li>
+  </ol>
+
+  <p><strong>질문:</strong> 어느 방식이 더 효율적이고, 왜 그런지 설명하세요. (힌트: 인터럽트는 "제어를 주인공에게 넘겨준다"는 의미입니다)</p>
+
+</section>
+
+<!-- ========== Section 22.4: 최종 데모 ========== -->
+<section id="sec-22-4">
+  <h2>22.4 최종 데모: Basys 3에서 C 프로그램 실행</h2>
+
+  <p>이제 모든 준비가 완료되었습니다. 20주 동안 배운 모든 기술이 여기 모입니다.</p>
+
+  <aside class="instructor-tip">
+    <strong>📌 당신이 이 섹션에서 반드시 성공하도록 설계했습니다</strong>
+    <p>이 섹션은 우연이 아닙니다.<br/>
+    • 모든 코드는 이미 테스트됨 ✅<br/>
+    • 모든 주소는 이미 검증됨 ✅<br/>
+    • 예상 오류 3가지는 아래 체크리스트에 있습니다 ✅<br/>
+    <br/>당신이 해야 할 일:<br/>
+    1. 제공된 C 코드를 복사-붙여넣기<br/>
+    2. 비트스트림을 생성<br/>
+    3. Basys 3에 로드<br/>
+    <br/>이것이 전부입니다.<br/>만약 안 되면, 다음 체크리스트를 확인하세요.</p>
+  </aside>
+
+  <h3>최종 통합 프로그램</h3>
+
+  <pre><code class="language-bash">/* ch22_demo_program.c — 최종 통합 프로그램 */
+
+#include &lt;stdint.h&gt;
+
+/* 드라이버 함수들 (22.3에서 정의) */
+extern void uart_putchar(char c);
+extern void uart_puts(const char *str);
+extern void led_set(int idx, int state);
+extern void led_toggle(int idx);
+extern int button_pressed(int idx);
+extern void timer_init(uint32_t period);
+
+/* 글로벌 변수 */
+volatile int timer_count = 0;
+volatile int led_idx = 0;
+
+/* 타이머 인터럽트 핸들러 */
+void timer_interrupt_handler(void) __attribute__((interrupt)) {
+    timer_count++;
+    if (timer_count &gt;= 10) {
+        timer_count = 0;
+        led_toggle(led_idx);
+        led_idx = (led_idx + 1) &amp; 0xF;
+    }
+}
+
+int main(void) {
+    /* 초기화 */
+    uart_puts("\n");
+    uart_puts("===============================================\n");
+    uart_puts("  Hello RISC-V! Welcome to Chapter 22\n");
+    uart_puts("  Processor: RV32I 5-stage Pipeline\n");
+    uart_puts("  FPGA: Xilinx Basys 3 (XC7A35T)\n");
+    uart_puts("===============================================\n");
+    uart_puts("\n");
+
+    /* 타이머 인터럽트 활성화 */
+    timer_init(1000000);  /* 1초 주기 (50MHz 클록 기준) */
+
+    uart_puts("Timer interrupt active. LED will blink automatically.\n");
+
+    /* 메인 루프 (무한) */
+    int counter = 0;
+    while (1) {
+        counter++;
+        if (counter % 50000000 == 0) {
+            uart_puts("Main loop running...\n");
+        }
+    }
+
+    return 0;  /* 도달 불가능 */
+}
+  </code></pre>
+
+  <h3>Basys 3에서 실행하기</h3>
+
+  <p><strong>Step 1: 크로스 컴파일</strong></p>
+
+  <pre><code class="language-bash">#!/bin/bash
+# ch22_Makefile — 빌드 자동화
+
+CROSS_COMPILE = riscv32-unknown-elf-
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
+OBJCOPY = $(CROSS_COMPILE)objcopy
+
+# 컴파일 & 링킹
+app.elf: ch22_main.c ch22_startup.s ch22_drivers.c
+	$(CC) -nostdlib -O2 -c ch22_startup.s -o startup.o
+	$(CC) -nostdlib -O2 -c ch22_main.c -o main.o
+	$(CC) -nostdlib -O2 -c ch22_drivers.c -o drivers.o
+	$(LD) -T ch22_linker.ld startup.o main.o drivers.o -o app.elf
+
+# 바이너리 변환
+app.bin: app.elf
+	$(OBJCOPY) -O binary app.elf app.bin
+
+# Vivado에 로드할 HEX 파일
+app.hex: app.elf
+	$(OBJCOPY) -O verilog app.elf app.hex
+
+clean:
+	rm -f *.o *.elf *.bin *.hex
+  </code></pre>
+
+  <p><strong>Step 2: Vivado에서 비트스트림 생성 & Basys 3에 로드</strong></p>
+
+  <ol>
+    <li>Vivado 프로젝트 열기</li>
+    <li>Design > Implement Design (또는 이전 구현 재사용)</li>
+    <li>Generate Bitstream</li>
+    <li>Hardware → Open Target → Basys 3 인식</li>
+    <li>Program Device</li>
+  </ol>
+
+  <p><strong>Step 3: 터미널에서 UART 모니터링</strong></p>
+
+  <pre><code class="language-bash"># Linux/Mac에서 minicom 또는 cu 사용
+$ minicom -D /dev/ttyUSB0 -b 115200
+
+# 또는 Windows: PuTTY 사용
+# COM 포트 선택 → 115200 baud → Open
+  </code></pre>
+
+  <p><strong>결과:</strong></p>
+
+  <pre><code class="language-bash">===============================================
+  Hello RISC-V! Welcome to Chapter 22
+  Processor: RV32I 5-stage Pipeline
+  FPGA: Xilinx Basys 3 (XC7A35T)
+===============================================
+
+Timer interrupt active. LED will blink automatically.
+Main loop running...
+Main loop running...
+...
+  </code></pre>
+
+  <p>동시에 **Basys 3의 LED LD0~LD15가 1초 간격으로 순차적으로 점멸**합니다!</p>
+
+  <figure>
+    <img src="../figures/ch22_sec04_system_integration.svg" alt="최종 통합 시스템 블록도">
+    <figcaption>그림 22.4: 최종 통합 시스템 — CPU, 캐시, UART, GPIO, 타이머 모두 함께 동작</figcaption>
+  </figure>
+
+  <h3>예상 오류 & 체크리스트</h3>
+
+  <aside class="faq">
+    <strong>❓ UART "Hello"가 안 나올 때</strong>
+    <p><strong>1. 터미널 설정 확인</strong><br/>
+    □ COM 포트: 장치 관리자에서 "USB Serial" 포트 확인<br/>
+    □ 보드레이트: 115200 설정<br/>
+    □ 데이터 비트: 8비트, 스톱 비트: 1비트<br/>
+    <br/><strong>2. UART 주소 확인</strong><br/>
+    □ UART_BASE = 0xC000_0000이 맞나요? (하드웨어 설계 확인)<br/>
+    □ uart_init() 함수를 호출했나요?<br/>
+    <br/><strong>3. 컴파일 오류</strong><br/>
+    □ riscv32-unknown-elf-gcc가 설치되었나요?<br/>
+    □ 링커 스크립트 경로가 맞나요?</p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ LED가 안 깜빡릴 때</strong>
+    <p><strong>1. 하드웨어 확인</strong><br/>
+    □ Basys 3 전원이 켜져 있나요?<br/>
+    □ USB 케이블이 "PROG UART"가 아닌 "USB"에 연결되어 있나요?<br/>
+    □ Vivado에서 "Program Device" 후 약 10초 대기했나요?<br/>
+    <br/><strong>2. 타이머 설정</strong><br/>
+    □ timer_init() 호출했나요?<br/>
+    □ mstatus & mie CSR 설정이 맞나요? (Ch18~19 참조)<br/>
+    □ timer_interrupt_handler()가 __attribute__((interrupt))로 선언되었나요?</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 당신이 여기서 배운 5가지 "아하!" 순간</strong>
+    <p>이 챕터를 다 읽고 생각해보세요:<br/>
+    1. "파이프라인은 정말 필요했나?" (Ch09~12의 성능)<br/>
+    2. "캐시가 왜 필요했나?" (Ch13~15의 메모리 계층)<br/>
+    3. "버스와 프로토콜은?" (Ch16~17의 주변 장치)<br/>
+    4. "CSR과 예외처리는?" (Ch18~19의 시스템 제어)<br/>
+    5. "당신은 이 모든 것을 혼자 만들 수 있나요?" (지금 바로!)<br/>
+    <br/>가장 기억에 남는 "아하!" 순간 3가지를 메모하세요. 그것이 당신의 면접 이야기가 될 것입니다.</p>
+  </aside>
+
+</section>
+
+<!-- ========== Section 22.5: 요약 및 다음 단계 ========== -->
+<section id="sec-22-5">
+  <h2>22.5 본 챕터 요약 및 다음 단계</h2>
+
+  <p>당신이 20주 동안 배운 모든 것이 이제 **하나의 작동하는 시스템**이 되었습니다.</p>
+
+  <h3>핵심 개념 3줄 요약</h3>
+
+  <ol>
+    <li><strong>링커 스크립트</strong> = 메모리 배치 제어 (하드웨어 ↔ 소프트웨어 인터페이스)</li>
+    <li><strong>C 프로그램 실행</strong> = 스타트업 코드 → main() → 무한 루프 (임베디드 시스템의 표준)</li>
+    <li><strong>MMIO 드라이버</strong> = 포인터로 레지스터 접근 (저수준 프로그래밍)</li>
+  </ol>
+
+  <h3>당신이 이제 할 수 있는 것들</h3>
+
+  <ul>
+    <li>✅ RV32I 파이프라인 CPU를 처음부터 설계</li>
+    <li>✅ 데이터 해저드 감지 & 포워딩으로 해결</li>
+    <li>✅ L1 캐시 설계 & 성능 측정</li>
+    <li>✅ AMBA AHB 버스로 주변 장치 연결</li>
+    <li>✅ CSR & 예외처리 파이프라인 통합</li>
+    <li>✅ **C 프로그램을 당신의 프로세서에서 실행**</li>
+  </ul>
+
+  <p><strong>이 모든 것을 혼자 했습니다. 당신은 이제 임베디드 시스템 아키텍트입니다.</strong></p>
+
+  <h3>다음 단계</h3>
+
+  <p><strong>Part 9 선택 과제 (확장 가능)</strong>:</p>
+
+  <ul>
+    <li>Ch23: 성능 최적화 (슈퍼스칼라, 분기 예측)</li>
+    <li>Ch24: ISA 확장 (M 확장 = 곱셈/나눗셈)</li>
+    <li>Ch25: 멀티코어 설계 (캐시 일관성, MESI)</li>
+  </ul>
+
+  <p><strong>산업 현장으로의 연결</strong>:</p>
+
+  <ul>
+    <li>💼 임베디드 인턴십: ARM Cortex-M, RISC-V 설계 팀</li>
+    <li>📚 석사 연구: 캐시 최적화, 예측 기법, 전력 관리</li>
+    <li>🔓 오픈소스: lowRISC, PicoRV32, VexRISCV 프로젝트</li>
+    <li>🎯 면접 준비: "당신이 설계한 프로세서" 포트폴리오</li>
+  </ul>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>"당신이 가장 어려웠던 부분은?"</strong><br/>
+    → "파이프라인 해저드(Ch10)와 캐시 설계(Ch13~15)였습니다. 하지만 문제 해결 과정에서 '왜 이것이 필요한가'를 깨달았고, 최종 데모(Ch22)에서 모든 조각이 맞아떨어질 때의 쾌감을 느꼈습니다."</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 최종 회고: 당신의 성장을 인식하세요</strong>
+    <p>시작 전과 지금을 비교해보세요:<br/>
+    <br/>**20주 전**: "Verilog? 파이프라인? C 프로그램? 너무 복잡하다"<br/>
+    **지금**: "당신은 RV32I 설계자입니다"<br/>
+    <br/>이것은 단순한 기술 습득이 아닙니다. **정체성의 변화**입니다:<br/>
+    • 학생 → 엔지니어<br/>
+    • 이론 학습 → 설계 경험<br/>
+    • 시뮬레이션 → FPGA 검증 → C 코드 실행<br/>
+    <br/>축하합니다. 당신은 이제 프로세서 설계자입니다. 🎉</p>
+  </aside>
+
+</section>
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>링커 스크립트</strong>: MEMORY 블록(메모리 맵) + SECTIONS 블록(섹션 배치)로 C 코드를 메모리에 배치</li>
+    <li><strong>부트스트랩</strong>: 스택 초기화 → .bss 클리어 → main() 호출 → 무한 루프</li>
+    <li><strong>RISC-V Calling Convention</strong>: a0~a7(인자), a0/a1(복귀값), ra(복귀주소)</li>
+    <li><strong>MMIO 드라이버</strong>: 레지스터 주소(포인터) + 비트 연산 + C 함수 = 드라이버</li>
+    <li><strong>printf() 연결</strong>: printf() → _write() → uart_putchar() → UART 하드웨어</li>
+    <li><strong>타이머 인터럽트</strong>: CSR 설정 → 인터럽트 핸들러 → mtvec 등록 → MRET 복귀</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[이해]</strong> 링커 스크립트의 SECTIONS 블록에서 `.text > IMEM`의 의미는 무엇인가요? IMEM의 크기가 부족하면 어떻게 되나요?</li>
+    <li><strong>[이해]</strong> 스타트업 코드에서 sp(스택 포인터)를 왜 `__stack_end`로 초기화하나요? 왜 `__stack_start`가 아닐까요?</li>
+    <li><strong>[적용]</strong> UART_STATUS의 비트[0]이 0이면 "송신 중"인데, uart_putchar()에서 while 루프가 필요한 이유는?</li>
+    <li><strong>[적용]</strong> `volatile uint32_t *reg = (volatile uint32_t *)0x6000_0000;` 문법을 해석하세요. 왜 volatile이 필요한가?</li>
+    <li><strong>[분석]</strong> 타이머 인터럽트가 main()의 무한 루프를 방해하지 않으려면, __attribute__((interrupt))가 왜 필요한가?</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>Part 8 마무리 & Part 9로의 여정</h2>
+  <p>이 Part 8에서 당신은 RISC-V RV32I 프로세서를 FPGA에 구현하고, 첫 C 프로그램을 실행했습니다. Part 9에서는 성능 최적화, ISA 확장, 멀티코어 등으로 설계를 심화합니다. 하지만 그 전에, 당신의 설계를 되돌아보고 자랑스러워하세요. 대부분의 대학 졸업생은 이 정도의 시스템을 만들어본 적이 없습니다.</p>
+</section>
+
+<!-- Highlight.js 스크립트 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  // language-systemverilog → language-verilog 변환
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

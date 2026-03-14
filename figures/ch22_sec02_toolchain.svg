@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <!-- 배경 -->
+  <rect width="800" height="600" fill="#f9fafb"/>
+
+  <!-- 제목 -->
+  <text x="400" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#2563eb">
+    RISC-V 크로스컴파일 도구 체인
+  </text>
+
+  <!-- 파이프라인 -->
+  <g id="pipeline">
+    <!-- 1단계: 소스 코드 -->
+    <rect x="50" y="80" width="120" height="80" fill="#93c5fd" stroke="#2563eb" stroke-width="2" rx="5"/>
+    <text x="110" y="110" font-size="12" font-weight="bold" text-anchor="middle" fill="#1f2937">C 소스코드</text>
+    <text x="110" y="135" font-size="10" text-anchor="middle" fill="#4b5563">*.c</text>
+    <text x="110" y="150" font-size="10" text-anchor="middle" fill="#4b5563">*.h</text>
+
+    <!-- 화살표 1 -->
+    <path d="M 170 120 L 210 120" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="190" y="110" font-size="10" fill="#6b7280" text-anchor="middle">gcc</text>
+
+    <!-- 2단계: 어셈블리 -->
+    <rect x="210" y="80" width="120" height="80" fill="#86efac" stroke="#059669" stroke-width="2" rx="5"/>
+    <text x="270" y="110" font-size="12" font-weight="bold" text-anchor="middle" fill="#1f2937">어셈블리</text>
+    <text x="270" y="135" font-size="10" text-anchor="middle" fill="#4b5563">*.s</text>
+    <text x="270" y="150" font-size="10" text-anchor="middle" fill="#4b5563">목적파일</text>
+
+    <!-- 화살표 2 -->
+    <path d="M 330 120 L 370 120" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="350" y="110" font-size="10" fill="#6b7280" text-anchor="middle">as</text>
+
+    <!-- 3단계: 목적 파일 -->
+    <rect x="370" y="80" width="120" height="80" fill="#fde68a" stroke="#d97706" stroke-width="2" rx="5"/>
+    <text x="430" y="110" font-size="12" font-weight="bold" text-anchor="middle" fill="#1f2937">목적 파일</text>
+    <text x="430" y="135" font-size="10" text-anchor="middle" fill="#4b5563">*.o</text>
+    <text x="430" y="150" font-size="10" text-anchor="middle" fill="#4b5563">(기계어)</text>
+
+    <!-- 화살표 3 -->
+    <path d="M 490 120 L 530 120" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="510" y="110" font-size="10" fill="#6b7280" text-anchor="middle">ld</text>
+
+    <!-- 4단계: ELF -->
+    <rect x="530" y="80" width="120" height="80" fill="#a78bfa" stroke="#7c3aed" stroke-width="2" rx="5"/>
+    <text x="590" y="110" font-size="12" font-weight="bold" text-anchor="middle" fill="#ffffff">ELF</text>
+    <text x="590" y="135" font-size="10" text-anchor="middle" fill="#ffffff">app.elf</text>
+    <text x="590" y="150" font-size="10" text-anchor="middle" fill="#ffffff">(실행 파일)</text>
+  </g>
+
+  <!-- 링커 스크립트 입력 -->
+  <g id="linker-script">
+    <rect x="530" y="200" width="120" height="60" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5,5" rx="5"/>
+    <text x="590" y="225" font-size="11" font-weight="bold" text-anchor="middle" fill="#1f2937">링커 스크립트</text>
+    <text x="590" y="245" font-size="10" text-anchor="middle" fill="#4b5563">*.ld</text>
+    <path d="M 590 200 L 590 160" stroke="#7c3aed" stroke-width="1" stroke-dasharray="3,3"/>
+  </g>
+
+  <!-- 다음 단계들 -->
+  <!-- 5단계: 바이너리 변환 -->
+  <text x="50" y="320" font-size="13" font-weight="bold" fill="#1f2937">바이너리 변환 (objcopy):</text>
+
+  <g id="binary-conversion">
+    <!-- ELF에서 출발 -->
+    <rect x="50" y="350" width="100" height="60" fill="#a78bfa" stroke="#7c3aed" stroke-width="2" rx="5"/>
+    <text x="100" y="375" font-size="11" font-weight="bold" text-anchor="middle" fill="#ffffff">app.elf</text>
+    <text x="100" y="395" font-size="10" text-anchor="middle" fill="#ffffff">(ELF)</text>
+
+    <!-- 화살표 -->
+    <path d="M 150 380 L 190 380" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="170" y="370" font-size="10" fill="#6b7280" text-anchor="middle">-O binary</text>
+
+    <!-- 바이너리 -->
+    <rect x="190" y="350" width="100" height="60" fill="#86efac" stroke="#059669" stroke-width="2" rx="5"/>
+    <text x="240" y="375" font-size="11" font-weight="bold" text-anchor="middle" fill="#1f2937">app.bin</text>
+    <text x="240" y="395" font-size="10" text-anchor="middle" fill="#4b5563">(바이너리)</text>
+
+    <!-- 화살표 -->
+    <path d="M 290 380 L 330 380" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+    <text x="310" y="370" font-size="10" fill="#6b7280" text-anchor="middle">→</text>
+
+    <!-- HEX (선택) -->
+    <rect x="330" y="350" width="100" height="60" fill="#fde68a" stroke="#d97706" stroke-width="2" stroke-dasharray="3,3" rx="5"/>
+    <text x="380" y="375" font-size="11" font-weight="bold" text-anchor="middle" fill="#1f2937">app.hex</text>
+    <text x="380" y="395" font-size="10" text-anchor="middle" fill="#4b5563">(16진수)</text>
+  </g>
+
+  <!-- Vivado 단계 -->
+  <g id="vivado-stage">
+    <text x="50" y="500" font-size="13" font-weight="bold" fill="#1f2937">FPGA 구현 (Vivado):</text>
+
+    <rect x="50" y="520" width="140" height="60" fill="#fca5a5" stroke="#dc2626" stroke-width="2" rx="5"/>
+    <text x="120" y="545" font-size="11" font-weight="bold" text-anchor="middle" fill="#1f2937">비트스트림 생성</text>
+    <text x="120" y="565" font-size="10" text-anchor="middle" fill="#4b5563">*.bit</text>
+
+    <!-- 화살표 -->
+    <path d="M 190 550 L 230 550" stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+
+    <rect x="230" y="520" width="140" height="60" fill="#93c5fd" stroke="#2563eb" stroke-width="2" rx="5"/>
+    <text x="300" y="545" font-size="11" font-weight="bold" text-anchor="middle" fill="#1f2937">Basys 3 로드</text>
+    <text x="300" y="565" font-size="10" text-anchor="middle" fill="#4b5563">FPGA 실행</text>
+  </g>
+
+  <!-- 화살표 정의 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- 범례 -->
+  <g id="legend" transform="translate(480, 460)">
+    <text x="0" y="0" font-size="12" font-weight="bold" fill="#1f2937">도구 체인:</text>
+    <text x="0" y="20" font-size="10" fill="#4b5563">gcc = C 컴파일러</text>
+    <text x="0" y="35" font-size="10" fill="#4b5563">as = 어셈블러</text>
+    <text x="0" y="50" font-size="10" fill="#4b5563">ld = 링커</text>
+    <text x="0" y="65" font-size="10" fill="#4b5563">objcopy = 형식 변환</text>
+  </g>
+</svg>

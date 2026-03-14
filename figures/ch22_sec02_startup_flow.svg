@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 700" width="1000" height="700">
+  <defs>
+    <style>
+      .title { font-size: 20px; font-weight: bold; fill: #2563EB; font-family: Pretendard, sans-serif; }
+      .step-num { font-size: 14px; font-weight: bold; fill: #FFFFFF; font-family: Pretendard, sans-serif; }
+      .step-text { font-size: 12px; fill: #1F2937; font-family: Pretendard, sans-serif; }
+      .code { font-size: 11px; fill: #1F2937; font-family: monospace; }
+      .register { font-size: 11px; fill: #FFFFFF; font-family: monospace; font-weight: bold; }
+      .step-box { fill: #3B82F6; stroke: #2563EB; stroke-width: 2; }
+      .arrow { stroke: #2563EB; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .box-content { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2563EB" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="35" text-anchor="middle" class="title">부팅 시퀀스 — 리셋부터 main() 호출까지</text>
+
+  <!-- Step 1: Reset -->
+  <g id="step1">
+    <circle cx="120" cy="100" r="25" class="step-box"/>
+    <text x="120" y="110" text-anchor="middle" class="step-num">1</text>
+    <text x="120" y="155" text-anchor="middle" class="step-text" font-weight="bold">리셋 신호</text>
+    <rect x="40" y="165" width="160" height="35" class="box-content" rx="3"/>
+    <text x="120" y="182" text-anchor="middle" class="code">PC ← 0x8000_0000</text>
+  </g>
+
+  <!-- Arrow 1 -> 2 -->
+  <path d="M 180 100 L 260 100" class="arrow"/>
+
+  <!-- Step 2: _start 진입 -->
+  <g id="step2">
+    <circle cx="320" cy="100" r="25" class="step-box"/>
+    <text x="320" y="110" text-anchor="middle" class="step-num">2</text>
+    <text x="320" y="155" text-anchor="middle" class="step-text" font-weight="bold">_start 진입</text>
+    <rect x="240" y="165" width="160" height="35" class="box-content" rx="3"/>
+    <text x="320" y="182" text-anchor="middle" class="code">IMEM[0x0]부터 실행</text>
+  </g>
+
+  <!-- Arrow 2 -> 3 -->
+  <path d="M 380 100 L 460 100" class="arrow"/>
+
+  <!-- Step 3: sp 초기화 -->
+  <g id="step3">
+    <circle cx="520" cy="100" r="25" class="step-box"/>
+    <text x="520" y="110" text-anchor="middle" class="step-num">3</text>
+    <text x="520" y="155" text-anchor="middle" class="step-text" font-weight="bold">sp 초기화</text>
+    <rect x="440" y="165" width="160" height="50" class="box-content" rx="3"/>
+    <text x="520" y="182" text-anchor="middle" class="code">sp ← __stack_end</text>
+    <text x="520" y="200" text-anchor="middle" class="code">sp = 0x8000_2000</text>
+  </g>
+
+  <!-- Arrow 3 -> 4 -->
+  <path d="M 580 100 L 660 100" class="arrow"/>
+
+  <!-- Step 4: gp 초기화 -->
+  <g id="step4">
+    <circle cx="720" cy="100" r="25" class="step-box"/>
+    <text x="720" y="110" text-anchor="middle" class="step-num">4</text>
+    <text x="720" y="155" text-anchor="middle" class="step-text" font-weight="bold">gp 초기화</text>
+    <rect x="640" y="165" width="160" height="50" class="box-content" rx="3"/>
+    <text x="720" y="182" text-anchor="middle" class="code">gp ← __global_pointer</text>
+    <text x="720" y="200" text-anchor="middle" class="code">(선택사항)</text>
+  </g>
+
+  <!-- Arrow 4 -> 5 -->
+  <path d="M 720 125 L 720 200" class="arrow"/>
+
+  <!-- Step 5: .bss 클리어 -->
+  <g id="step5">
+    <circle cx="720" cy="270" r="25" class="step-box"/>
+    <text x="720" y="280" text-anchor="middle" class="step-num">5</text>
+    <text x="720" y="325" text-anchor="middle" class="step-text" font-weight="bold">.bss 클리어</text>
+    <rect x="640" y="335" width="160" height="65" class="box-content" rx="3"/>
+    <text x="720" y="352" text-anchor="middle" class="code">루프: 메모리[a0] ← 0</text>
+    <text x="720" y="368" text-anchor="middle" class="code">a0 += 4 (다음 워드)</text>
+    <text x="720" y="384" text-anchor="middle" class="code">반복 (end까지)</text>
+  </g>
+
+  <!-- Arrow 5 -> 6 -->
+  <path d="M 720 295 L 720 380" class="arrow"/>
+
+  <!-- Step 6: main() 호출 -->
+  <g id="step6">
+    <circle cx="720" cy="450" r="25" class="step-box"/>
+    <text x="720" y="460" text-anchor="middle" class="step-num">6</text>
+    <text x="720" y="505" text-anchor="middle" class="step-text" font-weight="bold">main() 호출</text>
+    <rect x="640" y="515" width="160" height="50" class="box-content" rx="3"/>
+    <text x="720" y="532" text-anchor="middle" class="code">jal ra, main</text>
+    <text x="720" y="550" text-anchor="middle" class="code">ra ← 복귀주소</text>
+  </g>
+
+  <!-- Arrow 6 -> 7 -->
+  <path d="M 720 475 L 720 560" class="arrow"/>
+
+  <!-- Step 7: main() 실행 -->
+  <g id="step7">
+    <circle cx="720" cy="630" r="25" class="step-box"/>
+    <text x="720" y="640" text-anchor="middle" class="step-num">7</text>
+    <text x="720" y="675" text-anchor="middle" class="step-text" font-weight="bold">프로그램 실행 시작</text>
+  </g>
+
+  <!-- Left side: Register state timeline -->
+  <g id="register-state">
+    <text x="50" y="300" class="step-text" font-weight="bold">PC 진행:</text>
+
+    <text x="50" y="330" class="code">Step 1: PC=0x8000_0000</text>
+    <text x="50" y="350" class="code">Step 2: PC=IMEM[0x0]</text>
+    <text x="50" y="370" class="code">Step 3-5: _start 코드</text>
+    <text x="50" y="390" class="code">Step 6: PC=main()</text>
+    <text x="50" y="410" class="code">Step 7: main() 실행</text>
+
+    <text x="50" y="450" class="step-text" font-weight="bold">스택 상태:</text>
+    <text x="50" y="480" class="code">초기: sp=미정의</text>
+    <text x="50" y="500" class="code">Step 3: sp=0x8000_2000</text>
+    <text x="50" y="520" class="code">Step 6+: sp 감소</text>
+  </g>
+
+</svg>

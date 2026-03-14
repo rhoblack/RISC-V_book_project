@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 700">
+  <!-- 배경 -->
+  <rect width="600" height="700" fill="#f9fafb"/>
+
+  <!-- 제목 -->
+  <text x="300" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#2563eb">
+    Basys 3 메모리 맵
+  </text>
+
+  <!-- 메모리 맵 본체 -->
+  <g id="memory-layout">
+    <!-- 주소 레이블 (좌측) -->
+    <text x="30" y="80" font-size="12" font-family="monospace" fill="#6b7280">0x0000_0000</text>
+    <rect x="80" y="65" width="400" height="60" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+    <text x="90" y="95" font-size="14" font-weight="bold" fill="#1f2937">IMEM (I-Cache)</text>
+    <text x="90" y="115" font-size="11" fill="#4b5563">주소: 0x0000_0000 ~ 0x0000_3FFF (16KB)</text>
+    <text x="490" y="100" font-size="12" font-family="monospace" fill="#6b7280">0x0000_3FFF</text>
+
+    <!-- 패딩 -->
+    <text x="30" y="155" font-size="11" fill="#9ca3af">[패딩: 약 512MB]</text>
+
+    <!-- DMEM -->
+    <text x="30" y="210" font-size="12" font-family="monospace" fill="#6b7280">0x2000_0000</text>
+    <rect x="80" y="195" width="400" height="80" fill="#86efac" stroke="#059669" stroke-width="2"/>
+    <text x="90" y="220" font-size="14" font-weight="bold" fill="#1f2937">DMEM (D-Cache)</text>
+    <text x="90" y="240" font-size="11" fill="#4b5563">.data (초기화된 전역변수)</text>
+    <text x="90" y="260" font-size="11" fill="#4b5563">.bss (미초기화 전역변수)</text>
+    <text x="490" y="230" font-size="12" font-family="monospace" fill="#6b7280">0x2000_7FFF</text>
+
+    <!-- 스택 -->
+    <rect x="80" y="275" width="400" height="40" fill="#fca5a5" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,5"/>
+    <text x="90" y="300" font-size="12" font-weight="bold" fill="#1f2937">스택 영역 (감소 방향 ↓)</text>
+
+    <!-- 패딩 -->
+    <text x="30" y="355" font-size="11" fill="#9ca3af">[패딩: 약 1.5GB]</text>
+
+    <!-- MMIO -->
+    <text x="30" y="410" font-size="12" font-family="monospace" fill="#6b7280">0x6000_0000</text>
+    <rect x="80" y="395" width="400" height="60" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+    <text x="90" y="420" font-size="14" font-weight="bold" fill="#1f2937">MMIO (주변 장치)</text>
+    <text x="90" y="440" font-size="11" fill="#4b5563">UART, GPIO, Timer 등의 레지스터</text>
+    <text x="490" y="425" font-size="12" font-family="monospace" fill="#6b7280">0x6000_FFFF</text>
+  </g>
+
+  <!-- 범례 -->
+  <g id="legend" transform="translate(50, 500)">
+    <text x="0" y="0" font-size="13" font-weight="bold" fill="#1f2937">범례</text>
+
+    <rect x="0" y="20" width="20" height="20" fill="#93c5fd" stroke="#2563eb" stroke-width="1"/>
+    <text x="30" y="35" font-size="12" fill="#1f2937">코드 메모리 (읽기 전용)</text>
+
+    <rect x="0" y="50" width="20" height="20" fill="#86efac" stroke="#059669" stroke-width="1"/>
+    <text x="30" y="65" font-size="12" fill="#1f2937">데이터 메모리 (읽기/쓰기)</text>
+
+    <rect x="0" y="80" width="20" height="20" fill="#fca5a5" stroke="#dc2626" stroke-width="1" stroke-dasharray="2,2"/>
+    <text x="30" y="95" font-size="12" fill="#1f2937">스택 (런타임, 감소)</text>
+
+    <rect x="0" y="110" width="20" height="20" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+    <text x="30" y="125" font-size="12" fill="#1f2937">주변 장치 (메모리 맵 I/O)</text>
+  </g>
+
+  <!-- 설명 텍스트 -->
+  <text x="50" y="650" font-size="11" fill="#6b7280">
+    주석: 이 메모리 맵은 Ch15에서 설계한 구조와 동일합니다.
+  </text>
+  <text x="50" y="670" font-size="11" fill="#6b7280">
+    링커 스크립트가 이 메모리 영역에 C 코드와 데이터를 배치합니다.
+  </text>
+</svg>

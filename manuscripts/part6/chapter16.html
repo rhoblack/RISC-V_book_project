@@ -344,7 +344,7 @@
   </p>
 
   <figure>
-    <img src="../../figures/ch16_sec04_ahb_timing.svg" alt="AHB-Lite 타이밍 다이어그램 — Single Read with Wait State" style="width:100%;max-width:860px;">
+    <img src="../../figures/ch16_sec03_ahb_timing.svg" alt="AHB-Lite 타이밍 다이어그램 — Single Read with Wait State" style="width:100%;max-width:860px;">
     <figcaption>그림 16-3: AHB Single Read 타이밍. T1=주소 페이즈(NONSEQ), T2=Wait State(HREADY=0), T3=데이터 페이즈(HRDATA 유효). HWDATA는 Read이므로 Don't Care.</figcaption>
   </figure>
 
@@ -577,7 +577,8 @@ module ahb_master_bridge (
 
    // ---- 주소 페이즈 정보 래치 ----
    // HREADY=0 동안 신호를 유지하기 위해 래치
-   logic [31:0] addr_lat;    // 래치된 주소
+   // 주의: addr_lat은 32비트 전체 주소를 보유하며, 실제 메모리 접근 시 필요한 비트만 사용
+   logic [31:0] addr_lat;    // 래치된 주소 (HADDR 동일 폭, 32비트)
    logic        write_lat;   // 래치된 쓰기 방향
    logic [31:0] wdata_lat;   // 래치된 쓰기 데이터
 
@@ -596,9 +597,11 @@ module ahb_master_bridge (
          wdata_lat &lt;= 32'h0;
       end else begin
          state &lt;= next_state;
-         // M_IDLE → M_ADDR 전이 결정 사이클에 래치
-         // (HREADY 조건 제거 — M_IDLE 마지막 사이클에서 캡처하므로
-         //  이후 M_ADDR에서 HREADY=0이 되어 M_WAIT으로 전이되어도 올바른 값 보유)
+         // ★ 핵심 설계: M_IDLE에서만 래치 갱신 (M_WAIT 상태에서는 절대 변경 불가)
+         // M_IDLE 마지막 사이클에서 cache_addr/cache_write/cache_wdata를 캡처하여
+         // addr_lat/write_lat/wdata_lat에 래치합니다.
+         // 이후 M_ADDR → M_WAIT으로 전이되더라도, addr_lat의 값은 고정되어 유지됩니다.
+         // 슬레이브가 HREADY=0으로 응답하면 마스터는 M_WAIT 상태에서 addr_lat을 그대로 구동하며 대기합니다.
          if (state == M_IDLE &amp;&amp; cache_req) begin
             addr_lat  &lt;= cache_addr;
             write_lat &lt;= cache_write;
@@ -640,10 +643,11 @@ module ahb_master_bridge (
                next_state = M_DATA;
          end
          M_DATA: begin
-            // HREADY=1일 때만 완료 전이 (슬레이브가 추가 Wait을 요청할 수 있음)
+            // 데이터 페이즈: HWDATA 전달 및 HRDATA 캡처
+            // HREADY=1 : 데이터 전송 성공 → M_DONE으로 전이
+            // HREADY=0 : 슬레이브가 추가 대기 요청 → M_DATA 유지 (모든 신호 동결)
             if (HREADY)
                next_state = M_DONE;
-            // HREADY=0이면 M_DATA 유지 (HWDATA 동결)
          end
          M_DONE: begin
             // cache_ack 1사이클 후 복귀
@@ -675,12 +679,14 @@ module ahb_master_bridge (
             HWRITE = cache_write;
          end
          M_WAIT: begin
-            // HREADY=0 — 신호 동결 (래치 값 사용)
-            // 핵심: addr_lat, write_lat를 그대로 구동
-            HADDR  = addr_lat;
-            HTRANS = HTRANS_NONSEQ;   // 전송 취소 금지
-            HWRITE = write_lat;
-            HWDATA = wdata_lat;       // Write이면 데이터도 유지
+            // HREADY=0 Wait State — 모든 신호 동결 (상태 변화 금지)
+            // M_IDLE에서 래치한 주소/제어/데이터 정보를 그대로 구동
+            HADDR  = addr_lat;        // 주소 고정
+            HTRANS = HTRANS_NONSEQ;   // 전송 타입 고정 (전송 취소 금지)
+            HSIZE  = 3'b010;          // 크기 고정 (32비트)
+            HBURST = 3'b000;          // 버스트 타입 고정 (SINGLE) ★ M_WAIT에서도 유지
+            HWRITE = write_lat;       // 방향 고정
+            HWDATA = wdata_lat;       // 쓰기 데이터 고정 (Write이면 데이터도 유지)
          end
          M_DATA: begin
             // 데이터 페이즈: HWDATA 구동 (Write 전송만)
@@ -750,12 +756,23 @@ endmodule
     <strong>S_DONE</strong>: <code>HREADY_out=1</code>을 구동합니다. 이 사이클에 마스터가 <code>HRDATA</code>를 캡처하거나 슬레이브가 <code>HWDATA</code>를 기록하고, 슬레이브는 S_IDLE로 복귀합니다.
   </p>
 
+  <p>
+    Wait State 시퀀싱의 핵심은 <strong>요청 인입 사이클 다음부터 지연이 시작</strong>된다는 점입니다.
+    요청 사이클을 T0라 하면, 실제 전체 지연 경로는 다음과 같습니다:
+    T0 (요청 + addr_lat 래치) → T1 (S_WAIT 진입, HREADY_out=0) → ... → T_{WAIT_CYCLES}(S_WAIT 마지막) → T_{WAIT_CYCLES+1} (S_DONE, HREADY_out=1, 데이터 전달).
+    따라서 <code>WAIT_CYCLES=1</code> 설정 시 요청부터 데이터 응답까지는 최소 2사이클이 소요됩니다 (T0에서 T2까지).
+  </p>
+
   <aside class="faq">
     <strong>❓ 수강생 단골 질문:</strong> "WAIT_CYCLES=1로 설정했는데 파형에서 HREADY_out=0이 2사이클 보입니다. 버그인가요?"
     <br><br>
-    <strong>답변:</strong> 버그가 아닙니다. S_WAIT(1사이클, HREADY_out=0) + S_DONE(1사이클, HREADY_out=1)의 구조이므로,
-    <code>WAIT_CYCLES=1</code> 설정 시 HREADY_out=0 구간은 1사이클이고 총 지연(S_WAIT + S_DONE)은 2사이클입니다.
-    "WAIT_CYCLES는 HREADY=0 구간의 사이클 수"이며, S_DONE 사이클(HREADY=1)은 별도로 추가됩니다.
+    <strong>답변:</strong> 버그가 아닙니다. 정확한 의미는 다음과 같습니다:
+    <ul>
+      <li><strong>WAIT_CYCLES=1</strong>은 "S_WAIT 상태에서 HREADY_out=0을 1사이클 동안 유지한다"는 의미입니다.</li>
+      <li>그 다음 S_DONE 상태에서 1사이클 동안 HREADY_out=1을 구동합니다.</li>
+      <li>결과적으로 요청 감지(S_IDLE) → S_WAIT(1사이클, HREADY_out=0) → S_DONE(1사이클, HREADY_out=1) = 총 3사이클 지연.</li>
+      <li>파형에서 관찰되는 "HREADY_out=0이 2사이클 보인다"는 것은, <strong>요청 인입 후 첫 사이클(T1)이 S_WAIT</strong>이고, 다음 사이클(T2)의 상태 전이 조건(wait_cnt ≥ WAIT_CYCLES-1)이 이미 만족되어 <strong>그 사이클에 S_DONE 상태로 진입</strong>하기 때문입니다. 즉, HREADY_out=0은 T1 사이클 1회만 나타나고, T2 사이클에는 이미 S_DONE(HREADY_out=1)입니다.</li>
+    </ul>
     이 구조는 ARM AHB Slave 설계 가이드의 표준 패턴입니다.
   </aside>
 
@@ -857,8 +874,10 @@ module ahb_sram_slave #(
    // ---- 쓰기 동작 (동기 로직) ----
    // 데이터 페이즈에서 HWDATA를 메모리에 기록
    // HREADY_out=1 AND write_lat=1 AND sel_lat=1 조건
-   always_ff @(posedge HCLK) begin
-      if (sel_lat &amp;&amp; write_lat &amp;&amp; HREADY_out) begin
+   always_ff @(posedge HCLK or negedge HRESETn) begin
+      if (!HRESETn) begin
+         for (int i = 0; i &lt; MEM_DEPTH; i++) mem[i] &lt;= 32'h0;
+      end else if (sel_lat &amp;&amp; write_lat &amp;&amp; HREADY_out) begin
          mem[addr_lat[($clog2(MEM_DEPTH)-1):0]] &lt;= HWDATA;
       end
    end
@@ -912,6 +931,16 @@ endmodule
     T1의 HSEL 정보(즉, 1사이클 지연된 HSEL_d)를 사용해야 합니다.
     현재 사이클의 HSEL을 사용하면 T1에서의 데이터가 T1에 읽혀야 하는 오류가 발생합니다.
   </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁 — HREADY MUX의 연속 전송 한계:</strong>
+    이 설계에서 <strong>HREADY 신호는 MUX를 거치지 않고 마스터로 바로 전달</strong>됩니다.
+    즉, 인터커넥트가 HSEL_d를 이용해 올바른 슬레이브의 HREADY_out을 선택합니다.
+    이 구조는 <strong>단일 마스터, 직렬 전송(연속 주소 증가)</strong> 환경에서만 안전합니다.
+    만약 캐시나 DMA 컨트롤러처럼 <strong>한 사이클에 여러 주소를 동시에 요청</strong하거나,
+    <strong>다중 마스터</strong가 서로 다른 슬레이브를 접근하려면, 각 마스터마다 독립적인 HREADY 신호를 관리해야 합니다.
+    <strong>AXI(Advanced eXtensible Interface)</strong와 같은 고급 버스는 이러한 다중 마스터 환경을 효과적으로 지원합니다.
+  </aside>
 
   <pre><code class="language-systemverilog">// ============================================================
 // ahb_interconnect.sv
@@ -1211,20 +1240,20 @@ module ahb_tb;
 
    // SVA 1: HREADY=0 동안 마스터는 HADDR를 변경하지 않아야 함
    // (주소 페이즈 또는 Wait State에서)
-   // |-> (overlapping): 현재 사이클에 선행 조건이 참이면 현재 사이클에 후행 조건도 참이어야 함
+   // |-> (non-overlapping): 선행 조건이 참인 다음 사이클에 후행 조건도 참이어야 함
    // AHB 스펙: HREADY=0인 바로 그 사이클에 HADDR가 이미 안정적이어야 함
    property p_addr_stable_on_wait;
       @(posedge HCLK) disable iff (!HRESETn)
-      (HTRANS[1] &amp;&amp; !HREADY) |-&gt; $stable(HADDR);
+      (HTRANS[1] &amp;&amp; !HREADY) |-> $stable(HADDR);
    endproperty
    assert property (p_addr_stable_on_wait)
       else $error("[SVA FAIL] HREADY=0인데 HADDR이 변경되었습니다!");
 
    // SVA 2: HREADY=0 동안 HTRANS는 변경되지 않아야 함
-   // |-> (overlapping): 현재 사이클에 선행 조건 참 → 현재 사이클에 후행 조건도 참
+   // |-> (non-overlapping): 선행 조건이 참인 다음 사이클에 후행 조건도 참
    property p_htrans_stable_on_wait;
       @(posedge HCLK) disable iff (!HRESETn)
-      (HTRANS[1] &amp;&amp; !HREADY) |-&gt; $stable(HTRANS);
+      (HTRANS[1] &amp;&amp; !HREADY) |-> $stable(HTRANS);
    endproperty
    assert property (p_htrans_stable_on_wait)
       else $error("[SVA FAIL] HREADY=0인데 HTRANS가 변경되었습니다!");
@@ -1233,7 +1262,7 @@ module ahb_tb;
    // (AHB 스펙: ERROR 응답은 2사이클 프로토콜)
    property p_error_two_cycle;
       @(posedge HCLK) disable iff (!HRESETn)
-      (HRESP &amp;&amp; !HREADY) |=&gt; (HRESP &amp;&amp; HREADY);
+      (HRESP &amp;&amp; !HREADY) |=> (HRESP &amp;&amp; HREADY);
    endproperty
    assert property (p_error_two_cycle)
       else $error("[SVA FAIL] HRESP ERROR 2사이클 프로토콜 위반!");
