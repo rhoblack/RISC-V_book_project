@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; font-weight: bold; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .cpu-box { fill: #E0F2FE; stroke: #0284C7; stroke-width: 2; }
+      .csr-box { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+      .uart-box { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .signal-line { stroke: #2563EB; stroke-width: 2; }
+      .interrupt-line { stroke: #DC2626; stroke-width: 2.5; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="30" text-anchor="middle" class="title">UART 핸들러와 주변장치 통합 구조</text>
+
+  <!-- CPU / Pipeline -->
+  <rect x="50" y="60" width="220" height="120" class="cpu-box" rx="5"/>
+  <text x="160" y="85" text-anchor="middle" class="label">RISC-V CPU</text>
+  <text x="160" y="105" text-anchor="middle" class="sublabel">(파이프라인)</text>
+  <text x="70" y="130" class="code">IF/ID/EX/MEM/WB</text>
+  <text x="70" y="145" class="code">PC, Registers</text>
+  <text x="70" y="160" class="code">ALU, Memory</text>
+
+  <!-- CSR Module -->
+  <rect x="320" y="60" width="220" height="120" class="csr-box" rx="5"/>
+  <text x="430" y="85" text-anchor="middle" class="label">CSR 모듈</text>
+  <text x="430" y="105" text-anchor="middle" class="sublabel">(mstatus, mie, mip, ...)</text>
+  <text x="340" y="130" class="code">mepc ← trap_pc</text>
+  <text x="340" y="145" class="code">mcause ← cause</text>
+  <text x="340" y="160" class="code">mtvec → handler_pc</text>
+
+  <!-- Priority Encoder & Trap Logic -->
+  <rect x="590" y="60" width="220" height="120" class="csr-box" rx="5"/>
+  <text x="700" y="85" text-anchor="middle" class="label">Trap Logic</text>
+  <text x="700" y="105" text-anchor="middle" class="sublabel">(Priority Encoder)</text>
+  <text x="610" y="130" class="code">mip → cause_code</text>
+  <text x="610" y="145" class="code">trap_en 생성</text>
+  <text x="610" y="160" class="code">handler_pc 계산</text>
+
+  <!-- UART Controller -->
+  <rect x="50" y="240" width="380" height="140" class="uart-box" rx="5"/>
+  <text x="240" y="265" text-anchor="middle" class="label">UART Controller (Ch17)</text>
+  <text x="70" y="290" class="code">• RX FIFO (16바이트)</text>
+  <text x="70" y="305" class="code">• TX FIFO (16바이트)</text>
+  <text x="70" y="320" class="code">• 16x Oversampling</text>
+  <text x="70" y="335" class="code">• uart_intr 신호</text>
+  <text x="70" y="350" class="code">• APB 슬레이브 인터페이스</text>
+
+  <!-- Memory (IMEM/DMEM) -->
+  <rect x="500" y="240" width="320" height="140" class="cpu-box" rx="5"/>
+  <text x="660" y="265" text-anchor="middle" class="label">Memory</text>
+  <text x="660" y="285" text-anchor="middle" class="sublabel">(IMEM / DMEM)</text>
+  <text x="520" y="310" class="code">• meip_handler 코드</text>
+  <text x="520" y="325" class="code">  (주소 0x8000_002C)</text>
+  <text x="520" y="340" class="code">• UART 데이터 처리</text>
+  <text x="520" y="355" class="code">  (읽기, 에코 등)</text>
+
+  <!-- Timer (reference) -->
+  <rect x="850" y="60" width="100" height="120" class="uart-box" rx="5"/>
+  <text x="900" y="100" text-anchor="middle" class="sublabel">Timer</text>
+  <text x="900" y="130" text-anchor="middle" class="code">mip[7]</text>
+  <text x="900" y="145" text-anchor="middle" class="code">(MTIP)</text>
+
+  <!-- Data bus -->
+  <rect x="50" y="450" width="760" height="80" fill="none" stroke="#CCCCCC" stroke-width="1" stroke-dasharray="3,3" rx="3"/>
+  <text x="70" y="475" class="label">데이터 버스 / 신호선</text>
+  <text x="70" y="495" class="code">• UART_RX_DATA, UART_TX_DATA (APB 주소 0xFFFF_0000)</text>
+  <text x="70" y="510" class="code">• AHB-to-APB 브리지를 통해 메인 프로세서와 연결</text>
+
+  <!-- Signal flow arrows -->
+
+  <!-- uart_intr → mip[11] -->
+  <path d="M 240 380 L 240 420" class="interrupt-line" marker-end="url(#arrowhead-red)"/>
+  <text x="250" y="405" class="sublabel" fill="#DC2626">uart_intr</text>
+
+  <!-- mip[11] → Priority Encoder -->
+  <path d="M 380 450 L 700 180" class="signal-line" marker-end="url(#arrowhead)"/>
+  <text x="520" y="310" class="sublabel" fill="#2563EB">mip[11]</text>
+
+  <!-- trap_en, handler_pc → CPU PC -->
+  <path d="M 590 120 L 270 120" class="signal-line" marker-end="url(#arrowhead)"/>
+  <text x="420" y="110" class="sublabel" fill="#2563EB">trap_en, handler_pc</text>
+
+  <!-- CSR outputs → Memory -->
+  <path d="M 540 120 L 500 250" class="signal-line" marker-end="url(#arrowhead)"/>
+  <text x="530" y="180" class="sublabel" fill="#2563EB">mepc, mcause</text>
+
+  <!-- Handler execution → UART Read -->
+  <path d="M 430 320 L 450 320" class="signal-line" marker-end="url(#arrowhead)"/>
+  <text x="430" y="310" class="sublabel" fill="#2563EB">Read/Write</text>
+
+  <!-- Bottom summary -->
+  <rect x="50" y="570" width="900" height="110" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1" rx="5"/>
+
+  <text x="70" y="595" class="label">통합 흐름:</text>
+  <text x="70" y="615" class="code">1. UART에서 데이터 수신 → uart_intr = 1</text>
+  <text x="70" y="630" class="code">2. uart_intr → mip[11] = 1 (MEIP pending)</text>
+  <text x="70" y="645" class="code">3. CSR 모듈이 trap_en = 1 생성 (mstatus.MIE=1, mie[11]=1, mip[11]=1 조건)</text>
+  <text x="70" y="660" class="code">4. Priority Encoder가 cause_code = 11 생성, handler_pc = 0x8000_002C 계산</text>
+
+  <!-- Arrowhead definitions -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" fill="#2563EB"/>
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" fill="#DC2626"/>
+    </marker>
+  </defs>
+</svg>

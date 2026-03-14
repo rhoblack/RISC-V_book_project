@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650" width="900" height="650">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 11px; fill: #1F2937; font-family: monospace; }
+      .mode0-box { fill: #E0F2FE; stroke: #0284C7; stroke-width: 2; }
+      .mode1-box { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .comparison-box { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" class="title">mtvec 어드레싱: Direct (MODE=0) vs Vectored (MODE=1)</text>
+
+  <!-- MODE 0: Direct -->
+  <rect x="50" y="60" width="380" height="200" class="mode0-box" rx="5"/>
+  <text x="240" y="85" text-anchor="middle" class="label" font-weight="bold">MODE = 0 (Direct)</text>
+
+  <text x="65" y="115" class="code">mtvec[31:2] = BASE (30비트)</text>
+  <text x="65" y="135" class="code">mtvec[1:0]  = 0</text>
+
+  <text x="65" y="165" class="label" font-weight="bold">계산:</text>
+  <text x="65" y="185" class="code">Handler_PC = (BASE &lt;&lt; 2)</text>
+  <text x="65" y="205" class="sublabel" fill="#DC2626">모든 Trap이 같은 주소로!</text>
+
+  <text x="65" y="235" class="sublabel">예: cause=7 → 0x8000_0000</text>
+  <text x="65" y="250" class="sublabel">   cause=3 → 0x8000_0000 (같음)</text>
+
+  <!-- MODE 1: Vectored -->
+  <rect x="470" y="60" width="380" height="200" class="mode1-box" rx="5"/>
+  <text x="660" y="85" text-anchor="middle" class="label" font-weight="bold">MODE = 1 (Vectored)</text>
+
+  <text x="485" y="115" class="code">mtvec[31:2] = BASE (30비트)</text>
+  <text x="485" y="135" class="code">mtvec[1:0]  = 1</text>
+
+  <text x="485" y="165" class="label" font-weight="bold">계산:</text>
+  <text x="485" y="185" class="code">Handler_PC = (BASE &lt;&lt; 2) + (cause &lt;&lt; 2)</text>
+  <text x="485" y="205" class="sublabel" fill="#059669">각 원인별로 다른 주소!</text>
+
+  <text x="485" y="235" class="sublabel">예: cause=7 → 0x8000_001C</text>
+  <text x="485" y="250" class="sublabel">   cause=3 → 0x8000_000C (다름)</text>
+
+  <!-- Vector Table Example -->
+  <text x="450" y="310" text-anchor="middle" class="label" font-weight="bold">Vectored 모드 벡터 테이블 예 (BASE=0x8000_0000)</text>
+
+  <!-- Table -->
+  <rect x="100" y="330" width="700" height="280" fill="none" stroke="#CCCCCC" stroke-width="1" rx="3"/>
+
+  <!-- Table headers -->
+  <rect x="100" y="330" width="175" height="30" fill="#E0F2FE" stroke="#0284C7" stroke-width="1"/>
+  <rect x="275" y="330" width="175" height="30" fill="#E0F2FE" stroke="#0284C7" stroke-width="1"/>
+  <rect x="450" y="330" width="175" height="30" fill="#E0F2FE" stroke="#0284C7" stroke-width="1"/>
+  <rect x="625" y="330" width="175" height="30" fill="#E0F2FE" stroke="#0284C7" stroke-width="1"/>
+
+  <text x="187" y="352" text-anchor="middle" class="label" font-weight="bold">Cause Code</text>
+  <text x="362" y="352" text-anchor="middle" class="label" font-weight="bold">Offset</text>
+  <text x="537" y="352" text-anchor="middle" class="label" font-weight="bold">Handler Address</text>
+  <text x="712" y="352" text-anchor="middle" class="label" font-weight="bold">ISR 함수</text>
+
+  <!-- MTIP -->
+  <rect x="100" y="360" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="275" y="360" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="450" y="360" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="625" y="360" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+
+  <text x="187" y="377" text-anchor="middle" class="code">7</text>
+  <text x="362" y="377" text-anchor="middle" class="code">0x1C (7&lt;&lt;2)</text>
+  <text x="537" y="377" text-anchor="middle" class="code">0x8000_001C</text>
+  <text x="712" y="377" text-anchor="middle" class="sublabel">mtip_handler</text>
+
+  <!-- MSIP -->
+  <rect x="100" y="385" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="275" y="385" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="450" y="385" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="625" y="385" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+
+  <text x="187" y="402" text-anchor="middle" class="code">3</text>
+  <text x="362" y="402" text-anchor="middle" class="code">0x0C (3&lt;&lt;2)</text>
+  <text x="537" y="402" text-anchor="middle" class="code">0x8000_000C</text>
+  <text x="712" y="402" text-anchor="middle" class="sublabel">msip_handler</text>
+
+  <!-- MEIP -->
+  <rect x="100" y="410" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="275" y="410" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="450" y="410" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+  <rect x="625" y="410" width="175" height="25" fill="white" stroke="#CCCCCC" stroke-width="1"/>
+
+  <text x="187" y="427" text-anchor="middle" class="code">11</text>
+  <text x="362" y="427" text-anchor="middle" class="code">0x2C (11&lt;&lt;2)</text>
+  <text x="537" y="427" text-anchor="middle" class="code">0x8000_002C</text>
+  <text x="712" y="427" text-anchor="middle" class="sublabel">meip_handler</text>
+
+  <!-- Comparison -->
+  <text x="450" y="480" text-anchor="middle" class="label" font-weight="bold">장단점 비교</text>
+
+  <rect x="100" y="500" width="330" height="100" class="mode0-box" rx="3"/>
+  <text x="265" y="520" text-anchor="middle" class="label" font-weight="bold">Direct (MODE=0)</text>
+  <text x="115" y="545" class="sublabel">✓ 구현 간단</text>
+  <text x="115" y="560" class="sublabel">✓ 유연한 핸들러 배치</text>
+  <text x="115" y="575" class="sublabel">✗ mcause 읽고 분기해야 함</text>
+
+  <rect x="470" y="500" width="330" height="100" class="mode1-box" rx="3"/>
+  <text x="635" y="520" text-anchor="middle" class="label" font-weight="bold">Vectored (MODE=1)</text>
+  <text x="485" y="545" class="sublabel">✓ 자동 분기 (빠름)</text>
+  <text x="485" y="560" class="sublabel">✓ mcause 읽을 필요 없음</text>
+  <text x="485" y="575" class="sublabel">✗ 벡터 테이블 배치 복잡</text>
+</svg>

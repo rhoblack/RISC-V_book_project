@@ -1,0 +1,174 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- 배경 -->
+  <rect width="1000" height="600" fill="#f8fafc"/>
+
+  <!-- 제목 -->
+  <text x="500" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    Vivado Power Report 인터페이스
+  </text>
+  <text x="500" y="55" font-size="12" text-anchor="middle" fill="#64748b">
+    Tools → Power → Report Power → Generate 실행 결과
+  </text>
+
+  <!-- ===== 좌측: Power Report 텍스트 ===== -->
+  <g>
+    <!-- 배경 -->
+    <rect x="50" y="80" width="420" height="500" fill="#1e293b" stroke="#3b82f6" stroke-width="2" rx="4"/>
+
+    <!-- 제목 바 -->
+    <rect x="50" y="80" width="420" height="30" fill="#0c4a6e" rx="4" rx="4"/>
+    <text x="260" y="102" font-size="12" font-weight="bold" text-anchor="middle" fill="white">
+      power_report.txt
+    </text>
+
+    <!-- 보고서 내용 (모노스페이스 폰트) -->
+    <text x="60" y="130" font-size="10" fill="#94a3b8" font-family="monospace">
+      ========================================
+    </text>
+    <text x="60" y="148" font-size="10" fill="#94a3b8" font-family="monospace" font-weight="bold">
+      POWER SUMMARY
+    </text>
+    <text x="60" y="166" font-size="10" fill="#94a3b8" font-family="monospace">
+      ========================================
+    </text>
+
+    <text x="60" y="195" font-size="10" fill="#e2e8f0" font-family="monospace">
+      Dynamic Power:     350.2 mW
+    </text>
+    <text x="60" y="213" font-size="10" fill="#e2e8f0" font-family="monospace">
+      Static Power:      149.8 mW
+    </text>
+    <text x="60" y="231" font-size="10" fill="#e2e8f0" font-family="monospace" font-weight="bold">
+      Total Power:       500.0 mW
+    </text>
+
+    <text x="60" y="260" font-size="10" fill="#94a3b8" font-family="monospace">
+      ----------------------------------------
+    </text>
+    <text x="60" y="278" font-size="10" fill="#94a3b8" font-family="monospace" font-weight="bold">
+      THERMAL ANALYSIS
+    </text>
+    <text x="60" y="296" font-size="10" fill="#94a3b8" font-family="monospace">
+      ----------------------------------------
+    </text>
+
+    <text x="60" y="325" font-size="10" fill="#e2e8f0" font-family="monospace">
+      Junction Temp:     42.5°C
+    </text>
+    <text x="60" y="343" font-size="10" fill="#e2e8f0" font-family="monospace">
+      Ambient Temp:      25.0°C
+    </text>
+    <text x="60" y="361" font-size="10" fill="#e2e8f0" font-family="monospace">
+      Thermal Margin:    42.5°C
+    </text>
+
+    <text x="60" y="390" font-size="10" fill="#94a3b8" font-family="monospace">
+      ----------------------------------------
+    </text>
+    <text x="60" y="408" font-size="10" fill="#94a3b8" font-family="monospace" font-weight="bold">
+      MODULE BREAKDOWN
+    </text>
+    <text x="60" y="426" font-size="10" fill="#94a3b8" font-family="monospace">
+      ----------------------------------------
+    </text>
+
+    <text x="60" y="455" font-size="9" fill="#cbd5e1" font-family="monospace">
+      alu_unit:         125.3 mW (35%)
+    </text>
+    <text x="60" y="471" font-size="9" fill="#cbd5e1" font-family="monospace">
+      memory_ctrl:       95.7 mW (27%)
+    </text>
+    <text x="60" y="487" font-size="9" fill="#cbd5e1" font-family="monospace">
+      pipeline_regs:     89.2 mW (25%)
+    </text>
+    <text x="60" y="503" font-size="9" fill="#cbd5e1" font-family="monospace">
+      i_cache:           40.0 mW (11%)
+    </text>
+    <text x="60" y="519" font-size="9" fill="#cbd5e1" font-family="monospace">
+      others:             4.8 mW ( 2%)
+    </text>
+
+    <text x="60" y="545" font-size="10" fill="#94a3b8" font-family="monospace">
+      ========================================
+    </text>
+  </g>
+
+  <!-- ===== 우측: 그래프 및 해석 ===== -->
+  <g>
+    <!-- 배경 -->
+    <rect x="540" y="80" width="410" height="500" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="4"/>
+
+    <!-- 제목 -->
+    <text x="745" y="110" font-size="14" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+      동적/정적 전력 비율
+    </text>
+
+    <!-- 원 그래프 (기본 기하) -->
+    <!-- 동적: 350 (70%), 정적: 150 (30%) -->
+    <!-- 대원호: 270도 (70% × 360°) -->
+    <circle cx="745" cy="220" r="80" fill="none" stroke="#dbeafe" stroke-width="2"/>
+
+    <!-- 동적 전력 호 (파란색, 70%) -->
+    <path d="M 745,140 A 80,80 0 1,1 612,271" fill="none" stroke="#2563eb" stroke-width="20" stroke-linecap="round"/>
+
+    <!-- 정적 전력 호 (빨간색, 30%) -->
+    <path d="M 612,271 A 80,80 0 0,1 745,140" fill="none" stroke="#ef4444" stroke-width="20" stroke-linecap="round"/>
+
+    <!-- 범례 -->
+    <rect x="560" y="330" width="350" height="60" fill="white" stroke="#d0d9e8" stroke-width="1" rx="4"/>
+
+    <circle cx="575" cy="350" r="6" fill="#2563eb"/>
+    <text x="590" y="355" font-size="11" fill="#0c4a6e" font-weight="bold">
+      동적 전력: 350mW (70%)
+    </text>
+
+    <circle cx="575" cy="370" r="6" fill="#ef4444"/>
+    <text x="590" y="375" font-size="11" fill="#0c4a6e" font-weight="bold">
+      정적 전력: 150mW (30%)
+    </text>
+
+    <!-- 모듈별 소비 비율 (막대 그래프) -->
+    <text x="560" y="415" font-size="12" font-weight="bold" fill="#0c4a6e">
+      모듈별 동적 전력 분해:
+    </text>
+
+    <!-- ALU: 125.3 (35%) -->
+    <rect x="560" y="435" width="245" height="15" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <text x="810" y="447" font-size="10" fill="#0c4a6e" font-weight="bold">
+      125.3mW (35%)
+    </text>
+    <text x="560" y="450" font-size="10" fill="#0c4a6e">
+      alu_unit
+    </text>
+
+    <!-- Memory: 95.7 (27%) -->
+    <rect x="560" y="460" width="172" height="15" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <text x="738" y="472" font-size="10" fill="#0c4a6e" font-weight="bold">
+      95.7mW (27%)
+    </text>
+    <text x="560" y="475" font-size="10" fill="#0c4a6e">
+      memory_ctrl
+    </text>
+
+    <!-- Pipeline: 89.2 (25%) -->
+    <rect x="560" y="485" width="159" height="15" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <text x="725" y="497" font-size="10" fill="#0c4a6e" font-weight="bold">
+      89.2mW (25%)
+    </text>
+    <text x="560" y="500" font-size="10" fill="#0c4a6e">
+      pipeline_regs
+    </text>
+
+    <!-- I-Cache: 40.0 (11%) -->
+    <rect x="560" y="510" width="70" height="15" fill="#dbeafe" stroke="#2563eb" stroke-width="1"/>
+    <text x="636" y="522" font-size="10" fill="#0c4a6e" font-weight="bold">
+      40.0mW (11%)
+    </text>
+    <text x="560" y="525" font-size="10" fill="#0c4a6e">
+      i_cache
+    </text>
+  </g>
+
+  <!-- 하단: 해석 -->
+  <rect x="50" y="590" width="900" height="2" fill="#cbd5e1"/>
+</svg>

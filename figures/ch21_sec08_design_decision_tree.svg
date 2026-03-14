@@ -1,0 +1,187 @@
+<svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- 배경 -->
+  <rect width="1200" height="700" fill="#f8fafc"/>
+
+  <!-- 제목 -->
+  <text x="600" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    의사결정 트리: 상황별 전력 최적화 전략
+  </text>
+  <text x="600" y="55" font-size="12" text-anchor="middle" fill="#64748b">
+    "당신의 목표는?" → "추천 기법은?"
+  </text>
+
+  <!-- ===== 기하 및 화살표 정의 ===== -->
+  <defs>
+    <marker id="arrowtree" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3b82f6"/>
+    </marker>
+  </defs>
+
+  <!-- ===== Root 노드: "당신의 주요 제약은?" ===== -->
+  <rect x="450" y="80" width="300" height="60" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="8"/>
+  <text x="600" y="108" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+    당신의 주요 제약은?
+  </text>
+  <text x="600" y="130" font-size="10" text-anchor="middle" fill="#0c4a6e">
+    (배터리 / 열 / 면적 / 성능)
+  </text>
+
+  <!-- ===== Level 1: 4가지 경로 ===== -->
+
+  <!-- 경로 1: 배터리 제한 -->
+  <line x1="520" y1="140" x2="220" y2="200" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+
+  <rect x="50" y="200" width="340" height="60" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="8"/>
+  <text x="220" y="228" font-size="11" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+    📱 배터리 제한 (IoT, 모바일)
+  </text>
+  <text x="220" y="248" font-size="10" text-anchor="middle" fill="#0c4a6e">
+    → 에너지/명령어(EPI) 최소화
+  </text>
+
+  <!-- 경로 2: 열 제약 -->
+  <line x1="560" y1="140" x2="600" y2="200" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+
+  <rect x="430" y="200" width="340" height="60" fill="#fed7aa" stroke="#f97316" stroke-width="2" rx="8"/>
+  <text x="600" y="228" font-size="11" font-weight="bold" text-anchor="middle" fill="#ea580c">
+    🌡️ 열 제약 (밀집 배치)
+  </text>
+  <text x="600" y="248" font-size="10" text-anchor="middle" fill="#ea580c">
+    → T_j &lt; 70°C 유지
+  </text>
+
+  <!-- 경로 3: 면적 제약 -->
+  <line x1="650" y1="140" x2="800" y2="200" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+
+  <rect x="630" y="200" width="340" height="60" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="8"/>
+  <text x="800" y="228" font-size="11" font-weight="bold" text-anchor="middle" fill="#15803d">
+    📦 면적 제약 (FPGA 보드)
+  </text>
+  <text x="800" y="248" font-size="10" text-anchor="middle" fill="#15803d">
+    → LUT 사용량 최소화
+  </text>
+
+  <!-- 경로 4: 성능 필요 -->
+  <line x1="680" y1="140" x2="1000" y2="200" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+
+  <rect x="830" y="200" width="340" height="60" fill="#e0e7ff" stroke="#4f46e5" stroke-width="2" rx="8"/>
+  <text x="1000" y="228" font-size="11" font-weight="bold" text-anchor="middle" fill="#312e81">
+    ⚡ 성능 필요 (게임, AI)
+  </text>
+  <text x="1000" y="248" font-size="10" text-anchor="middle" fill="#312e81">
+    → MHz / CPI 최소화
+  </text>
+
+  <!-- ===== Level 2: 각 경로별 추천 기법 ===== -->
+
+  <!-- 경로 1-1: 배터리 → DVFS 우선 -->
+  <line x1="220" y1="260" x2="120" y2="320" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+  <rect x="20" y="320" width="200" height="80" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="6"/>
+  <text x="120" y="342" font-size="10" font-weight="bold" text-anchor="middle" fill="#991b1b">
+    🥇 DVFS
+  </text>
+  <text x="120" y="358" font-size="9" text-anchor="middle" fill="#64748b">
+    (동적 전압/주파수)
+  </text>
+  <text x="120" y="374" font-size="9" text-anchor="middle" fill="#64748b">
+    효과: 70% 절감
+  </text>
+  <text x="120" y="390" font-size="8" text-anchor="middle" fill="#991b1b">
+    단점: 구현 복잡
+  </text>
+
+  <!-- 경로 1-2: 배터리 → Clock Gating 보조 -->
+  <line x1="250" y1="260" x2="330" y2="320" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+  <rect x="230" y="320" width="200" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="330" y="342" font-size="10" font-weight="bold" text-anchor="middle" fill="#15803d">
+    🥈 Clock Gating
+  </text>
+  <text x="330" y="358" font-size="9" text-anchor="middle" fill="#64748b">
+    (클록 게이팅)
+  </text>
+  <text x="330" y="374" font-size="9" text-anchor="middle" fill="#64748b">
+    효과: 25% 절감
+  </text>
+  <text x="330" y="390" font-size="8" text-anchor="middle" fill="#15803d">
+    장점: 간단함
+  </text>
+
+  <!-- 경로 2: 열 → 클록 감소 -->
+  <line x1="600" y1="260" x2="600" y2="320" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+  <rect x="480" y="320" width="240" height="80" fill="#fed7aa" stroke="#f97316" stroke-width="2" rx="6"/>
+  <text x="600" y="342" font-size="10" font-weight="bold" text-anchor="middle" fill="#ea580c">
+    🥇 클록 감소
+  </text>
+  <text x="600" y="358" font-size="9" text-anchor="middle" fill="#64748b">
+    (주파수 ↓)
+  </text>
+  <text x="600" y="374" font-size="9" text-anchor="middle" fill="#64748b">
+    동적 전력 ↓
+  </text>
+  <text x="600" y="390" font-size="8" text-anchor="middle" fill="#ea580c">
+    + 냉각(환풍) 추가
+  </text>
+
+  <!-- 경로 3: 면적 → 메모리 선택 -->
+  <line x1="800" y1="260" x2="800" y2="320" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+  <rect x="680" y="320" width="240" height="80" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="6"/>
+  <text x="800" y="342" font-size="10" font-weight="bold" text-anchor="middle" fill="#15803d">
+    🥇 메모리 선택
+  </text>
+  <text x="800" y="358" font-size="9" text-anchor="middle" fill="#64748b">
+    (BRAM vs LUTRAM)
+  </text>
+  <text x="800" y="374" font-size="9" text-anchor="middle" fill="#64748b">
+    효율: 15% 절감
+  </text>
+  <text x="800" y="390" font-size="8" text-anchor="middle" fill="#15803d">
+    + 순차화 고려
+  </text>
+
+  <!-- 경로 4: 성능 → 파이프라인 -->
+  <line x1="1000" y1="260" x2="1000" y2="320" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtree)"/>
+  <rect x="880" y="320" width="240" height="80" fill="#e0e7ff" stroke="#4f46e5" stroke-width="2" rx="6"/>
+  <text x="1000" y="342" font-size="10" font-weight="bold" text-anchor="middle" fill="#312e81">
+    🥇 파이프라인
+  </text>
+  <text x="1000" y="358" font-size="9" text-anchor="middle" fill="#64748b">
+    (깊이 증가)
+  </text>
+  <text x="1000" y="374" font-size="9" text-anchor="middle" fill="#64748b">
+    MHz ↑, CPI ↓
+  </text>
+  <text x="1000" y="390" font-size="8" text-anchor="middle" fill="#312e81">
+    비용: 면적 ↑
+  </text>
+
+  <!-- ===== Level 3: 최종 체크리스트 ===== -->
+  <rect x="50" y="470" width="1100" height="200" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="8"/>
+
+  <text x="600" y="495" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+    ✅ 모든 경로에서 공통으로 확인해야 할 것:
+  </text>
+
+  <text x="70" y="530" font-size="11" fill="#0c4a6e">
+    1️⃣ Vivado Power Report 생성 (기준선 수립)
+  </text>
+
+  <text x="70" y="555" font-size="11" fill="#0c4a6e">
+    2️⃣ 3가지 벤치마크 실행 (순차/스래싱/최적화)
+  </text>
+
+  <text x="70" y="580" font-size="11" fill="#0c4a6e">
+    3️⃣ EPI 계산: (동적 + 정적 전력) × CPI / 주파수
+  </text>
+
+  <text x="70" y="605" font-size="11" fill="#0c4a6e">
+    4️⃣ 온도 안전 확인: T_j = T_ambient + P × θ_ja &lt; 85°C
+  </text>
+
+  <text x="70" y="630" font-size="11" fill="#0c4a6e">
+    5️⃣ 결론: "왜 이 기법을 선택했는가?" 근거 제시
+  </text>
+
+  <text x="70" y="655" font-size="10" fill="#64748b" font-style="italic">
+    💡 팁: 종종 2~3가지 기법의 조합이 최적입니다 (예: DVFS + Clock Gating)
+  </text>
+</svg>

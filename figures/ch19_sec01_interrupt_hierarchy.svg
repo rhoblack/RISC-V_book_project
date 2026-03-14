@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .box { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; }
+      .exception-box { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; }
+      .interrupt-box { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .priority-box { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="title">Trap 분류 계층도</text>
+
+  <!-- Top Level: Trap -->
+  <rect x="250" y="60" width="300" height="60" class="box" rx="5"/>
+  <text x="400" y="85" text-anchor="middle" class="label" font-weight="bold">Trap (함정)</text>
+  <text x="400" y="105" text-anchor="middle" class="sublabel">정상 프로그램 흐름 이탈</text>
+
+  <!-- Division line -->
+  <line x1="400" y1="120" x2="400" y2="150" stroke="#2563EB" stroke-width="2"/>
+
+  <!-- Exception and Interrupt boxes -->
+  <rect x="80" y="150" width="250" height="80" class="exception-box" rx="5"/>
+  <text x="205" y="175" text-anchor="middle" class="label" font-weight="bold">Exception</text>
+  <text x="205" y="195" text-anchor="middle" class="sublabel">(예외)</text>
+  <text x="205" y="215" text-anchor="middle" class="sublabel">동기, 명령어로 인한</text>
+
+  <rect x="470" y="150" width="250" height="80" class="interrupt-box" rx="5"/>
+  <text x="595" y="175" text-anchor="middle" class="label" font-weight="bold">Interrupt</text>
+  <text x="595" y="195" text-anchor="middle" class="sublabel">(인터럽트)</text>
+  <text x="595" y="215" text-anchor="middle" class="sublabel">비동기, 외부 신호</text>
+
+  <!-- Interrupt Sources -->
+  <line x1="595" y1="230" x2="595" y2="270" stroke="#059669" stroke-width="2"/>
+
+  <!-- Three interrupt sources -->
+  <!-- MEIP -->
+  <rect x="350" y="270" width="140" height="80" class="priority-box" rx="5"/>
+  <text x="420" y="295" text-anchor="middle" class="label" font-weight="bold">MEIP</text>
+  <text x="420" y="315" text-anchor="middle" class="sublabel">Machine External</text>
+  <text x="420" y="330" text-anchor="middle" class="sublabel">mip[11]</text>
+  <text x="420" y="345" text-anchor="middle" class="label" font-weight="bold" fill="#DC2626">우선순위 1위</text>
+
+  <!-- MSIP -->
+  <rect x="530" y="270" width="140" height="80" class="priority-box" rx="5"/>
+  <text x="600" y="295" text-anchor="middle" class="label" font-weight="bold">MSIP</text>
+  <text x="600" y="315" text-anchor="middle" class="sublabel">Machine Software</text>
+  <text x="600" y="330" text-anchor="middle" class="sublabel">mip[3]</text>
+  <text x="600" y="345" text-anchor="middle" class="label" font-weight="bold" fill="#F59E0B">우선순위 2위</text>
+
+  <!-- MTIP -->
+  <rect x="710" y="270" width="140" height="80" class="priority-box" rx="5"/>
+  <text x="780" y="295" text-anchor="middle" class="label" font-weight="bold">MTIP</text>
+  <text x="780" y="315" text-anchor="middle" class="sublabel">Machine Timer</text>
+  <text x="780" y="330" text-anchor="middle" class="sublabel">mip[7]</text>
+  <text x="780" y="345" text-anchor="middle" class="label" font-weight="bold" fill="#10B981">우선순위 3위</text>
+
+  <!-- Arrow from Interrupt to sources -->
+  <line x1="570" y1="230" x2="420" y2="270" stroke="#059669" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="595" y1="230" x2="600" y2="270" stroke="#059669" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="620" y1="230" x2="780" y2="270" stroke="#059669" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Description boxes -->
+  <rect x="50" y="400" width="700" height="150" fill="none" stroke="#CCCCCC" stroke-width="1" stroke-dasharray="5,5" rx="3"/>
+  <text x="60" y="420" class="label" font-weight="bold">주요 특징:</text>
+  <text x="60" y="445" class="sublabel">• Exception: 명령어 실행 중 발생 (0으로 나누기, 메모리 정렬 오류 등)</text>
+  <text x="60" y="465" class="sublabel">• Interrupt: 외부 신호 (타이머, UART, GPIO 등)로 발생</text>
+  <text x="60" y="485" class="sublabel">• 고정 우선순위: MEIP (외부) > MSIP (소프트웨어) > MTIP (타이머)</text>
+  <text x="60" y="505" class="sublabel">• Trap Handler: mepc(복귀주소) 저장, mtvec(핸들러주소)로 분기</text>
+  <text x="60" y="525" class="sublabel">• MRET: 저장된 mepc로 복귀, mstatus 복구</text>
+
+  <!-- Arrowhead definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" fill="#059669"/>
+    </marker>
+  </defs>
+</svg>

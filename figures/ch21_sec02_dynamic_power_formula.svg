@@ -1,0 +1,101 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- 배경 -->
+  <rect width="1000" height="600" fill="#f8fafc"/>
+
+  <!-- 제목 -->
+  <text x="500" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    전압(V) 변화에 따른 동적 전력 증가
+  </text>
+  <text x="500" y="55" font-size="12" text-anchor="middle" fill="#64748b">
+    P_dyn = C × V² × f 에서 V의 제곱 관계 시각화
+  </text>
+
+  <!-- ===== Y축 (전력) ===== -->
+  <line x1="80" y1="80" x2="80" y2="480" stroke="#1e293b" stroke-width="2"/>
+  <text x="40" y="280" font-size="12" fill="#1e293b" text-anchor="middle" writing-mode="tb">
+    전력 (P) [mW]
+  </text>
+
+  <!-- Y축 눈금 -->
+  <line x1="75" y1="480" x2="85" y2="480" stroke="#1e293b" stroke-width="1"/>
+  <text x="65" y="485" font-size="11" fill="#64748b" text-anchor="end">0</text>
+
+  <line x1="75" y1="400" x2="85" y2="400" stroke="#1e293b" stroke-width="1"/>
+  <text x="65" y="405" font-size="11" fill="#64748b" text-anchor="end">0.5</text>
+
+  <line x1="75" y1="320" x2="85" y2="320" stroke="#1e293b" stroke-width="1"/>
+  <text x="65" y="325" font-size="11" fill="#64748b" text-anchor="end">1.0</text>
+
+  <line x1="75" y1="240" x2="85" y2="240" stroke="#1e293b" stroke-width="1"/>
+  <text x="65" y="245" font-size="11" fill="#64748b" text-anchor="end">1.5</text>
+
+  <line x1="75" y1="160" x2="85" y2="160" stroke="#1e293b" stroke-width="1"/>
+  <text x="65" y="165" font-size="11" fill="#64748b" text-anchor="end">2.0</text>
+
+  <!-- ===== X축 (전압) ===== -->
+  <line x1="80" y1="480" x2="950" y2="480" stroke="#1e293b" stroke-width="2"/>
+  <text x="515" y="530" font-size="12" fill="#1e293b" text-anchor="middle">
+    공급 전압 (V) [Volt]
+  </text>
+
+  <!-- X축 눈금 -->
+  <line x1="80" y1="475" x2="80" y2="485" stroke="#1e293b" stroke-width="1"/>
+  <text x="80" y="505" font-size="11" fill="#64748b" text-anchor="middle">0.0</text>
+
+  <line x1="240" y1="475" x2="240" y2="485" stroke="#1e293b" stroke-width="1"/>
+  <text x="240" y="505" font-size="11" fill="#64748b" text-anchor="middle">0.5</text>
+
+  <line x1="400" y1="475" x2="400" y2="485" stroke="#1e293b" stroke-width="1"/>
+  <text x="400" y="505" font-size="11" fill="#64748b" text-anchor="middle">1.0</text>
+
+  <line x1="560" y1="475" x2="560" y2="485" stroke="#1e293b" stroke-width="1"/>
+  <text x="560" y="505" font-size="11" fill="#64748b" text-anchor="middle">1.2</text>
+
+  <line x1="720" y1="475" x2="720" y2="485" stroke="#1e293b" stroke-width="1"/>
+  <text x="720" y="505" font-size="11" fill="#64748b" text-anchor="middle">1.5</text>
+
+  <!-- ===== 곡선: P = V² (C×f 상수) ===== -->
+  <!-- V=0.0: P=0,  V=0.5: P=0.25,  V=1.0: P=1.0,  V=1.2: P=1.44,  V=1.5: P=2.25 -->
+  <!-- 스케일: V는 80~920 범위, P는 480~160 범위 (역순) -->
+  <polyline points="80,480 240,400 400,320 560,251 720,145"
+            fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 곡선 위의 점들 -->
+  <circle cx="80" cy="480" r="5" fill="#2563eb"/>
+  <circle cx="240" cy="400" r="5" fill="#2563eb"/>
+  <circle cx="400" cy="320" r="5" fill="#2563eb"/>
+  <circle cx="560" cy="251" r="5" fill="#2563eb"/>
+  <circle cx="720" cy="145" r="5" fill="#2563eb"/>
+
+  <!-- 수직 참조선 (V=1.0과 1.1 비교) -->
+  <line x1="400" y1="480" x2="400" y2="320" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+  <circle cx="400" cy="320" r="4" fill="#ef4444"/>
+
+  <!-- V 10% 증가 시 전력 변화 표시 -->
+  <line x1="440" y1="480" x2="440" y2="299" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,5"/>
+  <circle cx="440" cy="299" r="4" fill="#16a34a"/>
+
+  <!-- 주석 -->
+  <text x="410" y="340" font-size="11" fill="#ef4444" font-weight="bold">
+    V=1.0V
+  </text>
+  <text x="410" y="355" font-size="10" fill="#ef4444">
+    P=1.0 mW
+  </text>
+
+  <text x="450" y="320" font-size="11" fill="#16a34a" font-weight="bold">
+    V=1.1V (+10%)
+  </text>
+  <text x="450" y="335" font-size="10" fill="#16a34a">
+    P=1.21 mW (+21%)
+  </text>
+
+  <!-- 텍스트 박스: 핵심 해석 -->
+  <rect x="100" y="540" width="850" height="50" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" rx="4"/>
+  <text x="110" y="560" font-size="12" fill="#1e40af" font-weight="bold">
+    V²의 의미: 전압을 조금만 올려도 전력은 제곱으로 급증!
+  </text>
+  <text x="110" y="578" font-size="11" fill="#0c4a6e">
+    예) V를 50% 낮추면 P는 75% 감소 (0.5² = 0.25) • V를 10% 올리면 P는 21% 증가 (1.1² = 1.21)
+  </text>
+</svg>

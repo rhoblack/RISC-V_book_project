@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .state { font-size: 14px; font-weight: bold; fill: white; }
+      .label { font-size: 13px; fill: #1F2937; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .normal-state { fill: #60A5FA; stroke: #2563EB; stroke-width: 2; }
+      .trap-state { fill: #F97316; stroke: #EA580C; stroke-width: 2; }
+      .handler-state { fill: #10B981; stroke: #059669; stroke-width: 2; }
+      .transition { font-size: 11px; fill: #1F2937; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" class="title">Trap Handler FSM (3상태)</text>
+
+  <!-- NORMAL state -->
+  <circle cx="150" cy="200" r="70" class="normal-state"/>
+  <text x="150" y="200" text-anchor="middle" class="state">NORMAL</text>
+  <text x="150" y="220" text-anchor="middle" class="sublabel">(일반 실행)</text>
+
+  <!-- TRAP state -->
+  <circle cx="450" cy="200" r="70" class="trap-state"/>
+  <text x="450" y="200" text-anchor="middle" class="state">TRAP</text>
+  <text x="450" y="220" text-anchor="middle" class="sublabel">(1 사이클)</text>
+
+  <!-- HANDLER state -->
+  <circle cx="750" cy="200" r="70" class="handler-state"/>
+  <text x="750" y="200" text-anchor="middle" class="state">HANDLER</text>
+  <text x="750" y="220" text-anchor="middle" class="sublabel">(실행 중)</text>
+
+  <!-- Transition: NORMAL → TRAP -->
+  <path d="M 215 175 Q 325 120 385 150" fill="none" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+  <text x="300" y="140" text-anchor="middle" class="transition">trap_en = 1</text>
+  <text x="300" y="156" text-anchor="middle" class="transition">(mstatus.MIE & (mie & mip))</text>
+
+  <!-- Transition: TRAP → HANDLER -->
+  <path d="M 515 175 Q 600 120 685 150" fill="none" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+  <text x="600" y="140" text-anchor="middle" class="transition">다음 클럭</text>
+
+  <!-- Transition: HANDLER → NORMAL (MRET) -->
+  <path d="M 680 240 Q 450 320 220 240" fill="none" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowhead)"/>
+  <text x="450" y="350" text-anchor="middle" class="transition">MRET 명령어 실행</text>
+  <text x="450" y="366" text-anchor="middle" class="transition">(MIE ← MPIE, pc ← mepc)</text>
+
+  <!-- Self-loop: NORMAL → NORMAL -->
+  <path d="M 120 130 Q 80 80 120 130" fill="none" stroke="#60A5FA" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="50" y="100" text-anchor="middle" class="transition">trap_en = 0</text>
+
+  <!-- State descriptions -->
+  <rect x="50" y="420" width="800" height="150" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1" rx="5"/>
+
+  <text x="70" y="445" class="label" font-weight="bold">NORMAL 상태:</text>
+  <text x="70" y="462" class="sublabel">• 일반 프로그램 실행</text>
+  <text x="70" y="478" class="sublabel">• 각 사이클마다 trap_en 신호 체크</text>
+  <text x="480" y="445" class="label" font-weight="bold">TRAP 상태:</text>
+  <text x="480" y="462" class="sublabel">• mepc, mcause, mstatus 자동 업데이트</text>
+  <text x="480" y="478" class="sublabel">• pc ← mtvec (또는 handler_pc)</text>
+
+  <text x="70" y="508" class="label" font-weight="bold">HANDLER 상태:</text>
+  <text x="70" y="525" class="sublabel">• Trap Handler 코드 실행</text>
+  <text x="70" y="541" class="sublabel">• MRET 명령어까지 계속 실행</text>
+  <text x="480" y="508" class="label" font-weight="bold">MRET (복귀):</text>
+  <text x="480" y="525" class="sublabel">• mstatus.MIE ← mstatus.MPIE</text>
+  <text x="480" y="541" class="sublabel">• pc ← mepc (원래 프로그램으로)</text>
+
+  <!-- Arrowhead definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" fill="#2563EB"/>
+    </marker>
+  </defs>
+</svg>

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 800" width="1000" height="800">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; font-weight: bold; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .stack-frame { fill: #E0E7FF; stroke: #4F46E5; stroke-width: 2; }
+      .handler1 { fill: #F97316; opacity: 0.3; stroke: #EA580C; stroke-width: 1; }
+      .handler2 { fill: #10B981; opacity: 0.3; stroke: #059669; stroke-width: 1; }
+      .memory-addr { font-size: 10px; fill: #1F2937; font-family: monospace; font-weight: bold; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="35" text-anchor="middle" class="title">중첩 인터럽트: 메모리 스택 다이어그램</text>
+
+  <!-- Timeline header -->
+  <text x="100" y="75" class="label">초기 상태</text>
+  <text x="350" y="75" class="label">1번 Trap (Timer)</text>
+  <text x="620" y="75" class="label">2번 Trap (External)</text>
+  <text x="850" y="75" class="label">복귀</text>
+
+  <!-- Initial stack state -->
+  <rect x="50" y="100" width="200" height="500" fill="none" stroke="#CCCCCC" stroke-width="1" stroke-dasharray="3,3" rx="3"/>
+  <text x="100" y="120" class="sublabel">sp</text>
+  <line x1="50" x2="250" y1="115" y2="115" stroke="#999999" stroke-width="1"/>
+  <text x="100" y="145" class="code">empty</text>
+  <text x="100" y="330" class="code" font-style="italic">(더 아래 유저 데이터)</text>
+
+  <!-- After 1st Trap -->
+  <rect x="300" y="100" width="200" height="500" fill="none" stroke="#CCCCCC" stroke-width="1" stroke-dasharray="3,3" rx="3"/>
+
+  <!-- Handler 1 frame -->
+  <rect x="300" y="280" width="200" height="120" class="handler1" rx="3"/>
+  <line x1="300" x2="500" y1="295" y2="295" stroke="#EA580C" stroke-width="1.5"/>
+  <text x="310" y="310" class="code">mepc=0x100</text>
+  <text x="310" y="325" class="code">mcause=7</text>
+  <text x="310" y="340" class="code">ra, t0, ...</text>
+  <text x="310" y="355" class="code">sp →</text>
+
+  <text x="350" y="425" class="sublabel">Handler 1</text>
+  <text x="350" y="440" class="sublabel">(Timer)</text>
+
+  <!-- After 2nd Trap -->
+  <rect x="550" y="100" width="200" height="500" fill="none" stroke="#CCCCCC" stroke-width="1" stroke-dasharray="3,3" rx="3"/>
+
+  <!-- Handler 1 frame (still there) -->
+  <rect x="550" y="160" width="200" height="120" class="handler1" rx="3"/>
+  <line x1="550" x2="750" y1="175" y2="175" stroke="#EA580C" stroke-width="1.5"/>
+  <text x="560" y="190" class="code">mepc=0x100</text>
+  <text x="560" y="205" class="code">mcause=7</text>
+  <text x="560" y="220" class="code">ra, t0, ...</text>
+
+  <!-- Handler 2 frame (nested) -->
+  <rect x="550" y="280" width="200" height="140" class="handler2" rx="3"/>
+  <line x1="550" x2="750" y1="295" y2="295" stroke="#059669" stroke-width="1.5"/>
+  <text x="560" y="310" class="code">mepc=0x200</text>
+  <text x="560" y="325" class="code">mcause=11</text>
+  <text x="560" y="340" class="code">ra, t0, ...</text>
+  <text x="560" y="355" class="code">sp →</text>
+  <text x="560" y="370" class="code">nested</text>
+
+  <text x="600" y="445" class="sublabel">Handler 2</text>
+  <text x="600" y="460" class="sublabel">(External)</text>
+
+  <!-- After recovery -->
+  <rect x="800" y="100" width="200" height="500" fill="none" stroke="#CCCCCC" stroke-width="1" stroke-dasharray="3,3" rx="3"/>
+
+  <text x="850" y="120" class="sublabel">sp</text>
+  <line x1="800" x2="1000" y1="115" y2="115" stroke="#999999" stroke-width="1"/>
+  <text x="850" y="145" class="code">정리 완료</text>
+
+  <!-- Sequence description -->
+  <rect x="50" y="640" width="900" height="140" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1" rx="5"/>
+
+  <text x="70" y="665" class="label">실행 순서:</text>
+  <text x="70" y="685" class="code">1. Timer 인터럽트 → Handler 1 진입 (mepc=0x100 저장)</text>
+  <text x="70" y="700" class="code">2. Handler 1에서 mstatus.MIE = 1로 설정 (중첩 허용)</text>
+  <text x="70" y="715" class="code">3. External 인터럽트 발생 → Handler 2 진입 (mepc=0x200 저장, Handler 1 위에 스택)</text>
+  <text x="70" y="730" class="code">4. Handler 2 완료 → MRET → mepc=0x200으로 복귀, 스택 정리</text>
+  <text x="70" y="745" class="code">5. Handler 1 계속 → MRET → mepc=0x100으로 복귀, 메인 프로그램 복귀</text>
+</svg>

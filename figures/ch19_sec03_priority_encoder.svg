@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 700" width="800" height="700">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 11px; fill: #1F2937; font-family: monospace; }
+      .input-label { font-size: 12px; fill: #DC2626; }
+      .output-label { font-size: 12px; fill: #059669; }
+      .logic-box { fill: #F3F4F6; stroke: #9CA3AF; stroke-width: 1.5; }
+      .priority-chain { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="title">우선순위 인코더 (Priority Encoder)</text>
+
+  <!-- Input signals -->
+  <text x="50" y="80" class="input-label" font-weight="bold">입력 신호:</text>
+  <circle cx="80" cy="105" r="4" fill="#DC2626"/>
+  <text x="95" y="109" class="sublabel">interrupt[11] = MEIP (외부, 우선순위 1위)</text>
+
+  <circle cx="80" cy="130" r="4" fill="#DC2626"/>
+  <text x="95" y="134" class="sublabel">interrupt[7]  = MTIP (타이머, 우선순위 3위)</text>
+
+  <circle cx="80" cy="155" r="4" fill="#DC2626"/>
+  <text x="95" y="159" class="sublabel">interrupt[3]  = MSIP (소프트웨어, 우선순위 2위)</text>
+
+  <!-- Priority chain logic -->
+  <text x="50" y="200" class="label" font-weight="bold">우선순위 체인 로직:</text>
+
+  <!-- First check: MEIP -->
+  <rect x="50" y="220" width="700" height="70" class="priority-chain" rx="5"/>
+  <text x="60" y="245" class="code">if (interrupt[11])</text>
+  <text x="75" y="265" class="code">→ cause_code = 4'd11, interrupt_valid = 1'b1</text>
+
+  <!-- Arrow -->
+  <line x1="400" y1="290" x2="400" y2="310" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Second check: MSIP -->
+  <rect x="50" y="310" width="700" height="70" class="priority-chain" rx="5"/>
+  <text x="60" y="335" class="code">else if (interrupt[3])</text>
+  <text x="75" y="355" class="code">→ cause_code = 4'd3,  interrupt_valid = 1'b1</text>
+
+  <!-- Arrow -->
+  <line x1="400" y1="380" x2="400" y2="400" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Third check: MTIP -->
+  <rect x="50" y="400" width="700" height="70" class="priority-chain" rx="5"/>
+  <text x="60" y="425" class="code">else if (interrupt[7])</text>
+  <text x="75" y="445" class="code">→ cause_code = 4'd7,  interrupt_valid = 1'b1</text>
+
+  <!-- Arrow -->
+  <line x1="400" y1="470" x2="400" y2="490" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Default case -->
+  <rect x="50" y="490" width="700" height="70" class="logic-box" rx="5"/>
+  <text x="60" y="515" class="code">else</text>
+  <text x="75" y="535" class="code">→ cause_code = 4'b0,  interrupt_valid = 1'b0</text>
+
+  <!-- Output signals -->
+  <text x="50" y="610" class="output-label" font-weight="bold">출력 신호:</text>
+  <circle cx="80" cy="635" r="4" fill="#059669"/>
+  <text x="95" y="639" class="sublabel">cause_code[3:0] = 3-bit 원인 코드 (3, 7, 11 중 하나)</text>
+
+  <circle cx="80" cy="660" r="4" fill="#059669"/>
+  <text x="95" y="664" class="sublabel">interrupt_valid = 대기 중인 인터럽트 있음 여부</text>
+
+  <!-- Arrowhead definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" fill="#F59E0B"/>
+    </marker>
+  </defs>
+</svg>

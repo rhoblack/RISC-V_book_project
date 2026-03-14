@@ -1,0 +1,157 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- 배경 -->
+  <rect width="1000" height="600" fill="#f8fafc"/>
+
+  <!-- 제목 -->
+  <text x="500" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    열 경로 (Thermal Path) 및 온도 분포
+  </text>
+  <text x="500" y="55" font-size="12" text-anchor="middle" fill="#64748b">
+    칩 내부에서 공기로 열이 전달되는 경로 • T_j = T_ambient + P × θ_ja
+  </text>
+
+  <!-- ===== 좌측: 열 경로 다이어그램 ===== -->
+  <g>
+    <!-- 배경 -->
+    <rect x="50" y="100" width="400" height="450" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="8"/>
+
+    <!-- 제목 -->
+    <text x="250" y="125" font-size="14" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+      열 전달 경로
+    </text>
+
+    <!-- 1. Si 칩 내부 -->
+    <rect x="120" y="160" width="260" height="50" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="4"/>
+    <text x="250" y="185" font-size="12" font-weight="bold" text-anchor="middle" fill="#991b1b">
+      1️⃣ Si 칩 내부
+    </text>
+    <text x="250" y="202" font-size="10" text-anchor="middle" fill="#991b1b">
+      T_core (가장 뜨거움)
+    </text>
+
+    <!-- 화살표 (아래로) -->
+    <path d="M 250 210 L 250 250" fill="none" stroke="#dc2626" stroke-width="3"
+          marker-end="url(#arrowhot)"/>
+    <text x="270" y="230" font-size="10" fill="#dc2626" font-weight="bold">θ_internal</text>
+
+    <!-- 2. 칩 표면 (접합, Junction) -->
+    <rect x="120" y="250" width="260" height="50" fill="#fed7aa" stroke="#f97316" stroke-width="2" rx="4"/>
+    <text x="250" y="275" font-size="12" font-weight="bold" text-anchor="middle" fill="#ea580c">
+      2️⃣ 칩 표면 (Junction)
+    </text>
+    <text x="250" y="292" font-size="10" text-anchor="middle" fill="#ea580c">
+      T_j = T_ambient + P × θ_ja
+    </text>
+
+    <!-- 화살표 (아래로) -->
+    <path d="M 250 300 L 250 340" fill="none" stroke="#f97316" stroke-width="3"
+          marker-end="url(#arrowhot)"/>
+    <text x="270" y="320" font-size="10" fill="#f97316" font-weight="bold">θ_jc</text>
+
+    <!-- 3. PCB 보드 -->
+    <rect x="120" y="340" width="260" height="50" fill="#bfdbfe" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="250" y="365" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+      3️⃣ PCB 보드
+    </text>
+    <text x="250" y="382" font-size="10" text-anchor="middle" fill="#0c4a6e">
+      T_board
+    </text>
+
+    <!-- 화살표 (아래로) -->
+    <path d="M 250 390 L 250 430" fill="none" stroke="#3b82f6" stroke-width="3"
+          marker-end="url(#arrowblue)"/>
+    <text x="270" y="410" font-size="10" fill="#3b82f6" font-weight="bold">θ_ba</text>
+
+    <!-- 4. 공기 (주변) -->
+    <rect x="120" y="430" width="260" height="50" fill="#d1d5db" stroke="#6b7280" stroke-width="2" rx="4"/>
+    <text x="250" y="455" font-size="12" font-weight="bold" text-anchor="middle" fill="#374151">
+      4️⃣ 공기 (주변)
+    </text>
+    <text x="250" y="472" font-size="10" text-anchor="middle" fill="#374151">
+      T_ambient = 25°C
+    </text>
+
+    <!-- 화살표 마커 정의 -->
+    <defs>
+      <marker id="arrowhot" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="#dc2626"/>
+      </marker>
+      <marker id="arrowblue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="#3b82f6"/>
+      </marker>
+    </defs>
+  </g>
+
+  <!-- ===== 우측: 온도 분포 및 계산 ===== -->
+  <g>
+    <!-- 배경 -->
+    <rect x="530" y="100" width="420" height="450" fill="#fef2f2" stroke="#dc2626" stroke-width="2" rx="8"/>
+
+    <!-- 제목 -->
+    <text x="740" y="125" font-size="14" font-weight="bold" text-anchor="middle" fill="#991b1b">
+      온도 계산 및 안전 마진
+    </text>
+
+    <!-- 예시 수치 -->
+    <rect x="560" y="160" width="360" height="30" fill="white" stroke="#fed7aa" stroke-width="1" rx="3"/>
+    <text x="570" y="180" font-size="11" fill="#ea580c" font-family="monospace" font-weight="bold">
+      P = 0.5W (Vivado 측정)
+    </text>
+
+    <!-- 계산 과정 -->
+    <text x="570" y="220" font-size="11" fill="#991b1b" font-weight="bold">
+      T_j = T_ambient + P × θ_ja
+    </text>
+    <text x="570" y="240" font-size="11" fill="#991b1b" font-family="monospace">
+      = 25°C + 0.5W × 50°C/W
+    </text>
+    <text x="570" y="260" font-size="11" fill="#991b1b" font-family="monospace">
+      = 25°C + 25°C
+    </text>
+    <text x="570" y="280" font-size="11" fill="#991b1b" font-family="monospace" font-weight="bold">
+      = 50°C ✓ 안전
+    </text>
+
+    <!-- 안전 범위 표시 -->
+    <rect x="560" y="310" width="360" height="120" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="580" y="330" font-size="11" fill="#0c4a6e" font-weight="bold">
+      Basys 3 온도 범위:
+    </text>
+
+    <rect x="580" y="345" width="320" height="25" fill="#dcfce7" stroke="#16a34a" stroke-width="1" rx="2"/>
+    <text x="590" y="365" font-size="10" fill="#15803d" font-family="monospace">
+      ✓ 정상: 0~70°C (권장)
+    </text>
+
+    <rect x="580" y="375" width="320" height="25" fill="#fef2f2" stroke="#dc2626" stroke-width="1" rx="2"/>
+    <text x="590" y="395" font-size="10" fill="#991b1b" font-family="monospace">
+      ⚠️ 위험: 70~85°C (경고)
+    </text>
+
+    <rect x="580" y="405" width="320" height="25" fill="#fecaca" stroke="#dc2626" stroke-width="2" rx="2"/>
+    <text x="590" y="425" font-size="10" fill="#7f1d1d" font-family="monospace" font-weight="bold">
+      🔴 치명: &gt;85°C (자동 셧다운)
+    </text>
+
+    <!-- 안전 마진 계산 -->
+    <rect x="560" y="450" width="360" height="80" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" rx="4"/>
+    <text x="580" y="470" font-size="11" fill="#0c4a6e" font-weight="bold">
+      안전 마진 계산:
+    </text>
+    <text x="580" y="490" font-size="10" fill="#0c4a6e" font-family="monospace">
+      Margin = 85°C - T_j
+    </text>
+    <text x="580" y="507" font-size="10" fill="#0c4a6e" font-family="monospace">
+      = 85°C - 50°C
+    </text>
+    <text x="580" y="524" font-size="10" fill="#15803d" font-family="monospace" font-weight="bold">
+      = 35°C ✓ 충분한 여유
+    </text>
+  </g>
+
+  <!-- 하단: 결론 -->
+  <rect x="50" y="560" width="900" height="40" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="4"/>
+  <text x="500" y="583" font-size="12" font-weight="bold" text-anchor="middle" fill="#15803d">
+    Basys 3는 대부분의 학생 설계에서 열 문제 없음 • 실측: 30~55°C (안전 범위)
+  </text>
+</svg>

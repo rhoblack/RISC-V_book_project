@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 12px; fill: #1F2937; font-weight: bold; }
+      .sublabel { font-size: 10px; fill: #4B5563; }
+      .code { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .row-header { font-size: 11px; fill: #1F2937; font-weight: bold; }
+      .state { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .cycle-box { stroke: #CCCCCC; stroke-width: 1; }
+      .trap-cycle { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+      .normal-cycle { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1; }
+      .handler1-cycle { fill: #FED7AA; stroke: #EA580C; stroke-width: 1; }
+      .handler2-cycle { fill: #D1FAE5; stroke: #059669; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" class="title">중첩 인터럽트 시뮬레이션 타임라인</text>
+
+  <!-- Cycle numbers -->
+  <text x="30" y="75" class="row-header">Cycle:</text>
+  <g id="cycle-labels">
+    <text x="75" y="75" class="code" text-anchor="middle">0</text>
+    <text x="130" y="75" class="code" text-anchor="middle">1</text>
+    <text x="185" y="75" class="code" text-anchor="middle">2</text>
+    <text x="240" y="75" class="code" text-anchor="middle">3</text>
+    <text x="295" y="75" class="code" text-anchor="middle">4</text>
+    <text x="350" y="75" class="code" text-anchor="middle">5</text>
+    <text x="405" y="75" class="code" text-anchor="middle">6</text>
+    <text x="460" y="75" class="code" text-anchor="middle">7</text>
+    <text x="515" y="75" class="code" text-anchor="middle">8</text>
+    <text x="570" y="75" class="code" text-anchor="middle">9</text>
+    <text x="625" y="75" class="code" text-anchor="middle">10</text>
+    <text x="680" y="75" class="code" text-anchor="middle">11</text>
+    <text x="735" y="75" class="code" text-anchor="middle">12</text>
+    <text x="790" y="75" class="code" text-anchor="middle">13</text>
+  </g>
+
+  <!-- State: PC -->
+  <text x="30" y="110" class="row-header">PC:</text>
+  <rect x="60" y="95" width="55" height="25" class="normal-cycle cycle-box"/>
+  <text x="87.5" y="113" class="code" text-anchor="middle">0x100</text>
+
+  <rect x="115" y="95" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="142.5" y="113" class="code" text-anchor="middle">TRAP</text>
+
+  <rect x="170" y="95" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="197.5" y="113" class="code" text-anchor="middle">H1-A</text>
+
+  <rect x="225" y="95" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="252.5" y="113" class="code" text-anchor="middle">H1-B</text>
+
+  <rect x="280" y="95" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="307.5" y="113" class="code" text-anchor="middle">TRAP</text>
+
+  <rect x="335" y="95" width="55" height="25" class="handler2-cycle cycle-box"/>
+  <text x="362.5" y="113" class="code" text-anchor="middle">H2</text>
+
+  <rect x="390" y="95" width="55" height="25" class="handler2-cycle cycle-box"/>
+  <text x="417.5" y="113" class="code" text-anchor="middle">H2</text>
+
+  <rect x="445" y="95" width="55" height="25" class="handler2-cycle cycle-box"/>
+  <text x="472.5" y="113" class="code" text-anchor="middle">MRET</text>
+
+  <rect x="500" y="95" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="527.5" y="113" class="code" text-anchor="middle">H1</text>
+
+  <rect x="555" y="95" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="582.5" y="113" class="code" text-anchor="middle">MRET</text>
+
+  <rect x="610" y="95" width="55" height="25" class="normal-cycle cycle-box"/>
+  <text x="637.5" y="113" class="code" text-anchor="middle">0x104</text>
+
+  <!-- mepc -->
+  <text x="30" y="155" class="row-header">mepc:</text>
+  <rect x="60" y="140" width="55" height="25" class="normal-cycle cycle-box"/>
+  <text x="87.5" y="158" class="code" text-anchor="middle">—</text>
+
+  <rect x="115" y="140" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="142.5" y="158" class="code" text-anchor="middle">←0x100</text>
+
+  <rect x="170" y="140" width="110" height="25" class="handler1-cycle cycle-box"/>
+  <text x="225" y="158" class="code" text-anchor="middle">0x100</text>
+
+  <rect x="280" y="140" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="307.5" y="158" class="code" text-anchor="middle">←0x200</text>
+
+  <rect x="335" y="140" width="110" height="25" class="handler2-cycle cycle-box"/>
+  <text x="390" y="158" class="code" text-anchor="middle">0x200</text>
+
+  <rect x="445" y="140" width="55" height="25" class="handler2-cycle cycle-box"/>
+  <text x="472.5" y="158" class="code" text-anchor="middle">→0x200</text>
+
+  <rect x="500" y="140" width="110" height="25" class="handler1-cycle cycle-box"/>
+  <text x="555" y="158" class="code" text-anchor="middle">0x100</text>
+
+  <rect x="610" y="140" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="637.5" y="158" class="code" text-anchor="middle">→0x100</text>
+
+  <!-- mcause -->
+  <text x="30" y="200" class="row-header">mcause:</text>
+  <rect x="60" y="185" width="55" height="25" class="normal-cycle cycle-box"/>
+  <text x="87.5" y="203" class="code" text-anchor="middle">—</text>
+
+  <rect x="115" y="185" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="142.5" y="203" class="code" text-anchor="middle">←7</text>
+
+  <rect x="170" y="185" width="110" height="25" class="handler1-cycle cycle-box"/>
+  <text x="225" y="203" class="code" text-anchor="middle">7 (Timer)</text>
+
+  <rect x="280" y="185" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="307.5" y="203" class="code" text-anchor="middle">←11</text>
+
+  <rect x="335" y="185" width="110" height="25" class="handler2-cycle cycle-box"/>
+  <text x="390" y="203" class="code" text-anchor="middle">11 (Ext)</text>
+
+  <rect x="445" y="185" width="110" height="25" class="handler2-cycle cycle-box"/>
+  <text x="500" y="203" class="code" text-anchor="middle">11 (Ext)</text>
+
+  <rect x="555" y="185" width="110" height="25" class="handler1-cycle cycle-box"/>
+  <text x="610" y="203" class="code" text-anchor="middle">7 (Timer)</text>
+
+  <!-- MIE (interrupt enable) -->
+  <text x="30" y="245" class="row-header">MIE:</text>
+  <rect x="60" y="230" width="55" height="25" class="normal-cycle cycle-box"/>
+  <text x="87.5" y="248" class="code" text-anchor="middle">1</text>
+
+  <rect x="115" y="230" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="142.5" y="248" class="code" text-anchor="middle">→0</text>
+
+  <rect x="170" y="230" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="197.5" y="248" class="code" text-anchor="middle">0</text>
+
+  <rect x="225" y="230" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="252.5" y="248" class="code" text-anchor="middle">→1</text>
+
+  <rect x="280" y="230" width="55" height="25" class="trap-cycle cycle-box"/>
+  <text x="307.5" y="248" class="code" text-anchor="middle">→0</text>
+
+  <rect x="335" y="230" width="110" height="25" class="handler2-cycle cycle-box"/>
+  <text x="390" y="248" class="code" text-anchor="middle">0</text>
+
+  <rect x="445" y="230" width="55" height="25" class="handler2-cycle cycle-box"/>
+  <text x="472.5" y="248" class="code" text-anchor="middle">→1</text>
+
+  <rect x="500" y="230" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="527.5" y="248" class="code" text-anchor="middle">1</text>
+
+  <rect x="555" y="230" width="55" height="25" class="handler1-cycle cycle-box"/>
+  <text x="582.5" y="248" class="code" text-anchor="middle">→1</text>
+
+  <rect x="610" y="230" width="55" height="25" class="normal-cycle cycle-box"/>
+  <text x="637.5" y="248" class="code" text-anchor="middle">1</text>
+
+  <!-- Legend -->
+  <rect x="50" y="290" width="900" height="480" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1" rx="5"/>
+
+  <text x="70" y="315" class="label">주요 이벤트:</text>
+
+  <rect x="70" y="330" width="20" height="20" class="normal-cycle cycle-box"/>
+  <text x="100" y="345" class="sublabel">일반 실행: 프로그램 정상 실행 중</text>
+
+  <rect x="70" y="360" width="20" height="20" class="trap-cycle cycle-box"/>
+  <text x="100" y="375" class="sublabel">TRAP: 인터럽트 감지, CSR 업데이트</text>
+
+  <rect x="70" y="390" width="20" height="20" class="handler1-cycle cycle-box"/>
+  <text x="100" y="405" class="sublabel">Handler 1 (Timer): Trap 1 처리</text>
+
+  <rect x="70" y="420" width="20" height="20" class="handler2-cycle cycle-box"/>
+  <text x="100" y="435" class="sublabel">Handler 2 (External): 중첩된 Trap 2 처리</text>
+
+  <text x="70" y="470" class="label">동작 순서:</text>
+  <text x="70" y="490" class="sublabel">Cycle 0: PC=0x100에서 정상 실행 중</text>
+  <text x="70" y="507" class="sublabel">Cycle 1: Timer 인터럽트 감지 → mepc=0x100 저장, MIE=0, PC=Handler1으로 변경</text>
+  <text x="70" y="524" class="sublabel">Cycle 2-3: Handler 1 실행, Cycle 3에서 MIE=1로 설정해 중첩 허용</text>
+  <text x="70" y="541" class="sublabel">Cycle 4: External 인터럽트 감지 → mepc=0x200 저장, MIE=0, PC=Handler2로 변경</text>
+  <text x="70" y="558" class="sublabel">Cycle 5-7: Handler 2 실행 (중첩)</text>
+  <text x="70" y="575" class="sublabel">Cycle 7: MRET 실행 → MIE=1, PC=mepc(0x200)으로 복귀 → Handler 1로 돌아옴</text>
+  <text x="70" y="592" class="sublabel">Cycle 8-9: Handler 1 계속 실행 후 MRET → PC=mepc(0x100)으로 복귀</text>
+  <text x="70" y="609" class="sublabel">Cycle 10: 메인 프로그램 복귀 (PC=0x104)</text>
+
+  <text x="70" y="640" class="label">핵심 관찰:</text>
+  <text x="70" y="660" class="sublabel">• MPIE를 통해 각 Handler의 MIE 상태를 독립적으로 보존</text>
+  <text x="70" y="677" class="sublabel">• 중첩 깊이가 깊어질수록 스택 메모리 사용량 증가</text>
+  <text x="70" y="694" class="sublabel">• MRET 시 정확한 복귀 주소(mepc)와 상태(MIE←MPIE)로 복구</text>
+</svg>

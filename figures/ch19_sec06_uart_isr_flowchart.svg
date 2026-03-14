@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 850" width="800" height="850">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; font-weight: bold; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .process-box { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; }
+      .decision-box { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+      .peripheral-box { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .end-box { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" class="title">UART ISR 호출 흐름도</text>
+
+  <!-- Start: UART peripheral -->
+  <rect x="250" y="60" width="300" height="60" class="peripheral-box" rx="5"/>
+  <text x="400" y="85" text-anchor="middle" class="label">UART Controller</text>
+  <text x="400" y="105" text-anchor="middle" class="sublabel">데이터 수신 (RX FIFO)</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="120" x2="400" y2="150" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- uart_intr signal -->
+  <rect x="250" y="150" width="300" height="50" class="process-box" rx="5"/>
+  <text x="400" y="170" text-anchor="middle" class="label">uart_intr = 1</text>
+  <text x="400" y="185" text-anchor="middle" class="code">(1 사이클 펄스)</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="200" x2="400" y2="230" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- mip[11] update -->
+  <rect x="250" y="230" width="300" height="50" class="process-box" rx="5"/>
+  <text x="400" y="250" text-anchor="middle" class="label">mip[11] ← 1</text>
+  <text x="400" y="265" text-anchor="middle" class="sublabel">(MEIP Pending)</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="280" x2="400" y2="310" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- Check MIE -->
+  <polygon points="400,310 500,360 400,410 300,360" class="decision-box"/>
+  <text x="400" y="360" text-anchor="middle" class="label">MIE = 1?</text>
+
+  <!-- Yes arrow -->
+  <line x1="400" y1="410" x2="400" y2="440" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+  <text x="410" y="428" class="sublabel">Yes</text>
+
+  <!-- No arrow (loops back) -->
+  <line x1="300" y1="360" x2="150" y2="360" stroke="#DC2626" stroke-width="2.5"/>
+  <line x1="150" y1="360" x2="150" y2="560" stroke="#DC2626" stroke-width="2.5"/>
+  <text x="200" y="355" class="sublabel" fill="#DC2626">No: 대기</text>
+
+  <!-- trap_en signal -->
+  <rect x="250" y="440" width="300" height="50" class="process-box" rx="5"/>
+  <text x="400" y="460" text-anchor="middle" class="label">trap_en = 1</text>
+  <text x="400" y="475" text-anchor="middle" class="code">(Trap 조건 만족)</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="490" x2="400" y2="520" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- Priority encoder -->
+  <rect x="250" y="520" width="300" height="50" class="process-box" rx="5"/>
+  <text x="400" y="540" text-anchor="middle" class="label">Priority Encoder</text>
+  <text x="400" y="555" text-anchor="middle" class="code">cause_code = 11</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="570" x2="400" y2="600" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- Handler PC calculation -->
+  <rect x="250" y="600" width="300" height="65" class="process-box" rx="5"/>
+  <text x="400" y="620" text-anchor="middle" class="label">Handler PC 계산</text>
+  <text x="400" y="638" text-anchor="middle" class="code">0x8000_0000 + (11 &lt;&lt; 2)</text>
+  <text x="400" y="653" text-anchor="middle" class="code">= 0x8000_002C</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="665" x2="400" y2="695" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- ISR entry -->
+  <rect x="250" y="695" width="300" height="55" class="process-box" rx="5"/>
+  <text x="400" y="715" text-anchor="middle" class="label">meip_handler() 진입</text>
+  <text x="400" y="732" text-anchor="middle" class="sublabel">(주소 0x8000_002C)</text>
+
+  <!-- Arrow down -->
+  <line x1="400" y1="750" x2="400" y2="780" stroke="#059669" stroke-width="2.5" marker-end="url(#arrowhead1)"/>
+
+  <!-- Handler execution -->
+  <rect x="250" y="780" width="300" height="50" class="process-box" rx="5"/>
+  <text x="400" y="800" text-anchor="middle" class="label">UART 데이터 처리</text>
+  <text x="400" y="815" text-anchor="middle" class="code">(읽기, 에코, 등)</text>
+</svg>

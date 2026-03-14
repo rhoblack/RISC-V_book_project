@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" width="1100" height="700">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; font-weight: bold; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .metric-box { fill: #E0F2FE; stroke: #0284C7; stroke-width: 2; }
+      .perf-box { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .warning-box { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; }
+      .axis { stroke: #1F2937; stroke-width: 2; }
+      .grid { stroke: #CCCCCC; stroke-width: 0.5; }
+      .bar { stroke: #2563EB; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="550" y="35" text-anchor="middle" class="title">인터럽트 성능 지표</text>
+
+  <!-- Left side: Metrics Table -->
+  <text x="50" y="75" class="label">주요 성능 지표 (100MHz 프로세서 기준):</text>
+
+  <!-- Latency metric -->
+  <rect x="50" y="95" width="500" height="100" class="metric-box" rx="5"/>
+  <text x="70" y="120" class="label">지연시간 (Interrupt Latency):</text>
+  <text x="70" y="140" class="code">• 정의: 외부 신호 발생 ~ Handler 첫 명령어 실행</text>
+  <text x="70" y="155" class="code">• 범위: 2～4 사이클 = 20～40 ns (100MHz)</text>
+  <text x="70" y="170" class="code">• 영향: 실시간 제어, 응답성 필요한 장치</text>
+
+  <!-- Throughput metric -->
+  <rect x="50" y="210" width="500" height="100" class="perf-box" rx="5"/>
+  <text x="70" y="235" class="label">처리량 (Interrupt Throughput):</text>
+  <text x="70" y="255" class="code">• 정의: 초당 처리 가능한 인터럽트 개수</text>
+  <text x="70" y="270" class="code">• 계산: (100 × 10^6) / (Handler 사이클) 인터럽트/초</text>
+  <text x="70" y="285" class="code">• 예: Handler=20사이클 → 5M 인터럽트/초</text>
+
+  <!-- Nested overhead -->
+  <rect x="50" y="325" width="500" height="100" class="warning-box" rx="5"/>
+  <text x="70" y="350" class="label">중첩 오버헤드 (Nested Overhead):</text>
+  <text x="70" y="370" class="code">• 메모리: 16 레지스터 × 4바이트 = 64바이트/단계</text>
+  <text x="70" y="385" class="code">• 시간: SAVE ~5사이클, RESTORE ~5사이클</text>
+  <text x="70" y="400" class="code">• 깊이8단계 시: 512바이트 메모리, 80사이클 오버헤드</text>
+
+  <!-- Right side: Performance Chart -->
+  <!-- Y axis (Latency) -->
+  <text x="610" y="75" class="label">성능 곡선:</text>
+
+  <line x1="650" y1="100" x2="650" y2="500" class="axis"/>
+  <line x1="650" y1="500" x2="1050" y2="500" class="axis"/>
+
+  <!-- Y axis labels -->
+  <text x="640" y="505" class="code" text-anchor="end">0</text>
+  <text x="640" y="455" class="code" text-anchor="end">2</text>
+  <text x="640" y="405" class="code" text-anchor="end">4</text>
+  <text x="640" y="355" class="code" text-anchor="end">6</text>
+  <text x="640" y="305" class="code" text-anchor="end">8</text>
+  <text x="640" y="255" class="code" text-anchor="end">10</text>
+
+  <!-- Y axis label -->
+  <text x="580" y="300" class="sublabel" text-anchor="middle">총 지연</text>
+  <text x="580" y="315" class="sublabel" text-anchor="middle">(사이클)</text>
+
+  <!-- X axis labels -->
+  <text x="650" y="520" class="code" text-anchor="middle">0</text>
+  <text x="750" y="520" class="code" text-anchor="middle">2</text>
+  <text x="850" y="520" class="code" text-anchor="middle">4</text>
+  <text x="950" y="520" class="code" text-anchor="middle">6</text>
+  <text x="1050" y="520" class="code" text-anchor="middle">8</text>
+
+  <!-- X axis label -->
+  <text x="850" y="560" class="sublabel">중첩 깊이</text>
+
+  <!-- Grid -->
+  <line x1="750" y1="100" x2="750" y2="500" class="grid" stroke-dasharray="2,2"/>
+  <line x1="850" y1="100" x2="850" y2="500" class="grid" stroke-dasharray="2,2"/>
+  <line x1="950" y1="100" x2="950" y2="500" class="grid" stroke-dasharray="2,2"/>
+
+  <line x1="650" y1="200" x2="1050" y2="200" class="grid" stroke-dasharray="2,2"/>
+  <line x1="650" y1="300" x2="1050" y2="300" class="grid" stroke-dasharray="2,2"/>
+  <line x1="650" y1="400" x2="1050" y2="400" class="grid" stroke-dasharray="2,2"/>
+
+  <!-- Data points and line (No nesting, Single nesting, Double nesting, etc.)
+       Latency ≈ 3 + 10*depth -->
+  <circle cx="650" cy="470" r="4" fill="#2563EB"/>
+  <circle cx="750" cy="380" r="4" fill="#2563EB"/>
+  <circle cx="850" cy="290" r="4" fill="#2563EB"/>
+  <circle cx="950" cy="200" r="4" fill="#2563EB"/>
+
+  <!-- Line connecting points -->
+  <line x1="650" y1="470" x2="750" y2="380" class="bar" stroke="#2563EB" stroke-width="2.5"/>
+  <line x1="750" y1="380" x2="850" y2="290" class="bar" stroke="#2563EB" stroke-width="2.5"/>
+  <line x1="850" y1="290" x2="950" y2="200" class="bar" stroke="#2563EB" stroke-width="2.5"/>
+
+  <!-- Labels on curve -->
+  <text x="660" y="485" class="sublabel">3 cy</text>
+  <text x="750" y="365" class="sublabel">13 cy</text>
+  <text x="850" y="275" class="sublabel">23 cy</text>
+  <text x="950" y="185" class="sublabel">33 cy</text>
+
+  <!-- Bottom summary -->
+  <rect x="50" y="580" width="1000" height="100" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1" rx="5"/>
+
+  <text x="70" y="605" class="label">설계 권고사항:</text>
+  <text x="70" y="625" class="code">1. 중첩 깊이 제한: 일반적으로 4～8단계 권장 (메모리, 성능 고려)</text>
+  <text x="70" y="640" class="code">2. Handler 최소화: 실시간 시스템은 Handler 사이클을 최소한으로 유지</text>
+  <text x="70" y="655" class="code">3. 스택 오버플로우 방지: 최악의 경우(깊은 중첩)를 대비한 스택 크기 할당</text>
+</svg>

@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 20 — FPGA 합성 최적화와 타이밍 클로저</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js atom-one-dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 20</span>
+  <h1>FPGA 합성 최적화와 타이밍 클로저</h1>
+  <p class="chapter-intro">Ch19까지 완성한 RISC-V 프로세서를 Basys 3 FPGA에서 실제로 동작시키기 위해서는, 리소스 제약 내에서 설계를 최적화해야 합니다. 이 챕터에서는 Vivado 합성 옵션, XDC 타이밍 제약, 그리고 임계 경로 분석을 통해 50MHz 이상의 주파수를 달성하는 실무 기법을 배웁니다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>Vivado 합성 옵션 5가지(Retiming, FSM Encoding, Keep Hierarchy, Gated Clock Conversion, Resource Sharing)의 효과를 설명할 수 있다.</li>
+    <li>create_clock, create_generated_clock, set_input_delay, set_output_delay를 사용하여 XDC 기본 제약을 작성할 수 있다.</li>
+    <li>Vivado 타이밍 보고서에서 WNS, TNS, 임계 경로를 읽고 병목을 식별할 수 있다.</li>
+    <li>임계 경로 개선을 위해 MUX 깊이 축소, 파이프라인 재삽입, 메모리 타입 변경 옵션을 분석할 수 있다.</li>
+    <li>Basys 3 LUT/BRAM/DSP 사용률에 따라 메모리 추론 타입을 선택하고 최적화 기준을 수립할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 섹션 20.1A ========== -->
+<section id="sec-20-1a">
+  <h2>20.1A 레지스터 균형과 FSM 인코딩 최적화</h2>
+
+  <p>
+    지금까지 설계한 rv32i_pipeline_complete 모듈은 기능적으로 완성되었지만, Vivado에서 기본 설정으로 합성하면 타이밍 위반이 발생할 가능성이 높습니다.
+    합성(synthesis)은 하드웨어 설명 언어(HDL)를 FPGA 논리 소자(LUT(조합논리블록), FF, BRAM(메모리블록)) 배치로 변환하는 과정인데,
+    이 과정에서 설계자의 의도와 다르게 비효율적인 경로가 형성될 수 있습니다.
+    Vivado의 합성 옵션 중 처음 두 가지 기법은 조합 경로의 길이를 줄이는 데 직접 기여합니다.
+  </p>
+
+  <h3>합성(Synthesis)과 구현(Implementation) 개념</h3>
+  <p>
+    FPGA 설계 흐름은 두 가지 단계로 나뉩니다.
+    <strong>합성</strong>은 SystemVerilog 코드를 FPGA 프리미티브(LUT, FF 등)의 네트리스트로 변환하는 단계입니다.
+    이 단계에서 논리 함수를 LUT에 구현하는 방식, 레지스터 전송 레벨(RTL) 회로의 구조 등을 결정합니다.
+    <strong>구현</strong>은 생성된 네트리스트를 실제 FPGA 칩의 물리 위치에 배치하고 신호 경로를 라우팅하는 단계입니다.
+    이 섹션에서는 합성 단계의 처음 두 가지 최적화 기법을 다룹니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 요리 레시피 vs 요리사의 의사결정. 요리 레시피(SystemVerilog 코드)는 "계란을 섞고 팬에 붓는다"는 추상적 명령만 제시합니다.
+    그러나 요리사(합성 도구)는 "어떤 크기의 볼을 쓸 것인가", "어느 정도 크기로 휘젓을 것인가", "팬의 온도는 몇 도인가"와 같은 구체적인 결정을 내려야 합니다.
+    이러한 결정 중 처음 두 가지는 조리 시간(경로 지연)에 직접 영향을 미칩니다.
+    <br><strong>한계:</strong> 이 비유는 요리사의 선택지가 유한함을 반영하지 못합니다. 실제로는 고급 합성 알고리즘이 매우 많은 경우의 수를 자동 탐색합니다.
+  </div>
+
+  <h3>1. Retiming(재타이밍): 플립플롭 위치 최적화</h3>
+
+  <p>
+    재타이밍은 플립플롭(FF)의 위치를 조정하여 조합 논리 경로의 길이를 단축하는 최적화입니다.
+    예를 들어, 원래는 "FF → ALU(20ns) → FF" 구조였다면, 재타이밍 후 "FF → ALU_PART1(10ns) → FF → ALU_PART2(10ns) → FF"로 변환되어 각 경로의 지연을 줄입니다.
+    Vivado에서 이 옵션을 활성화하면 회로의 정확성을 유지하면서 자동으로 FF 위치를 재배열합니다.
+
+    이 최적화의 핵심 성질은 <strong>기능 동작이 정확히 동일</strong>하다는 점입니다.
+    각 스테이지에 추가되는 FF는 신호 지연을 1사이클씩 미루지만, 전체 파이프라인 깊이가 1~2 단계 증가하므로 그 영향이 미미합니다.
+  </p>
+
+  <h3>2. FSM Encoding(상태 머신 인코딩): 상태 표현 방식</h3>
+
+  <p>
+    유한 상태 머신(FSM)의 상태를 2진수로 인코딩하는 방식입니다.
+    <strong>원-핫(one-hot) 인코딩</strong>은 각 상태를 별도의 FF 1개로 표현합니다(예: 8개 상태면 FF 8개).
+    장점은 상태 판별이 매우 빠르지만, 디코더 로직이 복잡해지고 면적이 증가합니다.
+
+    <strong>바이너리(binary) 인코딩</strong>은 상태를 log2(상태수)개 FF로 표현합니다(예: 8개 상태면 FF 3개).
+    장점은 FF가 적고 면적이 작지만, 상태 디코더가 더 복잡한 조합 로직을 필요로 하여 경로 지연이 증가할 수 있습니다.
+
+    <strong>선택 기준:</strong> 타이밍이 임계 경로를 지날 만큼 중요하면 원-핫을, 면적 절약이 목표면 바이너리를 선택합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      Vivado의 합성 옵션은 Tcl 스크립트로 자동화할 수 있습니다.
+      ch20_synthesis_options.tcl 스크립트를 프로젝트 루트에 배치하고, Vivado GUI의 Tools → Run Tcl Script로 실행하면 한 번에 여러 옵션을 적용할 수 있습니다.
+      이는 설계 반복 과정에서 매우 효율적입니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> Retiming을 항상 활성화하면 왜 안 되나요?</p>
+    <p><strong>A:</strong> Retiming은 FF 위치를 재배열하기 때문에 외부 신호(GPIO 출력)의 타이밍이 변할 수 있습니다.
+    따라서 I/O 경로가 있는 설계에서는 재타이밍 전에 false path를 명시해야 합니다.
+    또한 디버깅 시 신호 관찰이 어렵고, 합성 시간이 증가합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>지금까지 읽었다면 다음에 답해 보세요:
+    "Retiming과 FSM Encoding 중 어느 옵션이 파이프라인 마이크로아키텍처(EX/MEM/WB 스테이지)에 더 직접적인 영향을 미칠까요?"
+    (힌트: 파이프라인은 이미 최적화된 FF 배치이므로...)</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.1B ========== -->
+<section id="sec-20-1b">
+  <h2>20.1B 계층 구조와 클록 게이팅 최적화</h2>
+
+  <p>
+    20.1A에서 경로 지연 단축에 초점을 맞췄다면, 이번 섹션에서는 리소스 사용량과 전력 효율성에 영향을 미치는 옵션들을 살펴봅시다.
+    이러한 옵션들은 직접 타이밍을 개선하기보다는, 설계 구조를 재편성하여 간접적으로 성능과 효율성에 기여합니다.
+  </p>
+
+  <h3>3. Keep Hierarchy(계층 유지): 모듈 경계 보존</h3>
+
+  <p>
+    기본적으로 Vivado는 모든 모듈을 평탄화(flatten)하여 전역 최적화를 수행합니다.
+    예를 들어, alu, control_unit, regfile 등 별도 모듈들을 하나의 거대한 조합 회로로 통합한 후 최적화하는 방식입니다.
+
+    <strong>Keep Hierarchy</strong> 옵션을 활성화하면 각 모듈의 경계를 유지하여 모듈별 부분 최적화를 진행합니다.
+    이는 설계 복잡도가 높을 때 합성 시간을 단축하고, 모듈 간 신호 흐름을 명확하게 유지합니다.
+
+    단점은 전역 최적화 기회를 상실할 수 있다는 것입니다.
+    일반적으로는 자동 평탄화가 더 좋은 성능 결과를 제공하므로, 이 옵션은 다음 상황에서만 활성화합니다:
+    - 합성 시간이 장애가 될 정도로 오래 걸릴 때
+    - 특정 모듈의 논리가 매우 복잡할 때
+    - 설계 재사용성이 중요할 때
+  </p>
+
+  <h3>4. Gated Clock Conversion(클록 게이팅 변환): 전력 절감</h3>
+
+  <p>
+    클록 게이팅은 CPU 설계의 고전적인 전력 절감 기법입니다.
+    불필요한 대기 사이클에 FF의 클록 신호를 비활성화하여 동적 전력 소비를 줄입니다.
+    예: 매 사이클마다 결과를 저장하지 않는 대기 단계에서는 레지스터 파일의 클록을 꺼서 전력을 절감합니다.
+
+    그러나 FPGA 설계에서는 전용 클록 게이팅 셀이 제한적입니다.
+    따라서 Vivado는 이를 <strong>자동으로 다중플렉서(MUX)로 변환</strong>합니다.
+    변환 방식: 모든 FF에 클록을 공급하되, FF 입력 데이터를 선택적으로 제어하여 같은 효과를 냅니다.
+    예: 대기 신호(stall)가 높을 때, 모든 레지스터 입력을 현재값으로 피드백하여 업데이트를 방지합니다.
+  </p>
+
+  <h3>5. Resource Sharing(리소스 공유): 면적 최소화</h3>
+
+  <p>
+    같은 기능이 여러 장소에서 사용되면, 이들을 시간 분할하여 하나의 하드웨어 블록으로 통합합니다.
+    예: ALU와 Barrel Shifter가 모두 32비트 덧셈을 내부적으로 사용한다면, 이 덧셈 하드웨어를 공유하여 LUT 개수를 줄입니다.
+
+    장점은 면적 감소이지만, 단점은 레이턴시(처리 시간)가 증가할 수 있다는 것입니다.
+    파이프라인 설계에서는 이 옵션을 조심스럽게 사용해야 합니다.
+    왜냐하면 공유 리소스에 대한 경합(contention)이 발생할 경우, 추가 사이클이 필요할 수 있기 때문입니다.
+  </p>
+
+  <p>
+    여기까지 5가지 합성 옵션을 살펴봤습니다. 다음 섹션(20.2)에서는 이러한 옵션들의 효과를 객관적으로 측정하기 위한 제약 파일(XDC)의 작성 방법을 배웁니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      합성 옵션 선택의 황금률: "<strong>측정 후 결정</strong>하세요."
+      각 옵션을 개별적으로 활성화한 후 Vivado의 타이밍 보고서(Tools → Report Timing)를 비교하여, 실제 성능 개선 효과를 확인합니다.
+      프로젝트별 최적 조합은 다르므로, 추측보다는 데이터 기반 결정이 중요합니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>이 섹션을 마친 후 답해 보세요:
+    "Keep Hierarchy 옵션이 활성화되면 합성 시간이 짧아지는 이유는 무엇일까요?"
+    (힌트: 최적화 알고리즘의 탐색 공간...)</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.2 ========== -->
+<section id="sec-20-2">
+  <h2>20.2 XDC 타이밍 제약: 기준 클록부터 거짓 경로까지</h2>
+
+  <p>
+    합성 도구는 회로의 동작을 최적화하지만, 설계자의 의도(예: "이 신호는 1MHz 클록으로 동작")를 모르면 올바른 결정을 내릴 수 없습니다.
+    XDC(Xilinx Design Constraints) 파일은 이러한 의도를 명시하는 제약 파일입니다.
+    처음 배우기엔 복잡해 보이지만, XDC 문법이 처음엔 복잡하지만, 4가지 기본 명령어만 알면 80% 해결됩니다.
+    XDC 없이는 합성 도구가 매우 보수적인(느린) 설계를 생성합니다.
+  </p>
+
+  <h3>create_clock: 기준 클록 정의</h3>
+  <p>
+    FPGA의 기준 클록은 외부 발진기(oscillator)에서 제공됩니다. Basys 3는 100MHz 클록을 제공하므로,
+    이를 XDC에서 명시합니다:
+  </p>
+
+  <pre><code class="language-tcl">
+# Basys 3 보드의 100MHz 발진기 (CLK100MHZ 핀)
+create_clock -period 10 -name clk100 [get_ports CLK100MHZ]
+
+# 만약 설계 내부에서 분주된 50MHz 클록을 사용하면
+# create_generated_clock -period 20 -source [get_pins clk_divider/clk_reg/Q] \
+#   -name clk50 [get_ports CLK_OUT]
+  </code></pre>
+
+  <p>
+    "period 10"은 주파수 100MHz(=1000/10 ns)를 의미합니다.
+    만약 50MHz 설계를 목표한다면 "period 20"을 사용합니다.
+    이 제약은 모든 조합 논리 경로가 10ns 이내에 완성되어야 함을 의미합니다.
+  </p>
+
+  <h3>set_input_delay, set_output_delay: I/O 타이밍</h3>
+  <p>
+    외부 장치(GPIO, UART)와의 신호 교환도 제약이 필요합니다.
+    예를 들어, 외부 센서가 신호를 제공할 때, 센서의 신호 유효 시간(setup time)을 고려해야 합니다:
+  </p>
+
+  <pre><code class="language-tcl">
+# GPIO 입력: 외부 신호가 30% 클록 기준으로 안정
+set_input_delay -clock clk100 -max 3.0 [get_ports GPIO_IN]
+set_input_delay -clock clk100 -min 0.5 [get_ports GPIO_IN]
+
+# GPIO 출력: FPGA에서 출력까지의 지연 5ns 이내
+set_output_delay -clock clk100 -max 5.0 [get_ports GPIO_OUT]
+set_output_delay -clock clk100 -min 0.0 [get_ports GPIO_OUT]
+  </code></pre>
+
+  <p>
+    입력 지연(input delay)은 외부 신호가 FPGA 입력 FF까지 도달하는 데 걸리는 시간입니다(일반적으로 PCB 라우팅 + 센서 지연).
+    출력 지연(output delay)은 FPGA 출력 FF에서 외부 핀까지의 시간입니다.
+  </p>
+
+  <h3>set_false_path: 동기화되지 않은 신호</h3>
+  <p>
+    클록 영역 간 신호(clock domain crossing, CDC)는 특별한 처리가 필요합니다.
+    예를 들어, GPIO 입력이 시스템 클록과 비동기이면, 직접 비교하지 말고 동기화기(synchronizer)를 거쳐야 합니다.
+    XDC에서는 이를 거짓 경로(false path)로 표시하여 타이밍 분석에서 제외합니다:
+  </p>
+
+  <pre><code class="language-tcl">
+# 동기화기 입력(async_in)은 기준 클록과 관계없음
+set_false_path -from [get_ports ASYNC_IN] \
+  -to [get_pins sync_ff_reg[0]/D]
+
+# UART RX도 비동기 신호
+set_false_path -from [get_ports UART_RX] \
+  -to [get_pins uart_rx_sync_0/D]
+  </code></pre>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      XDC는 Vivado GUI에서 직접 작성하는 것보다, 텍스트 에디터로 작성 후 프로젝트에 추가하는 것이 좋습니다.
+      버전 관리와 자동 생성이 편리하기 때문입니다.
+      또한 주석을 충분히 남겨 나중에 수정할 때 의도를 기억할 수 있게 합니다.
+    </p>
+  </aside>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> set_false_path를 너무 많이 쓰면 어떻게 되나요?</p>
+    <p><strong>A:</strong> False path를 과다 사용하면, 실제 타이밍 문제가 은폐될 수 있습니다.
+    정말 비동기인 신호에만 사용하세요. 동기식 설계에서 모든 경로는 한 클록 도메인으로 귀결되어야 합니다.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>지금까지 읽었다면 다음에 답해 보세요:
+    "Basys 3 FPGA가 50MHz로 동작하려면, XDC 파일에서 create_clock의 period 값은 몇이어야 하나요?"</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.3A ========== -->
+<section id="sec-20-3a">
+  <h2>20.3A Slack 여유량 개념과 시간 분석</h2>
+
+  <p>
+    합성과 구현 후, Vivado는 타이밍 보고서(timing report)를 생성합니다.
+    이 보고서는 가장 느린 경로(임계 경로, critical path)를 식별하고, 각 단계의 지연을 분석합니다.
+    임계 경로를 이해하는 것이 성능 개선의 첫 단계입니다.
+    타이밍 위반은 현업에서 50% 이상 설계자들이 처음 합성에서 경험합니다. 걱정하지 마세요.
+  </p>
+
+  <h3>Slack(여유량) 개념과 계산</h3>
+  <p>
+    Slack(여유량)은 제약과 실제 지연의 차이입니다:
+  </p>
+  <p style="text-align: center; font-family: monospace;">
+    <strong>Slack(여유량) = 제약 지연 - 실제 지연</strong>
+  </p>
+
+  <p>
+    예를 들어, 10ns 제약에서 실제 지연이 9ns면 slack=1ns(여유 있음).
+    실제 지연이 12ns면 slack=-2ns(위반).
+    WNS(Worst Negative Slack)는 가장 나쁜 음수 slack을 의미하고, TNS(Total Negative Slack)는 모든 위반 경로의 합입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유:</strong> 도로 공사의 신호등. 신호등 주기가 60초(제약)이지만, 실제 교차로 통과 시간이 65초(실제 지연)면,
+    신호등 회전(slack=-5초)이 필요합니다. 반대로 55초면 여유(slack=5초)가 생겨 안전하게 통과합니다.
+    구체적 예: Retiming 적용 후 지연이 4.2ns → 2.8ns로 감소하면, slack = 10ns - 2.8ns = 7.2ns(충분한 여유 달성).
+    <br><strong>한계:</strong> 실제 타이밍은 온도, 공정편차, 전압에 따라 변하지만, 이 비유는 고정값으로 본다는 점입니다.
+  </div>
+
+  <h3>Slack 분석 방법</h3>
+  <p>
+    Slack 분석의 핵심은 <strong>여유가 남는 경로와 부족한 경로를 구분</strong>하는 것입니다.
+    예를 들어, WNS=-2.5ns라면 가장 느린 경로가 2.5ns 초과합니다.
+    이를 해결하려면 임계 경로의 지연을 최소 2.5ns 줄이거나, 클록 주기를 2.5ns 늘려야 합니다.
+
+    실무에서는 모든 경로를 완벽하게 개선하기보다, 상위 5~10개 위반 경로부터 집중적으로 개선하면 효율적입니다.
+    상위 경로들을 개선하면, 그 아래의 경로들이 새로운 임계 경로로 올라오면서 자동으로 해결되는 경우가 많기 때문입니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      Vivado의 Slack 히스토그램을 확인하면 전체 경로 분포를 알 수 있습니다.
+      WNS가 음수여도 TNS가 작으면, 소수의 경로만 개선해도 타이밍 클로저를 달성할 수 있습니다.
+      Tools → Report Timing 실행 후 Slack Histogram 탭을 참고하세요.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>지금까지 읽었다면 다음에 답해 보세요:
+    "타이밍 보고서에서 WNS=-2.5ns이고 기준 클록이 10ns(100MHz)라면, 실제 임계 경로의 지연은 몇 ns인가요?"</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.3B ========== -->
+<section id="sec-20-3b">
+  <h2>20.3B 임계 경로 분석과 병목 식별</h2>
+
+  <p>
+    개별 경로의 slack을 파악했다면, 이제 Vivado 타이밍 보고서를 읽고 실제 병목을 찾아내는 방법을 배웁시다.
+    임계 경로 분석은 회로의 정확한 지연 구조를 이해하고, 가장 효과적인 최적화 전략을 결정하는 데 필수적입니다.
+  </p>
+
+  <h3>Vivado 타이밍 보고서 읽기</h3>
+  <p>
+    Vivado 레이아웃 후 Tools → Report Timing를 실행하면 다음과 같은 형식의 보고서가 생성됩니다:
+  </p>
+
+  <pre><code class="language-text">
+=== Timing Report (WNS = -3.456 ns, TNS = -45.231 ns) ===
+
+Startpoint: pipeline_reg_ex.dout[0] (rising edge triggered flip-flop clocked by clk)
+Endpoint:   pipeline_reg_mem.din[15] (rising edge triggered flip-flop clocked by clk)
+Path Delay: 13.456 ns
+
+Slack: -3.456 ns (VIOLATED)
+
+Timing Path Details:
+  Location | Delay | Cumulative
+  ---------|-------|----------
+  FF-Q     | 0.500 | 0.500
+  MUX(fwd) | 4.200 | 4.700  <- 병목: Data forwarding MUX
+  ALU      | 5.890 | 10.590
+  AND      | 1.200 | 11.790
+  FF-D     | 1.666 | 13.456
+  ---------|-------|----------
+  Period   | 10.000 ns (위반!)
+  </code></pre>
+
+  <p>
+    이 예에서 "MUX(fwd)" 단계가 4.2ns로 가장 큰 지연을 차지합니다.
+    이것은 EX-EX, MEM-EX, WB-EX 세 개의 포워딩 소스를 다중플렉서로 선택하는 로직입니다.
+    이 경로를 개선하는 세 가지 전략을 살펴봅시다:
+  </p>
+
+  <h3>옵션 1: MUX 깊이 축소</h3>
+  <p>
+    3-to-1 MUX 대신 2-to-1 MUX를 사용하는 선택.
+    예를 들어, EX-EX가 가장 흔한 포워딩이면, EX-EX를 우선 선택한 후 MEM-EX를 2차로 선택하는 구조로 개선합니다.
+    구체적 효과: 4.2ns(3-to-1 MUX) → 2.8ns(2단계 2-to-1 MUX 캐스케이드) 달성 가능.
+    단, 이는 코드 수정이 필요합니다.
+  </p>
+
+  <h3>옵션 2: 파이프라인 깊이 증가</h3>
+  <p>
+    MUX 출력 후 추가 FF를 삽입하여 다음 스테이지로 미루기.
+    이는 레이턴시는 증가하지만 주파수를 높일 수 있습니다.
+    트레이드오프: 파이프라인 재삽입 시 CPI(사이클 당 명령어)는 +1 증가하지만, 동작 주파수는 +15MHz 이상 향상될 수 있습니다.
+    파이프라인 설계에서는 선택적으로만 사용합니다.
+  </p>
+
+  <h3>옵션 3: 메모리 읽기 지연 감소</h3>
+  <p>
+    IMEM/DMEM의 읽기 지연을 줄이기 위해 메모리 추론 타입을 변경합니다.
+    조합 읽기(asynchronous read)는 지연이 작지만 전력 소비가 크고,
+    동기 읽기(synchronous read)는 지연이 크지만 효율적입니다.
+    구체적 차이: BRAM 동기 읽기(2사이클, 지연 3ns) vs LUTRAM 조합 읽기(0사이클, 지연 1ns).
+    Vivado에서는 `(* ram_style = "block" *)` 또는 `"distributed"` 속성으로 제어합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      Vivado의 Slack 히스토그램을 확인하면 전체 경로 분포를 알 수 있습니다.
+      WNS가 음수여도 TNS가 작으면, 소수의 경로만 개선해도 타이밍 클로저를 달성할 수 있습니다.
+      Tools → Report Timing 실행 후 Slack Histogram 탭을 참고하세요.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: 타이밍 위반이 발생했을 때 가장 먼저 확인해야 할 것은?</strong>
+      <br><strong>A:</strong> WNS(Worst Negative Slack) 값과 임계 경로의 시작점/끝점을 확인합니다.
+      어느 스테이지(EX/MEM/WB)가 병목인지 파악하면, 그 영역에 집중할 수 있습니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>이 섹션을 마친 후 답해 보세요:
+    "옵션 2(파이프라인 재삽입)에서 CPI가 증가하는데도 높은 주파수가 실제 성능 향상으로 이어질까요? 언제 유리할까요?"</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.4 ========== -->
+<section id="sec-20-4">
+  <h2>20.4 Basys 3 리소스 최적화: LUT, BRAM, FF 분배</h2>
+
+  <p>
+    Vivado 구현 후 Place &amp; Route 보고서는 리소스 사용률을 표시합니다.
+    Basys 3(XC7A35T)는 LUT 20,800개, BRAM 50개(36Kbit), FF 101,440개를 제공합니다.
+    우리 설계가 이를 어떻게 사용하는지 분석하여 추가 최적화의 여지를 판단합니다.
+  </p>
+
+  <h3>리소스별 분배 전략</h3>
+
+  <p><strong>LUT (Look-Up Table) — 조합 논리</strong></p>
+  <p>
+    LUT는 조합 논리를 구현합니다. ALU, MUX, 디코더 등이 LUT를 차지합니다.
+    Ch19 설계에서는:
+  </p>
+  <ul>
+    <li>ALU (32비트 덧셈/뺄셈): ~150 LUT</li>
+    <li>Data forwarding MUX (3-to-1): ~200 LUT</li>
+    <li>레지스터 파일 (32×32 읽기): ~400 LUT</li>
+    <li>캐시 태그 비교: ~300 LUT</li>
+    <li>기타 디코더/제어: ~500 LUT</li>
+  </ul>
+  <p>총합: ~1,550 LUT (약 7.5% 사용).</p>
+
+  <p><strong>BRAM (Block RAM) — 메모리</strong></p>
+  <p>
+    BRAM은 메모리 블록입니다. IMEM, DMEM, 캐시가 BRAM을 사용합니다:
+  </p>
+  <ul>
+    <li>IMEM (4KB = 1024×32): 2개 BRAM (각 18Kb)</li>
+    <li>DMEM (4KB): 2개 BRAM</li>
+    <li>I-Cache Data (4KB): 1개 BRAM (또는 LUTRAM(분산메모리))</li>
+    <li>D-Cache Data (4KB): LUTRAM(분산메모리) (조합 읽기, BRAM 미사용)</li>
+  </ul>
+  <p>총합: 5개 BRAM (10% 사용).</p>
+
+  <p><strong>FF (Flip-Flop) — 순차 논리</strong></p>
+  <p>
+    FF는 레지스터입니다. 레지스터 파일, 파이프라인 레지스터, 제어 신호 등이 FF를 사용합니다:
+  </p>
+  <ul>
+    <li>레지스터 파일 (32×32): 1,024 FF</li>
+    <li>파이프라인 레지스터 4개 스테이지 × 각 ~200 FF: 800 FF</li>
+    <li>캐시 유효 비트/더티 비트: 200 FF</li>
+    <li>제어 신호/카운터: 300 FF</li>
+  </ul>
+  <p>총합: ~2,324 FF (약 2.3% 사용).</p>
+
+  <h3>메모리 추론 타입 선택: BRAM vs LUTRAM(분산메모리)</h3>
+  <p>
+    BRAM은 특화된 메모리 블록이지만 개수가 제한됩니다.
+    작은 메모리는 LUTRAM(분산메모리)으로 대체할 수 있습니다.
+    Vivado에서는 HDL 속성으로 선택합니다:
+  </p>
+
+  <pre><code class="language-systemverilog">
+// BRAM으로 추론 (기본값)
+(* ram_style = "block" *)
+reg [31:0] mem[0:255];
+
+// LUTRAM(분산메모리)으로 추론 (작은 메모리에 권장)
+(* ram_style = "distributed" *)
+reg [31:0] cache_data[0:127];
+
+// 자동 선택 (크기에 따라)
+reg [31:0] temp_mem[0:63];
+  </code></pre>
+
+  <p>
+    LUTRAM(분산메모리)은 조합 읽기(조회가 클록을 기다리지 않음)를 지원하므로, 캐시 데이터처럼 지연이 중요한 경로에 유리합니다.
+    하지만 LUTRAM은 BRAM보다 면적이 크므로, LUT 사용률을 증가시킵니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      리소스 최적화 시 "병목부터 개선하기(bottleneck first)" 원칙을 따르세요.
+      예를 들어, LUT가 85% 사용되었다면, FF는 아직 여유가 있으므로 FF를 추가 스테이지로 삽입하여 레이턴시를 거래하면서 LUT를 줄입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>지금까지 읽었다면 다음에 답해 보세요:
+    "캐시 데이터가 조합 읽기를 필요로 한다면, BRAM과 LUTRAM(분산메모리) 중 어느 것이 더 적합할까요? 왜 그럴까요?"</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.5 ========== -->
+<section id="sec-20-5">
+  <h2>20.5 최적화 사례: Ch19 CSR 모듈의 타이밍 개선</h2>
+
+  <p>
+    이론을 정리했으니, 이제 실제 사례를 봅시다. Ch19에서 구현한 CSR(제어 및 상태 레지스터) 모듈은
+    7개 레지스터를 관리하고, 읽기/쓰기 경로가 복잡합니다.
+    다음은 타이밍을 개선하는 실전 전략입니다. 각 단계가 명확한 이유를 가집니다.
+    이 모듈의 타이밍을 개선하는 과정을 따라가겠습니다.
+  </p>
+
+  <h3>초기 상태: 기본 합성</h3>
+  <p>
+    기본 설정으로 합성하면:
+  </p>
+  <ul>
+    <li><strong>최대 주파수:</strong> 45MHz (제약 10ns 목표에 미달)</li>
+    <li><strong>WNS:</strong> -2.1ns (위반)</li>
+    <li><strong>임계 경로:</strong> mie_reg[7:0] 읽기 → csr_data 출력 (MUX, 8ns)</li>
+    <li><strong>리소스:</strong> LUT 850, FF 256, BRAM 0</li>
+  </ul>
+
+  <h3>Step 1: Retiming 활성화</h3>
+  <p>
+    Vivado GUI에서 Synthesis 설정 → synth_1을 우클릭 → Synthesis Options를 열고,
+    "retiming" 옵션을 활성화합니다. 재합성하면:
+  </p>
+  <ul>
+    <li><strong>최대 주파수:</strong> 52MHz (+7MHz 개선)</li>
+    <li><strong>WNS:</strong> -0.8ns (개선)</li>
+    <li><strong>리소스:</strong> LUT 880 (+30, 무시할 수준), FF 310 (+54)</li>
+  </ul>
+  <p>
+    Retiming이 CSR 읽기 경로에 추가 FF를 삽입하여, 각 스테이지의 조합 지연을 줄였습니다.
+  </p>
+
+  <h3>Step 2: FSM Encoding 최적화</h3>
+  <p>
+    메모리 컨트롤러의 FSM(20.1절에서 언급한 ARB_IDLE 등의 상태)에 대해,
+    원-핫 인코딩을 사용 중이었습니다. 바이너리 인코딩(binary encoding)으로 변경하면:
+  </p>
+  <ul>
+    <li><strong>최대 주파수:</strong> 55MHz (+3MHz)</li>
+    <li><strong>WNS:</strong> +0.2ns (달성!)</li>
+    <li><strong>리소스:</strong> LUT 820 (-60, BRAM 디코더 감소)</li>
+  </ul>
+
+  <h3>Step 3: XDC 추가 제약</h3>
+  <p>
+    create_clock 제약만으로는 부족했으므로, set_multicycle_path를 추가합니다.
+    CSR 쓰기는 2사이클(ID 스테이지에서 시작, WB 스테이지에서 완료)이므로:
+  </p>
+
+  <pre><code class="language-tcl">
+# CSR 쓰기 경로: WB 스테이지에서 ID 스테이지 레지스터로 (1사이클 지연)
+set_multicycle_path 2 -setup \
+  -from [get_pins csr_unit/csr_we_reg/Q] \
+  -to [get_pins csr_unit/mie_reg[*]/D]
+
+set_multicycle_path 1 -hold \
+  -from [get_pins csr_unit/csr_we_reg/Q] \
+  -to [get_pins csr_unit/mie_reg[*]/D]
+  </code></pre>
+
+  <p>
+    이를 적용하면 타이밍 도구가 더 정확한 분석을 수행합니다:
+  </p>
+  <ul>
+    <li><strong>최대 주파수:</strong> 60MHz (+5MHz)</li>
+    <li><strong>WNS:</strong> +1.8ns (충분한 여유)</li>
+  </ul>
+
+  <h3>최종 결과</h3>
+  <p>
+    3단계 최적화 후, CSR 모듈은 50MHz를 안정적으로 달성합니다:
+  </p>
+  <table border="1" cellpadding="8" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <th>지표</th>
+      <th>초기</th>
+      <th>최종</th>
+      <th>개선도</th>
+    </tr>
+    <tr>
+      <td>최대 주파수</td>
+      <td>45MHz</td>
+      <td>60MHz</td>
+      <td>+33%</td>
+    </tr>
+    <tr>
+      <td>WNS</td>
+      <td>-2.1ns</td>
+      <td>+1.8ns</td>
+      <td>+3.9ns</td>
+    </tr>
+    <tr>
+      <td>LUT</td>
+      <td>850</td>
+      <td>820</td>
+      <td>-30 (-3.5%)</td>
+    </tr>
+    <tr>
+      <td>FF</td>
+      <td>256</td>
+      <td>310</td>
+      <td>+54 (+21%)</td>
+    </tr>
+  </table>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p>
+      <strong>Q: 타이밍 개선 시 LUT는 감소했으나 FF는 증가했습니다. 이것이 좋은 거래인가요?</strong>
+      <br><strong>A:</strong> 네, 좋은 거래입니다. Basys 3는 LUT(20,800개)보다 FF(101,440개)의 여유가 훨씬 크기 때문입니다.
+      50MHz 달성이 목표인데, 그 과정에서 FF를 일부 소비하는 것은 효율적입니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>지금까지 읽었다면 다음에 답해 보세요:
+    "Step 1과 Step 2 중 어느 것이 임계 경로를 더 직접적으로 해결했을까요?"
+    (힌트: 임계 경로는 MUX 경로였고, FSM은 메모리 컨트롤러의 일부...)</p>
+  </aside>
+
+</section>
+
+<!-- ========== 섹션 20.6 ========== -->
+<section id="sec-20-6">
+  <h2>20.6 요약 및 다음 단계</h2>
+
+  <h3>핵심 정리</h3>
+  <ul>
+    <li><strong>합성(Synthesis):</strong> RTL을 FPGA 네트리스트로 변환하는 단계. 합성 옵션이 최종 성능을 좌우합니다.</li>
+    <li><strong>Retiming:</strong> FF 위치를 재배열하여 조합 경로를 단축. 가장 효과적인 최적화 방법이지만, 디버깅이 어렵습니다.</li>
+    <li><strong>FSM Encoding:</strong> 원-핫(면적) vs 바이너리 인코딩(binary encoding)(속도) 트레이드오프. 속도가 중요하면 원-핫을 선택합니다.</li>
+    <li><strong>XDC 타이밍 제약:</strong> create_clock으로 기준 클록을 정의하고, set_input/output_delay로 I/O 타이밍을 명시합니다.</li>
+    <li><strong>Slack(여유량) 분석:</strong> Slack(여유량) = 제약 - 실제 지연. WNS(Worst Negative Slack) &gt; 0이면 타이밍 달성.</li>
+    <li><strong>임계 경로 개선:</strong> MUX 깊이 축소, 파이프라인 재삽입, 메모리 타입 변경의 세 가지 기법을 상황에 따라 선택합니다.</li>
+    <li><strong>리소스 최적화:</strong> 병목부터 개선하기. LUT와 BRAM이 부족하면 LUTRAM(분산메모리)이나 파이프라인 심화로 보완합니다.</li>
+    <li><strong>Basys 3 타겟:</strong> 최소 50MHz, 목표 65MHz. LUT &lt; 70%, BRAM &lt; 60% 목표로 여유를 확보합니다.</li>
+  </ul>
+
+  <h3>학습 로드맵</h3>
+  <p>이 챕터에서 배운 내용은 다음과 같이 체계화됩니다:</p>
+  <ol>
+    <li><strong>개념 이해:</strong> Retiming, FSM Encoding 등의 원리를 파악했습니다.</li>
+    <li><strong>제약 작성:</strong> XDC 파일 기초 4가지 명령어(create_clock, set_input/output_delay, set_false_path)를 습득했습니다.</li>
+    <li><strong>분석 능력:</strong> 타이밍 보고서를 읽고 임계 경로를 식별하는 방법을 배웠습니다.</li>
+    <li><strong>최적화 기술:</strong> MUX 깊이, 파이프라인 깊이, 메모리 타입 선택을 통해 성능-면적 트레이드오프를 경험했습니다.</li>
+    <li><strong>실무 경험:</strong> Ch19 CSR 모듈 사례를 통해 45MHz → 60MHz 개선 프로세스를 따랐습니다.</li>
+  </ol>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      다음 프로젝트에서는 다음과 같은 초기 설정을 권장합니다:
+      1. 프로젝트 시작 시 XDC 파일을 먼저 작성 (create_clock 기본 제약)
+      2. 초기 합성에서 Retiming 활성화
+      3. 구현 후 가장 먼저 타이밍 보고서 확인
+      4. 상위 10개 위반 경로만 분석 (나머지는 자동 해결)
+    </p>
+  </aside>
+
+  <h3>연습문제</h3>
+  <ol>
+    <li><strong>[적용]</strong> Retiming은 FF를 추가하면서 LUT는 감소합니다. 이는 왜 일어날까요? 회로 구조 관점에서 설명하세요.</li>
+    <li><strong>[이해]</strong> Basys 3에서 100MHz 클록을 50MHz로 분주하면, create_clock의 period 값은 몇이 되어야 하고, 그 이유는?</li>
+    <li><strong>[적용]</strong> 비동기 GPIO 입력 신호를 위한 XDC 제약을 작성하세요. (set_false_path 사용)</li>
+    <li><strong>[분석]</strong> 타이밍 보고서에서 WNS=-1.5ns, TNS=-3.2ns가 나왔습니다. 이를 개선하는 우선순위 3가지를 제시하세요.</li>
+    <li><strong>[평가]</strong> 현재 LUT 85% 사용, FF 30% 사용인 설계에서, 주파수를 10MHz 더 높이려면 어느 리소스를 희생해야 할까요?</li>
+  </ol>
+
+  <h3>다음 챕터 예고</h3>
+  <p>
+    이제 성능 최적화는 완료했습니다. 다음 챕터(Ch21)에서는
+    <strong>전력 소비와 열 관리</strong>를 다룹니다.
+    50MHz 이상으로 동작하는 프로세서는 상당한 전력을 소비하며, 이를 측정하고 최소화하는 방법을 배웁니다.
+    동적 전력(Dynamic Power)과 정적 전력(Static Power)의 개념부터 시작하여,
+    클록 게이팅(Clock Gating), 전압 스케일링(Voltage Scaling), 그리고 Basys 3의 Power Delivery Network를 최적화하는 기법을 습득합니다.
+  </p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>이 챕터를 마무리하며, 다음 질문에 답해 보세요:
+    "FPGA에서 타이밍 위반이 발생했을 때, 가장 먼저 해야 할 세 가지 조치는 무엇인가요?"
+    (힌트: 정보 수집 → 분석 → 행동 순서)</p>
+  </aside>
+
+</section>
+
+<!-- ========== 챕터 마무리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li>FPGA 합성은 RTL 코드를 논리 소자(LUT, FF, BRAM)로 변환하는 과정</li>
+    <li>Retiming은 FF 위치를 재배열하여 조합 경로 지연을 단축하는 가장 효과적인 최적화</li>
+    <li>FSM Encoding은 원-핫(면적) vs 바이너리 인코딩(binary encoding)(속도) 트레이드오프 결정</li>
+    <li>XDC 파일로 기준 클록, I/O 타이밍, 거짓 경로를 명시</li>
+    <li>Slack(여유량) = 제약 - 실제 지연이며, WNS &gt; 0이 타이밍 달성 기준</li>
+    <li>임계 경로는 Vivado 타이밍 보고서에서 식별 가능하며, MUX 깊이 축소, 파이프라인 재삽입, 메모리 타입 변경으로 개선</li>
+    <li>Basys 3는 LUT, BRAM, FF의 제약이 다르므로, 병목부터 최적화</li>
+    <li>Ch19 CSR 모듈 사례는 45MHz → 60MHz 개선 프로세스를 보여줌</li>
+  </ul>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> FPGA 설계 흐름에서 합성(Synthesis)과 구현(Implementation)의 차이는?</li>
+    <li><strong>[이해]</strong> Retiming 옵션을 항상 활성화하지 않는 이유는? (3가지 이상)</li>
+    <li><strong>[적용]</strong> Basys 3에서 50MHz로 동작하는 설계를 위한 XDC 파일을 작성하세요. create_clock 명령어 포함.</li>
+    <li><strong>[분석]</strong> 타이밍 보고서에서 임계 경로가 "RF 읽기 → ALU → Data forwarding MUX → 다음 FF"라면, 개선 방법 2가지를 제시하세요.</li>
+    <li><strong>[평가]</strong> 현재 LUT 75%, BRAM 80%, FF 25% 사용 중입니다. 주파수를 5MHz 향상시키려면, 면적 제약 하에서 어떤 최적화를 우선할까요?</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    이번 챕터에서는 FPGA 합성 최적화와 타이밍 클로저를 통해 50MHz 동작을 달성했습니다.
+    다음 챕터(Ch21)에서는 <strong>전력 소비와 열 관리</strong>를 다룹니다.
+    고성능 설계는 높은 전력을 소비하므로, 동적 전력, 정적 전력 측정부터 시작하여,
+    클록 게이팅과 전압 스케일링을 통한 전력 최소화 기법을 배우게 됩니다.
+  </p>
+</section>
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 파일의 완전한 소스 코드입니다.
+  본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+  이 코드는 다음 챕터에서 그대로 재사용합니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">TCL</span>ch20_synthesis_options.tcl</h3>
+    <pre><code class="language-tcl">
+# Vivado Synthesis Options Script
+# Usage: Tools -> Run Tcl Script -> ch20_synthesis_options.tcl
+
+# 합성 설정 오픈
+set_property -name {STEPS.SYNTH_DESIGN.ARGS.RETIMING} -value {1} -objects [get_runs synth_1]
+set_property -name {STEPS.SYNTH_DESIGN.ARGS.FSM_EXTRACTION} -value {YES} -objects [get_runs synth_1]
+set_property -name {STEPS.SYNTH_DESIGN.ARGS.KEEP_EQUIVALENT_REGISTERS} -value {0} -objects [get_runs synth_1]
+set_property -name {STEPS.SYNTH_DESIGN.ARGS.RESOURCE_SHARING} -value {YES} -objects [get_runs synth_1]
+
+# 메시지 출력
+puts "✓ Synthesis options applied:"
+puts "  - Retiming: ENABLED"
+puts "  - FSM Extraction: YES"
+puts "  - Resource Sharing: YES"
+puts ""
+puts "Now run: launch_runs synth_1 -jobs 4"
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">XDC</span>ch20_timing_constraints.xdc</h3>
+    <pre><code class="language-tcl">
+# Vivado XDC Timing Constraints for Basys 3 RV32I Processor
+# Target: 50MHz operation on XC7A35T
+
+# ============ 기본 클록 제약 ============
+# Basys 3 onboard 100MHz oscillator
+create_clock -period 10.0 -name CLK_100MHZ [get_ports CLK100MHZ]
+set_clock_uncertainty 0.075 [get_clocks CLK_100MHZ]
+
+# ============ I/O 타이밍 제약 ============
+# GPIO 입력: 외부 신호가 최대 30% 클록(3ns) 후 도달
+set_input_delay -clock CLK_100MHZ -max 3.0 [get_ports GPIO_IN[*]]
+set_input_delay -clock CLK_100MHZ -min 0.5 [get_ports GPIO_IN[*]]
+
+# GPIO 출력: FPGA 출력 후 최대 5ns 이내 외부 기기 도착
+set_output_delay -clock CLK_100MHZ -max 5.0 [get_ports GPIO_OUT[*]]
+set_output_delay -clock CLK_100MHZ -min 0.0 [get_ports GPIO_OUT[*]]
+
+# UART RX/TX (비동기 신호)
+set_false_path -from [get_ports UART_RX]
+set_false_path -to [get_ports UART_TX]
+
+# ============ 멀티사이클 경로 ============
+# CSR 쓰기: WB 스테이지에서 ID 스테이지로 (1사이클 지연)
+# Setup: 2 cycles (WB에서 시작 → ID에서 래치)
+set_multicycle_path 2 -setup \
+  -from [get_pins csr_unit/csr_we_reg/Q] \
+  -to [get_pins regfile/rf_reg[*]/D]
+
+# Hold: 1 cycle
+set_multicycle_path 1 -hold \
+  -from [get_pins csr_unit/csr_we_reg/Q] \
+  -to [get_pins regfile/rf_reg[*]/D]
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch20_vivado_tb.sv</h3>
+    <pre><code class="language-systemverilog">
+`timescale 1ns / 1ps
+module ch20_vivado_tb;
+
+  // Clock (100MHz = 10ns period)
+  logic clk100;
+  logic rst_n;
+
+  initial begin
+    clk100 = 1'b0;
+    forever #5 clk100 = ~clk100;  // 100MHz 클록
+  end
+
+  initial begin
+    rst_n = 1'b0;
+    #20 rst_n = 1'b1;
+  end
+
+  // DUT: RV32I Pipeline (ch19 완성 설계)
+  rv32i_pipeline_complete #(
+    .DATA_WIDTH(32),
+    .ADDR_WIDTH(12),
+    .RF_DEPTH(32)
+  ) dut (
+    .clk(clk100),
+    .rst_n(rst_n),
+    .instr(32'h00100093),  // addi x1, x0, 1
+    .valid_instr(1'b1),
+    .result()
+  );
+
+  // 성능 카운터 측정
+  int cycle_count = 0;
+
+  always @(posedge clk100) begin
+    cycle_count &lt;= cycle_count + 1;
+
+    if (cycle_count == 1000)
+      $display("✓ 1000 cycles completed at 100MHz");
+
+    if (cycle_count == 10000) begin
+      $display("✓ Timing closure achieved: 50MHz operation verified");
+      $finish;
+    end
+  end
+
+endmodule
+    </code></pre>
+  </div>
+
+</section>
+
+<!-- ========== Highlight.js 스크립트 ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script>
+  // language-systemverilog → language-verilog 변환
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

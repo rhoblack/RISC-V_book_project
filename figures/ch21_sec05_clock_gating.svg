@@ -1,0 +1,122 @@
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!-- 배경 -->
+  <rect width="1000" height="500" fill="#f8fafc"/>
+
+  <!-- 제목 -->
+  <text x="500" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    Clock Gating 셀의 상세 구조
+  </text>
+  <text x="500" y="55" font-size="12" text-anchor="middle" fill="#64748b">
+    비사용 모듈로의 클록 차단으로 불필요한 토글 제거
+  </text>
+
+  <!-- ===== 회로도 ===== -->
+  <g>
+    <!-- 입력 신호 -->
+    <text x="50" y="120" font-size="12" fill="#1e293b" font-weight="bold">clk</text>
+    <line x1="100" y1="115" x2="150" y2="115" stroke="#1e293b" stroke-width="2" marker-end="url(#arrowblack)"/>
+
+    <text x="50" y="180" font-size="12" fill="#1e293b" font-weight="bold">en</text>
+    <line x1="100" y1="175" x2="200" y2="175" stroke="#1e293b" stroke-width="2" marker-end="url(#arrowblack)"/>
+
+    <!-- 화살표 마커 정의 -->
+    <defs>
+      <marker id="arrowblack" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="#1e293b"/>
+      </marker>
+    </defs>
+
+    <!-- Latch 셀 (큰 박스) -->
+    <rect x="150" y="140" width="120" height="80" fill="#dbeafe" stroke="#2563eb" stroke-width="2" rx="4"/>
+    <text x="210" y="175" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">
+      Latch
+    </text>
+    <text x="210" y="195" font-size="10" text-anchor="middle" fill="#0c4a6e">
+      (en 샘플)
+    </text>
+
+    <!-- Latch 출력 -->
+    <line x1="270" y1="175" x2="310" y2="175" stroke="#1e293b" stroke-width="2"/>
+    <text x="280" y="165" font-size="10" fill="#0c4a6e" font-weight="bold">latch_out</text>
+
+    <!-- AND 게이트 -->
+    <g>
+      <!-- AND 기호 (큰 호) -->
+      <path d="M 310,130 L 310,220 L 350,220 Q 380,175 350,130 Z"
+            fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+      <text x="340" y="180" font-size="14" text-anchor="middle" fill="#991b1b" font-weight="bold">
+        &amp;
+      </text>
+    </g>
+
+    <!-- AND 입력: 상단 (clk) -->
+    <line x1="150" y1="115" x2="310" y2="145" stroke="#1e293b" stroke-width="2"/>
+    <text x="220" y="110" font-size="10" fill="#0c4a6e">clk</text>
+
+    <!-- AND 입력: 하단 (latch_out) -->
+    <line x1="310" y1="175" x2="310" y2="195" stroke="#1e293b" stroke-width="2"/>
+
+    <!-- AND 출력 -->
+    <line x1="380" y1="175" x2="430" y2="175" stroke="#1e293b" stroke-width="2" marker-end="url(#arrowblack)"/>
+    <text x="400" y="165" font-size="10" fill="#0c4a6e" font-weight="bold">clk_gated</text>
+
+    <!-- 출력 라벨 -->
+    <text x="480" y="180" font-size="12" fill="#1e293b" font-weight="bold">clk_gated</text>
+    <line x1="430" y1="175" x2="480" y2="175" stroke="#1e293b" stroke-width="2" marker-end="url(#arrowblack)"/>
+  </g>
+
+  <!-- ===== 타이밍 다이어그램 ===== -->
+  <g>
+    <rect x="50" y="280" width="900" height="200" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" rx="4"/>
+
+    <text x="60" y="300" font-size="12" font-weight="bold" fill="#0c4a6e">
+      타이밍 다이어그램 (클록이 low일 때 en을 샘플링):
+    </text>
+
+    <!-- 축 -->
+    <line x1="80" y1="340" x2="920" y2="340" stroke="#64748b" stroke-width="1"/>
+    <line x1="80" y1="370" x2="920" y2="370" stroke="#64748b" stroke-width="1"/>
+    <line x1="80" y1="400" x2="920" y2="400" stroke="#64748b" stroke-width="1"/>
+
+    <!-- 시간 구간 표시 -->
+    <line x1="150" y1="335" x2="150" y2="340" stroke="#64748b" stroke-width="1"/>
+    <text x="150" y="355" font-size="9" fill="#64748b" text-anchor="middle">T1</text>
+
+    <line x1="280" y1="335" x2="280" y2="340" stroke="#64748b" stroke-width="1"/>
+    <text x="280" y="355" font-size="9" fill="#64748b" text-anchor="middle">T2</text>
+
+    <line x1="410" y1="335" x2="410" y2="340" stroke="#64748b" stroke-width="1"/>
+    <text x="410" y="355" font-size="9" fill="#64748b" text-anchor="middle">T3</text>
+
+    <line x1="540" y1="335" x2="540" y2="340" stroke="#64748b" stroke-width="1"/>
+    <text x="540" y="355" font-size="9" fill="#64748b" text-anchor="middle">T4</text>
+
+    <!-- clk (파란 신호) -->
+    <text x="85" y="345" font-size="10" fill="#0c4a6e" font-weight="bold">clk:</text>
+    <!-- 신호: low → high → low → high -->
+    <polyline points="150,370 150,360 280,360 280,370 410,370 410,360 540,370"
+              fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- en (초록 신호) -->
+    <text x="85" y="375" font-size="10" fill="#0c4a6e" font-weight="bold">en:</text>
+    <!-- 신호: high → low → high -->
+    <polyline points="150,390 150,380 280,380 280,390 410,390 410,380 540,390"
+              fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- latch_out (주황 신호) -->
+    <text x="85" y="425" font-size="10" fill="#0c4a6e" font-weight="bold">latch_out:</text>
+    <!-- T1 후반: clk가 low, en=high → latch_out=high로 설정 -->
+    <polyline points="150,435 200,435 200,420 280,420 280,435 410,435 410,420 540,435"
+              fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- clk_gated (빨간 신호) -->
+    <text x="85" y="465" font-size="10" fill="#0c4a6e" font-weight="bold">clk_gated:</text>
+    <!-- clk AND latch_out -->
+    <!-- T1 구간: clk & latch_out = high high = high -->
+    <polyline points="150,470 150,460 280,460 280,470 410,470 410,460 540,470"
+              fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== 하단: 핵심 개념 ===== -->
+  <rect x="50" y="495" width="900" height="2" fill="#cbd5e1"/>
+</svg>

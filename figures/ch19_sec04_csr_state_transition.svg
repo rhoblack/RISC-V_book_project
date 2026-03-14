@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #2563EB; }
+      .label { font-size: 13px; fill: #1F2937; font-weight: bold; }
+      .sublabel { font-size: 11px; fill: #4B5563; }
+      .code { font-size: 10px; fill: #1F2937; font-family: monospace; }
+      .before-box { fill: #E0F2FE; stroke: #0284C7; stroke-width: 2; }
+      .after-box { fill: #DCF4E7; stroke: #059669; stroke-width: 2; }
+      .event-box { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2.5; }
+      .arrow { font-size: 12px; fill: #F59E0B; font-weight: bold; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="35" text-anchor="middle" class="title">Trap 발생 시 CSR 상태 전환</text>
+
+  <!-- Event box -->
+  <rect x="250" y="60" width="500" height="60" class="event-box" rx="5"/>
+  <text x="500" y="85" text-anchor="middle" class="label">Trap 발생 조건: trap_en = 1</text>
+  <text x="500" y="105" text-anchor="middle" class="sublabel">(mstatus.MIE = 1 AND (mie & mip) ≠ 0)</text>
+
+  <!-- Before state -->
+  <text x="150" y="165" class="label">Before Trap:</text>
+
+  <rect x="50" y="180" width="300" height="100" class="before-box" rx="5"/>
+  <text x="65" y="200" class="code">mstatus.MIE = 1</text>
+  <text x="65" y="218" class="code">mstatus.MPIE = ?</text>
+  <text x="65" y="236" class="code">mepc = 0x0000_0XXX</text>
+  <text x="65" y="254" class="code">mcause = 0x0000_0000</text>
+
+  <!-- Arrow -->
+  <text x="430" y="235" class="arrow" text-anchor="middle">→</text>
+
+  <!-- After state -->
+  <text x="820" y="165" class="label">After Trap:</text>
+
+  <rect x="650" y="180" width="300" height="100" class="after-box" rx="5"/>
+  <text x="665" y="200" class="code">mstatus.MIE = 0</text>
+  <text x="665" y="218" class="code">mstatus.MPIE = 1</text>
+  <text x="665" y="236" class="code">mepc = trap_pc</text>
+  <text x="665" y="254" class="code">mcause = {1'b1, cause[4:0]}</text>
+
+  <!-- Detailed update sequence -->
+  <text x="50" y="330" class="label">각 CSR 업데이트 동작:</text>
+
+  <!-- mepc -->
+  <rect x="50" y="350" width="900" height="65" fill="#F5F5F5" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+  <text x="65" y="370" class="label">1️⃣ mepc:</text>
+  <text x="100" y="388" class="code">mepc ← current_pc (또는 next_pc)</text>
+  <text x="100" y="403" class="sublabel">→ Trap 발생 시점의 프로그램 카운터 저장. MRET 시 이 주소로 복귀.</text>
+
+  <!-- mcause -->
+  <rect x="50" y="425" width="900" height="65" fill="#F5F5F5" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+  <text x="65" y="445" class="label">2️⃣ mcause:</text>
+  <text x="100" y="463" class="code">mcause ← {1'b1, 26'b0, cause_code[4:0]}</text>
+  <text x="100" y="478" class="sublabel">→ 인터럽트 비트(1)와 원인 코드(cause=3, 7, 11) 저장. Handler가 읽어서 처리.</text>
+
+  <!-- mstatus.MPIE -->
+  <rect x="50" y="500" width="900" height="65" fill="#F5F5F5" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+  <text x="65" y="520" class="label">3️⃣ mstatus.MPIE (Machine Previous Interrupt Enable):</text>
+  <text x="100" y="538" class="code">mstatus.MPIE ← mstatus.MIE (이전 값 저장)</text>
+  <text x="100" y="553" class="sublabel">→ MIE 상태 백업. MRET 시 MPIE 값으로 MIE 복구. 중첩 인터럽트 시 각 단계의 MIE 보존.</text>
+
+  <!-- mstatus.MIE -->
+  <rect x="50" y="575" width="900" height="65" fill="#F5F5F5" stroke="#E5E7EB" stroke-width="1" rx="3"/>
+  <text x="65" y="595" class="label">4️⃣ mstatus.MIE (Machine Interrupt Enable):</text>
+  <text x="100" y="613" class="code">mstatus.MIE ← 0 (비활성화)</text>
+  <text x="100" y="628" class="sublabel">→ Handler 진입 후 기본적으로 새로운 인터럽트 차단. Handler에서 명시적으로 MIE=1로 설정하면 중첩 허용.</text>
+</svg>
