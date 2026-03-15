@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="780" height="500" viewBox="0 0 780 500" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="780" height="500" fill="#F8FAFC" rx="8"/>
+  <text x="390" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">M 확장 파이프라인 통합: 2사이클 곱셈기 + 나눗셈 FSM</text>
+  <text x="390" y="44" text-anchor="middle" font-size="11" fill="#64748B">Ch12 rv32i_pipeline_complete 확장 — EX 스테이지 수정</text>
+
+  <defs>
+    <marker id="arw" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#2563EB"/>
+    </marker>
+    <marker id="arw-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#DC2626"/>
+    </marker>
+    <marker id="arw-grn" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <!-- 파이프라인 스테이지 배경 -->
+  <g transform="translate(30, 60)">
+    <!-- IF -->
+    <rect x="0" y="0" width="120" height="380" rx="6" fill="#EFF6FF" opacity="0.5"/>
+    <text x="60" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">IF</text>
+    <!-- ID -->
+    <rect x="130" y="0" width="120" height="380" rx="6" fill="#EFF6FF" opacity="0.5"/>
+    <text x="190" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">ID</text>
+    <!-- EX (확장 영역 강조) -->
+    <rect x="260" y="0" width="200" height="380" rx="6" fill="#DBEAFE" opacity="0.6"/>
+    <text x="360" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">EX (M 확장 추가)</text>
+    <!-- MEM -->
+    <rect x="470" y="0" width="120" height="380" rx="6" fill="#EFF6FF" opacity="0.5"/>
+    <text x="530" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">MEM</text>
+    <!-- WB -->
+    <rect x="600" y="0" width="120" height="380" rx="6" fill="#EFF6FF" opacity="0.5"/>
+    <text x="660" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">WB</text>
+  </g>
+
+  <!-- IF 블록 -->
+  <g transform="translate(40, 100)">
+    <rect x="0" y="0" width="100" height="50" rx="6" fill="#2563EB"/>
+    <text x="50" y="22" text-anchor="middle" font-size="9" fill="white" font-weight="600">PC</text>
+    <text x="50" y="38" text-anchor="middle" font-size="9" fill="white" font-weight="600">I-Cache</text>
+  </g>
+
+  <!-- ID 블록 -->
+  <g transform="translate(170, 90)">
+    <rect x="0" y="0" width="100" height="40" rx="6" fill="#3B82F6"/>
+    <text x="50" y="25" text-anchor="middle" font-size="9" fill="white" font-weight="600">Decoder</text>
+    <rect x="0" y="50" width="100" height="30" rx="6" fill="#60A5FA"/>
+    <text x="50" y="70" text-anchor="middle" font-size="9" fill="white" font-weight="600">Reg File</text>
+  </g>
+
+  <!-- EX 블록 (핵심 확장 영역) -->
+  <g transform="translate(295, 80)">
+    <!-- 기존 ALU -->
+    <rect x="0" y="0" width="150" height="50" rx="6" fill="#2563EB"/>
+    <text x="75" y="20" text-anchor="middle" font-size="10" fill="white" font-weight="700">ALU (기존)</text>
+    <text x="75" y="37" text-anchor="middle" font-size="8" fill="#DBEAFE">ADD, SUB, AND, OR...</text>
+
+    <!-- 곱셈기 (신규) -->
+    <rect x="0" y="65" width="150" height="60" rx="6" fill="#059669" stroke="#047857" stroke-width="1.5"/>
+    <text x="75" y="83" text-anchor="middle" font-size="10" fill="white" font-weight="700">곱셈기 (신규)</text>
+    <text x="75" y="98" text-anchor="middle" font-size="8" fill="#DCFCE7">MUL/MULH: 1사이클</text>
+    <text x="75" y="112" text-anchor="middle" font-size="8" fill="#DCFCE7">DSP 슬라이스 활용</text>
+
+    <!-- 나눗셈 FSM (신규) -->
+    <rect x="0" y="140" width="150" height="60" rx="6" fill="#D97706" stroke="#B45309" stroke-width="1.5"/>
+    <text x="75" y="158" text-anchor="middle" font-size="10" fill="white" font-weight="700">나눗셈 FSM (신규)</text>
+    <text x="75" y="173" text-anchor="middle" font-size="8" fill="#FEF3C7">DIV/REM: 34사이클</text>
+    <text x="75" y="188" text-anchor="middle" font-size="8" fill="#FEF3C7">Restoring Division</text>
+
+    <!-- MUX (신규) -->
+    <polygon points="60,215 100,215 85,260 75,260" fill="#1E40AF" stroke="#1E3A8A" stroke-width="1"/>
+    <text x="80" y="242" text-anchor="middle" font-size="8" fill="white" font-weight="600">MUX</text>
+
+    <!-- MUX 입력 화살표 -->
+    <line x1="50" y1="50" x2="65" y2="215" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arw)"/>
+    <line x1="75" y1="125" x2="75" y2="215" stroke="#059669" stroke-width="1.5" marker-end="url(#arw-grn)"/>
+    <line x1="100" y1="200" x2="90" y2="215" stroke="#D97706" stroke-width="1.5"/>
+
+    <!-- 제어 신호 -->
+    <text x="160" y="242" font-size="8" fill="#1E40AF" font-weight="600">alu_src_mul</text>
+  </g>
+
+  <!-- MEM 블록 -->
+  <g transform="translate(505, 100)">
+    <rect x="0" y="0" width="80" height="50" rx="6" fill="#3B82F6"/>
+    <text x="40" y="22" text-anchor="middle" font-size="9" fill="white" font-weight="600">D-Cache</text>
+    <text x="40" y="38" text-anchor="middle" font-size="9" fill="white" font-weight="600">Load/Store</text>
+  </g>
+
+  <!-- WB 블록 -->
+  <g transform="translate(635, 100)">
+    <rect x="0" y="0" width="80" height="50" rx="6" fill="#2563EB"/>
+    <text x="40" y="22" text-anchor="middle" font-size="9" fill="white" font-weight="600">WB MUX</text>
+    <text x="40" y="38" text-anchor="middle" font-size="9" fill="white" font-weight="600">→ Reg File</text>
+  </g>
+
+  <!-- 데이터 흐름 화살표 -->
+  <line x1="140" y1="125" x2="165" y2="125" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="270" y1="125" x2="290" y2="125" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="445" y1="340" x2="500" y2="125" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arw)"/>
+  <line x1="585" y1="125" x2="630" y2="125" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- 스톨 신호 (빨간색) -->
+  <g transform="translate(30, 400)">
+    <rect x="0" y="0" width="690" height="55" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+    <text x="345" y="18" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">스톨 우선순위 (pipeline_stall 확장)</text>
+
+    <rect x="15" y="28" width="90" height="20" rx="3" fill="#DC2626"/>
+    <text x="60" y="42" text-anchor="middle" font-size="8" fill="white" font-weight="600">flush (최우선)</text>
+
+    <text x="115" y="42" font-size="10" fill="#DC2626">&gt;</text>
+
+    <rect x="125" y="28" width="110" height="20" rx="3" fill="#EF4444"/>
+    <text x="180" y="42" text-anchor="middle" font-size="8" fill="white" font-weight="600">icache_stall</text>
+
+    <text x="245" y="42" font-size="10" fill="#DC2626">&gt;</text>
+
+    <rect x="255" y="28" width="110" height="20" rx="3" fill="#F87171"/>
+    <text x="310" y="42" text-anchor="middle" font-size="8" fill="white" font-weight="600">dcache_stall</text>
+
+    <text x="375" y="42" font-size="10" fill="#DC2626">&gt;</text>
+
+    <rect x="385" y="28" width="120" height="20" rx="3" fill="#D97706"/>
+    <text x="445" y="42" text-anchor="middle" font-size="8" fill="white" font-weight="600">mul_div_busy (신규)</text>
+
+    <text x="515" y="42" font-size="10" fill="#DC2626">&gt;</text>
+
+    <rect x="525" y="28" width="120" height="20" rx="3" fill="#FCA5A5"/>
+    <text x="585" y="42" text-anchor="middle" font-size="8" fill="#7F1D1D" font-weight="600">load_use_stall</text>
+  </g>
+
+  <!-- 포워딩 경로 표시 -->
+  <g transform="translate(380, 360)">
+    <rect x="0" y="0" width="340" height="25" rx="4" fill="#F0FDF4" stroke="#059669"/>
+    <text x="170" y="17" text-anchor="middle" font-size="9" fill="#059669" font-weight="600">포워딩: EX-EX &gt; MEM-EX (곱셈 결과도 포워딩 대상)</text>
+  </g>
+</svg>

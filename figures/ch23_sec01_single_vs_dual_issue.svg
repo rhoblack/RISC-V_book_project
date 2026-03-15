@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="780" height="480" viewBox="0 0 780 480" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="780" height="480" fill="#F8FAFC" rx="8"/>
+  <text x="390" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">단일 이슈 vs 2-이슈 파이프라인 타이밍 비교</text>
+  <text x="390" y="44" text-anchor="middle" font-size="11" fill="#64748B">동일 6개 명령어 시퀀스 — 의존성 없는 이상적 경우</text>
+
+  <!-- 단일 이슈 섹션 -->
+  <text x="30" y="75" font-size="12" font-weight="700" fill="#1E40AF">단일 이슈 (Single-Issue)</text>
+  <text x="30" y="90" font-size="10" fill="#64748B">IPC 이론값 = 1.0, 완료: 10사이클</text>
+
+  <!-- 사이클 헤더 (단일) -->
+  <g transform="translate(130, 95)">
+    <text x="0" y="0" font-size="9" fill="#64748B">C1</text>
+    <text x="55" y="0" font-size="9" fill="#64748B">C2</text>
+    <text x="110" y="0" font-size="9" fill="#64748B">C3</text>
+    <text x="165" y="0" font-size="9" fill="#64748B">C4</text>
+    <text x="220" y="0" font-size="9" fill="#64748B">C5</text>
+    <text x="275" y="0" font-size="9" fill="#64748B">C6</text>
+    <text x="330" y="0" font-size="9" fill="#64748B">C7</text>
+    <text x="385" y="0" font-size="9" fill="#64748B">C8</text>
+    <text x="440" y="0" font-size="9" fill="#64748B">C9</text>
+    <text x="495" y="0" font-size="9" fill="#64748B">C10</text>
+  </g>
+
+  <!-- 명령어 레이블 (단일) -->
+  <g transform="translate(30, 115)">
+    <text x="0" y="0" font-size="10" fill="#1E293B" font-family="monospace">I1: ADD</text>
+    <text x="0" y="22" font-size="10" fill="#1E293B" font-family="monospace">I2: SUB</text>
+    <text x="0" y="44" font-size="10" fill="#1E293B" font-family="monospace">I3: AND</text>
+    <text x="0" y="66" font-size="10" fill="#1E293B" font-family="monospace">I4: OR</text>
+    <text x="0" y="88" font-size="10" fill="#1E293B" font-family="monospace">I5: XOR</text>
+    <text x="0" y="110" font-size="10" fill="#1E293B" font-family="monospace">I6: SLL</text>
+  </g>
+
+  <!-- 파이프라인 스테이지 (단일 이슈) -->
+  <!-- I1 -->
+  <g transform="translate(120, 105)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <!-- I2 -->
+  <g transform="translate(175, 127)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <!-- I3 -->
+  <g transform="translate(230, 149)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <!-- I4 -->
+  <g transform="translate(285, 171)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <!-- I5 -->
+  <g transform="translate(340, 193)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <!-- I6 -->
+  <g transform="translate(395, 215)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+
+  <!-- 구분선 -->
+  <line x1="20" y1="250" x2="760" y2="250" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4"/>
+
+  <!-- 2-이슈 섹션 -->
+  <text x="30" y="272" font-size="12" font-weight="700" fill="#16A34A">2-이슈 (Dual-Issue)</text>
+  <text x="30" y="287" font-size="10" fill="#64748B">IPC 이론값 = 2.0, 완료: 7사이클 (30% 단축)</text>
+
+  <!-- 사이클 헤더 (2-이슈) -->
+  <g transform="translate(130, 300)">
+    <text x="0" y="0" font-size="9" fill="#64748B">C1</text>
+    <text x="55" y="0" font-size="9" fill="#64748B">C2</text>
+    <text x="110" y="0" font-size="9" fill="#64748B">C3</text>
+    <text x="165" y="0" font-size="9" fill="#64748B">C4</text>
+    <text x="220" y="0" font-size="9" fill="#64748B">C5</text>
+    <text x="275" y="0" font-size="9" fill="#64748B">C6</text>
+    <text x="330" y="0" font-size="9" fill="#64748B">C7</text>
+  </g>
+
+  <!-- I1+I2 동시 -->
+  <g transform="translate(30, 310)">
+    <text x="0" y="0" font-size="10" fill="#1E293B" font-family="monospace">I1: ADD</text>
+    <text x="0" y="22" font-size="10" fill="#16A34A" font-family="monospace">I2: SUB</text>
+  </g>
+  <g transform="translate(120, 302)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <g transform="translate(120, 324)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#166534"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#16A34A"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#22C55E"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#4ADE80"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#86EFAC"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+
+  <!-- I3+I4 동시 -->
+  <g transform="translate(30, 354)">
+    <text x="0" y="0" font-size="10" fill="#1E293B" font-family="monospace">I3: AND</text>
+    <text x="0" y="22" font-size="10" fill="#16A34A" font-family="monospace">I4: OR</text>
+  </g>
+  <g transform="translate(175, 346)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <g transform="translate(175, 368)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#166534"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#16A34A"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#22C55E"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#4ADE80"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#86EFAC"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+
+  <!-- I5+I6 동시 -->
+  <g transform="translate(30, 398)">
+    <text x="0" y="0" font-size="10" fill="#1E293B" font-family="monospace">I5: XOR</text>
+    <text x="0" y="22" font-size="10" fill="#16A34A" font-family="monospace">I6: SLL</text>
+  </g>
+  <g transform="translate(230, 390)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#1E40AF"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#2563EB"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#3B82F6"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#60A5FA"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#93C5FD"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+  <g transform="translate(230, 412)">
+    <rect x="0" y="0" width="50" height="18" rx="3" fill="#166534"/><text x="25" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">IF</text>
+    <rect x="55" y="0" width="50" height="18" rx="3" fill="#16A34A"/><text x="80" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">ID</text>
+    <rect x="110" y="0" width="50" height="18" rx="3" fill="#22C55E"/><text x="135" y="13" text-anchor="middle" font-size="8" fill="white" font-weight="600">EX</text>
+    <rect x="165" y="0" width="50" height="18" rx="3" fill="#4ADE80"/><text x="190" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">MEM</text>
+    <rect x="220" y="0" width="50" height="18" rx="3" fill="#86EFAC"/><text x="245" y="13" text-anchor="middle" font-size="8" fill="#1E293B" font-weight="600">WB</text>
+  </g>
+
+  <!-- 범례 -->
+  <g transform="translate(560, 440)">
+    <rect x="0" y="0" width="12" height="12" rx="2" fill="#2563EB"/>
+    <text x="16" y="10" font-size="9" fill="#1E293B">명령어 A (파이프라인 0)</text>
+    <rect x="0" y="18" width="12" height="12" rx="2" fill="#16A34A"/>
+    <text x="16" y="28" font-size="9" fill="#1E293B">명령어 B (파이프라인 1)</text>
+  </g>
+
+  <!-- 성능 비교 화살표 -->
+  <rect x="600" y="105" width="150" height="50" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="675" y="125" text-anchor="middle" font-size="11" font-weight="700" fill="#1E40AF">10사이클</text>
+  <text x="675" y="142" text-anchor="middle" font-size="9" fill="#2563EB">IPC = 6/10 = 0.6</text>
+
+  <rect x="600" y="340" width="150" height="50" rx="6" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="675" y="360" text-anchor="middle" font-size="11" font-weight="700" fill="#166534">7사이클</text>
+  <text x="675" y="377" text-anchor="middle" font-size="9" fill="#16A34A">IPC = 6/7 = 0.86</text>
+</svg>

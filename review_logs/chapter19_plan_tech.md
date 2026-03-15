@@ -1,138 +1,484 @@
-# Chapter 19 기술 저자 기획안
-**챕터**: Chapter 19 — 예외/인터럽트와 파이프라인 통합
-**작성자**: 기술 저자 에이전트
-**작성일**: 2026-03-13
-**참조 파일**:
-- `TABLE_OF_CONTENTS.md` — Ch19 절 구성 및 기술 의존성
-- `manuscripts/part7/chapter18.html` — Ch18 연계 인터페이스 확인
-- `code_examples/ch19_exception_unit.sv` — 예외 처리 유닛 구현 예제
-- `code_examples/ch19_trap_controller.sv` — 트랩 컨트롤러 구현 예제
-- `code_examples/ch19_exception_tb.sv` — 통합 테스트벤치
-- `figures/ch19_sec0*.svg` — 6개 다이어그램 기확보
+# Chapter 19 기술 저자 기획 (Phase 1)
+
+**작성일**: 2026-03-15
+**챕터**: 19 — 예외/인터럽트와 파이프라인 통합
+**상태**: Phase 1 완료 (기획)
 
 ---
 
-## 절 구성 제안 (7절)
+## 1. 각 절별 분량 및 개념 계획
 
-TOC에 정의된 절 구성(19.1~19.7)을 기준으로 하며, 각 절의 구체적 집필 방향을 아래에 제시합니다.
+| 절 | 제목 | 예상 자수 | 신규 개념 수 | 핵심 내용 |
+|----|------|---------|-----------|---------|
+| 19.1 | 파이프라인 구조 핵심 복습 | 1,500~2,000 | 0 (복습) | Ch12 파이프라인 구조 1페이지 요약, 5단계(IF/ID/EX/MEM/WB), 스톨/플러시 메커니즘 재확인 |
+| 19.2 | 동기 예외 처리 | 2,500~3,000 | 3 | Illegal Instruction, Load/Store Misaligned, ECALL, 예외 발생 시점(decode/execute/memory), mepc/mcause 업데이트 |
+| 19.3 | 비동기 인터럽트 처리 | 2,500~3,000 | 3 | 외부 인터럽트(PLIC), 타이머 인터럽트(timer_irq), 우선순위(mcause[31] = 1), mie/mip 레지스터 |
+| 19.4 | 트랩 진입/복귀 메커니즘 | 2,000~2,500 | 2 | Trap handler PC = mtvec, MRET 명령어 (mepc 복귀), 레지스터 저장/복구 어셈블리 |
+| 19.5 | 파이프라인과 예외 처리 통합 | 3,000~4,000 | 4 | **최고 난이도** — 예외 감지 스테이지 선택, precise exception 보장, flush 메커니즘, CSR 해저드 처리(mie 수정 중 인터럽트) |
+| 19.6 | 예외/인터럽트 테스트벤치 | 2,000~2,500 | 1 | ECALL 시나리오(trap handler 진입/복귀), Load Misaligned 감지, 타이머 인터럽트 응답 시간 측정 |
+| 19.7 | 본 챕터 요약 및 다음 단계 | 1,500~2,000 | 0 (정리) | 핵심 개념 5줄 요약, 자가 점검 질문 5개, Ch20(FPGA 합성) 예고 |
+| **합계** | | **15,000~18,000** | **13** | — |
 
-### 19.1 파이프라인 구조 핵심 복습
-- **핵심 내용**: Ch12 파이프라인 1페이지 요약 — 스톨/플러시 메커니즘 재확인, 파이프라인 레지스터 구조 복습, 포워딩 유닛 위치 재확인
-- **집필 포인트**: 독자가 Ch12 이후 오랜 시간을 거쳐 이 챕터에 도달했으므로, "파이프라인 구조를 처음 보는 것처럼" 설명하는 것이 아니라 "빠르게 상기시키는" 톤으로 작성. 스톨/플러시 신호 이름(PC_en, IF/ID_en, ID/EX_flush 등)을 그대로 사용하여 연속성 유지
-- **감정 곡선**: "불안 지점 #8 — 파이프라인 복습 박스로 안심 장치 제공"
-- **SVG 연계**: `ch19_sec01_pipeline_review.svg` (기확보)
-- **예상 분량**: 2,000자 내외 (복습 절이므로 간결하게)
+**설계 원칙**:
+- 19.1은 **인지 부하 상쇄용** 1페이지 복습 (새 개념 없음)
+- 19.2~19.4는 **각 2~3개 신규 개념** 단계적 도입
+- 19.5는 **파이프라인 통합**으로 최고 난이도 (4개 개념)
+- 각 절 종료 시 "이 절을 마치며" 자가 점검 1~2개 포함
 
-### 19.2 동기 예외 처리
-- **핵심 내용**: Illegal Instruction(mcause=2), EBREAK(mcause=3), Load/Store Misaligned(mcause=4,6), ECALL(mcause=11) — 각 예외의 발생 스테이지, RISC-V 스펙 필수 처리 여부
-- **집필 포인트**: 예외는 "명령어 실행의 직접적 결과"이며 파이프라인의 특정 스테이지에서 감지된다는 점을 강조. `exception_unit.sv`의 스테이지별 감지 로직(id_exception, ex_exception, mem_exception)을 코드 예제로 활용
-- **비유**: 공장 조립 라인의 불량 감지 센서 — ID 라인에서, EX 라인에서, MEM 라인에서 각각 감지
-- **SVG 연계**: `ch19_sec02_sync_exception.svg` (기확보)
-- **예상 분량**: 2,500~3,000자
-
-### 19.3 비동기 인터럽트 처리
-- **핵심 내용**: 외부 인터럽트(MEI), 소프트웨어 인터럽트(MSI), 타이머 인터럽트(MTI) — 인터럽트 마스킹 로직(mstatus.MIE AND mie AND mip), 우선순위(MEI > MSI > MTI)
-- **집필 포인트**: Ch17의 타이머 컨트롤러가 생성한 `timer_irq` 신호가 이 절에서 실제로 처리됨을 명시하여 Part 6~7 연계성 부각. `exception_unit.sv`의 `mei_pending`, `msi_pending`, `mti_pending` 인코딩 로직 코드 예제로 활용. mcause의 인터럽트 비트(bit 31 = 1)와 예외 코드의 구조적 차이 설명 필수
-- **비유**: 응급실 트리아지(triage) — 환자 중증도(우선순위)에 따라 처치 순서 결정
-- **SVG 연계**: `ch19_sec03_interrupt_priority.svg` (기확보)
-- **예상 분량**: 2,500~3,000자
-
-### 19.4 트랩 진입/복귀 메커니즘
-- **핵심 내용**: 트랩 진입 시퀀스(mepc ← PC, mcause ← 코드, mstatus.MPIE ← MIE, mstatus.MIE ← 0, PC ← mtvec), MRET 복귀 시퀀스(PC ← mepc, mstatus.MIE ← MPIE, mstatus.MPIE ← 1)
-- **집필 포인트**: `trap_controller.sv`의 FSM(S_IDLE → S_TRAP_MEPC → S_TRAP_MCAUSE → S_TRAP_MTVAL → S_TRAP_MSTATUS → S_IDLE)을 코드 예제로 활용. 다중 CSR 쓰기가 여러 사이클에 걸쳐 이루어지는 이유(단일 포트 CSR 설계 제약) 설명. Ch18의 `csr_unit`이 트랩 컨트롤러의 쓰기 명령을 받아 CSR을 갱신하는 인터페이스 구조 명시
-- **SVG 연계**: `ch19_sec04_trap_mechanism.svg` (기확보)
-- **예상 분량**: 3,000~3,500자
-
-### 19.5 파이프라인과 예외 처리 통합
-- **핵심 내용**: 정확한 예외(Precise Exception) 보장 — 예외 발생 명령어 이전은 완료, 이후는 취소. 동기 예외 우선순위(MEM > EX > ID), 동기 예외 vs 비동기 인터럽트 우선순위. CSR 해저드 처리(CSR 읽기-쓰기 간 데이터 의존성, 파이프라인 스톨 또는 포워딩 처리)
-- **집필 포인트**: `exception_unit.sv`의 우선순위 결정 로직 전체를 코드로 제시하고, "왜 MEM > EX > ID 순서인가"를 파이프라인 타이밍 다이어그램과 함께 설명. 인터럽트의 mepc 저장 시 "현재 실행 중 가장 오래된 명령어의 다음 PC"를 저장하는 이유 설명. CSR 해저드: CSRRW로 쓴 값을 다음 사이클에 CSRRS로 읽는 경우 1사이클 포워딩 필요
-- **안심 장치**: `<aside class="instructor-tip">` — "정확한 예외는 산업 현장에서도 구현 오류가 가장 잦은 영역입니다. 구현이 틀려도 괜찮습니다. 파형에서 mcause 값과 플러시 타이밍을 추적하는 디버깅 가이드를 함께 제공합니다."
-- **SVG 연계**: `ch19_sec05_precise_exception.svg` (기확보)
-- **예상 분량**: 3,500~4,000자 (이 챕터 핵심 절)
-
-### 19.6 예외/인터럽트 테스트벤치
-- **핵심 내용**: `exception_tb.sv` 5개 시나리오 해설 — ECALL, Illegal Instruction, Load Misaligned, 타이머 인터럽트 응답 시간 측정, 동시 발생 우선순위 검증. VCS/Vivado Simulator 실행 방법, 파형에서 확인할 신호 목록(trap_taken, trap_mcause, flush_*)
-- **집필 포인트**: 테스트벤치 코드 전체를 나열하는 대신, 각 시나리오의 "검증 의도 → 핵심 코드 → 기대 파형"의 3단 구성으로 설명. `$time / CLK_PERIOD`를 이용한 인터럽트 응답 시간 측정 방법 강조
-- **SVG 연계**: `ch19_sec06_testbench_flow.svg` (기확보)
-- **예상 분량**: 2,000~2,500자
-
-### 19.7 요약 및 다음 단계
-- **핵심 내용**: Ch19 핵심 개념 요약, 자가 점검 질문 3~5개, Ch20(FPGA 합성 최적화) 예고
-- **집필 포인트**: "이 챕터를 마치면 완전한 RV32I 파이프라인 프로세서가 완성됩니다" — 달성감 강조. Ch20 FPGA 합성에서 예외 처리 로직이 타이밍에 미치는 영향 예고
-- **예상 분량**: 1,500~2,000자
+**Part 7 마일스톤 확인**:
+- Ch18(CSR 레지스터 + CSR 명령어) + Ch19(예외/인터럽트 파이프라인 통합)
+- 최종 마일스톤: 타이머 인터럽트 기반 LED 깜빡임 (Part 8에서 FPGA 구현)
+- Part 6(AMBA 버스)의 인터럽트 소스(UART, 타이머)가 Ch19의 입력
 
 ---
 
-## 핵심 코드 예제 목록
+## 2. SVG 다이어그램 상세 설계 (5개)
 
-| 파일명 | 설명 | 학습 목표 |
-|--------|------|----------|
-| `ch19_exception_unit.sv` | 예외 처리 유닛 — 스테이지별 동기 예외 감지 및 비동기 인터럽트 우선순위 결정 | 파이프라인 각 스테이지에서 예외를 감지하고 우선순위에 따라 트랩을 결정하는 combinational 로직 설계 능력 |
-| `ch19_trap_controller.sv` | 트랩 컨트롤러 — FSM 기반 CSR 다중 쓰기 시퀀스 관리, MRET 복귀 처리 | 트랩 진입/복귀의 하드웨어 시퀀스를 FSM으로 설계하고, Ch18의 csr_unit과 연동하는 능력 |
-| `ch19_exception_tb.sv` | 통합 테스트벤치 — 5개 시나리오(ECALL, Illegal, Misaligned, 타이머 IRQ, 우선순위) | 예외/인터럽트 처리의 정확성을 SystemVerilog assertion으로 자동 검증하는 능력 |
+### 2.1 ch19_sec01_pipeline_review.svg
+**용도**: 파이프라인 구조 1페이지 핵심 복습
+**크기**: 800×600px
+**내용**:
+- IF(명령어 인출) → ID(해독) → EX(실행) → MEM(메모리) → WB(쓰기)
+- 각 스테이지 입출력: pc_in/instr/alu_out/mem_data 명시
+- 파이프라인 레지스터 4종 표시 (IF/ID, ID/EX, EX/MEM, MEM/WB)
+- 하단에 stall/flush 신호 4개 표시 (구체적 동작은 19.5에서 상세)
+- 색상: 파란 계열 (#2563EB 주요, #3B82F6 보조)
 
-**19.5절에 추가 필요한 인라인 코드 스니펫 (원고 내 직접 작성)**:
-- CSR 해저드 포워딩 로직 (약 20줄): WB 스테이지의 CSR 쓰기 결과를 ID 스테이지 CSR 읽기로 포워딩하는 조합 로직
-- 파이프라인 최상위 모듈에서 `exception_unit` 및 `trap_controller` 인스턴스 연결 예시 (약 30줄)
+**핵심 메시지**: "5개 스테이지, 4개 레지스터, 2개 신호(stall/flush)만 기억하면 된다"
+
+### 2.2 ch19_sec02_exception_types.svg
+**용도**: 동기 vs 비동기 예외 분류 (2×2 매트릭스) + mcause 코드 매핑
+**크기**: 900×500px
+**내용**:
+- **좌상단**: "동기 예외(Synchronous)" = 명령어 실행 중 발생
+  - Illegal Instruction (mcause=2)
+  - Load Misaligned (mcause=4)
+  - Store Misaligned (mcause=6)
+  - ECALL (mcause=11)
+- **우상단**: "비동기 인터럽트(Asynchronous)" = 언제든 발생 가능
+  - 외부 인터럽트 (mcause=0x80000001)
+  - 타이머 인터럽트 (mcause=0x80000007)
+  - 소프트웨어 인터럽트 (mcause=0x80000003)
+- **하단**: 타이밍 다이어그램 (시계열)
+  - 동기: 명령어 #N 실행 → 예외 감지 → flush #(N+1)~#(N+k)
+  - 비동기: 임의 시점 → 인터럽트 신호 → 현재 명령어 완료 후 trap
+
+**핵심 메시지**: "동기는 '이 명령어가 문제', 비동기는 '이 시점에 외부 이벤트'"
+
+### 2.3 ch19_sec03_interrupt_priority.svg
+**용도**: mie/mip 비트 매칭 및 인터럽트 우선순위 판정 로직
+**크기**: 900×500px
+**내용**:
+- **좌측**: mie 레지스터 비트 필드 (MSIE[3], MTIE[7], MEIE[11])
+- **중앙**: mip 레지스터 비트 필드 (MSIP[3], MTIP[7], MEIP[11])
+- **연결**: mie[N] & mip[N] = "처리 가능" (AND 게이트 시각화)
+- **우측**: 우선순위 인코더 (MEI > MSI > MTI 순)
+- **하단**: mstatus.MIE (전역 인터럽트 활성화) 게이트
+
+**핵심 메시지**: "mie로 개별 허용, mstatus.MIE로 전역 허용, mip로 현재 요청 확인"
+
+### 2.4 ch19_sec04_trap_handler_flow.svg
+**용도**: Trap handler 진입 → CSR 업데이트 → 복귀
+**크기**: 900×700px
+**내용**:
+- **Step 1**: "예외 발생" → flush
+- **Step 2**: "mtvec에서 handler PC 읽기" (mtvec[31:2] = handler base)
+- **Step 3**: "Handler 진입" (CSRRW mstatus로 상태 저장)
+- **Step 4**: "ISR 실행" (원인별 처리)
+- **Step 5**: "mepc 복구" (CSRR로 mepc 읽어서 원래 위치 확인)
+- **Step 6**: "MRET 실행" → PC = mepc로 복귀
+- **흐름선**: 왼쪽→오른쪽 위로 arc, 마지막에 원점으로 루프
+
+**CSR 레지스터 패널** (우측):
+- mtvec (trap handler 주소)
+- mepc (예외 발생 PC)
+- mcause (예외 원인)
+- mstatus (모드 / 인터럽트 활성화)
+
+**핵심 메시지**: "Trap handler = 예외 처리 함수, MRET = return from exception"
+
+### 2.5 ch19_sec05_precise_exception_timing.svg
+**용도**: 파이프라인에서 정확한 예외(precise exception) 타이밍
+**크기**: 1000×600px
+**내용**:
+- **사이클 0**: instr#(N-2) in WB, instr#(N-1) in MEM, instr#N in EX, instr#(N+1) in ID, instr#(N+2) in IF
+- **사이클 1**: instr#N에서 예외 감지 (EX 또는 MEM) → flush 신호 발생
+- **사이클 2~3**: instr#(N+1), instr#(N+2) flush (취소) → PC = mepc로 복귀 준비
+- **사이클 4**: trap handler (mepc의 PC에서) 시작
+- **색상 코딩**:
+  - 초록(완료된 명령어) / 파랑(진행 중) / 빨강(flush 대상) / 주황(trap handler)
+
+**핵심 메시지**: "예외 발생 명령어 이전은 완료, 이후는 취소 → 정확성 보장"
 
 ---
 
-## 필요한 SVG 다이어그램
+## 3. SystemVerilog 코드 상세 설계 (3개)
 
-아래 6개 SVG는 모두 `figures/` 디렉토리에 기확보되어 있습니다. 원고 집필 중 내용과 불일치 발견 시 수정 필요.
+### 3.1 code_examples/ch19_exception_handler.sv (~250줄)
+**목적**: 예외 발생 감지, flush 로직, mtvec 리다이렉션 통합 구현
 
-| 파일명 | 다이어그램 내용 | 사용 절 |
-|--------|---------------|--------|
-| `ch19_sec01_pipeline_review.svg` | 5단 파이프라인 블록 다이어그램 — 스톨/플러시 신호 경로 강조 표시 | 19.1절 |
-| `ch19_sec02_sync_exception.svg` | 동기 예외 발생 스테이지 맵 — ID/EX/MEM 각 스테이지에서 감지되는 예외 유형과 mcause 코드 | 19.2절 |
-| `ch19_sec03_interrupt_priority.svg` | 인터럽트 마스킹 로직 및 우선순위 계층 — mstatus.MIE, mie, mip 비트 관계도, MEI>MSI>MTI 우선순위 | 19.3절 |
-| `ch19_sec04_trap_mechanism.svg` | 트랩 진입/복귀 시퀀스 타이밍 다이어그램 — 클럭 기준 mepc/mcause/mstatus 갱신 순서, MRET 복귀 흐름 | 19.4절 |
-| `ch19_sec05_precise_exception.svg` | 정확한 예외 보장 메커니즘 — 파이프라인 타이밍 다이어그램에서 예외 발생 명령어 이전 완료/이후 취소 시각화 | 19.5절 |
-| `ch19_sec06_testbench_flow.svg` | 테스트벤치 검증 흐름도 — 5개 시나리오의 입력→기대 출력 관계, 응답 시간 측정 포인트 | 19.6절 |
+**구조**:
+```systemverilog
+module exception_handler (
+   input  logic        clk,
+   input  logic        rst_n,
+
+   // ====== 각 스테이지 예외 신호 ======
+   // ID 단계
+   input  logic [31:0] id_instr,        // 명령어
+   input  logic [31:0] id_pc,           // PC
+   // EX 단계
+   input  logic [31:0] ex_pc,
+   input  logic [31:0] ex_alu_result,
+   input  logic [2:0]  ex_funct3,
+   input  logic        ex_is_load,
+   input  logic        ex_is_store,
+   // MEM 단계
+   input  logic [31:0] mem_pc,
+   input  logic [31:0] mem_addr,
+   input  logic        mem_is_load,
+   input  logic        mem_is_store,
+
+   // ====== 인터럽트 입력 ======
+   input  logic        timer_irq,       // 타이머 인터럽트
+   input  logic        external_irq,    // 외부 인터럽트
+   input  logic        software_irq,    // 소프트웨어 인터럽트
+
+   // ====== CSR 입력 ======
+   input  logic [31:0] mie,             // 인터럽트 활성화
+   input  logic [31:0] mstatus,         // 전역 인터럽트 활성화
+   input  logic [31:0] mtvec,           // trap handler 주소
+
+   // ====== 출력: 파이프라인 제어 ======
+   output logic        trap_taken,      // trap 발생
+   output logic [31:0] trap_pc,         // trap handler PC
+   output logic [31:0] trap_mepc,       // 예외 발생 PC (mepc에 저장)
+   output logic [31:0] trap_mcause,     // 예외 코드 (mcause에 저장)
+   output logic        flush_if_id,     // IF/ID 레지스터 flush
+   output logic        flush_id_ex,     // ID/EX 레지스터 flush
+   output logic        flush_ex_mem     // EX/MEM 레지스터 flush
+);
+```
+
+**핵심 설계**:
+- **예외 감지 영역 분리**:
+  - ID 단계: ECALL/EBREAK 감지 (opcode == 7'b1110011, funct3 == 3'b000)
+  - EX 단계: Illegal Instruction 감지 (미지원 opcode/funct3 조합)
+  - MEM 단계: Load/Store Misaligned 감지 (addr[1:0] != 0 for word)
+- **다단계 예외 우선순위**: MEM > EX > ID (파이프라인 순서상 앞선 명령어 우선)
+- **인터럽트 샘플링**: mstatus.MIE == 1 && mie[N] && mip[N] → 명령어 경계에서 처리
+- **flush 범위**: 예외 발생 스테이지 이후 모든 파이프라인 레지스터 flush
+
+### 3.2 code_examples/ch19_interrupt_controller.sv (~150줄)
+**목적**: mie/mip 비트 관리, 인터럽트 우선순위 판정
+
+**구조**:
+```systemverilog
+module interrupt_controller (
+   input  logic        clk,
+   input  logic        rst_n,
+
+   // ====== 인터럽트 소스 (Ch17 주변 장치) ======
+   input  logic        timer_irq,       // 타이머 인터럽트 (Ch17.5)
+   input  logic        external_irq,    // 외부 인터럽트 (PLIC)
+   input  logic        software_irq,    // 소프트웨어 인터럽트
+
+   // ====== CSR 레지스터 입력 ======
+   input  logic [31:0] mie,             // 인터럽트 개별 활성화
+   input  logic        mstatus_mie,     // 전역 인터럽트 활성화
+
+   // ====== 출력 ======
+   output logic [31:0] mip,             // 인터럽트 Pending 비트
+   output logic        irq_pending,     // 처리 가능한 인터럽트 존재
+   output logic [3:0]  irq_code         // 최우선 인터럽트 코드
+);
+
+   // ====== mip 레지스터 업데이트 ======
+   // mip는 외부 인터럽트 신호를 반영 (하드웨어 제어)
+   assign mip[3]  = software_irq;   // MSIP
+   assign mip[7]  = timer_irq;      // MTIP
+   assign mip[11] = external_irq;   // MEIP
+
+   // ====== 인터럽트 활성화 판정 ======
+   logic [31:0] enabled_irq;
+   assign enabled_irq = mie & mip & {32{mstatus_mie}};
+
+   // ====== 우선순위 인코더 ======
+   // RISC-V 우선순위: MEI(11) > MSI(3) > MTI(7)
+   always_comb begin
+      irq_pending = |enabled_irq;
+      if (enabled_irq[11])      irq_code = 4'd11;  // External
+      else if (enabled_irq[3])  irq_code = 4'd3;   // Software
+      else if (enabled_irq[7])  irq_code = 4'd7;   // Timer
+      else                      irq_code = 4'd0;   // None
+   end
+endmodule
+```
+
+**핵심 설계**:
+- mip 비트는 하드웨어가 직접 제어 (외부 신호 반영)
+- mie 비트는 CSR 명령어로 소프트웨어 제어
+- 우선순위: MEI(11) > MSI(3) > MTI(7) (RISC-V 특권 스펙 준수)
+- mstatus.MIE로 전역 인터럽트 게이팅
+
+### 3.3 code_examples/ch19_exception_tb.sv (~200줄)
+**목적**: 예외 및 인터럽트 시뮬레이션 테스트벤치
+
+**테스트 시나리오**:
+
+1. **Scenario 1: ECALL 명령어 실행**
+   - instr[0] = ADDI x5, x0, 10 (정상)
+   - instr[1] = ECALL (trap 발생)
+   - 검증: mepc = instr[1]의 PC, mcause = 11, flush 신호 발생, 다음 PC = mtvec
+
+2. **Scenario 2: Load Misaligned**
+   - instr[0] = LW x1, 0x0(x2) (정상, 주소 정렬됨)
+   - instr[1] = LW x3, 0x1(x4) (misaligned, 4바이트 정렬 필요)
+   - 검증: 메모리 접근 전 예외 감지, mcause = 4 (Load Misaligned)
+
+3. **Scenario 3: 타이머 인터럽트**
+   - 명령어 실행 중 timer_irq 신호 도착
+   - 현재 명령어 완료 후 PC = mtvec로 점프
+   - 검증: 비동기이므로 명령어 경계에서만 처리, mepc = 다음 명령어 PC
+
+4. **Scenario 4: CSR 해저드 (mie 수정 중 인터럽트)**
+   - CSRRS mie, (1<<7) 실행 (MTIE 활성화)
+   - WB 단계 완료 전 timer_irq 도착
+   - 검증: mie 업데이트 완료(WB) 후 인터럽트 샘플링
+
+**어설션(assertions)**:
+```systemverilog
+// ECALL 예외 검증
+property p_ecall_exception;
+   @(posedge clk)
+   (ecall_instr) |=> (mepc == ecall_pc) && (mcause == 11);
+endproperty
+assert property (p_ecall_exception) else $error("ECALL exception failed");
+
+// Precise exception 검증: 예외 후 N사이클 내 다음 명령어 flush
+property p_precise_exception;
+   @(posedge clk)
+   (exception_detected) |-> ##[1:3] (flush_complete);
+endproperty
+assert property (p_precise_exception) else $error("Exception not precise");
+```
 
 ---
 
-## 전 챕터 연계 포인트
+## 4. 비유 및 실생활 예시 전략
 
-### Ch18 (CSR과 시스템 명령어)에서 이어지는 개념
+### 4.1 비유 #1: 응급실 트리아지 (예외 처리 우선순위)
+**목표**: "예외가 여러 개 발생할 때 어떤 것을 먼저 처리하나?"
 
-1. **CSR 인터페이스 직결 연계**: Ch18의 `csr_unit` 모듈이 출력하는 `trap_en`, `mret_en`, `irq_pending` 포트가 Ch19의 `trap_controller`와 `exception_unit`의 입력으로 연결됩니다. Ch18 18.5절 마지막에 "Ch17의 timer_irq → mip.MTIP → irq_pending → 파이프라인 플러시 → 핸들러 실행의 연결이 완성됩니다"라고 예고된 흐름이 이 챕터에서 완성됩니다.
+**비유 내용**:
+- "응급실에서 환자가 여러 명 들어온다면?"
+- "의사는 우선순위 기준(심각도)에 따라 순서를 정한다"
+- "RISC-V 프로세서도 동일: 파이프라인 앞쪽 스테이지(더 오래된 명령어)의 예외가 우선"
+- **정확성 매핑**: 파이프라인 순서 = 시간순. MEM 스테이지 예외(이전 명령어) > EX 스테이지 예외(나중 명령어)
+- **한계 명시**: "실제 응급실은 의료진 판단이지만, 프로세서는 하드코드된 규칙을 따름. 또한 응급실은 여러 환자를 동시에 치료하지만, 프로세서는 한 번에 하나의 예외만 처리"
 
-2. **CSR 해저드 예고 해결**: Ch18 18.3절에서 "파이프라인 구현 시 읽기(ID)와 쓰기(WB) 사이의 해저드 발생 가능 — Ch19에서 해결"이라고 언급된 CSR 해저드를 19.5절에서 정식으로 처리합니다.
+### 4.2 비유 #2: 비행기 블랙박스 (CSR 상태 기록)
+**목표**: "예외 발생 순간의 프로세서 상태를 어떻게 저장하나?"
 
-3. **mstatus 비트 조작 연속**: Ch18에서 구현한 CSRRS/CSRRC로 mstatus.MIE를 세트/클리어하는 기법이 그대로 트랩 진입(MIE←0)과 MRET 복귀(MIE←MPIE) 시퀀스에 활용됩니다.
+**비유 내용**:
+- "비행기가 문제를 만나면 블랙박스에 사건 직전 상태를 기록한다"
+- "마찬가지로 예외 발생 순간 프로세서 상태를 CSR에 저장"
+- mepc = PC (비행기에 문제가 발생한 시각)
+- mcause = 예외 원인 (엔진 고장? 난기류?)
+- mstatus = 프로세서 모드 (Machine mode로 전환)
 
-4. **mtvec 활용**: Ch18에서 설정한 mtvec 레지스터 값이 트랩 핸들러 점프 주소(PC ← mtvec)로 직접 사용됩니다.
+**정확성 매핑**:
+- mepc[31:0] = 정확히 예외 발생 명령어의 PC (32비트)
+- mcause[31:0] = 예외 코드 (비트 31은 인터럽트/예외 구분자)
+- mstatus.MPP = 돌아갈 모드
 
-5. **Ch17 타이머 인터럽트 신호 종착점**: Ch17 17.5절에서 구현한 APB 슬레이브 타이머의 `timer_irq` 출력 신호가 이 챕터의 `exception_unit`에서 최종적으로 처리됩니다.
+**한계 명시**:
+- "블랙박스는 사건 후 분석용이지만, CSR은 **실시간**으로 사건을 처리하는 데 사용"
+- "따라서 trap handler는 CSR 값을 읽어서 예외 원인을 파악하고 즉시 대응"
+
+### 4.3 비유 #3: 영화 편집 (Flush 메커니즘)
+**목표**: "파이프라인에서 예외 발생 후 왜 이후 명령어를 취소(flush)해야 하나?"
+
+**비유 내용**:
+- "영화 촬영 중 배우가 대사를 크게 틀렸다면?"
+- "그 장면 이후의 촬영분은 모두 버려진다 (잘못된 전제 위에 세워졌으므로)"
+- "마찬가지로 예외 발생 명령어 이후의 명령어들은 완료되지 않았으므로 취소(flush)"
+- "예외 명령어 이전의 명령어들은 이미 완료됐으므로 결과가 반영됨"
+
+**파이프라인 타이밍 매핑**:
+- Cycle 0: 예외 명령어(N) 실행 중
+- Cycle 1: "컷!" (flush 신호 발생)
+- Cycle 2~3: N+1, N+2 명령어 취소 (파이프라인 비움)
+- Cycle 4: trap handler 시작 (새로운 장면)
+
+**한계 명시**:
+- "실제 영화와 달리 CPU는 flush가 즉시 일어나지 않고 파이프라인 깊이만큼 시간이 필요"
+- "또한 flush는 물리적 삭제가 아니라 valid 비트를 끄는 논리적 취소"
+
+### 4.4 비유 #4: 전화 중 긴급 전화 받기 (인터럽트)
+**목표**: "인터럽트는 현재 작업을 잠시 멈추고 긴급 사안을 처리한 뒤 복귀"
+
+**비유 내용**:
+- "업무 전화 중 긴급 전화가 온다면?"
+- "현재 통화(명령어)를 마무리하고 → 긴급 전화(trap handler) 응대 → 복귀"
+- mepc = 통화 메모(어디까지 얘기했는지 기록)
+- MRET = "긴급 전화 끊고 원래 통화로 돌아가기"
+
+**프로세서 매핑**:
+- 원래 작업 PC = mepc에 저장
+- 긴급 처리(ISR) 실행 = trap handler 코드
+- MRET = mepc 값을 PC에 로드 → 원래 위치에서 재개
+
+**한계 명시**:
+- "전화와 달리, 프로세서는 인터럽트를 '거절'할 수 있다 (mstatus.MIE=0 또는 mie 비트로)"
+- "또한 여러 긴급 전화가 동시에 오면 우선순위 인코더가 가장 긴급한 하나만 선택"
 
 ---
 
-## 기술적 주의사항
+## 5. 연습문제 블룸 분류 및 개요
 
-### RISC-V 스펙 관련 사항
+| 절 | 문제 | 블룸 수준 | 난이도 | 내용 |
+|----|------|---------|--------|------|
+| 19.1 | 1-1. 파이프라인 5단계 각각의 역할을 쓰고, "stall"과 "flush"의 차이를 설명하시오. | L2 (이해) | ★ | 복습용 확인 문제 |
+| 19.2 | 2-1. 동기 예외의 정의를 쓰고, 3가지 예시를 들어라. | L2 (이해) | ★ | 개념 이해도 확인 |
+| 19.2 | 2-2. 다음 코드에서 예외가 발생하는 시점을 찾고, mepc와 mcause 값을 구하시오. (Load Misaligned 예제) | L3 (적용) | ★★ | 실제 주소 계산 |
+| 19.3 | 3-1. 비동기 인터럽트와 동기 예외의 처리 시점 차이를 쓰시오. | L2 (이해) | ★ | 개념 구분 |
+| 19.3 | 3-2. mie.MTIE=0일 때 timer_irq 신호가 도착해도 trap handler가 실행되지 않는 이유를 설명하시오. | L3 (적용) | ★★ | 인터럽트 마스킹 |
+| 19.4 | 4-1. MRET 명령어 실행 후 PC 값이 mepc로 설정되는 이유를 설명하시오. | L2 (이해) | ★ | 복귀 메커니즘 |
+| 19.5 | 5-1. "정확한 예외(precise exception)"의 정의를 쓰고, 왜 이것이 중요한지 설명하시오. | L2 (이해) | ★ | 핵심 개념 |
+| 19.5 | 5-2. 예외 발생 명령어 이전의 명령어는 완료되고, 이후는 취소되는 이유를 파이프라인 타이밍 다이어그램으로 설명하시오. | L4 (분석) | ★★★ | **가장 어려움** |
+| 19.5 | 5-3. mie 레지스터를 수정하는 CSRRS 명령어 실행 중 timer_irq가 도착했다. 이 인터럽트가 처리되는 시점은? (WB 이전 vs WB 이후) | L4 (분석) | ★★★ | CSR 해저드 |
+| 19.6 | 6-1. ECALL → trap handler 진입 → MRET 복귀 전체 흐름을 타이밍 다이어그램으로 그리시오. | L3 (적용) | ★★ | 실제 시나리오 |
+| 19.7 | 7-1. (종합) 파이프라인에서 여러 예외가 동시에 감지되었을 때 우선순위를 정하는 메커니즘을 설명하시오. | L5 (평가) | ★★★★ | **최고 난이도** |
 
-1. **Misaligned Access 예외 필수 처리**: RISC-V Unprivileged ISA Spec v20191213에 따라 Load/Store Misaligned access 예외는 하드웨어가 반드시 처리해야 합니다(소프트웨어 에뮬레이션 불가). `mem_load_misaligned` / `mem_store_misaligned` 신호는 ALU 결과(메모리 접근 주소)의 하위 비트를 조합하여 생성합니다. LW의 경우 `alu_result[1:0] != 2'b00`, LH/LHU의 경우 `alu_result[0] != 1'b0`.
-
-2. **mcause 인터럽트 비트**: 인터럽트의 mcause는 bit 31 = 1, 예외 코드는 bit 31 = 0입니다. `ch19_exception_unit.sv`에서 타이머 인터럽트 mcause를 `32'h8000_0007`로 표기한 것이 이 규칙의 적용 예시입니다. 원고에서 이 인코딩 규칙을 표로 정리해야 합니다.
-
-3. **인터럽트 mepc 저장값**: 비동기 인터럽트 발생 시 mepc에는 "인터럽트가 수용된 시점에 완료되지 않은 가장 오래된 명령어의 PC"를 저장해야 합니다. 구현 간략화(현재 예제: `mem_pc + 32'd4` 사용)의 한계와 완전 구현 방향을 원고에서 명시해야 합니다.
-
-4. **MRET의 권한 수준 복원**: 완전한 MRET 구현은 MPP 필드(mstatus[12:11])에서 이전 특권 수준을 복원해야 하나, RV32I M-mode 전용 구현에서는 MPP 처리를 생략할 수 있습니다. 이 단순화 결정을 원고에서 명시해야 합니다.
-
-### SystemVerilog 구현 주의사항
-
-5. **트랩 컨트롤러 FSM — 멀티사이클 CSR 쓰기**: `trap_controller.sv`의 FSM은 트랩 발생 시 4사이클(mepc → mcause → mtval → mstatus)에 걸쳐 CSR을 순차 쓰기합니다. 이 동안 파이프라인은 플러시 상태를 유지해야 합니다. 원고에서 "플러시 지속 시간 = 트랩 처리 사이클 수"임을 타이밍 다이어그램으로 명시해야 합니다.
-
-6. **csr_wdata 비트 필드 조작 주의**: `trap_controller.sv`의 `S_TRAP_MSTATUS` 블록에서 `csr_wdata = csr_mstatus; csr_wdata[MPIE_BIT] = ...`와 같이 packed 구조체 비트 필드를 수정하는 방식은 Vivado 합성에서 경고 없이 지원되나, 일부 도구에서 Unpacked Array와 혼동할 수 있습니다. 원고 코드에서 `always_comb begin ... end` 블록 내에서만 이 방식을 사용함을 명시하고, 합성 가능성 검증을 강조합니다.
-
-7. **예외와 분기 플러시 충돌**: Ch11에서 구현한 분기 플러시(flush_if, flush_id)와 예외 플러시(exception_unit의 flush_if~flush_mem)가 동시에 발생할 수 있습니다. 우선순위 규칙: 예외 플러시가 분기 플러시를 포함(superset)하므로 OR 연산으로 합산합니다. 원고에서 이 신호 병합 방법을 명시해야 합니다.
-
-8. **CSR 해저드 조건**: CSR을 ID 스테이지에서 읽고 WB 스테이지에서 쓰는 경우(CSRRW → 이후 CSRRS), RAW 해저드가 발생합니다. 간략화된 처리: CSR 명령어 감지 시 2사이클 스톨 삽입. 완전한 처리: WB→ID 포워딩 경로 추가. 원고에서 두 방법의 트레이드오프를 설명하고 어느 방법을 선택할지 명시해야 합니다.
-
-9. **Basys 3 합성 영향**: 예외 처리 유닛과 트랩 컨트롤러 추가로 약 200~300 LUT 증가 예상. 임계 경로에는 영향이 적으나, `exception_unit`의 조합 논리(우선순위 결정)가 MEM 스테이지 지연에 추가될 수 있으므로 Vivado `report_timing`으로 확인 권장.
+**블룸 분포**:
+- L2(이해): 4문제 (기초 개념)
+- L3(적용): 3문제 (실제 계산/시나리오)
+- L4(분석): 2문제 (정확한 예외, CSR 해저드)
+- L5(평가): 1문제 (종합 문제)
 
 ---
 
-*기획안 작성 기준: TABLE_OF_CONTENTS.md Ch19 항목, manuscripts/part7/chapter18.html 연계 인터페이스 분석, code_examples/ch19_*.sv 코드 구조 분석*
-*기술 저자 에이전트 — 2026-03-13*
+## 6. 핵심 예제 코드 시나리오
+
+### Scenario 1: ECALL 명령어 실행 (기본)
+**목표**: Trap handler 진입과 복귀 전체 흐름 이해
+
+**어셈블리**:
+```asm
+start:
+  li   a0, 100          # 사용자 코드: a0 = 100
+  ecall                 # 예외 발생 → trap handler 진입
+  addi a0, a0, 1        # 돌아온 후 실행 (trap handler 복귀 후)
+  j    start
+```
+
+**파이프라인 타이밍**:
+```
+Cycle  IF               ID               EX               MEM              WB
+0      li a0,100        [이전]           [이전]           [이전]           [이전]
+1      ecall            li a0,100        [이전]           [이전]           [이전]
+2      addi a0,a0,1     ecall            li a0,100        [이전]           [이전]
+3      [flush]          [flush]          ecall(예외감지)  li a0,100        [이전]
+4      trap_handler_PC  [flush]          [flush]          ecall            li a0,100
+5      [handler]        trap_handler_PC  [flush]          [flush]          ecall
+```
+
+**CSR 값 변화**:
+- Cycle 3 (예외 감지): mepc ← ecall의 PC, mcause ← 11
+- Cycle 4 (trap handler 진입): PC ← mtvec[31:2]
+- Handler 종료 (MRET): PC ← mepc + 4 (ecall 다음 명령어)
+
+### Scenario 2: Load Misaligned 예외 (중간)
+**어셈블리**:
+```asm
+  li   a0, 0x0000_0001  # 홀수 주소 (misaligned)
+  lw   a1, 0(a0)        # Load word: 4바이트 정렬 필수 → 예외 발생
+```
+
+**예외 감지 시점**:
+- EX 단계: 주소 계산 (a0 + 0 = 0x0000_0001)
+- MEM 단계: 주소 정렬 확인 → addr[1:0] = 01 → **misaligned!**
+- mcause = 4 (Load Address Misaligned), mepc = LW 명령어의 PC
+
+### Scenario 3: 타이머 인터럽트 (비동기)
+**핵심 포인트**:
+- timer_irq 신호는 임의 시점에 도착
+- 인터럽트 처리는 현재 WB 단계 완료 후 (명령어 경계)
+- mepc = 다음 실행할 명령어의 PC (인터럽트는 다음 명령어 PC를 저장)
+- mcause[31] = 1 (인터럽트), mcause[3:0] = 7 (타이머)
+
+### Scenario 4: CSR 해저드 (고급)
+**코드**:
+```asm
+  li   a0, (1 << 7)        # a0 = 0x80 (MTIE 비트)
+  csrrs mie, a0            # mie = mie | a0 (MTIE = 1)
+  nop                       # timer_irq 여기서 도착 가능
+```
+
+**핵심 설계**:
+- CSRRS의 WB 단계에서 mie 실제 업데이트
+- 인터럽트 샘플링은 WB 이후에만 수행 → CSR 일관성 보장
+- WB 이전에 도착한 timer_irq는 이전 mie 값으로 판정 (아직 MTIE=0이면 무시)
+
+---
+
+## 7. 코드 작성 가이드라인
+
+### 스타일 규칙
+- **들여쓰기**: 3칸 (Ch01~Ch18과 일관성)
+- **명명규칙**: snake_case (except_code, load_misaligned 등)
+- **주석**: 한국어 (절 제목, 섹션 분리, 신호 설명)
+- **합성**: IEEE 1800-2017 표준 (always_ff/always_comb 분리)
+
+### SystemVerilog 패턴
+```systemverilog
+// ====== 예외 감지 (조합 로직) ======
+always_comb begin
+   // 주소 정렬 확인
+   addr_misaligned = (funct3 == 3'b010 && addr[1:0] != 0) ? 1'b1 : 1'b0;
+end
+
+// ====== 예외 상태 전파 (순차 로직) ======
+always_ff @(posedge clk or negedge rst_n) begin
+   if (~rst_n) begin
+      ex_except <= 1'b0;
+   end else begin
+      ex_except <= illegal_instr;
+   end
+end
+```
+
+### HTML 이스케이프 규칙 확인
+- `<pre><code>` 내부: `<` → `&lt;`, `>` → `&gt;`, `&` → `&amp;`
+- Highlight.js: `language-systemverilog` → `language-verilog` 런타임 변환
+
+---
+
+## 8. Ch18 선행 지식 복습 포인트
+
+Ch19는 Ch18(CSR)에 강하게 의존. 다음 CSR을 19.1 또는 19.2 도입부에서 간략 복습:
+
+| CSR | 주소 | 역할 | Ch18 참조 절 |
+|-----|------|------|------------|
+| mstatus | 0x300 | 전역 인터럽트 활성화(MIE), 이전 모드(MPP) | 18.2 |
+| mtvec | 0x305 | Trap handler 시작 주소 | 18.2 |
+| mepc | 0x341 | 예외 발생 명령어 PC | 18.2 |
+| mcause | 0x342 | 예외/인터럽트 코드 | 18.2 |
+| mie | 0x304 | 인터럽트 개별 활성화 (MEIE/MTIE/MSIE) | 18.2 |
+| mip | 0x344 | 인터럽트 Pending 상태 | 18.2 |
+
+---
+
+## 요약
+
+**Chapter 19 기술 저자 기획 완료**:
+- ✅ 7개 절 (19.1~19.7), 약 15,000~18,000자 분량
+- ✅ 5개 SVG (파이프라인 복습, 예외 분류, 인터럽트 우선순위, trap handler, precise exception)
+- ✅ 3개 SystemVerilog 모듈 (ch19_exception_handler.sv, ch19_interrupt_controller.sv, ch19_exception_tb.sv)
+- ✅ 4개 비유 (응급실 트리아지, 블랙박스, 영화 편집, 긴급 전화)
+- ✅ 11개 연습문제 (L2~L5, 블룸 분포)
+- ✅ 4개 핵심 시나리오 (ECALL, Load Misaligned, 타이머, CSR 해저드)
+- ✅ Part 7 마일스톤: AMBA(Ch16~17) + CSR(Ch18) + 예외 처리(Ch19) 통합
+
+**다음 단계**: Phase 2 (기술 저자 원고 작성)

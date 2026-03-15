@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="780" height="380" viewBox="0 0 780 380" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="780" height="380" fill="#F8FAFC" rx="8"/>
+  <text x="390" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">IEEE 754 단정밀도(Single-Precision) 비트 구조</text>
+  <text x="390" y="44" text-anchor="middle" font-size="11" fill="#64748B">32비트 = 부호(1) + 지수(8) + 가수(23)</text>
+
+  <!-- 비트 구조 메인 다이어그램 -->
+  <g transform="translate(40, 70)">
+    <!-- 비트 번호 -->
+    <text x="0" y="0" font-size="9" fill="#64748B">31</text>
+    <text x="35" y="0" font-size="9" fill="#64748B">30</text>
+    <text x="315" y="0" font-size="9" fill="#64748B">23</text>
+    <text x="335" y="0" font-size="9" fill="#64748B">22</text>
+    <text x="685" y="0" font-size="9" fill="#64748B">0</text>
+
+    <!-- 부호 비트 (1비트) -->
+    <rect x="0" y="10" width="30" height="50" rx="4" fill="#DC2626"/>
+    <text x="15" y="40" text-anchor="middle" font-size="11" fill="white" font-weight="700">S</text>
+
+    <!-- 지수 (8비트) -->
+    <rect x="32" y="10" width="300" height="50" rx="4" fill="#2563EB"/>
+    <text x="182" y="35" text-anchor="middle" font-size="12" fill="white" font-weight="700">Exponent (지수)</text>
+    <text x="182" y="50" text-anchor="middle" font-size="9" fill="#DBEAFE">8비트 — 바이어스 127</text>
+
+    <!-- 가수 (23비트) -->
+    <rect x="334" y="10" width="366" height="50" rx="4" fill="#059669"/>
+    <text x="517" y="35" text-anchor="middle" font-size="12" fill="white" font-weight="700">Fraction (가수)</text>
+    <text x="517" y="50" text-anchor="middle" font-size="9" fill="#DCFCE7">23비트 — 묵시적 1 포함</text>
+  </g>
+
+  <!-- 각 필드 설명 -->
+  <g transform="translate(40, 150)">
+    <!-- 부호 설명 -->
+    <rect x="0" y="0" width="180" height="70" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1"/>
+    <text x="90" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="#DC2626">S (부호)</text>
+    <text x="90" y="37" text-anchor="middle" font-size="9" fill="#1E293B">0 = 양수 (+)</text>
+    <text x="90" y="52" text-anchor="middle" font-size="9" fill="#1E293B">1 = 음수 (−)</text>
+    <text x="90" y="65" text-anchor="middle" font-size="8" fill="#64748B">정수의 MSB와 동일한 역할</text>
+
+    <!-- 지수 설명 -->
+    <rect x="200" y="0" width="250" height="70" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1"/>
+    <text x="325" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="#2563EB">E (지수) — 바이어스 127</text>
+    <text x="325" y="37" text-anchor="middle" font-size="9" fill="#1E293B">실제 지수 = E − 127</text>
+    <text x="325" y="52" text-anchor="middle" font-size="9" fill="#1E293B">범위: −126 ~ +127 (0과 255는 특수)</text>
+    <text x="325" y="65" text-anchor="middle" font-size="8" fill="#64748B">E=0: 비정규수/제로, E=255: ±∞/NaN</text>
+
+    <!-- 가수 설명 -->
+    <rect x="470" y="0" width="230" height="70" rx="6" fill="#F0FDF4" stroke="#059669" stroke-width="1"/>
+    <text x="585" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="#059669">F (가수) — 묵시적 1</text>
+    <text x="585" y="37" text-anchor="middle" font-size="9" fill="#1E293B">실제 값 = 1.F (정규화)</text>
+    <text x="585" y="52" text-anchor="middle" font-size="9" fill="#1E293B">정밀도: ~7자리 10진수</text>
+    <text x="585" y="65" text-anchor="middle" font-size="8" fill="#64748B">23비트 + 묵시적 1 = 24비트 유효숫자</text>
+  </g>
+
+  <!-- 변환 예제: -6.5 -->
+  <g transform="translate(40, 240)">
+    <rect x="0" y="0" width="700" height="120" rx="8" fill="#FFFBEB" stroke="#D97706" stroke-width="1"/>
+    <text x="350" y="22" text-anchor="middle" font-size="11" font-weight="700" fill="#92400E">변환 예제: −6.5 (십진수) → IEEE 754</text>
+
+    <!-- 단계 -->
+    <text x="20" y="45" font-size="9" fill="#1E293B" font-weight="600">① 부호:</text>
+    <text x="80" y="45" font-size="9" fill="#1E293B">음수 → S = 1</text>
+
+    <text x="200" y="45" font-size="9" fill="#1E293B" font-weight="600">② 이진 변환:</text>
+    <text x="295" y="45" font-size="9" fill="#1E293B">6.5 = 110.1₂ = 1.101 × 2²</text>
+
+    <text x="480" y="45" font-size="9" fill="#1E293B" font-weight="600">③ 지수:</text>
+    <text x="530" y="45" font-size="9" fill="#1E293B">2 + 127 = 129 = 10000001₂</text>
+
+    <!-- 비트 결과 -->
+    <g transform="translate(20, 60)">
+      <rect x="0" y="0" width="25" height="30" rx="3" fill="#DC2626"/>
+      <text x="12.5" y="20" text-anchor="middle" font-size="10" fill="white" font-weight="700">1</text>
+
+      <rect x="27" y="0" width="200" height="30" rx="3" fill="#2563EB"/>
+      <text x="127" y="20" text-anchor="middle" font-size="10" fill="white" font-weight="600" font-family="monospace">1 0 0 0 0 0 0 1</text>
+
+      <rect x="229" y="0" width="430" height="30" rx="3" fill="#059669"/>
+      <text x="444" y="20" text-anchor="middle" font-size="10" fill="white" font-weight="600" font-family="monospace">1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</text>
+    </g>
+
+    <text x="350" y="108" text-anchor="middle" font-size="10" fill="#92400E" font-weight="600">결과: 0xC0D00000 = −6.5</text>
+  </g>
+
+  <!-- 수식 -->
+  <text x="390" y="372" text-anchor="middle" font-size="11" fill="#1E293B" font-weight="600">값 = (−1)ˢ × 1.F × 2^(E−127)</text>
+</svg>

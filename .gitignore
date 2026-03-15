@@ -13,3 +13,7 @@ Thumbs.db
 # 임시 파일
 *.tmp
 *.bak
+
+# Vivado/Xilinx 빌드 파산물
+xsim.dir/
+xvlog.pb

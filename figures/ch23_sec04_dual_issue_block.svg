@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="500" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="800" height="500" fill="#F8FAFC" rx="8"/>
+  <text x="400" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">2-이슈 In-Order 파이프라인 블록 다이어그램</text>
+  <text x="400" y="44" text-anchor="middle" font-size="11" fill="#64748B">Ch12 rv32i_pipeline_complete 기반 확장 — 파이프라인 0(A) + 파이프라인 1(B)</text>
+
+  <defs>
+    <marker id="ad" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#475569"/>
+    </marker>
+    <marker id="adB" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#2563EB"/>
+    </marker>
+    <marker id="adG" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="#16A34A"/>
+    </marker>
+  </defs>
+
+  <!-- 스테이지 헤더 -->
+  <g transform="translate(0, 55)">
+    <rect x="30" y="0" width="120" height="25" rx="4" fill="#1E40AF"/>
+    <text x="90" y="17" text-anchor="middle" font-size="10" font-weight="700" fill="white">IF</text>
+
+    <rect x="170" y="0" width="140" height="25" rx="4" fill="#2563EB"/>
+    <text x="240" y="17" text-anchor="middle" font-size="10" font-weight="700" fill="white">ID + Issue Check</text>
+
+    <rect x="330" y="0" width="160" height="25" rx="4" fill="#3B82F6"/>
+    <text x="410" y="17" text-anchor="middle" font-size="10" font-weight="700" fill="white">EX</text>
+
+    <rect x="510" y="0" width="120" height="25" rx="4" fill="#60A5FA"/>
+    <text x="570" y="17" text-anchor="middle" font-size="10" font-weight="700" fill="white">MEM</text>
+
+    <rect x="650" y="0" width="120" height="25" rx="4" fill="#93C5FD"/>
+    <text x="710" y="17" text-anchor="middle" font-size="10" font-weight="700" fill="#1E293B">WB</text>
+  </g>
+
+  <!-- ====== 파이프라인 0 (A) — 파란색 ====== -->
+  <text x="30" y="105" font-size="9" font-weight="700" fill="#1E40AF">파이프라인 A</text>
+
+  <!-- IF: 64비트 IMEM -->
+  <rect x="30" y="110" width="120" height="60" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="90" y="130" text-anchor="middle" font-size="9" font-weight="600" fill="#1E40AF">IMEM</text>
+  <text x="90" y="145" text-anchor="middle" font-size="8" fill="#2563EB">64비트 읽기</text>
+  <text x="90" y="160" text-anchor="middle" font-size="7" fill="#64748B">(2개 명령어)</text>
+
+  <!-- ID: 디코더 A -->
+  <rect x="170" y="110" width="140" height="55" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="240" y="130" text-anchor="middle" font-size="9" font-weight="600" fill="#1E40AF">디코더 A</text>
+  <text x="240" y="145" text-anchor="middle" font-size="8" fill="#2563EB">+ RF 읽기 (rs1a, rs2a)</text>
+  <text x="240" y="158" text-anchor="middle" font-size="7" fill="#64748B">instr_a = imem[31:0]</text>
+
+  <!-- EX: ALU 0 -->
+  <rect x="340" y="110" width="140" height="55" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="410" y="130" text-anchor="middle" font-size="9" font-weight="600" fill="#1E40AF">ALU 0</text>
+  <text x="410" y="145" text-anchor="middle" font-size="8" fill="#2563EB">+ 분기 유닛</text>
+  <text x="410" y="158" text-anchor="middle" font-size="7" fill="#64748B">분기는 ALU 0 전용</text>
+
+  <!-- MEM A -->
+  <rect x="510" y="110" width="120" height="55" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="570" y="130" text-anchor="middle" font-size="9" font-weight="600" fill="#1E40AF">MEM A</text>
+  <text x="570" y="145" text-anchor="middle" font-size="8" fill="#2563EB">DMEM 포트</text>
+  <text x="570" y="158" text-anchor="middle" font-size="7" fill="#64748B">(단일 포트 공유)</text>
+
+  <!-- WB A -->
+  <rect x="660" y="110" width="100" height="55" rx="5" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="710" y="130" text-anchor="middle" font-size="9" font-weight="600" fill="#1E40AF">WB A</text>
+  <text x="710" y="145" text-anchor="middle" font-size="8" fill="#2563EB">RF 쓰기 0</text>
+
+  <!-- A 경로 화살표 -->
+  <line x1="150" y1="140" x2="168" y2="140" stroke="#2563EB" stroke-width="1.5" marker-end="url(#adB)"/>
+  <line x1="310" y1="140" x2="338" y2="140" stroke="#2563EB" stroke-width="1.5" marker-end="url(#adB)"/>
+  <line x1="480" y1="140" x2="508" y2="140" stroke="#2563EB" stroke-width="1.5" marker-end="url(#adB)"/>
+  <line x1="630" y1="140" x2="658" y2="140" stroke="#2563EB" stroke-width="1.5" marker-end="url(#adB)"/>
+
+  <!-- ====== 파이프라인 1 (B) — 초록색 ====== -->
+  <text x="30" y="205" font-size="9" font-weight="700" fill="#166534">파이프라인 B</text>
+
+  <!-- ID: 디코더 B -->
+  <rect x="170" y="210" width="140" height="55" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="240" y="230" text-anchor="middle" font-size="9" font-weight="600" fill="#166534">디코더 B</text>
+  <text x="240" y="245" text-anchor="middle" font-size="8" fill="#16A34A">+ RF 읽기 (rs1b, rs2b)</text>
+  <text x="240" y="258" text-anchor="middle" font-size="7" fill="#64748B">instr_b = imem[63:32]</text>
+
+  <!-- EX: ALU 1 -->
+  <rect x="340" y="210" width="140" height="55" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="410" y="230" text-anchor="middle" font-size="9" font-weight="600" fill="#166534">ALU 1</text>
+  <text x="410" y="245" text-anchor="middle" font-size="8" fill="#16A34A">연산 전용</text>
+  <text x="410" y="258" text-anchor="middle" font-size="7" fill="#64748B">분기 불가</text>
+
+  <!-- WB B -->
+  <rect x="660" y="210" width="100" height="55" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="710" y="230" text-anchor="middle" font-size="9" font-weight="600" fill="#166534">WB B</text>
+  <text x="710" y="245" text-anchor="middle" font-size="8" fill="#16A34A">RF 쓰기 1</text>
+
+  <!-- B 경로 화살표 -->
+  <line x1="150" y1="155" x2="155" y2="237" stroke="#16A34A" stroke-width="1" stroke-dasharray="3"/>
+  <line x1="155" y1="237" x2="168" y2="237" stroke="#16A34A" stroke-width="1.5" marker-end="url(#adG)"/>
+  <line x1="310" y1="237" x2="338" y2="237" stroke="#16A34A" stroke-width="1.5" marker-end="url(#adG)"/>
+  <line x1="480" y1="237" x2="658" y2="237" stroke="#16A34A" stroke-width="1" stroke-dasharray="4" marker-end="url(#adG)"/>
+  <text x="560" y="230" font-size="7" fill="#64748B">MEM 없으면 직행</text>
+
+  <!-- ====== 발급 검사기 ====== -->
+  <rect x="175" y="290" width="130" height="45" rx="5" fill="#FFF7ED" stroke="#EA580C" stroke-width="2"/>
+  <text x="240" y="310" text-anchor="middle" font-size="9" font-weight="700" fill="#EA580C">발급 검사기</text>
+  <text x="240" y="325" text-anchor="middle" font-size="7" fill="#EA580C">dual_issue_checker</text>
+
+  <line x1="240" y1="265" x2="240" y2="288" stroke="#EA580C" stroke-width="1.5" marker-end="url(#ad)"/>
+  <text x="248" y="280" font-size="7" fill="#EA580C">can_dual?</text>
+
+  <!-- ====== 포워딩 유닛 확장 ====== -->
+  <rect x="340" y="290" width="140" height="55" rx="5" fill="#F1F5F9" stroke="#64748B" stroke-width="1.5"/>
+  <text x="410" y="307" text-anchor="middle" font-size="9" font-weight="600" fill="#475569">포워딩 유닛</text>
+  <text x="410" y="320" text-anchor="middle" font-size="8" fill="#64748B">(확장: 4경로)</text>
+  <text x="410" y="335" text-anchor="middle" font-size="7" fill="#94A3B8">EX-A→A, EX-A→B</text>
+  <text x="410" y="345" text-anchor="middle" font-size="7" fill="#94A3B8">EX-B→A, EX-B→B</text>
+
+  <!-- 포워딩 화살표 -->
+  <line x1="410" y1="165" x2="410" y2="288" stroke="#64748B" stroke-width="1" stroke-dasharray="3"/>
+  <line x1="410" y1="265" x2="410" y2="288" stroke="#64748B" stroke-width="1" stroke-dasharray="3"/>
+
+  <!-- ====== 레지스터 파일 ====== -->
+  <rect x="30" y="300" width="120" height="55" rx="5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="90" y="318" text-anchor="middle" font-size="9" font-weight="600" fill="#7C3AED">레지스터 파일</text>
+  <text x="90" y="333" text-anchor="middle" font-size="8" fill="#7C3AED">4R / 2W</text>
+  <text x="90" y="348" text-anchor="middle" font-size="7" fill="#64748B">x0~x31 (32개)</text>
+
+  <!-- ====== 해저드 제어 ====== -->
+  <rect x="175" y="380" width="310" height="50" rx="5" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="330" y="400" text-anchor="middle" font-size="9" font-weight="600" fill="#DC2626">해저드 제어 유닛 (확장)</text>
+  <text x="330" y="416" text-anchor="middle" font-size="8" fill="#B91C1C">A-B 간 의존성 | Load-Use 스톨 | 분기 플러시 (A가 분기 시 B 무효화)</text>
+
+  <!-- PC -->
+  <rect x="30" y="400" width="80" height="35" rx="5" fill="#1E40AF"/>
+  <text x="70" y="420" text-anchor="middle" font-size="10" font-weight="700" fill="white">PC</text>
+  <text x="70" y="432" text-anchor="middle" font-size="7" fill="#BFDBFE">+4 또는 +8</text>
+
+  <!-- PC → IMEM -->
+  <line x1="70" y1="400" x2="70" y2="172" stroke="#1E40AF" stroke-width="1.5" marker-end="url(#ad)"/>
+
+  <!-- 파이프라인 레지스터 표시 -->
+  <g transform="translate(158, 90)">
+    <line x1="0" y1="0" x2="0" y2="200" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4 2"/>
+    <text x="0" y="-5" text-anchor="middle" font-size="7" fill="#94A3B8">IF/ID</text>
+  </g>
+  <g transform="translate(328, 90)">
+    <line x1="0" y1="0" x2="0" y2="200" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4 2"/>
+    <text x="0" y="-5" text-anchor="middle" font-size="7" fill="#94A3B8">ID/EX</text>
+  </g>
+  <g transform="translate(498, 90)">
+    <line x1="0" y1="0" x2="0" y2="200" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4 2"/>
+    <text x="0" y="-5" text-anchor="middle" font-size="7" fill="#94A3B8">EX/MEM</text>
+  </g>
+  <g transform="translate(648, 90)">
+    <line x1="0" y1="0" x2="0" y2="200" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4 2"/>
+    <text x="0" y="-5" text-anchor="middle" font-size="7" fill="#94A3B8">MEM/WB</text>
+  </g>
+
+  <!-- 범례 -->
+  <g transform="translate(30, 460)">
+    <rect x="0" y="0" width="12" height="12" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+    <text x="16" y="10" font-size="8" fill="#1E293B">파이프라인 A</text>
+    <rect x="110" y="0" width="12" height="12" rx="2" fill="#DCFCE7" stroke="#16A34A" stroke-width="1"/>
+    <text x="126" y="10" font-size="8" fill="#1E293B">파이프라인 B</text>
+    <rect x="220" y="0" width="12" height="12" rx="2" fill="#FFF7ED" stroke="#EA580C" stroke-width="1"/>
+    <text x="236" y="10" font-size="8" fill="#1E293B">발급 검사기</text>
+    <rect x="330" y="0" width="12" height="12" rx="2" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1"/>
+    <text x="346" y="10" font-size="8" fill="#1E293B">레지스터 파일 (4R/2W)</text>
+    <rect x="480" y="0" width="12" height="12" rx="2" fill="#FEE2E2" stroke="#DC2626" stroke-width="1"/>
+    <text x="496" y="10" font-size="8" fill="#1E293B">해저드 제어</text>
+  </g>
+
+  <!-- 핵심 차이 박스 -->
+  <rect x="520" y="300" width="250" height="90" rx="6" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="645" y="318" text-anchor="middle" font-size="9" font-weight="700" fill="#1E293B">Ch12 대비 주요 변경</text>
+  <text x="530" y="335" font-size="8" fill="#475569">1. IMEM 64비트 (2개 명령어 동시 인출)</text>
+  <text x="530" y="350" font-size="8" fill="#475569">2. 디코더 2개, ALU 2개</text>
+  <text x="530" y="365" font-size="8" fill="#475569">3. RF 포트: 2R/1W → 4R/2W</text>
+  <text x="530" y="380" font-size="8" fill="#475569">4. 포워딩 경로: 2개 → 4개 (O(n²))</text>
+</svg>

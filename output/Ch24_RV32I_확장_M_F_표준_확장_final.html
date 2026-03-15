@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 24 — RV32I 확장: M &amp; F 표준 확장</title>
+  <link rel="stylesheet" href="../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js atom-one-dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 24</span>
+  <h1>RV32I 확장: M &amp; F 표준 확장</h1>
+  <p class="chapter-intro">
+    Ch12까지 완성한 RV32I 파이프라인은 정수 덧셈, 뺄셈, 논리 연산만 하드웨어로 지원합니다.
+    곱셈이나 나눗셈은 소프트웨어 루프로 수십~수백 사이클이 소요되지만,
+    <strong>M 확장</strong> 하나만 추가하면 단 1~36사이클로 줄일 수 있습니다.
+    이 챕터에서는 M 확장(정수 곱셈·나눗셈)을 ISA와 하드웨어 수준에서 완성하고,
+    F 확장(부동소수점)과 Zicntr(성능 카운터 표준화)를 개념적으로 탐구합니다.
+  </p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li><strong>LO-1</strong>: M 확장이 정의하는 8개 명령어(MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU)의 동작을 설명할 수 있다. (이해)</li>
+    <li><strong>LO-2</strong>: MUL과 MULH의 차이를 비트 수준에서 설명하고, 32비트 곱셈이 64비트 결과를 만드는 이유를 논증할 수 있다. (이해/분석)</li>
+    <li><strong>LO-3</strong>: 곱셈기(Radix-4 Booth)와 나눗셈기(Restoring Division)의 하드웨어 동작 원리를 설명할 수 있다. (이해)</li>
+    <li><strong>LO-4</strong>: SystemVerilog로 M 확장 곱셈/나눗셈 모듈을 구현하고, 테스트벤치로 검증할 수 있다. (적용)</li>
+    <li><strong>LO-5</strong>: M 확장 유닛을 기존 5단계 파이프라인에 통합하는 방법(MUX 추가, 스톨 신호)을 설계할 수 있다. (적용/분석)</li>
+    <li><strong>LO-6</strong>: IEEE 754 단정밀도 부동소수점의 비트 구조(부호·지수·가수)를 설명할 수 있다. (이해)</li>
+    <li><strong>LO-7</strong>: F 확장의 단정밀도 범위와 정밀도 한계를 과학 표기법과 대응하여 설명할 수 있다. (이해)</li>
+    <li><strong>LO-8</strong>: F 확장의 SW 에뮬레이션과 HW 구현 간 트레이드오프를 비교할 수 있다. (분석)</li>
+    <li><strong>LO-9</strong>: Zicntr 확장의 minstret/mcycle CSR을 활용하여 IPC를 계산할 수 있다. (적용)</li>
+    <li><strong>LO-10</strong>: 성능 카운터 표준화가 소프트웨어 이식성에 미치는 영향을 설명할 수 있다. (이해)</li>
+    <li><strong>LO-11</strong>: M 확장 유닛을 기존 파이프라인에 통합하는 3단계(디코더 확장, MUX 추가, 스톨·포워딩 확장)를 설계할 수 있다. (창조)</li>
+    <li><strong>LO-12</strong>: 1사이클 vs 다중사이클 곱셈기의 면적·타이밍 트레이드오프를 평가할 수 있다. (평가)</li>
+  </ul>
+</nav>
+
+<section id="chapter-intro-narrative">
+  <p>
+    Ch12에서 완성한 5단계 파이프라인 프로세서에 "축하합니다!"라고 말씀드렸던 것을 기억하시나요?
+    그 프로세서는 <code>ADD</code>, <code>SUB</code>, <code>AND</code>, <code>OR</code> 같은 기본 정수 연산을 1사이클에 처리합니다.
+    그런데 실제 프로그램에서는 <strong>곱셈과 나눗셈</strong>이 빈번하게 등장합니다.
+    행렬 연산, 해시 함수, 신호 처리 — 이 모든 것에 곱셈이 필수입니다.
+  </p>
+  <p>
+    RV32I 기본 명령어 세트만으로 곱셈을 수행하려면
+    <code>ADD</code>를 반복하는 소프트웨어 루프가 필요합니다.
+    32비트 × 32비트 곱셈은 최악의 경우 32번의 덧셈-시프트 루프, 즉 약 100사이클 이상이 소요됩니다.
+    <strong>M 확장</strong>을 추가하면 이를 하드웨어가 직접 처리하여 1~36사이클로 단축합니다.
+  </p>
+  <p>
+    Ch23에서 슈퍼스칼라와 비순차 실행으로 IPC를 높이는 방법을 탐구했습니다.
+    이번 챕터는 접근법이 다릅니다 — 새로운 <strong>명령어</strong>를 추가하여
+    기존에 수십~수백 사이클 걸리던 연산을 단일 명령어로 처리함으로써 성능을 개선합니다.
+    Ch23의 "파이프라인 구조 개선"과 이 챕터의 "ISA 확장"은 상호 보완적인 최적화 전략입니다.
+  </p>
+  <p>
+    이 챕터의 구성은 다음과 같습니다.
+    24.1절에서 M 확장의 ISA 정의와 하드웨어 구현을 다룹니다.
+    24.2절에서 F 확장(부동소수점)의 기초를 "5분 읽기" 수준으로 소개합니다.
+    24.3절에서 Zicntr 성능 카운터 표준화를 Ch18의 CSR과 연결합니다.
+    24.4절에서 곱셈기를 파이프라인으로 확장하는 미니 설계 과제를 수행합니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      실무에서 곱셈기는 FPGA의 DSP 슬라이스를 활용하여 구현합니다.
+      Basys 3의 Artix-7에는 DSP48E1 슬라이스가 90개 있으며,
+      Vivado가 <code>*</code> 연산자를 자동으로 DSP에 매핑합니다.
+      원리를 이해한 후에는 도구를 신뢰하세요.
+    </p>
+  </aside>
+</section>
+
+<!-- ========================================================================== -->
+<!-- 24.1 M 확장: 정수 곱셈과 나눗셈                                                   -->
+<!-- ========================================================================== -->
+<section id="sec-24-1">
+  <h2>24.1 M 확장: 정수 곱셈과 나눗셈</h2>
+
+  <!-- ======================== 24.1.1 ======================== -->
+  <h3 id="sec-24-1-1">24.1.1 M 확장 ISA 정의</h3>
+
+  <p>
+    RISC-V의 <strong>M 확장(RV32M)</strong>은 정수 곱셈과 나눗셈을 위한 8개 명령어를 정의합니다.
+    모두 R-type 형식(funct7 + rs2 + rs1 + funct3 + rd + opcode)이며,
+    opcode는 <code>0110011</code>(OP)로 기본 ALU 명령어와 동일하고,
+    <code>funct7 = 0000001</code>로 구분합니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유 — 초등학교 곱셈표에서 고속 계산기로:</strong>
+    초등학교에서 두 자리 곱셈을 배울 때, 우리는 한 자리씩 곱하고 자리를 맞춰 더했습니다(필산법).
+    이것이 RV32I만으로 곱셈하는 소프트웨어 루프와 같습니다 — 맞지만 느립니다.
+    M 확장은 <strong>전자 계산기의 × 버튼</strong>과 같습니다.
+    내부적으로는 복잡한 회로가 동작하지만, 사용자 입장에서는 버튼 하나로 즉시 결과를 얻습니다.
+    <br><br>
+    <em>한계: 실제 하드웨어 곱셈기는 전자 계산기처럼 '즉시'가 아닐 수 있습니다.
+    구현 방식에 따라 1~36사이클이 소요되며, 24.1.2절에서 그 원리를 다룹니다.</em>
+  </div>
+
+  <h4>8개 명령어 요약</h4>
+  <p>
+    M 확장의 핵심은 <strong>32비트 × 32비트 곱셈이 64비트 결과</strong>를 만든다는 점입니다.
+    그러나 RV32의 레지스터는 32비트이므로, 결과의 <strong>하위 32비트</strong>와
+    <strong>상위 32비트</strong>를 별도 명령어로 가져옵니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>명령어</th>
+        <th>funct3</th>
+        <th>동작</th>
+        <th>결과 위치</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>MUL rd, rs1, rs2</code></td>
+        <td>000</td>
+        <td>rs1 × rs2 (부호 무관)</td>
+        <td>하위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>MULH rd, rs1, rs2</code></td>
+        <td>001</td>
+        <td>signed(rs1) × signed(rs2)</td>
+        <td>상위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>MULHSU rd, rs1, rs2</code></td>
+        <td>010</td>
+        <td>signed(rs1) × unsigned(rs2)</td>
+        <td>상위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>MULHU rd, rs1, rs2</code></td>
+        <td>011</td>
+        <td>unsigned(rs1) × unsigned(rs2)</td>
+        <td>상위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>DIV rd, rs1, rs2</code></td>
+        <td>100</td>
+        <td>signed(rs1) ÷ signed(rs2)</td>
+        <td>몫</td>
+      </tr>
+      <tr>
+        <td><code>DIVU rd, rs1, rs2</code></td>
+        <td>101</td>
+        <td>unsigned(rs1) ÷ unsigned(rs2)</td>
+        <td>몫</td>
+      </tr>
+      <tr>
+        <td><code>REM rd, rs1, rs2</code></td>
+        <td>110</td>
+        <td>signed(rs1) % signed(rs2)</td>
+        <td>나머지</td>
+      </tr>
+      <tr>
+        <td><code>REMU rd, rs1, rs2</code></td>
+        <td>111</td>
+        <td>unsigned(rs1) % unsigned(rs2)</td>
+        <td>나머지</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>왜 MUL과 MULH가 분리되어 있는가</h4>
+  <p>
+    C 언어에서 <code>int a = b * c;</code>를 컴파일하면 <code>MUL</code> 한 명령어면 충분합니다.
+    하위 32비트만 필요하기 때문입니다. 그러나 <code>long long result = (long long)b * c;</code>처럼
+    64비트 전체 결과가 필요하면 <code>MUL</code> + <code>MULH</code> 두 명령어를 연속 실행합니다.
+    하드웨어는 내부적으로 64비트 곱셈을 한 번만 수행하고,
+    <code>MUL</code>은 하위 32비트를, <code>MULH</code>는 상위 32비트를 선택하여 rd에 기록합니다.
+  </p>
+
+  <p>
+    <strong>오버플로 검출</strong>에도 MULH가 유용합니다.
+    <code>MUL</code> 결과가 32비트에 담길 수 있는지 확인하려면,
+    <code>MULH</code> 결과가 0(양수)이거나 -1(음수)인지 검사하면 됩니다.
+  </p>
+
+  <pre><code class="language-armasm">
+# 64비트 전체 결과 (C: long long result = (long long)a * b)
+MUL   x10, x5, x6    # x10 = 하위 32비트
+MULH  x11, x5, x6    # x11 = 상위 32비트
+# 결과: {x11, x10} = 64비트 곱
+
+# 오버플로 검출
+MUL   x10, x5, x6    # x10 = a * b (하위 32비트)
+MULH  x11, x5, x6    # x11 = 상위 32비트
+SRAI  x12, x10, 31   # x12 = x10의 부호 확장
+BNE   x11, x12, overflow_handler  # 상위 비트 ≠ 부호 확장 → 오버플로
+  </code></pre>
+
+  <h4>나눗셈의 특수 케이스</h4>
+  <p>
+    나눗셈에는 두 가지 특수 케이스가 있으며, RISC-V는 <strong>예외를 발생시키지 않고</strong>
+    명확한 결과를 정의합니다.
+  </p>
+  <ol>
+    <li><strong>0으로 나누기</strong>: <code>DIV</code>는 -1(모든 비트 1), <code>REM</code>은 rs1 값을 반환합니다. <code>DIVU</code>는 0xFFFFFFFF, <code>REMU</code>는 rs1을 반환합니다.</li>
+    <li><strong>부호 있는 오버플로</strong>: -2<sup>31</sup> ÷ (-1) = 2<sup>31</sup>은 32비트에 담을 수 없으므로, <code>DIV</code>는 -2<sup>31</sup>을, <code>REM</code>은 0을 반환합니다.</li>
+  </ol>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> MULH는 언제 쓰나요? MUL만으로 부족한 경우가 있나요?</p>
+    <p><strong>A:</strong> 암호 알고리즘(RSA, ECC)에서 큰 수의 곱셈은 64비트 전체 결과가 필수입니다.
+    또한 고정소수점(fixed-point) 연산에서 곱셈 후 상위 비트를 추출해야 하는데,
+    MULH가 없으면 소프트웨어 시프트로 수십 사이클이 추가됩니다.
+    컴파일러도 오버플로 검출 시 MUL + MULH 패턴을 자동 생성합니다.</p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> RV32M에서 MUL과 MULH의 차이는?</p>
+    <p><strong>A:</strong> 둘 다 동일한 64비트 곱셈을 수행하지만,
+    <code>MUL</code>은 하위 32비트를, <code>MULH</code>는 상위 32비트를 rd에 기록합니다.
+    하위 32비트는 signed/unsigned 구분 없이 동일하므로 <code>MUL</code>은 하나뿐이지만,
+    상위 32비트는 부호 처리에 따라 달라지므로 <code>MULH</code>, <code>MULHSU</code>, <code>MULHU</code>
+    세 가지가 존재합니다. 하드웨어 구현 시 곱셈기는 하나만 두고
+    funct3로 결과의 상위/하위를 선택하는 MUX를 추가합니다.</p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      GCC에서 <code>-march=rv32im</code> 옵션으로 M 확장을 활성화합니다.
+      M 확장 없이 컴파일하면 <code>__mulsi3</code>, <code>__divsi3</code> 같은
+      라이브러리 함수를 호출하여 수십 배 느려집니다.
+      임베디드 시스템에서 곱셈이 빈번하다면 M 확장은 사실상 필수입니다.
+    </p>
+  </aside>
+
+  <!-- ======================== 24.1.2 ======================== -->
+  <h3 id="sec-24-1-2">24.1.2 M 확장 하드웨어 구현</h3>
+
+  <p>
+    ISA가 "무엇을" 정의한다면, 하드웨어 구현은 "어떻게"에 해당합니다.
+    32비트 곱셈기와 나눗셈기를 설계하는 여러 방법이 있으며,
+    각각의 면적·타이밍·사이클 수 트레이드오프가 다릅니다.
+  </p>
+
+  <h4>곱셈기: 필산에서 병렬 트리까지</h4>
+
+  <p>
+    이진수 곱셈의 기본 원리는 초등학교 필산과 동일합니다.
+    승수(multiplier)의 각 비트에 대해 피승수(multiplicand)를 시프트한 후,
+    모든 <strong>부분곱(partial product)</strong>을 더합니다.
+    32비트 곱셈이면 부분곱이 32개 생성됩니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유 — 초등학교 필산 곱셈:</strong>
+    123 × 45를 필산할 때, 먼저 123 × 5 = 615, 그다음 123 × 40 = 4920을 구하고,
+    두 결과를 더하여 5545를 얻습니다.
+    이진수도 동일합니다. 다만 각 자리의 곱이 0 또는 피승수 자체이므로
+    "곱하기" 대신 "AND 게이트"로 처리할 수 있습니다.
+    32비트면 32개의 부분곱을 만들고 모두 더하는 것이 관건입니다.
+    <br><br>
+    <em>한계: 실제 하드웨어는 32개의 부분곱을 순차적으로 더하지 않고,
+    Booth 인코딩으로 부분곱 수를 절반으로 줄이고(Radix-4),
+    Wallace 트리나 Dadda 트리로 병렬 덧셈하여 지연을 O(log n)으로 줄입니다.</em>
+  </div>
+
+  <p>
+    곱셈기의 진화 단계를 정리하면 다음과 같습니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch24_sec01_multiply_stages.svg" alt="곱셈기 진화 4단계: 순차 시프트-덧셈 → Booth Radix-4 → Wallace 트리 → DSP 슬라이스">
+    <figcaption>그림 24.1: 곱셈기 구현의 진화.
+    순차 방식(32사이클)에서 시작하여, Booth 인코딩으로 부분곱을 절반으로 줄이고,
+    Wallace 트리로 병렬 축소하면 1~3사이클까지 단축됩니다.
+    FPGA에서는 DSP 슬라이스가 이를 단일 사이클로 처리합니다.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr>
+        <th>방식</th>
+        <th>부분곱 수</th>
+        <th>사이클</th>
+        <th>면적</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>순차 시프트-덧셈</td>
+        <td>32개</td>
+        <td>32</td>
+        <td>최소</td>
+        <td>교육용, 느림</td>
+      </tr>
+      <tr>
+        <td>Booth Radix-4</td>
+        <td>16개</td>
+        <td>16</td>
+        <td>중간</td>
+        <td>부분곱 수 절반</td>
+      </tr>
+      <tr>
+        <td>Wallace/Dadda 트리</td>
+        <td>-</td>
+        <td>1~3</td>
+        <td>대형</td>
+        <td>병렬 축소</td>
+      </tr>
+      <tr>
+        <td>FPGA DSP 슬라이스</td>
+        <td>-</td>
+        <td>1</td>
+        <td>전용 HW</td>
+        <td>Vivado 자동 매핑</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>나눗셈기: 장제법(Long Division)의 하드웨어 버전</h4>
+
+  <p>
+    나눗셈은 곱셈보다 본질적으로 느립니다.
+    곱셈은 모든 부분곱을 병렬 생성할 수 있지만,
+    나눗셈은 각 자릿수의 몫이 이전 단계의 나머지에 의존하므로
+    <strong>순차적</strong>입니다.
+  </p>
+
+  <div class="analogy">
+    <strong>비유 — 초등학교 장제법(나눗셈 필산):</strong>
+    13 ÷ 3을 장제법으로 풀어봅시다(그림 24.2의 예제와 동일합니다).
+    ① 1 ÷ 3 = 0 나머지 1, ② 13 ÷ 3 = 4 나머지 1.
+    몫은 4, 나머지는 1입니다. 각 단계에서 "이전 나머지"를 사용하므로 병렬화가 불가능합니다.
+    이진수 나눗셈도 동일한 원리이며, 매 클럭 사이클마다 몫의 1비트를 결정합니다.
+    <br><br>
+    <em>한계: 이 비유는 Restoring Division을 설명합니다.
+    Non-Restoring, SRT 같은 고급 방식은 매 사이클 2비트 이상을 결정하지만,
+    기본 원리는 동일합니다. 본 챕터에서는 Restoring Division을 구현합니다.</em>
+  </div>
+
+  <figure>
+    <img src="../figures/ch24_sec02_division_longdiv.svg" alt="Restoring Division 하드웨어 동작 5단계">
+    <figcaption>그림 24.2: Restoring Division의 하드웨어 동작.
+    매 사이클마다 나머지를 좌시프트하고 제수를 빼서,
+    결과가 양수면 몫 비트 = 1, 음수면 복원(Restore)하고 몫 비트 = 0으로 설정합니다.
+    32비트 나눗셈은 최대 36사이클이 필요합니다(내역: 초기화 1 + 나눗셈 32 + 부호 보정 2 + 종료 1 = 36사이클).</figcaption>
+  </figure>
+
+  <h4>FPGA 리소스 추정</h4>
+  <p>
+    Vivado에서 32×32 곱셈은 DSP48E1 <strong>4개</strong>로 추론됩니다.
+    DSP48E1의 곱셈기 입력은 25×18비트이므로, 32비트를 18+14로 분할하여
+    4개의 부분곱(partial product)을 병렬 계산한 뒤 내장 가산기로 합산합니다.
+    나눗셈기는 DSP를 사용하지 않고 순수 로직으로 구현하면 약 1,200 LUT가 소요됩니다.
+    Basys 3(XC7A35T)에는 DSP48E1이 90개, LUT가 20,800개 있으므로
+    M 확장 추가는 전체 리소스의 약 5~6%만 차지합니다.
+  </p>
+
+  <h4>SystemVerilog 구현</h4>
+  <p>
+    다음은 M 확장 곱셈/나눗셈 유닛의 핵심 구현입니다.
+    곱셈은 Vivado의 DSP 매핑을 활용하기 위해 <code>*</code> 연산자를 사용하고(1사이클),
+    나눗셈은 Restoring Division FSM으로 32반복(총 36사이클)에 걸쳐 수행합니다.
+  </p>
+
+  <pre><code class="language-systemverilog">
+// M 확장 곱셈/나눗셈 유닛 — 핵심 인터페이스
+module mul_div_unit (
+   input  logic        clk,
+   input  logic        rst_n,
+   input  logic        start,       // EX 스테이지에서 시작 신호
+   input  logic [2:0]  funct3,      // 연산 종류 선택
+   input  logic [31:0] operand_a,   // rs1 값
+   input  logic [31:0] operand_b,   // rs2 값
+   output logic [31:0] result,      // 결과 (rd에 기록)
+   output logic        ready,       // 1이면 결과 유효
+   output logic        busy         // 1이면 연산 진행 중
+);
+   // 곱셈: 1사이클 (DSP 슬라이스 활용)
+   logic [63:0] mul_result_ss, mul_result_su, mul_result_uu;
+
+   assign mul_result_ss = $signed(operand_a) * $signed(operand_b);
+   assign mul_result_su = $signed(operand_a) *
+                          $signed({1'b0, operand_b}); // signed×unsigned (MULHSU)
+   // ... (전체 코드는 하단 전체 소스 코드 섹션 참조)
+endmodule
+  </code></pre>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:
+    "32비트 × 32비트 곱셈의 결과가 최대 몇 비트인가?
+    MUL과 MULH는 그 결과의 어느 부분을 반환하는가?"
+    답: 최대 64비트. MUL은 하위 32비트, MULH는 상위 32비트를 반환합니다.
+    만약 바로 답하지 못했다면, 24.1.1절의 표를 다시 확인해 보십시오.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:
+    "Restoring Division에서 32비트 나눗셈이 32사이클 걸리는 이유는?
+    곱셈은 왜 1사이클(또는 수 사이클)로 가능한가?"
+    답: 나눗셈은 각 비트의 몫이 이전 나머지에 의존하므로 순차적입니다.
+    곱셈의 부분곱은 독립적이므로 병렬 생성·축소가 가능합니다.</p>
+  </aside>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      나눗셈의 32사이클 지연이 걱정되시나요? 걱정하지 마세요.
+      ① 실제 프로그램에서 나눗셈 비율은 전체 명령어의 1~3%에 불과합니다.
+      ② Vivado에서 <code>div_gen</code> IP 코어를 사용하면 파이프라인된 나눗셈기를 얻을 수 있습니다.
+      ③ 컴파일러는 2의 거듭제곱 나눗셈을 시프트로 자동 치환합니다.
+    </p>
+  </aside>
+</section>
+
+<!-- ========================================================================== -->
+<!-- 24.2 F 확장: 부동소수점 기초                                                      -->
+<!-- ========================================================================== -->
+<section id="sec-24-2">
+  <h2>24.2 F 확장: 부동소수점 기초</h2>
+
+  <p>
+    M 확장이 정수 곱셈·나눗셈을 하드웨어로 지원한다면,
+    <strong>F 확장</strong>은 <strong>부동소수점(floating-point)</strong> 연산을 하드웨어로 지원합니다.
+    F 확장은 IEEE 754 단정밀도(single-precision, 32비트) 부동소수점 명령어를 정의하며,
+    32개의 전용 부동소수점 레지스터(<code>f0</code>~<code>f31</code>)를 추가합니다.
+  </p>
+
+  <p>
+    <strong>이 절은 "5분 읽기" 수준의 개념 소개입니다.</strong>
+    F 확장의 하드웨어 구현(FPU 설계)은 이 교재의 범위를 넘어서며,
+    여기서는 IEEE 754 형식의 이해와 SW/HW 트레이드오프만 다룹니다.
+    RV32I 파이프라인에 F 확장을 추가하려면 레지스터 파일, 데이터패스, 제어 유닛의
+    대규모 수정이 필요하므로, 개념적 이해에 집중하겠습니다.
+  </p>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> F 확장은 꼭 구현해야 하나요?</p>
+    <p><strong>A:</strong> 아닙니다. RV32I + M만으로도 대부분의 임베디드 시스템에 충분합니다.
+    부동소수점이 필요하면 소프트웨어 에뮬레이션(<code>soft-float</code>)으로 처리할 수 있으며,
+    성능이 중요한 경우에만 F 확장 하드웨어를 추가합니다.
+    Basys 3 프로젝트에서는 M 확장까지가 현실적인 목표입니다.</p>
+  </aside>
+
+  <h4>IEEE 754 단정밀도 형식</h4>
+
+  <div class="analogy">
+    <strong>비유 — 과학 표기법(Scientific Notation):</strong>
+    과학에서 매우 크거나 작은 수를 표현할 때 <strong>1.5 × 10<sup>3</sup> = 1500</strong>처럼
+    씁니다. 이 표기법에는 세 가지 요소가 있습니다:
+    부호(+), 유효숫자(1.5), 지수(3).
+    IEEE 754도 동일한 구조를 이진수에 적용한 것입니다.
+    <code>1.1011 × 2<sup>5</sup></code>처럼 이진 유효숫자와 2의 지수로 실수를 표현합니다.
+    <br><br>
+    <em>한계: 10진 과학표기법의 유효숫자는 정밀도에 제한이 없지만,
+    IEEE 754의 가수(mantissa)는 23비트로 고정되어 있습니다.
+    따라서 약 7자리 10진수의 정밀도만 보장됩니다(예: 1.234567까지 정확, 그 이후는 반올림 오차).</em>
+  </div>
+
+  <p>
+    IEEE 754 단정밀도는 32비트를 다음과 같이 배분합니다.
+  </p>
+
+  <figure>
+    <img src="../figures/ch24_sec03_ieee754_bits.svg" alt="IEEE 754 단정밀도 비트 분해: 부호 1비트, 지수 8비트, 가수 23비트">
+    <figcaption>그림 24.3: IEEE 754 단정밀도 형식.
+    부호(S) 1비트, 지수(Exponent) 8비트(바이어스 127), 가수(Fraction) 23비트.
+    실제 값 = (-1)<sup>S</sup> × 1.Fraction × 2<sup>(Exponent-127)</sup>.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr>
+        <th>필드</th>
+        <th>비트</th>
+        <th>범위</th>
+        <th>역할</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>부호(S)</td>
+        <td>[31]</td>
+        <td>0 또는 1</td>
+        <td>0 = 양수, 1 = 음수</td>
+      </tr>
+      <tr>
+        <td>지수(E)</td>
+        <td>[30:23]</td>
+        <td>0~255</td>
+        <td>바이어스 127을 빼면 실제 지수 (-126 ~ +127)</td>
+      </tr>
+      <tr>
+        <td>가수(F)</td>
+        <td>[22:0]</td>
+        <td>0 ~ 2<sup>23</sup>-1</td>
+        <td>정규화: 항상 1.xxxxx로 시작 (1은 묵시적)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>변환 예제: 십진수 -6.5를 IEEE 754로</h4>
+  <ol>
+    <li>부호: 음수이므로 S = 1</li>
+    <li>절댓값 6.5 = 이진수 110.1 = 1.101 × 2<sup>2</sup></li>
+    <li>지수: 2 + 127(바이어스) = 129 = 10000001<sub>2</sub></li>
+    <li>가수: 101 → 10100000000000000000000 (23비트 패딩)</li>
+    <li>결과: <code>1 10000001 10100000000000000000000</code> = <code>0xC0D00000</code></li>
+  </ol>
+
+  <h4>SW 에뮬레이션 vs HW 구현</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>SW 에뮬레이션 (soft-float)</th>
+        <th>HW 구현 (F 확장)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>성능</td>
+        <td>FADD: ~50사이클, FMUL: ~80사이클</td>
+        <td>FADD: 3~5사이클, FMUL: 3~5사이클</td>
+      </tr>
+      <tr>
+        <td>면적</td>
+        <td>추가 HW 없음</td>
+        <td>FPU 추가 (~3,000 LUT + DSP 2개)</td>
+      </tr>
+      <tr>
+        <td>전력</td>
+        <td>CPU 연산으로 소비</td>
+        <td>전용 유닛으로 효율적</td>
+      </tr>
+      <tr>
+        <td>적합 용도</td>
+        <td>FP 연산이 드문 경우</td>
+        <td>DSP, 제어 루프, 과학 계산</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    구체적으로, 부동소수점 가산기 1개는 약 800 LUT, 곱셈기 1개는 DSP 2개를 소비합니다.
+    최소한의 FPU(가산기 + 곱셈기 + 비교기 + 변환기)를 구현하면 약 3,000 LUT + DSP 2개가 필요하며,
+    이는 Basys 3 전체 LUT(20,800)의 약 15%에 해당합니다.
+    파이프라인 프로세서와 캐시까지 포함하면 FPGA 리소스가 부족해지므로,
+    Basys 3에서는 M 확장까지가 현실적인 목표입니다.
+  </p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      학생들이 부동소수점 오차에 당황하는 경우가 많습니다.
+      <code>0.1 + 0.2 ≠ 0.3</code>을 파이썬으로 시연하면 효과적입니다.
+      이는 "가수 23비트의 유한 정밀도" 때문이며,
+      <strong>오차가 발생하는 것이 정상</strong>임을 강조하세요.
+      "버그가 아니라 물리적 한계"라는 프레이밍이 불안을 줄입니다.
+    </p>
+  </aside>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q:</strong> 부동소수점 연산에서 왜 <code>0.1 + 0.2 ≠ 0.3</code>인가?</p>
+    <p><strong>A:</strong> 0.1과 0.2는 이진 소수로 정확히 표현할 수 없습니다.
+    유한한 23비트 가수에 저장할 때 반올림이 발생하며,
+    두 반올림 오차가 합산되어 결과가 0.30000000000000004가 됩니다.
+    이는 IEEE 754의 구조적 한계이며, 정밀도가 중요한 금융 계산에서는
+    고정소수점이나 BCD를 사용합니다.</p>
+  </aside>
+</section>
+
+<!-- ========================================================================== -->
+<!-- 24.3 Zicntr 확장: 성능 카운터 표준화                                              -->
+<!-- ========================================================================== -->
+<section id="sec-24-3">
+  <h2>24.3 Zicntr 확장: 성능 카운터 표준화</h2>
+
+  <p>
+    Ch18에서 <code>mcycle</code>(사이클 카운터)과 <code>minstret</code>(실행 명령어 카운터)
+    CSR을 이미 구현했습니다. <strong>Zicntr(Counter) 확장</strong>은
+    이 두 카운터를 모든 RISC-V 구현체에서 <strong>표준 인터페이스로 보장</strong>하는 확장입니다.
+  </p>
+
+  <h4>왜 성능 카운터가 필요한가</h4>
+  <p>
+    프로세서 설계자나 소프트웨어 개발자가 "이 프로그램이 얼마나 빠른가?"를 측정하려면
+    <strong>하드웨어 수준의 정밀한 카운터</strong>가 필수입니다.
+    소프트웨어 타이머(예: <code>clock()</code> 함수)는 OS 스케줄링에 의한 노이즈가 크지만,
+    <code>mcycle</code>은 프로세서 클럭 사이클 단위로 정확하게 측정합니다.
+    <code>minstret</code>은 실제로 커밋된 명령어 수를 세므로,
+    두 카운터의 비율이 <strong>IPC(Instructions Per Cycle) = minstret ÷ mcycle</strong>입니다.
+  </p>
+
+  <p>
+    Zicntr가 별도 확장으로 분리된 이유는 간단합니다.
+    매우 작은 마이크로컨트롤러(예: 보안 칩)에서는 성능 카운터 자체가 보안 위험이 될 수 있습니다.
+    타이밍 사이드 채널 공격(timing side-channel attack)에 카운터가 악용될 수 있기 때문입니다.
+    따라서 RISC-V는 카운터를 선택적 확장으로 분리하되,
+    구현하는 경우 표준 인터페이스를 따르도록 합니다.
+  </p>
+
+  <h4>RDCYCLE과 RDINSTRET: 의사 명령어의 실체</h4>
+  <p>
+    Zicntr 확장은 사용자 모드에서 카운터를 읽기 위한 <strong>의사 명령어(pseudo-instruction)</strong>를
+    정의합니다. 실제로는 CSR 읽기 명령어로 변환됩니다.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>의사 명령어</th>
+        <th>실제 명령어</th>
+        <th>CSR 주소</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>RDCYCLE rd</code></td>
+        <td><code>CSRRS rd, 0xC00, x0</code></td>
+        <td>0xC00 (cycle)</td>
+        <td>사이클 카운터 하위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>RDCYCLEH rd</code></td>
+        <td><code>CSRRS rd, 0xC80, x0</code></td>
+        <td>0xC80 (cycleh)</td>
+        <td>사이클 카운터 상위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>RDINSTRET rd</code></td>
+        <td><code>CSRRS rd, 0xC02, x0</code></td>
+        <td>0xC02 (instret)</td>
+        <td>명령어 카운터 하위 32비트</td>
+      </tr>
+      <tr>
+        <td><code>RDINSTRETH rd</code></td>
+        <td><code>CSRRS rd, 0xC82, x0</code></td>
+        <td>0xC82 (instreth)</td>
+        <td>명령어 카운터 상위 32비트</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Ch18에서 구현한 <code>mcycle</code>(0xB00)과 <code>minstret</code>(0xB02)은 M-모드 CSR이고,
+    위 표의 <code>cycle</code>(0xC00)과 <code>instret</code>(0xC02)은 U-모드 읽기 전용 미러(shadow)입니다.
+    <code>CSRRS rd, csr, x0</code>은 x0가 항상 0이므로 "CSR을 읽되 쓰지 않는" 패턴입니다.
+    이것이 Ch18에서 배운 CSRRS의 실전 활용입니다.
+  </p>
+
+  <h4>IPC 측정 실습</h4>
+  <p>
+    Ch18에서 구현한 CSR을 활용하여 IPC(Instructions Per Cycle)를 측정하는 코드입니다.
+    소프트웨어에서 구간 측정을 수행합니다.
+    M 확장의 <code>DIV</code>로 정수 IPC를 직접 계산할 수 있습니다.
+  </p>
+
+  <pre><code class="language-armasm">
+# IPC 측정 루틴 (Ch18 CSR + Ch24 M 확장 활용)
+RDCYCLE   x10           # = CSRRS x10, 0xC00, x0 — 시작 사이클
+RDINSTRET x11           # = CSRRS x11, 0xC02, x0 — 시작 명령어 수
+
+# === 측정 대상 코드 시작 ===
+# 예: 배열 합산 루프
+ADDI  x5, x0, 0        # sum = 0
+ADDI  x6, x0, 100      # count = 100
+loop:
+  LW    x7, 0(x8)      # data 로드
+  ADD   x5, x5, x7     # sum += data
+  ADDI  x8, x8, 4      # 포인터 증가
+  ADDI  x6, x6, -1     # count--
+  BNE   x6, x0, loop   # count != 0이면 반복
+# === 측정 대상 코드 끝 ===
+
+RDCYCLE   x12           # 종료 사이클
+RDINSTRET x13           # 종료 명령어 수
+SUB   x14, x12, x10    # 경과 사이클 = 종료 - 시작
+SUB   x15, x13, x11    # 실행 명령어 수 = 종료 - 시작
+# IPC = x15 / x14 (M 확장으로 나눗셈 가능!)
+DIV   x16, x15, x14    # IPC 정수 부분
+REM   x17, x15, x14    # IPC 소수 부분 (나머지)
+# 예: 500명령어 / 420사이클 → IPC=1, 나머지=80 → 약 1.19
+  </code></pre>
+
+  <p>
+    위 예제에서 100회 루프의 명령어 수는 5×100 = 500개입니다.
+    Ch12의 파이프라인(CPI ≈ 1.2)에서 실행하면 약 600사이클이 예상되므로,
+    IPC ≈ 500/600 ≈ 0.83입니다.
+    포워딩이 잘 동작하면 IPC가 0.9 이상으로 개선됩니다.
+    이처럼 성능 카운터는 <strong>최적화의 효과를 수치로 검증</strong>하는 도구입니다.
+  </p>
+
+  <p>
+    Ch15에서 구현한 성능 카운터(<code>cycle_cnt</code>, <code>instr_cnt</code>,
+    <code>icache_miss_cnt</code>, <code>dcache_miss_cnt</code>)도 Zicntr의 정신을 따른 것입니다.
+    표준화된 카운터 덕분에 프로파일링 도구(perf, gprof)가
+    특정 하드웨어에 종속되지 않고 동작할 수 있습니다.
+    다음 챕터(Ch25)에서 다룰 멀티코어 환경에서는
+    각 코어가 독립적인 mcycle/minstret 카운터를 갖고 있어,
+    코어별 성능을 개별적으로 모니터링할 수 있습니다.
+  </p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>
+      Linux에서 <code>perf stat</code> 명령은 Zicntr의 <code>mcycle</code>과
+      <code>minstret</code>을 읽어 IPC를 자동 계산합니다.
+      RISC-V 리눅스 보드에서 <code>perf stat ./my_program</code>을 실행하면
+      사이클 수, 명령어 수, IPC가 즉시 표시됩니다.
+    </p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:
+    "RDCYCLE 의사 명령어는 실제로 어떤 명령어로 변환되는가?
+    mcycle(0xB00)과 cycle(0xC00)의 차이는?"
+    답: <code>RDCYCLE rd</code> = <code>CSRRS rd, 0xC00, x0</code>.
+    mcycle은 M-모드 읽기/쓰기, cycle은 U-모드 읽기 전용 미러입니다.
+    만약 답하지 못했다면, Ch18의 CSR 접근 권한 표를 다시 확인해 보십시오.</p>
+  </aside>
+</section>
+
+<!-- ========================================================================== -->
+<!-- 24.4 미니 설계 과제: 파이프라인 곱셈기 통합                                          -->
+<!-- ========================================================================== -->
+<section id="sec-24-4">
+  <h2>24.4 미니 설계 과제: 파이프라인 곱셈기 통합</h2>
+
+  <p>
+    24.1절에서 곱셈/나눗셈 유닛을 설계했습니다.
+    이제 이를 Ch12의 5단계 파이프라인에 통합하는 방법을 설계합니다.
+    핵심 질문은: <strong>"곱셈이 여러 사이클 걸리면, 파이프라인은 어떻게 대응하는가?"</strong>입니다.
+  </p>
+
+  <h4>통합 전략: 스톨 vs 파이프라인 곱셈기</h4>
+
+  <p>
+    두 가지 접근 방식이 있습니다.
+  </p>
+
+  <ol>
+    <li><strong>방법 A — 전체 스톨</strong>: 곱셈/나눗셈 명령어를 만나면 <code>mul_busy</code> 신호로
+    전체 파이프라인을 동결합니다. 구현이 간단하지만, 곱셈 중 다른 명령어도 진행하지 못합니다.
+    Ch13의 <code>icache_stall</code>과 동일한 메커니즘입니다.</li>
+    <li><strong>방법 B — 파이프라인 곱셈기</strong>: 곱셈기 내부를 2~3단계 파이프라인으로 나누어,
+    곱셈이 진행되는 동안 다른 명령어가 계속 흐르도록 합니다.
+    IPC가 향상되지만, 결과 기록 시점의 충돌(구조적 해저드)을 관리해야 합니다.</li>
+  </ol>
+
+  <figure>
+    <img src="../figures/ch24_sec04_twoissue_multiplier.svg" alt="2사이클 파이프라인 곱셈기 블록도">
+    <figcaption>그림 24.4: 2사이클 파이프라인 곱셈기 통합.
+    Stage 1에서 부분곱 생성, Stage 2에서 최종 덧셈을 수행합니다.
+    ALU 결과와 곱셈기 결과가 동시에 WB에 도달하면 구조적 해저드가 발생하며,
+    WB 포트 중재기가 필요합니다.</figcaption>
+  </figure>
+
+  <h4>파이프라인 통합: 단계별 설계 가이드</h4>
+  <p>
+    Ch12의 <code>rv32i_pipeline_complete</code>에 M 확장을 통합하는 과정을
+    3단계로 나누어 설명합니다. 각 단계를 순서대로 구현하고 테스트하세요.
+  </p>
+
+  <ol>
+    <li><strong>Step 1 — 디코더 확장</strong>: ID 스테이지의 디코더에서 <code>funct7 == 7'b0000001</code>을
+    감지하고 <code>ex_is_mul_div</code> 제어 신호를 생성합니다.
+    <code>funct3</code>를 EX 스테이지로 전달하는 파이프라인 레지스터를 추가합니다.</li>
+    <li><strong>Step 2 — EX 스테이지 MUX 확장</strong>: 기존 ALU 결과 외에 <code>mul_div_result</code>를
+    선택하는 MUX를 추가합니다. <code>mul_div_unit</code> 인스턴스를 EX 스테이지에 배치하고,
+    <code>start</code> 신호를 <code>ex_is_mul_div &amp;&amp; !pipeline_stall</code>로 연결합니다.</li>
+    <li><strong>Step 3 — 스톨 및 포워딩 확장</strong>:
+    <code>pipeline_stall</code>에 <code>mul_div_busy</code>를 추가하고,
+    포워딩 유닛에서 곱셈기 결과도 EX-EX, MEM-EX 포워딩 대상에 포함합니다.
+    <strong>flush 신호를 mul_div_unit의 flush 입력에 반드시 연결</strong>해야 합니다 —
+    분기 미스 시 진행 중인 나눗셈을 즉시 취소하기 위함입니다.</li>
+  </ol>
+
+  <pre><code class="language-systemverilog">
+// 파이프라인 통합 — EX 스테이지 결과 선택 (코드 스켈레톤)
+// 주의: mul_div_result는 곱셈 시 조합논리(1사이클), 나눗셈 시 FSM 완료 후 유효
+// ready 신호로 결과 유효 시점을 판별해야 합니다
+always_comb begin
+   if (ex_is_mul_div) begin
+      ex_result = mul_div_result;  // M 확장 결과
+      ex_stall  = mul_div_busy;    // 나눗셈 진행 중이면 스톨
+   end else begin
+      ex_result = alu_result;      // 기존 ALU 결과
+      ex_stall  = 1'b0;
+   end
+end
+
+// 스톨 우선순위 (Ch13 확장)
+assign pipeline_stall = flush       ? 1'b0 :  // flush 시 스톨 무시
+                        icache_stall ? 1'b1 :
+                        dcache_stall ? 1'b1 :
+                        mul_div_busy ? 1'b1 :
+                        load_use_stall;
+
+// flush 신호를 mul_div_unit으로 반드시 전달
+// 분기 미스 시 진행 중인 나눗셈을 즉시 취소해야 함
+// pipeline_control: mul_div_unit.flush &lt;= branch_flush;
+  </code></pre>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오:
+    "방법 A(전체 스톨)와 방법 B(파이프라인 곱셈기)의 IPC 차이는?
+    곱셈이 전체 명령어의 5%를 차지하고, 곱셈에 3사이클이 걸린다면,
+    각 방법의 CPI 영향은 얼마인가?"
+    답: 방법 A는 곱셈마다 2사이클 추가 스톨 → CPI 증가 = 0.05 × 2 = 0.10.
+    방법 B는 파이프라인으로 처리하면 구조적 해저드 시에만 1사이클 스톨 → CPI 증가 ≈ 0.02~0.05.</p>
+  </aside>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 설계 관점에서 스스로 점검해 보십시오:
+    "기존 파이프라인에 <code>mul_div_busy</code>를 추가할 때,
+    <code>flush</code>와의 우선순위는 어떻게 되어야 하는가?
+    <code>flush</code>가 발생하면 진행 중인 곱셈도 취소해야 하는가?"
+    답: <code>flush</code> &gt; <code>mul_div_busy</code>. 분기 미스로 인한 flush는
+    잘못된 경로의 곱셈 결과를 폐기해야 하므로, 곱셈기도 리셋해야 합니다.</p>
+  </aside>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>
+      학생들에게 "방법 A를 먼저 구현하고, 정상 동작 확인 후 방법 B로 업그레이드"하라고 안내하세요.
+      처음부터 파이프라인 곱셈기를 구현하면 디버깅이 어렵습니다.
+      방법 A → B 전환은 <code>mul_div_busy</code> 신호를 제거하고
+      파이프라인 레지스터를 추가하는 것이 핵심이므로, 변경 범위가 명확합니다.
+    </p>
+  </aside>
+</section>
+
+<!-- ========================================================================== -->
+<!-- 24.5 요약 및 다음 단계                                                           -->
+<!-- ========================================================================== -->
+<section class="chapter-summary" id="sec-24-5">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>M 확장</strong>: 8개 명령어(MUL/MULH/MULHSU/MULHU/DIV/DIVU/REM/REMU)를 정의하며,
+    모두 R-type 형식, funct7 = 0000001로 식별합니다.</li>
+    <li><strong>곱셈기</strong>: 32×32 = 64비트 결과를 생성합니다. MUL은 하위 32비트, MULH 계열은 상위 32비트를 반환합니다.
+    FPGA에서는 DSP 슬라이스를 활용하여 1사이클 곱셈이 가능합니다.</li>
+    <li><strong>나눗셈기</strong>: Restoring Division 방식으로 매 사이클 1비트를 결정하며, 총 36사이클(초기화 1 + 반복 32 + 부호 보정 2 + 종료 1)이 필요합니다.
+    0으로 나누기와 부호 오버플로 시 예외 없이 명확한 결과를 반환합니다.</li>
+    <li><strong>F 확장</strong>: IEEE 754 단정밀도(부호 1 + 지수 8 + 가수 23 = 32비트)를 지원합니다.
+    HW FPU는 성능이 뛰어나지만 면적이 크며, SW 에뮬레이션으로 대체 가능합니다.</li>
+    <li><strong>Zicntr</strong>: mcycle/minstret CSR을 표준화하여 이식 가능한 성능 측정을 보장합니다.</li>
+    <li><strong>파이프라인 통합</strong>: M 확장 유닛은 EX 스테이지에 MUX로 연결하고,
+    mul_div_busy 신호로 스톨을 제어합니다. 파이프라인 곱셈기로 업그레이드하면 IPC가 개선됩니다.</li>
+  </ul>
+
+  <h3>자가 점검 질문</h3>
+  <ol>
+    <li>MUL과 MULH의 차이를 한 문장으로 설명할 수 있는가?</li>
+    <li>RV32M에서 0으로 나누면 어떤 결과가 반환되는가?</li>
+    <li>IEEE 754 단정밀도에서 가수가 23비트이면, 10진수 기준 약 몇 자리까지 정확한가?</li>
+    <li>기존 파이프라인에 M 확장을 추가할 때, 스톨 우선순위는 어떻게 되는가?</li>
+    <li>Zicntr가 별도 확장으로 분리된 보안적 이유는?</li>
+  </ol>
+</section>
+
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[이해]</strong> MUL 명령어와 MULH 명령어가 각각 64비트 곱셈 결과의 어느 부분을 반환하는지 설명하고,
+    MULH 계열이 3개(MULH, MULHSU, MULHU)인 반면 MUL은 1개인 이유를 논증하시오.</li>
+
+    <li><strong>[적용 — 블룸 L3]</strong> 32비트 unsigned 정수 A = 0xFFFFFFFF와 B = 0x00000002의 곱셈 결과를
+    64비트 전체로 계산하고, MUL과 MULHU가 각각 반환하는 값을 구하시오.</li>
+
+    <li><strong>[적용]</strong> 10진수 32 ÷ 7을 Restoring Division 알고리즘으로 수동 추적하시오.
+    각 반복에서 나머지(remainder), 몫 비트(quotient bit), 복원 여부를 표로 작성하시오.
+    (힌트: 32 = 100000<sub>2</sub>, 7 = 111<sub>2</sub>, 6비트 범위에서 수행)</li>
+
+    <li><strong>[적용]</strong> Basys 3의 Artix-7(XC7A35T)에 탑재된 DSP48E1 슬라이스는
+    25×18비트 곱셈을 지원합니다. 32×32비트 곱셈을 DSP 슬라이스로 구현하려면
+    최소 몇 개의 DSP가 필요한지 추정하시오.
+    (힌트: 32비트를 18+14로 분할)</li>
+
+    <li><strong>[적용]</strong> 십진수 -12.375를 IEEE 754 단정밀도 형식으로 변환하시오.
+    부호, 지수, 가수 각 필드를 이진수로 표시하시오.</li>
+
+    <li><strong>[분석]</strong> 프로그램의 명령어 구성이 ALU 60%, Load/Store 25%, 분기 10%, 곱셈 4%, 나눗셈 1%일 때,
+    방법 A(전체 스톨, 곱셈 3사이클, 나눗셈 36사이클)와
+    방법 B(파이프라인 곱셈기 1사이클 스루풋, 나눗셈은 동일)의 CPI 차이를 계산하시오.
+    기본 CPI는 1.2로 가정합니다.</li>
+
+    <li><strong>[평가]</strong> Ch12의 파이프라인에 M 확장을 추가할 때, 1사이클 곱셈기(DSP 활용)와
+    4사이클 파이프라인 곱셈기(순수 로직) 중 어느 것이 Basys 3에 더 적합한지
+    면적, 타이밍, 전력 관점에서 평가하시오.</li>
+  </ol>
+</section>
+
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>
+    Ch25에서는 <strong>멀티코어와 캐시 일관성(Cache Coherence) 기초</strong>를 다룹니다.
+    프로세서 하나의 성능을 높이는 것에는 한계가 있습니다(무어의 법칙 둔화).
+    여러 프로세서 코어가 같은 메모리를 공유할 때 발생하는 캐시 일관성 문제와
+    MESI 프로토콜을 개념적으로 탐구합니다.
+    이번 챕터에서 학습한 M 확장과 성능 카운터는
+    멀티코어 환경에서 각 코어의 성능을 독립적으로 측정하는 데 활용됩니다.
+  </p>
+</section>
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+  본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+  이 코드는 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch24_mul_divider.sv</h3>
+    <pre><code class="language-systemverilog">
+// =============================================================
+// M 확장 곱셈/나눗셈 유닛 (RV32M)
+// - 곱셈: 조합 논리 (DSP 슬라이스 자동 매핑)
+// - 나눗셈: Restoring Division FSM (최대 36사이클)
+// =============================================================
+module mul_div_unit #(
+   parameter DATA_WIDTH = 32
+)(
+   input  logic                  clk,
+   input  logic                  rst_n,
+   input  logic                  start,       // 연산 시작
+   input  logic                  flush,       // 파이프라인 flush
+   input  logic [2:0]            funct3,      // 연산 종류
+   input  logic [DATA_WIDTH-1:0] operand_a,   // rs1
+   input  logic [DATA_WIDTH-1:0] operand_b,   // rs2
+   output logic [DATA_WIDTH-1:0] result,      // 결과
+   output logic                  ready,       // 결과 유효
+   output logic                  busy         // 연산 진행 중
+);
+
+   // funct3 인코딩
+   localparam MUL    = 3'b000;
+   localparam MULH   = 3'b001;
+   localparam MULHSU = 3'b010;
+   localparam MULHU  = 3'b011;
+   localparam DIV_OP = 3'b100;
+   localparam DIVU   = 3'b101;
+   localparam REM_OP = 3'b110;
+   localparam REMU   = 3'b111;
+
+   // -------------------------------------------------------
+   // 곱셈: 조합 논리 (1사이클, DSP48E1 매핑)
+   // -------------------------------------------------------
+   logic signed [63:0] mul_ss;  // signed × signed
+   logic signed [63:0] mul_su;  // signed × unsigned
+   logic        [63:0] mul_uu;  // unsigned × unsigned
+
+   assign mul_ss = $signed(operand_a) * $signed(operand_b);
+   assign mul_su = $signed(operand_a) * $signed({1'b0, operand_b});
+   assign mul_uu = {32'b0, operand_a} * {32'b0, operand_b};
+
+   logic [DATA_WIDTH-1:0] mul_result;
+   always_comb begin
+      case (funct3)
+         MUL:    mul_result = mul_ss[31:0];    // 하위 32비트
+         MULH:   mul_result = mul_ss[63:32];   // 상위 (signed×signed)
+         MULHSU: mul_result = mul_su[63:32];   // 상위 (signed×unsigned)
+         MULHU:  mul_result = mul_uu[63:32];   // 상위 (unsigned×unsigned)
+         default: mul_result = '0;
+      endcase
+   end
+
+   // -------------------------------------------------------
+   // 나눗셈: Restoring Division FSM
+   // -------------------------------------------------------
+   typedef enum logic [2:0] {
+      IDLE,
+      INIT,       // 부호 처리 및 절대값 변환
+      COMPUTE,    // 반복 나눗셈 (32회)
+      SIGN_ADJ,   // 결과 부호 보정
+      DONE
+   } div_state_t;
+
+   div_state_t state, state_next;
+   logic [5:0]            count;       // 반복 카운터 (0~31)
+   logic [DATA_WIDTH-1:0] quotient;    // 몫
+   logic [DATA_WIDTH:0]   remainder;   // 나머지 (33비트, 부호 비트 포함)
+   logic [DATA_WIDTH-1:0] divisor_abs; // 제수 절대값
+   logic [DATA_WIDTH-1:0] dividend_abs;// 피제수 절대값
+   logic                  quot_sign;   // 몫 부호
+   logic                  rem_sign;    // 나머지 부호
+   logic                  div_by_zero; // 0으로 나누기
+   logic                  is_signed;   // signed 연산 여부
+   logic                  is_div;      // 나눗셈(DIV) vs 나머지(REM)
+
+   assign is_signed  = (funct3 == DIV_OP) || (funct3 == REM_OP);
+   assign is_div     = (funct3 == DIV_OP) || (funct3 == DIVU);
+   assign div_by_zero = (operand_b == '0);
+
+   // FSM: 상태 전이
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         state &lt;= IDLE;
+      else if (flush)
+         state &lt;= IDLE;
+      else
+         state &lt;= state_next;
+   end
+
+   always_comb begin
+      state_next = state;
+      case (state)
+         IDLE:     if (start &amp;&amp; (funct3 &gt;= DIV_OP))
+                      state_next = div_by_zero ? DONE : INIT;
+         INIT:     state_next = COMPUTE;
+         COMPUTE:  if (count == 6'd31)
+                      state_next = is_signed ? SIGN_ADJ : DONE;
+         SIGN_ADJ: state_next = DONE;
+         DONE:     state_next = IDLE;
+         default:  state_next = IDLE;
+      endcase
+   end
+
+   // FSM: 데이터패스
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         count        &lt;= '0;
+         quotient     &lt;= '0;
+         remainder    &lt;= '0;
+         divisor_abs  &lt;= '0;
+         dividend_abs &lt;= '0;
+         quot_sign    &lt;= 1'b0;
+         rem_sign     &lt;= 1'b0;
+      end else if (flush) begin
+         count        &lt;= '0;
+         quotient     &lt;= '0;
+         remainder    &lt;= '0;
+      end else begin
+         case (state)
+            IDLE: begin
+               count &lt;= '0;
+               if (start &amp;&amp; div_by_zero) begin
+                  // 0으로 나누기: 즉시 결과
+                  if (is_div)
+                     quotient &lt;= is_signed ? 32'hFFFFFFFF : 32'hFFFFFFFF;
+                  else
+                     quotient &lt;= operand_a; // REM 결과 = 피제수
+               end
+            end
+            INIT: begin
+               // 절대값 변환
+               dividend_abs &lt;= (is_signed &amp;&amp; operand_a[31]) ?
+                               (~operand_a + 1'b1) : operand_a;
+               divisor_abs  &lt;= (is_signed &amp;&amp; operand_b[31]) ?
+                               (~operand_b + 1'b1) : operand_b;
+               quot_sign    &lt;= is_signed &amp;&amp;
+                               (operand_a[31] ^ operand_b[31]);
+               rem_sign     &lt;= is_signed &amp;&amp; operand_a[31];
+               remainder    &lt;= '0;
+               quotient     &lt;= '0;
+               count        &lt;= '0;
+            end
+            COMPUTE: begin
+               // Restoring Division 핵심 루프
+               // 1) 나머지를 좌시프트하고 피제수의 다음 비트를 삽입
+               // 2) 나머지에서 제수를 빼기
+               // 3) 결과가 음수면 복원(Restore)
+               count &lt;= count + 1'b1;
+               begin
+                  logic [DATA_WIDTH:0] shifted_rem;
+                  logic [DATA_WIDTH:0] trial_sub;
+                  shifted_rem = {remainder[DATA_WIDTH-1:0],
+                                 dividend_abs[DATA_WIDTH-1-count[4:0]]};
+                  trial_sub   = shifted_rem - {1'b0, divisor_abs};
+
+                  if (!trial_sub[DATA_WIDTH]) begin
+                     // 양수: 몫 비트 = 1, 나머지 = 뺄셈 결과
+                     remainder &lt;= trial_sub;
+                     quotient[DATA_WIDTH-1-count[4:0]] &lt;= 1'b1;
+                  end else begin
+                     // 음수: 몫 비트 = 0, 나머지 복원
+                     remainder &lt;= shifted_rem;
+                     quotient[DATA_WIDTH-1-count[4:0]] &lt;= 1'b0;
+                  end
+               end
+            end
+            SIGN_ADJ: begin
+               // 부호 보정
+               if (quot_sign) quotient  &lt;= ~quotient + 1'b1;
+               if (rem_sign)  remainder &lt;= ~remainder + 1'b1;
+            end
+            default: ;
+         endcase
+      end
+   end
+
+   // -------------------------------------------------------
+   // 출력 선택
+   // -------------------------------------------------------
+   logic [DATA_WIDTH-1:0] div_result;
+   assign div_result = is_div ? quotient : remainder[DATA_WIDTH-1:0];
+
+   logic is_mul_op;
+   assign is_mul_op = (funct3 &lt;= MULHU);
+
+   // 곱셈: start 후 1사이클에 ready
+   // 나눗셈: FSM DONE 상태에서 ready
+   logic mul_ready_r;
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)     mul_ready_r &lt;= 1'b0;
+      else if (flush) mul_ready_r &lt;= 1'b0;
+      else            mul_ready_r &lt;= start &amp;&amp; is_mul_op;
+   end
+
+   assign result = is_mul_op ? mul_result : div_result;
+   assign ready  = is_mul_op ? mul_ready_r : (state == DONE);
+   assign busy   = is_mul_op ? 1'b0 :
+                   (state != IDLE) &amp;&amp; (state != DONE);
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>ch24_mul_tb.sv</h3>
+    <pre><code class="language-systemverilog">
+// =============================================================
+// M 확장 곱셈/나눗셈 유닛 테스트벤치
+// =============================================================
+`timescale 1ns / 1ps
+
+module mul_div_tb;
+
+   logic        clk, rst_n, start, flush;
+   logic [2:0]  funct3;
+   logic [31:0] operand_a, operand_b;
+   logic [31:0] result;
+   logic        ready, busy;
+
+   mul_div_unit #(.DATA_WIDTH(32)) dut (.*);
+
+   // 클럭 생성 (10ns 주기)
+   initial clk = 0;
+   always #5 clk = ~clk;
+
+   // 테스트 태스크
+   task automatic test_mul(
+      input  string     name,
+      input  logic [2:0] f3,
+      input  logic [31:0] a, b,
+      input  logic [31:0] expected
+   );
+      @(posedge clk);
+      funct3    = f3;
+      operand_a = a;
+      operand_b = b;
+      start     = 1'b1;
+      @(posedge clk);
+      start = 1'b0;
+      // 곱셈: 1사이클 후 ready
+      @(posedge clk);
+      if (ready &amp;&amp; result === expected)
+         $display("[PASS] %s: %0d op %0d = 0x%08h", name, $signed(a), $signed(b), result);
+      else
+         $display("[FAIL] %s: expected 0x%08h, got 0x%08h (ready=%b)", name, expected, result, ready);
+   endtask
+
+   task automatic test_div(
+      input  string     name,
+      input  logic [2:0] f3,
+      input  logic [31:0] a, b,
+      input  logic [31:0] expected
+   );
+      @(posedge clk);
+      funct3    = f3;
+      operand_a = a;
+      operand_b = b;
+      start     = 1'b1;
+      @(posedge clk);
+      start = 1'b0;
+      // 나눗셈: ready가 1이 될 때까지 대기
+      wait(ready);
+      @(posedge clk);
+      if (result === expected)
+         $display("[PASS] %s: %0d op %0d = 0x%08h", name, $signed(a), $signed(b), result);
+      else
+         $display("[FAIL] %s: expected 0x%08h, got 0x%08h", name, expected, result);
+   endtask
+
+   // 메인 테스트 시퀀스
+   initial begin
+      $display("=== M Extension MUL/DIV Unit Test ===");
+      rst_n = 0; start = 0; flush = 0;
+      funct3 = 0; operand_a = 0; operand_b = 0;
+      repeat(3) @(posedge clk);
+      rst_n = 1;
+      @(posedge clk);
+
+      // --- 곱셈 테스트 ---
+      $display("\n--- Multiplication Tests ---");
+      // MUL: 7 × 3 = 21 (하위 32비트)
+      test_mul("MUL  7*3",     3'b000, 32'd7, 32'd3, 32'd21);
+      // MUL: -7 × 3 = -21
+      test_mul("MUL -7*3",     3'b000, -32'sd7, 32'd3, -32'sd21);
+      // MULH: 0x7FFFFFFF × 2 → 상위 32비트
+      test_mul("MULH large",   3'b001, 32'h7FFF_FFFF, 32'd2, 32'h0000_0000);
+      // MULHU: 0xFFFFFFFF × 2 → 상위 32비트 = 1
+      test_mul("MULHU max*2",  3'b011, 32'hFFFF_FFFF, 32'd2, 32'h0000_0001);
+      // MUL: 0 × 12345 = 0
+      test_mul("MUL  0*x",     3'b000, 32'd0, 32'd12345, 32'd0);
+
+      // --- 나눗셈 테스트 ---
+      $display("\n--- Division Tests ---");
+      // DIV: 100 / 7 = 14
+      test_div("DIV  100/7",   3'b100, 32'd100, 32'd7, 32'd14);
+      // REM: 100 % 7 = 2
+      test_div("REM  100%7",   3'b110, 32'd100, 32'd7, 32'd2);
+      // DIV: -100 / 7 = -14
+      test_div("DIV -100/7",   3'b100, -32'sd100, 32'd7, -32'sd14);
+      // DIVU: 0xFFFFFFFF / 2 = 0x7FFFFFFF
+      test_div("DIVU max/2",   3'b101, 32'hFFFF_FFFF, 32'd2, 32'h7FFF_FFFF);
+
+      // --- 특수 케이스 ---
+      $display("\n--- Special Cases ---");
+      // 0으로 나누기: DIV
+      test_div("DIV  x/0",     3'b100, 32'd42, 32'd0, 32'hFFFF_FFFF);
+      // 0으로 나누기: REM
+      test_div("REM  x/0",     3'b110, 32'd42, 32'd0, 32'd42);
+      // -2^31 / -1 오버플로 (RISC-V 스펙: DIV=-2^31, REM=0)
+      test_div("DIV -2^31/-1", 3'b100, 32'h8000_0000, 32'hFFFF_FFFF, 32'h8000_0000);
+      test_div("REM -2^31/-1", 3'b110, 32'h8000_0000, 32'hFFFF_FFFF, 32'd0);
+
+      $display("\n=== All tests completed ===");
+      $finish;
+   end
+
+   // 타임아웃 가드
+   initial begin
+      #100000;
+      $display("[TIMEOUT] Simulation exceeded time limit");
+      $finish;
+   end
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch24_mul_extended.sv</h3>
+    <pre><code class="language-systemverilog">
+// =============================================================
+// 2사이클 파이프라인 곱셈기 (미니 설계 과제)
+// Stage 1: 부분곱(partial product) 생성
+// Stage 2: 최종 덧셈 및 결과 출력
+// =============================================================
+module mul_pipelined #(
+   parameter DATA_WIDTH = 32
+)(
+   input  logic                  clk,
+   input  logic                  rst_n,
+   input  logic                  flush,
+   input  logic                  valid_in,    // 새 곱셈 요청
+   input  logic [2:0]            funct3,
+   input  logic [DATA_WIDTH-1:0] operand_a,
+   input  logic [DATA_WIDTH-1:0] operand_b,
+   output logic [DATA_WIDTH-1:0] result,
+   output logic                  valid_out    // 결과 유효
+);
+
+   // Stage 1 레지스터: 부분곱 생성 결과 래치
+   logic signed [63:0] stage1_product;
+   logic [2:0]         stage1_funct3;
+   logic               stage1_valid;
+
+   // Stage 1: 곱셈 수행 (DSP 슬라이스가 이 단계를 처리)
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n || flush) begin
+         stage1_product &lt;= '0;
+         stage1_funct3  &lt;= '0;
+         stage1_valid   &lt;= 1'b0;
+      end else begin
+         stage1_valid  &lt;= valid_in;
+         stage1_funct3 &lt;= funct3;
+         if (valid_in) begin
+            // signed × signed (MULH도 이 결과 사용)
+            stage1_product &lt;= $signed(operand_a) * $signed(operand_b);
+         end
+      end
+   end
+
+   // Stage 2: 결과 선택 및 출력
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n || flush) begin
+         result    &lt;= '0;
+         valid_out &lt;= 1'b0;
+      end else begin
+         valid_out &lt;= stage1_valid;
+         if (stage1_valid) begin
+            case (stage1_funct3)
+               3'b000:  result &lt;= stage1_product[31:0];   // MUL
+               3'b001:  result &lt;= stage1_product[63:32];  // MULH
+               default: result &lt;= stage1_product[31:0];
+            endcase
+         end
+      end
+   end
+
+endmodule
+    </code></pre>
+  </div>
+</section>
+
+<!-- ========== Highlight.js 스크립트 ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script>
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

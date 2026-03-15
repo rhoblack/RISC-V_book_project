@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="700" height="350" viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, sans-serif">
+  <rect width="700" height="350" fill="#F8FAFC" rx="8"/>
+  <text x="350" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#1E293B">gshare 방식: PC XOR GHR → PHT 인덱스</text>
+  <text x="350" y="44" text-anchor="middle" font-size="11" fill="#64748B">전역 예측기의 PHT 인덱싱 — PC와 전역 이력을 조합하여 편향(aliasing) 감소</text>
+
+  <defs>
+    <marker id="aB" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- PC 비트 필드 -->
+  <text x="50" y="90" font-size="11" font-weight="700" fill="#1E40AF">PC [31:0]</text>
+
+  <!-- PC 비트 박스 -->
+  <rect x="50" y="100" width="200" height="30" rx="3" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <text x="150" y="120" text-anchor="middle" font-size="9" fill="#64748B">상위 비트 (사용 안 함)</text>
+
+  <rect x="250" y="100" width="160" height="30" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="330" y="120" text-anchor="middle" font-size="10" font-weight="600" fill="#1E40AF">PC[m+1:2]</text>
+
+  <rect x="410" y="100" width="40" height="30" rx="3" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1"/>
+  <text x="430" y="120" text-anchor="middle" font-size="9" fill="#64748B">[1:0]</text>
+
+  <text x="470" y="120" font-size="8" fill="#64748B">← 바이트 오프셋 (항상 00)</text>
+
+  <!-- GHR -->
+  <text x="50" y="175" font-size="11" font-weight="700" fill="#166534">GHR [m-1:0]</text>
+
+  <rect x="250" y="180" width="160" height="30" rx="3" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="330" y="200" text-anchor="middle" font-size="10" font-weight="600" fill="#166534">GHR[m-1:0]</text>
+
+  <text x="420" y="200" font-size="8" fill="#64748B">← 최근 m개 분기 결과</text>
+  <text x="420" y="212" font-size="7" fill="#94A3B8">예: 10110101 (T/NT 시퀀스)</text>
+
+  <!-- XOR 게이트 -->
+  <circle cx="330" cy="250" r="22" fill="white" stroke="#7C3AED" stroke-width="2"/>
+  <text x="330" y="254" text-anchor="middle" font-size="12" font-weight="700" fill="#7C3AED">XOR</text>
+
+  <!-- PC → XOR -->
+  <line x1="330" y1="130" x2="330" y2="226" stroke="#2563EB" stroke-width="1.5" marker-end="url(#aB)"/>
+
+  <!-- GHR → XOR -->
+  <line x1="330" y1="210" x2="330" y2="226" stroke="#16A34A" stroke-width="1.5"/>
+
+  <!-- XOR → PHT 인덱스 -->
+  <line x1="330" y1="272" x2="330" y2="295" stroke="#7C3AED" stroke-width="2" marker-end="url(#aB)"/>
+
+  <!-- PHT 인덱스 결과 -->
+  <rect x="240" y="298" width="180" height="35" rx="6" fill="#7C3AED" stroke="#6D28D9" stroke-width="1.5"/>
+  <text x="330" y="316" text-anchor="middle" font-size="11" font-weight="700" fill="white">PHT 인덱스</text>
+  <text x="330" y="328" text-anchor="middle" font-size="8" fill="#DDD6FE">m비트 → 2^m 엔트리 중 하나</text>
+
+  <!-- 예시 -->
+  <rect x="500" y="90" width="180" height="130" rx="6" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="590" y="110" text-anchor="middle" font-size="10" font-weight="700" fill="#1E293B">예시 (m=8)</text>
+  <text x="510" y="130" font-size="9" fill="#2563EB" font-family="monospace">PC[9:2] = 01000010</text>
+  <text x="510" y="148" font-size="9" fill="#16A34A" font-family="monospace">GHR     = 10110101</text>
+  <line x1="510" y1="155" x2="670" y2="155" stroke="#94A3B8" stroke-width="0.5"/>
+  <text x="510" y="170" font-size="9" fill="#7C3AED" font-family="monospace">XOR     = 11110111</text>
+  <text x="510" y="190" font-size="9" fill="#64748B">→ PHT[247] 조회</text>
+  <text x="510" y="208" font-size="8" fill="#94A3B8">PHT[247] = 2'b11 → Taken</text>
+
+  <!-- 장점 설명 -->
+  <rect x="500" y="240" width="180" height="60" rx="6" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="590" y="260" text-anchor="middle" font-size="9" font-weight="600" fill="#1E40AF">XOR의 장점</text>
+  <text x="510" y="278" font-size="8" fill="#475569">동일 PC의 분기라도 GHR이</text>
+  <text x="510" y="290" font-size="8" fill="#475569">다르면 다른 PHT 엔트리 사용</text>
+</svg>

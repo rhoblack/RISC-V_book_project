@@ -5,6 +5,24 @@
 // 지역(Local) 예측기와 전역(Global) 예측기를 조합하여
 // 메타 예측기(Chooser)가 더 나은 예측을 동적으로 선택하는 구조
 // =============================================================================
+// 본문(23.2절) 대응표:
+//   본문 파라미터          이 파일
+//   PHT_BITS             IDX_W ($clog2(LOCAL_DEPTH))
+//   GHR_BITS             GHR_WIDTH
+//   LHR_BITS             LOCAL_HIST_W
+//   LHT_BITS             $clog2(LOCAL_DEPTH)
+//   pred_pc              pc_i
+//   pred_taken           predict_taken_o
+//   update_valid          update_en_i
+//   update_pc            update_pc_i
+//   update_taken          actual_taken_i
+//   ghr                  ghr
+//   global_pht           global_pht
+//   local_pht            local_pht
+//   lhr[]                local_hist_table[]
+//   chooser[]            chooser[]
+//   gshare 인덱싱: PC XOR GHR (본문 그림 23.3과 동일)
+// =============================================================================
 
 module tournament_predictor #(
    parameter PC_WIDTH     = 32,       // PC 비트 수
@@ -103,9 +121,9 @@ module tournament_predictor #(
    logic [IDX_W-1:0] global_pht_pred_idx;
    logic [IDX_W-1:0] global_pht_upd_idx;
 
-   // GHR을 인덱스로 사용
-   assign global_pht_pred_idx = ghr[IDX_W-1:0];
-   assign global_pht_upd_idx  = ghr[IDX_W-1:0];
+   // gshare 방식: PC XOR GHR → PHT 인덱스 (본문 23.2절 그림 23.3 참조)
+   assign global_pht_pred_idx = ghr[IDX_W-1:0] ^ pc_i[IDX_W+1:2];
+   assign global_pht_upd_idx  = ghr[IDX_W-1:0] ^ update_pc_i[IDX_W+1:2];
 
    logic global_prediction;
    assign global_prediction = global_pht[global_pht_pred_idx][1];
