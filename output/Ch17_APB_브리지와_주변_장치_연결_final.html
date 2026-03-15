@@ -245,6 +245,28 @@ APB는 파이프라인이 없어 슬레이브 설계가 훨씬 단순해지는 �
       </tbody>
    </table>
 
+   <aside class="metacognition">
+      <strong>🔍 스스로 점검</strong><br>
+      이 절을 읽은 후, 다음 질문에 답할 수 있는가?<br>
+      <ol>
+         <li>AHB와 APB의 핵심 차이 3가지는?<br>
+            <em>(힌트: 파이프라인, 신호 수, 슬레이브 복잡도)</em>
+         </li>
+         <li>APB의 Setup Phase와 Enable Phase를 1~2문장으로 설명할 수 있는가?</li>
+         <li>APB는 왜 파이프라인이 없는가? 그 장점은?</li>
+      </ol>
+      세 질문 모두 설명할 수 있다면, ✅ 다음 절 17.2로 진행해 주세요.
+   </aside>
+
+   <aside class="instructor-tip">
+      <strong>📌 강사 꿀팁</strong><br>
+      강의 현장에서 학생들이 "왜 APB는 신호가 적은데 더 느린가?"라고 물으면,
+      이렇게 답하세요: "APB는 느린 게 아니라 <strong>간단</strong>해요.
+      신호가 적으니까 슬레이브(주변장치) 설계가 쉬워지고, 칩 면적이 줄어듭니다.
+      빠른 전송이 필요 없는 UART, GPIO, 타이머 같은 장치에는
+      APB의 간단함이 오히려 장점입니다."
+   </aside>
+
    <p>
       이 절에서 APB 프로토콜의 기본을 이해했습니다. 다음 절에서는 AHB 세계와 APB 세계를
       연결하는 브리지 설계로 넘어갑니다.
@@ -2575,6 +2597,16 @@ endmodule</code></pre>
    </aside>
 
    <p class="achievement">
+      <strong>축하합니다! 당신은 이제 SoC 설계자입니다.</strong>
+      17.1에서 APB 프로토콜을 배웠고, 17.2에서 브리지를 설계했으며, 17.3~17.5에서
+      UART, GPIO, Timer 3개의 주변장치를 직접 구현했습니다.
+      마지막으로 17.6에서 이들을 하나로 통합하여 동작시켰습니다.
+      당신이 설계한 이 시스템은 실제 Basys 3 FPGA에 구현되어 LED를 켜고, PC와 통신하며,
+      정해진 시간에 신호를 생성할 수 있습니다.
+      다음 장(Ch18)에서는 CPU가 이 신호들을 어떻게 처리하는지 배우게 됩니다.
+   </p>
+
+
 🎉 축하합니다! UART, GPIO, 타이머 — 세 가지 핵심 주변 장치를 직접 설계하고 RISC-V 프로세서에
 연결했습니다. 이제 여러분의 프로세서는 "Hello RISC-V"를 외칠 수 있습니다.
 다음 Chapter 18에서는 인터럽트 컨트롤러(PLIC)를 구현하여 이 주변 장치들의
@@ -2586,6 +2618,108 @@ endmodule</code></pre>
 
 
 <!-- ========== 연습문제 ========== -->
+<section id="chapter-summary">
+   <h2>17장 요약: APB 브리지와 주변 장치 연결</h2>
+
+   <h3>핵심 개념</h3>
+   <ul>
+      <li><strong>APB 프로토콜</strong>: 저속 주변 장치용 버스. Setup Phase(PSEL=1, PENABLE=0) +
+         Enable Phase(PSEL=1, PENABLE=1)의 2단계 전송. 파이프라인 없음 → 슬레이브 설계 단순</li>
+      <li><strong>AHB-to-APB 브리지</strong>: FSM(IDLE → SETUP → ACCESS)으로 신호 변환.
+         HREADY 제어로 AHB 마스터 대기. PREADY 감시로 APB 슬레이브 응답 수집</li>
+      <li><strong>UART</strong>: 직렬 통신. TX FSM(START + 8bit DATA + STOP), RX FSM(16× 오버샘플링).
+         FIFO로 비동기 송수신 처리. 보드레이트 분주기로 클록 조절</li>
+      <li><strong>GPIO</strong>: 범용 입출력. 방향 레지스터(DIR)로 입력/출력 선택.
+         2단 FF 동기화기로 메타안정성 방지. 상승 에지 감지로 인터럽트 생성</li>
+      <li><strong>Timer</strong>: 주기적 신호 생성. 카운터 증가 → 비교 레지스터 비교 → 인터럽트 신호.
+         Prescale 레지스터로 클록 분주. AUTO_RELOAD로 자동 재시작</li>
+      <li><strong>통합 시스템</strong>: 주소 디코더로 각 슬레이브 PSEL 생성.
+         PRDATA MUX로 슬레이브 응답 선택. 3개 독립 인터럽트(uart_irq, gpio_irq, timer_irq)</li>
+   </ul>
+
+   <h3>학습 흐름 체크리스트</h3>
+   <table>
+      <tr><th>절</th><th>내용</th><th>이해도</th><th>구현도</th></tr>
+      <tr>
+         <td><strong>17.1</strong></td>
+         <td>APB 신호 5개(PSEL, PENABLE, PWRITE, PWDATA, PRDATA) 이해</td>
+         <td>□ ⭐⭐⭐</td>
+         <td>—</td>
+      </tr>
+      <tr>
+         <td><strong>17.2</strong></td>
+         <td>AHB-to-APB 브리지 FSM(3상태) 설계</td>
+         <td>□ ⭐⭐⭐</td>
+         <td>□ SystemVerilog 코드 작성</td>
+      </tr>
+      <tr>
+         <td><strong>17.3</strong></td>
+         <td>UART TX/RX FSM + 16× 오버샘플링 + FIFO</td>
+         <td>□ ⭐⭐⭐</td>
+         <td>□ 'Hello' 송신 성공</td>
+      </tr>
+      <tr>
+         <td><strong>17.4</strong></td>
+         <td>GPIO 방향 제어 + 2단 동기화기</td>
+         <td>□ ⭐⭐⭐</td>
+         <td>□ LED 켜기/끄기</td>
+      </tr>
+      <tr>
+         <td><strong>17.5</strong></td>
+         <td>Timer 카운터 + 비교기 + 인터럽트 신호</td>
+         <td>□ ⭐⭐⭐</td>
+         <td>□ 주기적 펄스 생성</td>
+      </tr>
+      <tr>
+         <td><strong>17.6</strong></td>
+         <td>4개 주변 장치 통합 + 테스트벤치</td>
+         <td>□ ⭐⭐⭐</td>
+         <td>□ 모든 기능 동시 동작</td>
+      </tr>
+   </table>
+
+   <h3>자가 점검 5가지 (마무리 확인)</h3>
+   <ol>
+      <li>APB와 AHB의 3가지 차이(파이프라인, 신호 수, 복잡도)를 말할 수 있는가?</li>
+      <li>UART 송신의 4단계("프로그램 쓰기" → "FIFO 저장" → "시리얼화" → "PC 수신")를 순서대로 설명할 수 있는가?</li>
+      <li>GPIO 방향 레지스터가 필요한 이유(핀 충돌 방지)를 설명할 수 있는가?</li>
+      <li>Timer 인터럽트 주기를 계산하는 공식(클럭 주파수 × CMP = 기간)을 사용할 수 있는가?</li>
+      <li>4개 주변 장치를 동시에 구동했을 때 오류 발생 시, 한 장치씩 끄며 디버깅할 수 있는가?</li>
+   </ol>
+
+   <h3>다음 단계 (Chapter 18)</h3>
+   <p>
+      17장에서 우리는 주변 장치가 신호를 생성하는 법을 배웠습니다 (UART 데이터 수신, GPIO 입력,
+      Timer 인터럽트). 하지만 이 신호들이 CPU에 어떻게 전달되고, CPU가 어떻게 반응하는지는
+      아직 배우지 않았습니다.
+   </p>
+   <p>
+      <strong>Chapter 18: CSR과 시스템 명령어</strong>에서는 RISC-V의 특수 레지스터(Control and
+      Status Register, CSR)를 배웁니다. MEPC(Machine Exception Program Counter), MIP(Machine
+      Interrupt Pending) 같은 CSR이 17장의 인터럽트 신호를 어떻게 처리하는지 알아봅시다.
+      이를 통해 당신의 RISC-V 프로세서가 진정한 "반응형 시스템(reactive system)"이 됩니다.
+   </p>
+   <p>
+      또한 <code>FENCE.I</code>, <code>ECALL</code>, <code>MRET</code> 같은 시스템 명령어를
+      구현하여, C 언어의 <code>__asm__ volatile</code>으로 어셈블리 명령어를 직접 발행하는
+      방법도 배우게 됩니다.
+   </p>
+
+   <aside class="tip">
+      <strong>💡 실무 팁</strong><br>
+      지금까지의 progress를 정리해 보세요:
+      <ul>
+         <li>✅ Ch01~Ch12: RISC-V 5단 파이프라인 CPU 설계</li>
+         <li>✅ Ch13~Ch15: I-Cache, D-Cache, 메모리 컨트롤러</li>
+         <li>✅ Ch16: AHB 고속 버스 인터커넥트</li>
+         <li>✅ Ch17: APB 저속 버스 + 3개 주변 장치 (지금 여기)</li>
+         <li>⬜ Ch18~19: 인터럽트 처리, 예외 처리 (다음 부분)</li>
+         <li>⬜ Ch20~22: 전체 SoC 통합, FPGA 구현, 최적화</li>
+      </ul>
+   </aside>
+
+</section>
+
 <section id="exercises">
    <h2>연습문제</h2>
 
@@ -2638,6 +2772,90 @@ endmodule</code></pre>
          Mean Time Between Failures)이 충분하지 않을 경우, 시스템에 어떤 오동작이
          발생할 수 있는지 GPIO 인터럽트 로직(<code>rising_edge</code> 감지)과 연관지어
          구체적으로 기술하시오.
+      </li>
+
+      <!-- 17.1 추가 문제 -->
+      <li>
+         <strong>[기억]</strong> APB의 제어 신호 3개(PSEL, PENABLE, PWRITE)의 기능을
+         각각 한 줄씩 설명하시오.
+      </li>
+
+      <li>
+         <strong>[이해]</strong> "APB는 파이프라인이 없다"는 무엇을 의미하는가?
+         이것이 슬레이브 설계에 주는 이점을 2~3문장으로 기술하시오.
+      </li>
+
+      <!-- 17.2 추가 문제 -->
+      <li>
+         <strong>[적용]</strong> AHB-to-APB 브리지의 ST_SETUP 상태에서는
+         <code>hready_out = 0</code>으로 구동합니다. 만약 이를 <code>1</code>로 설정하면
+         어떤 문제가 생기는지 AHB 마스터의 파이프라인 관점에서 설명하시오.
+      </li>
+
+      <li>
+         <strong>[이해]</strong> PREADY 신호를 보면 APB 슬레이브가 현재 상태를 알 수 있습니다.
+         PREADY=0일 때 브리지의 ST_ACCESS 상태는 몇 클럭 더 유지되는가?
+         또한 이 기간 동안 AHB 마스터(CPU)는 무엇을 기다리는가?
+      </li>
+
+      <!-- 17.3 추가 문제 -->
+      <li>
+         <strong>[기억]</strong> UART에서 "보드레이트(Baud Rate)"는 무엇을 의미하는가?
+         115200 보드레이트일 때 1비트 전송에 걸리는 시간은 약 몇 μs인가?
+      </li>
+
+      <li>
+         <strong>[적용]</strong> UART RX FSM에서 START 비트를 감지한 후,
+         데이터 비트 8개를 샘플링하는 시점이 baud_div에서 16번째마다인 이유를
+         "오버샘플링"과 "노이즈 거부" 관점에서 설명하시오.
+      </li>
+
+      <li>
+         <strong>[분석]</strong> UART FIFO가 가득 찼을 때 프로그램이 계속 쓰려고 하면,
+         데이터는 손실됩니다. 이를 방지하기 위해 소프트웨어가 할 수 있는 조치는?
+         또한 <code>tx_fifo_full</code> 플래그를 읽고 대기하는 방식이 현실적인 이유는?
+      </li>
+
+      <!-- 17.4 추가 문제 -->
+      <li>
+         <strong>[기억]</strong> GPIO 방향 레지스터(DIR)에서 비트 값이 1과 0일 때
+         각각 무엇을 의미하는가? (1=?, 0=?)
+      </li>
+
+      <li>
+         <strong>[적용]</strong> <code>apb_gpio.sv</code>의 2단 동기화기를 통해
+         <code>gpio_in</code>을 <code>sync_0</code> → <code>sync_1</code>로 처리합니다.
+         만약 1단 동기화기만 사용했다면, 메타안정성으로 인해 어떤 현상이 나타날까요?
+         특히 GPIO 인터럽트(상승 에지 감지)에 어떤 영향이 있을까요?
+      </li>
+
+      <!-- 17.5 추가 문제 -->
+      <li>
+         <strong>[기억]</strong> APB 타이머의 동작 3단계를 순서대로 나열하시오.
+         (1) 카운터 증가, (2) 비교, (3) ...
+      </li>
+
+      <li>
+         <strong>[적용]</strong> 50MHz 클럭에서 10ms 주기의 타이머 인터럽트를 만들려면,
+         CMP 레지스터에 어떤 값을 설정해야 하는가? 계산 과정을 보이시오.
+         (참고: prescale_reg = 0인 경우)
+      </li>
+
+      <li>
+         <strong>[이해]</strong> 타이머 인터럽트는 "신호 생성"일 뿐, CPU가 그 신호를
+         처리하는 것은 19장(예외 처리)에서 배웁니다. 17장에서 우리가 확인해야 하는 것은?
+      </li>
+
+      <!-- 17.6 추가 문제 -->
+      <li>
+         <strong>[분석]</strong> UART와 GPIO를 동시에 구동할 때, 버스 충돌이 발생하지 않는
+         이유를 주소 공간 분리와 PSEL 신호 관점에서 설명하시오.
+      </li>
+
+      <li>
+         <strong>[평가]</strong> 당신이 설계한 4개 주변장치(UART, GPIO, Timer, ?)를
+         모두 동시에 활성화했을 때 오류가 발생했습니다. 효율적인 디버깅 전략을 제시하시오.
+         (단, 한 주변장치씩 활성화/비활성화하는 방법을 포함)
       </li>
    </ol>
 </section>
