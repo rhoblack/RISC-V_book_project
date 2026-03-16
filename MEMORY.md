@@ -1,9 +1,9 @@
 # RISC-V 교재 프로젝트 메모리
 
-## 📊 현재 진행 현황 (2026-03-15)
+## 📊 현재 진행 현황 (2026-03-16)
 
-**완료**: Ch01~Ch24 (24/25, 96%)
-**진행중**: Ch25 Phase 2 (초안 작성) — 일시 정지
+**완료**: Ch01~Ch24 (24/25, 96%) — output 폴더에 _final.html 24개 배포
+**진행중**: Ch25 Phase 2 (초안 작성) — 기획 완료, 원고 작성 준비 중
 **부록**: A~F (미계획)
 
 ---
@@ -59,3 +59,16 @@
 - ✅ `code_examples/ch25_mesi_tracker_tb.sv`
 - ✅ `code_examples/ch25_lr_sc_unit_tb.sv`
 - ⏳ `manuscripts/part9/chapter25.html` (진행 중)
+
+---
+
+## output 폴더 상태 (2026-03-16 확인)
+
+**배포 완료**:
+- 24개 최종 HTML 파일 (Ch01~Ch24_*_final.html)
+- 모든 파일 40~90KB 범위 (타임스탐프: 2026-03-15)
+
+**준비 중**:
+- `output/docx/` (Word 산출물)
+- `output/ppt/` (PPT 강의자료)
+- `output/workbook/` (연습문제 워크북)
