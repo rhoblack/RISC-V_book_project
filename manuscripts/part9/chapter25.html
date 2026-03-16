@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 25: 멀티코어와 캐시 일관성 기초</title>
+  <link rel="stylesheet" href="../../templates/book_style.css">
+  <!-- Syntax Highlighting (Highlight.js atom-one-dark) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+
+<header class="chapter-header">
+  <span class="chapter-number">Chapter 25</span>
+  <h1>멀티코어와 캐시 일관성 기초</h1>
+  <p class="chapter-intro">단일 코어에서 다중 코어로 확장할 때 여러 프로세서가 동일한 메모리를 공유하면서 발생하는 캐시 일관성 문제를 이해하고, MESI 프로토콜로 이를 해결하는 방법을 습득한다. 또한 LR/SC 원자 연산을 이용해 스핀락과 같은 동기화 메커니즘을 설계한다.</p>
+</header>
+
+<nav class="learning-objectives">
+  <h2>학습 목표</h2>
+  <ul>
+    <li>멀티코어 환경에서 캐시 일관성 문제가 발생하는 원인을 설명할 수 있다.</li>
+    <li>MESI 프로토콜의 4가지 상태(Modified, Exclusive, Shared, Invalid)와 상태 전이 조건을 이해할 수 있다.</li>
+    <li>주어진 멀티코어 메모리 접근 시나리오에서 캐시 일관성 문제를 식별하고 해결할 수 있다.</li>
+    <li>RISC-V LR/SC 명령어의 작동 원리를 이해하고, 원자성(Atomicity)이 보장되는 메커니즘을 분석할 수 있다.</li>
+    <li>LR/SC를 이용해 스핀락을 구현하고, 실무 멀티코어 설계에 적용할 수 있다.</li>
+  </ul>
+</nav>
+
+<!-- ========== 절 1 시작 ========== -->
+<section id="sec-25-1">
+  <h2>25.1 멀티코어 설계 과제: MESI 캐시 일관성</h2>
+
+  <!-- 도입: 문제 제시 -->
+  <p>지금까지 우리가 설계한 모든 프로세서는 <strong>단일 코어(single-core)</strong> 아키텍처였다. 그런데 현실의 스마트폰, 서버, 임베디드 시스템은 거의 모두 <strong>멀티코어 프로세서</strong>를 탑재하고 있다. 멀티코어로 확장하면서 우리는 새로운 도전에 직면하게 된다: <strong>여러 프로세서가 동일한 메모리 주소를 동시에 접근할 때 데이터 일관성을 어떻게 보장할 것인가?</strong></p>
+
+  <p>간단한 예를 생각해 보자. Core 0이 메모리 주소 0x100에 저장된 변수 X를 값 10에서 20으로 수정한다고 하자. Core 1은 같은 주소 0x100을 읽으려고 한다. Core 0의 수정이 캐시에만 머물러 있고 메인 메모리에 아직 반영되지 않았다면, Core 1이 읽는 값은 구(old) 값인 10일까, 신(new) 값인 20일까? 이것은 단순한 궁금증이 아니라, 프로세서 아키텍처의 <strong>정확성(correctness)</strong> 문제를 좌우한다.</p>
+
+  <!-- 비유: 도서관 비유 -->
+  <div class="analogy">
+    <strong>비유:</strong> 도서관의 열람실을 생각해 보자. 여러 학생(코어)이 동일한 교재(메모리)를 공유한다. 각 학생은 개인적으로 교재의 필기본(캐시)을 만든다. 한 학생이 필기본에 새로운 내용을 추가했을 때, 다른 학생들의 필기본은 여전히 옛날 내용을 담고 있다. MESI 프로토콜은 "한 학생이 필기본을 수정하면, 다른 학생들에게 '너희 필기본은 이제 사용 금지(invalidate)'라고 신호를 보낸다"는 메커니즘이다. 이렇게 모든 필기본이 일관되게 유지된다.
+  </div>
+
+  <!-- 또 다른 비유: Google Docs -->
+  <p>또 다른 각도에서, 온라인 협업 문서(Google Docs)를 생각해 보자. 여러 편집자가 동시에 같은 문서를 수정한다. 편집자 A가 문장을 변경하면, 편집자 B의 화면에는 즉시 업데이트된 내용이 반영된다. 이는 클라우드 서버가 중앙에서 "동기화"와 "일관성"을 관리하기 때문이다. MESI도 이와 유사하게, 버스(bus)를 통해 모든 캐시 간 동기화를 실시간으로 관리한다.</p>
+
+  <h3>캐시 일관성 문제의 구체적 사례</h3>
+
+  <p>단일 코어에서는 캐시가 "개인 소유"이기 때문에 일관성 문제가 없다. CPU가 캐시를 읽고 쓰고 수정해도, 결국 자신의 메모리 뷰만 관리하면 된다. 하지만 멀티코어에서는 <strong>여러 캐시가 동일한 메모리 라인(cache line)을 보유할 수 있다</strong>는 상황이 발생한다:</p>
+
+  <ul>
+    <li><strong>시간 T0</strong>: Core 0과 Core 1이 모두 메모리 주소 0x100을 읽음 → 둘 다 값 5를 자신의 L1 캐시에 복사</li>
+    <li><strong>시간 T1</strong>: Core 0이 주소 0x100을 값 10으로 쓰기 → Core 0의 캐시만 업데이트됨 (메모리는 아직 5)</li>
+    <li><strong>시간 T2</strong>: Core 1이 주소 0x100을 읽음 → Core 1의 캐시에는 여전히 5가 있으므로 5를 반환</li>
+    <li><strong>결과</strong>: Core 1은 오래된(stale) 데이터를 읽음 → 버그!</li>
+  </ul>
+
+  <p>이 문제를 해결하기 위해, 멀티코어 프로세서는 <strong>캐시 일관성 프로토콜(cache coherence protocol)</strong>을 구현한다. MESI는 가장 널리 사용되는 프로토콜이다.</p>
+
+  <!-- SVG 다이어그램 1: 문제 시각화 -->
+  <figure>
+    <img src="../../figures/ch25_sec01_multicore_coherence.svg" alt="멀티코어 캐시 일관성 문제 시각화">
+    <figcaption>그림 25.1: 멀티코어에서의 캐시 일관성 문제. Core 0이 X를 5에서 수정했지만, Core 1과 Core 2는 여전히 오래된 값을 보고 있는 상황을 보여준다.</figcaption>
+  </figure>
+
+  <h3>MESI 프로토콜: 4가지 상태</h3>
+
+  <p>MESI는 각 캐시 라인이 가질 수 있는 4가지 상태를 정의한다. 각 캐시 라인의 헤더에는 이 상태를 나타내는 비트들이 저장된다:</p>
+
+  <ul>
+    <li><strong>Modified (M)</strong>: 이 캐시가 유일하게 최신 복사본을 보유. 메인 메모리는 오래된 데이터 포함. 다른 캐시는 이 라인을 보유하지 않음.</li>
+    <li><strong>Exclusive (E)</strong>: 이 캐시가 유일하게 이 라인을 보유하나, 메인 메모리와 동일한 최신 값. 다른 캐시는 이 라인을 보유하지 않음.</li>
+    <li><strong>Shared (S)</strong>: 여러 캐시가 동일한 라인을 보유. 모두 메인 메모리와 동일한 최신 값.</li>
+    <li><strong>Invalid (I)</strong>: 이 캐시 라인은 유효하지 않음. 캐시 미스 상태와 동일.</li>
+  </ul>
+
+  <p>상태 간 전이는 <strong>두 가지 종류의 이벤트</strong>에 의해 발생한다:</p>
+
+  <ul>
+    <li><strong>프로세서 요청(Processor Request)</strong>: 자신의 CPU가 로컬 읽기(PrRd) 또는 로컬 쓰기(PrWr) 요청</li>
+    <li><strong>버스 이벤트(Bus Event)</strong>: 다른 코어의 메모리 접근을 버스에서 감시(snooping)하여 감지한 읽기(BusRd) 또는 읽기-독점(BusRdX, 쓰기 의도)</li>
+  </ul>
+
+  <!-- SVG 다이어그램 2: MESI 상태 전이도 -->
+  <figure>
+    <img src="../../figures/ch25_sec01_mesi_states.svg" alt="MESI 프로토콜 상태 전이도">
+    <figcaption>그림 25.2: MESI의 4가지 상태와 상태 전이 조건. 파란색 화살표는 버스 읽기 이벤트, 빨간색은 로컬 쓰기, 주황색은 Invalidate 신호를 나타낸다.</figcaption>
+  </figure>
+
+  <h3>MESI 상태 전이의 핵심 시나리오</h3>
+
+  <p>MESI 상태도가 처음엔 복잡해 보일 수 있지만, 몇 가지 핵심 전이 패턴만 이해하면 충분하다:</p>
+
+  <p><strong>시나리오 1: Read Miss → Exclusive 또는 Shared</strong></p>
+  <p>캐시 미스로 인해 Invalid 상태에서 벗어난다. 메인 메모리가 이 라인의 최신 값을 응답할 때, "다른 캐시도 이 라인을 가지고 있는가?"를 확인한다. 아무도 가지지 않았다면 Exclusive 상태로, 다른 캐시도 가지고 있다면 Shared 상태로 전이한다.</p>
+
+  <p><strong>시나리오 2: Exclusive → Modified (로컬 쓰기)</strong></p>
+  <p>이미 Exclusive 상태에서는 다른 캐시가 이 라인을 가지지 않고 있음이 보장된다. 따라서 로컬 쓰기를 하면, <strong>버스 트랜잭션 없이 조용히(silently)</strong> Modified 상태로 전이한다. 이를 "Silent transition"이라 부른다.</p>
+
+  <p><strong>시나리오 3: Shared → Modified (로컬 쓰기)</strong></p>
+  <p>Shared 상태에서는 다른 캐시도 이 라인을 가지고 있을 수 있다. 쓰기를 하려면 먼저 다른 캐시의 복사본을 모두 무효화(invalidate)해야 한다. 이를 위해 BusRdX(Read-Exclusive, 쓰기 의도 신호)를 버스에 방송한다. 다른 캐시들이 이 신호를 감시하면 자신의 복사본을 Invalid 상태로 전이한다.</p>
+
+  <p><strong>시나리오 4: Modified → Shared 또는 Invalid (버스 이벤트)</strong></p>
+  <p>다른 코어가 메모리를 읽으려는 신호(BusRd)를 버스에서 감시하면, 이 캐시는 최신 데이터를 메모리에 기록(flush)하고 Shared 상태로 전이한다. 만약 다른 코어가 쓰기를 의도하는 신호(BusRdX)를 감시하면, 데이터를 기록하고 Invalid 상태로 전이한다.</p>
+
+  <aside class="metacognition">
+    <strong>🔍 스스로 점검</strong>
+    <p>여기까지 읽었다면, 다음 질문에 답해 보십시오: Core 0이 주소 0x100을 Exclusive 상태에서 보유하고 있을 때, Core 1이 같은 주소를 읽기 위해 BusRd를 보낸다면, Core 0의 상태는 어디로 전이할까? 그리고 Core 1의 상태는 어디로 전이할까?</p>
+  </aside>
+
+  <h3>버스 스누핑(Bus Snooping) 메커니즘</h3>
+
+  <p>MESI 프로토콜이 동작하려면, <strong>모든 캐시가 버스의 모든 트랜잭션을 감시</strong>해야 한다. 이를 "스누핑(snooping)" 또는 "리슨(listening)"이라 부른다.</p>
+
+  <p>아키텍처 레벨에서 보면:</p>
+
+  <ul>
+    <li>Core 0의 캐시 컨트롤러가 메모리 접근을 버스에 방송 (주소, 읽기/쓰기, 데이터)</li>
+    <li>Core 1, Core 2, ... 의 캐시 컨트롤러가 이 방송을 모두 수신</li>
+    <li>각 캐시는 자신이 보유한 라인과 주소를 비교하여, MESI 상태를 자동으로 업데이트</li>
+  </ul>
+
+  <p>이는 각 캐시가 "다른 캐시의 움직임"을 실시간으로 인지하도록 강제하므로, 모든 캐시가 일관된 데이터를 볼 수 있도록 보장한다. 대신, 버스 트래픽이 증가하고 모든 캐시가 항상 주시해야 하므로 전력 소비가 증가한다는 트레이드오프가 있다.</p>
+
+  <aside class="tip">
+    <strong>💡 실무 팁</strong>
+    <p>현대의 멀티코어 프로세서(Intel, ARM)는 단순 MESI뿐만 아니라 확장 버전을 사용한다. 예를 들어, Intel은 MESI의 변형인 MESIF(Shared 상태에서 한 캐시가 "Forward" 역할)를 사용하고, AMD는 MOESI(Owned 상태 추가)를 사용한다. 하지만 핵심 아이디어는 동일하다: 캐시 라인의 상태를 추적하고, 버스 스누핑으로 모든 캐시를 동기화한다.</p>
+  </aside>
+
+  <h3>MESI 캐시 컨트롤러의 SystemVerilog 구현</h3>
+
+  <p>실제로 MESI 프로토콜을 하드웨어로 구현하는 방법을 보자. 다음 코드는 <strong>단일 캐시 라인의 MESI 상태를 관리하는 조합 논리(combinational logic)</strong>를 보여준다. 각 캐시 라인마다 이러한 상태 머신을 하나씩 인스턴스화해야 한다.</p>
+
+  <pre><code class="language-systemverilog">
+// MESI 캐시 라인 상태 추적기 (단순화 모델)
+module mesi_tracker (
+   input  logic       clk,
+   input  logic       rst_n,
+   // 프로세서 요청
+   input  logic       pr_rd,        // 프로세서 Read 요청
+   input  logic       pr_wr,        // 프로세서 Write 요청
+   // 버스 스누핑 입력
+   input  logic       bus_rd,       // 다른 코어의 Read 관찰
+   input  logic       bus_rdx,      // 다른 코어의 Read-Exclusive (Write 의도)
+   // 메모리 응답
+   input  logic       mem_shared,   // 메모리 응답: 다른 캐시에도 복사본 존재
+   // 상태 출력
+   output logic [1:0] state,        // 현재 MESI 상태
+   // 버스 동작 출력
+   output logic       do_flush,     // 수정된 데이터를 메모리에 기록
+   output logic       do_bus_rd,    // 버스 Read 트랜잭션 발생
+   output logic       do_bus_rdx,   // 버스 Read-Exclusive 트랜잭션 발생
+   output logic       do_invalidate // 자신의 캐시 라인을 무효화
+);
+
+   // MESI 상태 인코딩
+   localparam logic [1:0] MODIFIED  = 2'b00;
+   localparam logic [1:0] EXCLUSIVE = 2'b01;
+   localparam logic [1:0] SHARED    = 2'b10;
+   localparam logic [1:0] INVALID   = 2'b11;
+
+   logic [1:0] state_next;
+
+   // 상태 레지스터 (flip-flop)
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         state &lt;= INVALID;
+      else
+         state &lt;= state_next;
+   end
+
+   // 다음 상태 결정 (조합 논리)
+   always_comb begin
+      // 기본값: 현재 상태 유지
+      state_next    = state;
+      do_flush      = 1'b0;
+      do_bus_rd     = 1'b0;
+      do_bus_rdx    = 1'b0;
+      do_invalidate = 1'b0;
+
+      case (state)
+         // Modified: 이 캐시만 유일한 최신 복사본 보유
+         MODIFIED: begin
+            if (bus_rd) begin
+               // 다른 코어가 읽기 요청 → Shared로 전이
+               state_next = SHARED;
+               do_flush   = 1'b1;  // 메모리에 기록
+            end
+            else if (bus_rdx) begin
+               // 다른 코어가 쓰기 의도 → Invalid로 전이
+               state_next    = INVALID;
+               do_flush      = 1'b1;
+               do_invalidate = 1'b1;
+            end
+         end
+
+         // Exclusive: 이 캐시만 보유, 메모리와 동일
+         EXCLUSIVE: begin
+            if (pr_wr) begin
+               // 로컬 쓰기 → Modified로 (Silent)
+               state_next = MODIFIED;
+            end
+            else if (bus_rd) begin
+               // 다른 코어가 읽기 → Shared로
+               state_next = SHARED;
+            end
+            else if (bus_rdx) begin
+               // 다른 코어가 쓰기 의도 → Invalid로
+               state_next    = INVALID;
+               do_invalidate = 1'b1;
+            end
+         end
+
+         // Shared: 여러 캐시가 동일한 값 보유
+         SHARED: begin
+            if (pr_wr) begin
+               // 로컬 쓰기 → 다른 복사본 무효화 후 Modified
+               state_next = MODIFIED;
+               do_bus_rdx = 1'b1;  // BusRdX 방송
+            end
+            else if (bus_rdx) begin
+               // 다른 코어가 쓰기 의도 → Invalid로
+               state_next    = INVALID;
+               do_invalidate = 1'b1;
+            end
+         end
+
+         // Invalid: 유효한 데이터 없음
+         INVALID: begin
+            if (pr_rd) begin
+               // 로컬 읽기 미스
+               do_bus_rd = 1'b1;
+               if (mem_shared)
+                  state_next = SHARED;     // 다른 캐시에도 있으면 Shared
+               else
+                  state_next = EXCLUSIVE;  // 단독이면 Exclusive
+            end
+            else if (pr_wr) begin
+               // 로컬 쓰기 미스 → BusRdX 후 Modified
+               state_next = MODIFIED;
+               do_bus_rdx = 1'b1;
+            end
+         end
+
+         default: state_next = INVALID;
+      endcase
+   end
+
+endmodule
+  </code></pre>
+
+  <p>이 모듈의 핵심을 이해하는 포인트:</p>
+
+  <ul>
+    <li><strong>항상 조합 논리</strong>: `always_comb` 블록에서 다음 상태를 결정. 플로프-플롭은 상태만 저장할 뿐, 상태 전이 로직 자체는 조합 회로.</li>
+    <li><strong>우선순위</strong>: 여러 이벤트가 동시에 발생할 수 있으므로, 설계자가 우선순위를 정의해야 함. 예를 들어, 이 코드에서는 프로세서 요청보다 버스 이벤트를 우선 처리.</li>
+    <li><strong>Shared 판정</strong>: 메모리로부터 응답받은 `mem_shared` 신호로 다른 캐시의 존재 여부 판단.</li>
+  </ul>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> 왜 메모리가 "다른 캐시에도 있는가"를 알 수 있을까? 메모리는 어떤 캐시가 데이터를 보유하는지 추적하지 않나요?</p>
+    <p><strong>A:</strong> 우수한 질문이다! 실무 구현에서는 메모리 컨트롤러가 "<strong>Directory(디렉토리)</strong>"라는 구조를 유지한다. 각 메모리 라인마다 어떤 캐시들이 복사본을 보유하는지를 비트맵으로 기록한다. 이 코드는 단순화를 위해 `mem_shared` 신호로 "공유 존재 여부"만 전달했지만, 실제로는 더 복잡한 구조를 사용한다.</p>
+  </aside>
+
+  <h3>성능 분석: 캐시 일관성의 오버헤드</h3>
+
+  <p>MESI 프로토콜이 일관성을 보장하는 대가는 무엇인가?</p>
+
+  <p><strong>1) 버스 트래픽 증가</strong>: 모든 캐시 컨트롤러가 모든 버스 트랜잭션을 관찰해야 하므로, 버스 대역폭이 낭비된다. 멀티코어가 많아질수록 이 오버헤드는 더 커진다.</p>
+
+  <p><strong>2) Invalidation 지연</strong>: Shared 상태에서 쓰기를 하려면 다른 캐시의 복사본을 무효화해야 한다. BusRdX를 보낸 후, 다른 캐시들이 응답할 때까지 기다려야 하므로 지연이 발생한다.</p>
+
+  <p><strong>3) 캐시 미스 증가</strong>: 다른 코어가 자주 같은 데이터를 접근하면, 자신의 캐시 라인이 계속 Invalid 상태로 전이되므로 미스가 증가한다. 이를 "cache thrashing"이라 부른다.</p>
+
+  <p>반대로, MESI의 <strong>장점</strong>은:</p>
+
+  <ul>
+    <li><strong>비교적 간단한 프로토콜</strong>: 4가지 상태와 명확한 전이 규칙</li>
+    <li><strong>하드웨어 오버헤드 적음</strong>: 각 캐시 라인마다 2비트만 필요 (MESI 상태)</li>
+    <li><strong>확장성</strong>: 코어 수가 늘어나도 프로토콜 자체는 변하지 않음 (디렉토리 구조는 확장되지만)</li>
+  </ul>
+
+  <p>Part 5의 성능 분석(Ch15)에서 배웠듯이, L1 캐시 히트율과 CPI는 성능을 결정하는 핵심이다. 멀티코어에서는 여기에 "캐시 일관성 지연"이 추가된다. 좋은 멀티코어 설계는 데이터 접근 패턴을 최적화하여 캐시 일관성으로 인한 오버헤드를 최소화하는 것이다.</p>
+
+</section>
+<!-- ========== 절 1 끝 ========== -->
+
+<!-- ========== 절 2 시작 ========== -->
+<section id="sec-25-2">
+  <h2>25.2 스핀락과 원자 연산: LR/SC 구현</h2>
+
+  <!-- 도입 -->
+  <p>멀티코어 환경에서 여러 프로세서가 동시에 실행되면, <strong>임계 영역(critical section)</strong>에 접근할 때 조율이 필요하다. 예를 들어, 공유 큐(queue)에 데이터를 삽입하거나, 공유 카운터를 증가시키는 작업은 원자적으로(atomically) 수행되어야 한다. 즉, "읽기 → 수정 → 쓰기"가 중간에 중단되지 않고 한 덩어리로 실행되어야 한다.</p>
+
+  <p>그런데 일반적인 메모리 쓰기 명령어(SW)는 원자성을 보장하지 않는다. Core 0이 읽기 직후, Core 1이 같은 주소를 수정할 수 있기 때문이다. 이 문제를 해결하기 위해, RISC-V는 <strong>A 확장(Atomic Instructions Extension)</strong>의 일부로 <strong>LR(Load-Reserved)</strong>과 <strong>SC(Store-Conditional)</strong> 명령어를 제공한다.</p>
+
+  <!-- 비유: 도서관 자리 예약 -->
+  <div class="analogy">
+    <strong>비유:</strong> 도서관에서 자리를 예약하는 상황을 생각해 보자. 학생 A는 "이 자리 예약해 주세요(LR.W)"라고 요청한다. 도서관은 "OK, 너 예약했어. 지금은 이 자리가 너 것"이라고 응답한다. 학생 A는 노트북을 가져오거나 다른 일을 한다(LR과 SC 사이의 코드). 그 후 "이제 자리에 앉겠습니다(SC.W)"라고 선언한다. 도서관은 확인한다: "너가 맞나? 다른 학생이 너 자리에 앉지 않았나?" 만약 다른 학생이 그 사이에 앉으면(다른 코어의 쓰기), 예약이 취소되고 SC가 실패한다. 그러면 학생 A는 처음부터 다시 시도한다.
+  </div>
+
+  <h3>LR/SC의 작동 원리</h3>
+
+  <p><strong>LR.W(Load-Reserved Word)</strong>: 메모리 주소에서 32비트 데이터를 읽고, 그 주소에 대해 "<strong>예약(reservation)</strong>"을 설정한다. 예약은 <strong>주소와 코어 ID를 함께 저장</strong>한다.</p>
+
+  <p><strong>SC.W(Store-Conditional Word)</strong>: 예약이 여전히 유효한지 확인하고, 유효하면 메모리에 데이터를 쓴다. 반환값(rd 레지스터)으로:</p>
+
+  <ul>
+    <li><strong>0</strong>: Store 성공 (예약이 유효했음)</li>
+    <li><strong>비영(nonzero)</strong>: Store 실패 (예약이 무효화됨)</li>
+  </ul>
+
+  <p>예약이 무효화되는 경우:</p>
+
+  <ul>
+    <li><strong>다른 코어가 같은 주소를 쓰기</strong> (BusRdX를 버스에 방송): MESI 프로토콜에 의해 이 코어의 예약이 자동으로 취소됨</li>
+    <li><strong>같은 코어가 다른 LR을 실행</strong>: 기존 예약이 새로운 예약으로 대체됨</li>
+    <li><strong>컨텍스트 스위칭</strong>: OS가 이 코어를 일시 중단했다 재개했을 때 (구현에 따라)</li>
+  </ul>
+
+  <p>핵심은 <strong>"LR과 SC 사이에 코드가 있어도 된다"</strong>는 점이다. 이는 메모리 읽기 후 어떤 계산을 수행하고 나서 쓸 수 있다는 뜻이다. 이를 이용해 "Compare-And-Swap" 같은 고급 동기화 연산을 구현할 수 있다.</p>
+
+  <!-- SVG 다이어그램: LR/SC 타이밍 -->
+  <figure>
+    <img src="../../figures/ch25_sec02_spinlock_lr_sc.svg" alt="LR/SC 기반 스핀락 동작 흐름">
+    <figcaption>그림 25.3: LR/SC를 이용한 스핀락 동작. Core 0이 먼저 LR → SC로 lock을 획득하고, 그 동안 Core 1은 스핀(spin)하며 반복적으로 LR을 시도한다.</figcaption>
+  </figure>
+
+  <h3>RISC-V A 확장 명령어 인코딩</h3>
+
+  <p>RISC-V 명령어 집합에서 LR.W와 SC.W의 인코딩:</p>
+
+  <pre><code class="language-systemverilog">
+// RISC-V LR.W 명령어
+// LR.W rd, (rs1)
+// | funct7 (1100001) | aq | rl | rs2(00000) | rs1 | funct3(010) | rd | opcode(101111) |
+//
+// 예: LR.W t0, (a0)
+// rd = t0 (x5), rs1 = a0 (x10)
+// funct7 = 0010001 (AMO operation)
+// aq(acquire) = 1, rl(release) = 0 (기본값)
+//
+// RISC-V SC.W 명령어
+// SC.W rd, rs2, (rs1)
+// | funct7 (0011000) | aq | rl | rs2 | rs1 | funct3(010) | rd | opcode(101111) |
+//
+// 예: SC.W t1, t2, (a0)
+// rd = t1 (x6), rs1 = a0 (x10), rs2 = t2 (x7)
+// rd는 SC의 결과를 받음: 0 = 성공, 1 = 실패
+
+// 컨트롤 신호 디코딩 (파이프라인 내)
+logic [6:0] funct7;
+logic [2:0] funct3;
+logic [6:0] opcode;
+logic       is_lr, is_sc;
+
+always_comb begin
+   opcode = instr[6:0];
+   funct3 = instr[14:12];
+   funct7 = instr[31:25];
+
+   is_lr = (opcode == 7'b101111) && (funct3 == 3'b010) &&
+           (funct7 == 7'b0010001) && (instr[24:20] == 5'b00000);
+
+   is_sc = (opcode == 7'b101111) && (funct3 == 3'b010) &&
+           (funct7 == 7'b0011000);
+end
+  </code></pre>
+
+  <h3>LR/SC 실행 유닛의 구현</h3>
+
+  <p>파이프라인의 EX 또는 MEM 스테이지에서 LR과 SC를 처리하는 모듈을 살펴보자:</p>
+
+  <pre><code class="language-systemverilog">
+// LR/SC (Load-Reserved / Store-Conditional) 실행 유닛
+module lr_sc_unit (
+   input  logic        clk,
+   input  logic        rst_n,
+
+   // 파이프라인 EX 스테이지 인터페이스
+   input  logic        ex_lr_w,       // LR.W 명령어 실행 중
+   input  logic        ex_sc_w,       // SC.W 명령어 실행 중
+   input  logic [31:0] ex_addr,       // 메모리 주소 (rs1 + offset)
+   input  logic [31:0] ex_wdata,      // SC.W 기록 데이터 (rs2 값)
+
+   // 외부 스누핑 입력 (다른 코어의 메모리 접근 감시)
+   input  logic        snoop_valid,   // 다른 코어의 메모리 접근 발생
+   input  logic [31:0] snoop_addr,    // 다른 코어가 접근한 주소
+   input  logic        snoop_write,   // 다른 코어의 쓰기 접근 여부
+
+   // 메모리 인터페이스 출력
+   output logic        mem_rd,        // 메모리 읽기 요청 (LR.W)
+   output logic        mem_wr,        // 메모리 쓰기 요청 (SC.W 성공 시)
+   output logic [31:0] mem_addr,      // 메모리 주소
+   output logic [31:0] mem_wdata,     // 메모리 기록 데이터
+
+   // SC.W 결과 (rd 레지스터에 기록)
+   output logic        sc_success,    // SC.W 성공 여부 (0=성공, 1=실패)
+   output logic        sc_result_valid // SC.W 결과 유효
+);
+
+   // 예약 레지스터
+   logic        reservation_valid;
+   logic [31:0] reservation_addr;
+
+   // 예약 일치 판정 (워드 정렬 주소 비교)
+   logic addr_match;
+   assign addr_match = reservation_valid &&
+                       (reservation_addr[31:2] == ex_addr[31:2]);
+
+   // ---------------------------------------------------------------
+   // 예약 레지스터 관리
+   // ---------------------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         reservation_valid &lt;= 1'b0;
+         reservation_addr  &lt;= 32'h0;
+      end
+      else begin
+         // 우선순위 정책:
+         // (1) SC.W 실행 → 예약 해제 (성공/실패와 무관)
+         // (2) 스누핑으로 무효화
+         // (3) LR.W 실행 → 새 예약 설정
+         if (ex_sc_w) begin
+            // SC.W가 실행되면 예약 해제
+            reservation_valid &lt;= 1'b0;
+         end
+         else if (snoop_valid && reservation_valid &&
+                  (snoop_addr[31:2] == reservation_addr[31:2])) begin
+            // 다른 코어가 예약된 주소에 쓰기 → 예약 무효화
+            if (snoop_write)
+               reservation_valid &lt;= 1'b0;
+         end
+         else if (ex_lr_w) begin
+            // LR.W 실행 → 새로운 예약 설정
+            reservation_valid &lt;= 1'b1;
+            reservation_addr  &lt;= ex_addr;
+         end
+      end
+   end
+
+   // ---------------------------------------------------------------
+   // 메모리 인터페이스 및 SC 결과 생성
+   // ---------------------------------------------------------------
+   always_comb begin
+      // 기본값
+      mem_rd          = 1'b0;
+      mem_wr          = 1'b0;
+      mem_addr        = ex_addr;
+      mem_wdata       = ex_wdata;
+      sc_success      = 1'b0;
+      sc_result_valid = 1'b0;
+
+      if (ex_lr_w) begin
+         // LR.W: 메모리 읽기 수행
+         mem_rd = 1'b1;
+      end
+      else if (ex_sc_w) begin
+         sc_result_valid = 1'b1;
+         if (addr_match) begin
+            // 예약이 유효하고 주소 일치 → SC 성공
+            mem_wr     = 1'b1;
+            sc_success = 1'b1;  // rd ← 0 (성공)
+         end
+         else begin
+            // 예약 무효 또는 주소 불일치 → SC 실패
+            mem_wr     = 1'b0;
+            sc_success = 1'b0;  // rd ← 1 (실패)
+         end
+      end
+   end
+
+endmodule
+  </code></pre>
+
+  <p>이 구현의 중요한 특징:</p>
+
+  <ul>
+    <li><strong>단순 예약 체계</strong>: 주소[31:2]만 비교 (워드 정렬). 실무에서는 라인 단위로 확장.</li>
+    <li><strong>스누핑 통합</strong>: 다른 코어의 쓰기를 감지하면 즉시 예약을 무효화.</li>
+    <li><strong>우선순위 정책</strong>: SC 실행 시 예약 해제, 스누핑으로 무효화, 마지막으로 LR로 새 예약.</li>
+  </ul>
+
+  <aside class="faq">
+    <strong>❓ 수강생 단골 질문</strong>
+    <p><strong>Q:</strong> SC가 실패해도 예약이 해제되나요? 다시 시도할 수는 없나요?</p>
+    <p><strong>A:</strong> RISC-V 스펙에 따르면, SC.W 실행(성공/실패 무관) 후 예약이 해제된다. 따라서 다시 시도하려면 새로운 LR을 실행해야 한다. 이는 의도적인 설계다. 예를 들어, 스핀락 루프에서 "LR → BNEZ(실패 시 LR로 돌아가기) → SC → BNEZ(실패 시 LR로 돌아가기)"가 표준 패턴이다.</p>
+  </aside>
+
+  <h3>스핀락(Spinlock) 구현</h3>
+
+  <p>LR/SC를 이용해 가장 간단한 동기화 메커니즘인 "스핀락"을 구현할 수 있다. 스핀락은 "임계 영역을 획득할 때까지 계속 재시도하는 락(lock)"을 의미한다.</p>
+
+  <pre><code class="language-systemverilog">
+// C 의사 코드
+// void spinlock_acquire(volatile int *lock) {
+//    while (1) {
+//       int val = load_reserved(lock);  // LR.W
+//       if (val != 0) continue;          // BNEZ → 반복
+//       if (store_conditional(lock, 1) == 0) // SC.W
+//          break;  // 성공, 루프 탈출
+//    }
+// }
+
+// RISC-V 어셈블리
+// lock 주소는 a0, 반환값 t1에 저장
+// spinlock_acquire:
+//    lr.w  t0, (a0)        // t0 = lock 값 읽기 + 예약 설정
+//    bnez  t0, spinlock_acquire  // t0 != 0이면 재시도
+//    sc.w  t1, x0, (a0)    // x0(zero) = 0을 lock에 저장 (언락)
+//    bnez  t1, spinlock_acquire  // SC 실패하면 재시도
+//    ret                    // 성공
+
+// SystemVerilog RTL (파이프라인 내에서의 명령어 처리)
+// 주의: 이것은 개념 설명이며, 실제 파이프라인 구현과는 다름
+
+logic [31:0] lock_addr = 32'h8000_0000;  // 공유 메모리의 lock 변수 주소
+
+// 프로세서 내부 레지스터
+logic [31:0] t0, t1;
+
+// LR 실행
+always_comb begin
+   if (ex_lr_w) begin
+      mem_rd = 1'b1;
+      mem_addr = lock_addr;
+      // 메모리로부터 데이터를 받으면 t0에 저장됨 (다음 사이클)
+   end
+end
+
+// BNEZ t0, spinlock_acquire 실행
+always_comb begin
+   if (ex_bnez && t0 != 0) begin
+      // 조건 true: PC를 spinlock_acquire로 점프
+      next_pc = spinlock_acquire_addr;
+   end
+end
+
+// SC 실행
+always_comb begin
+   if (ex_sc_w) begin
+      if (sc_success) begin
+         // SC 성공: t1 ← 0
+         t1 = 32'h0;
+         mem_wr = 1'b1;
+         mem_addr = lock_addr;
+         mem_wdata = 32'h0;  // unlock: lock = 0
+      end else begin
+         // SC 실패: t1 ← 1
+         t1 = 32'h1;
+      end
+   end
+end
+
+// 다시 BNEZ t1, spinlock_acquire 실행
+// t1 != 0 (실패)이면 루프로 돌아감
+  </code></pre>
+
+  <p>스핀락의 동작 흐름:</p>
+
+  <ol>
+    <li><strong>LR.W</strong>: 공유 lock 변수에서 읽기 + 예약 설정</li>
+    <li><strong>BNEZ</strong>: lock = 0이 아니면 (잠금 상태) LR로 돌아가 스핀</li>
+    <li><strong>SC.W</strong>: lock을 0으로 쓰기 시도 (이 명령어 실행 후 lock이 1이 됨, 즉 이 코어가 획득)</li>
+    <li><strong>BNEZ</strong>: SC 실패하면 LR로 돌아가 재시도</li>
+    <li><strong>성공</strong>: 임계 영역 진입, lock = 1로 설정되어 다른 코어 진입 방지</li>
+  </ol>
+
+  <p>임계 영역에서 작업을 마친 후, "SW zero, 0(a0)" (또는 "AMOSWAP 0, lock")으로 lock = 0을 기록하여 해제한다.</p>
+
+  <aside class="instructor-tip">
+    <strong>📌 강사 꿀팁</strong>
+    <p>스핀락 코드를 강의할 때, "왜 재시도하는가"를 명확히 하는 것이 중요하다. "SC가 실패한다"는 것은 다른 코어가 그 사이에 lock을 건드렸다는 뜻이다. 학생들은 "그럼 LR부터 다시 해야 하나?"라고 헷갈린다. 답은 "네, LR부터 다시하는 게 맞다. 왜냐하면 메모리 값이 변했을 가능성이 있기 때문"이다. 이 부분을 강조하면 LR/SC의 의미가 명확해진다.</p>
+  </aside>
+
+  <h3>테스트벤치와 검증</h3>
+
+  <p>LR/SC 유닛을 검증하는 간단한 테스트벤치:</p>
+
+  <pre><code class="language-systemverilog">
+// LR/SC 유닛 테스트벤치 (부분)
+initial begin
+   $display("========================================");
+   $display("LR/SC 유닛 테스트벤치");
+   $display("========================================");
+
+   clear_inputs();
+   rst_n = 0;
+   #20;
+   rst_n = 1;
+   #10;
+
+   // 시나리오 1: LR → SC 성공 (간섭 없음)
+   $display("\n[시나리오 1] LR.W → SC.W 성공");
+   ex_lr_w = 1;
+   ex_addr = 32'h1000;
+   @(posedge clk); #1;
+   clear_inputs();
+   assert(mem_rd == 1) else $error("LR.W 시 mem_rd = 1이어야 함!");
+
+   @(posedge clk); #1;
+
+   // SC: 같은 주소에 값 42 기록
+   ex_sc_w = 1;
+   ex_addr = 32'h1000;
+   ex_wdata = 32'd42;
+   @(posedge clk); #1;
+   assert(sc_success == 1) else $error("SC.W 성공해야 함!");
+   assert(mem_wr == 1) else $error("SC 성공 시 mem_wr = 1");
+   clear_inputs();
+
+   // 시나리오 2: LR → 스누핑 무효화 → SC 실패
+   $display("\n[시나리오 2] LR.W → 스누핑 → SC.W 실패");
+   @(posedge clk); #1;
+
+   ex_lr_w = 1;
+   ex_addr = 32'h2000;
+   @(posedge clk); #1;
+   clear_inputs();
+
+   @(posedge clk); #1;
+
+   // 다른 코어가 같은 주소에 쓰기
+   snoop_valid = 1;
+   snoop_addr = 32'h2000;
+   snoop_write = 1;
+   @(posedge clk); #1;
+   clear_inputs();
+
+   @(posedge clk); #1;
+
+   // SC: 예약이 무효화되었으므로 실패
+   ex_sc_w = 1;
+   ex_addr = 32'h2000;
+   ex_wdata = 32'd99;
+   @(posedge clk); #1;
+   assert(sc_success == 0) else $error("SC.W 실패해야 함!");
+   assert(mem_wr == 0) else $error("SC 실패 시 mem_wr = 0");
+   clear_inputs();
+
+   $display("\n========================================");
+   $display("모든 시나리오 통과!");
+   $display("========================================");
+   #20;
+   $finish;
+end
+  </code></pre>
+
+  <h3>멀티코어 동기화의 확장: 뮤텍스와 세마포어</h3>
+
+  <p>스핀락은 "간단하지만 비효율적"인 락이다. CPU가 계속 루프를 반복하므로 전력을 낭비한다. 실무에서는 더 정교한 동기화 메커니즘을 사용한다:</p>
+
+  <p><strong>뮤텍스(Mutex)</strong>: "상호 배제(mutual exclusion)"를 구현하는 락. 임계 영역에 한 번에 한 스레드만 진입 가능. POSIX `pthread_mutex`가 대표.</p>
+
+  <p><strong>세마포어(Semaphore)</strong>: 여러 스레드의 접근을 제한하는 카운터 기반 메커니즘. 예: 2개의 프린터를 3개의 스레드가 공유할 때, 세마포어 값 = 2로 설정.</p>
+
+  <p><strong>조건 변수(Condition Variable)</strong>: "특정 조건이 충족될 때까지 대기"하는 메커니즘. 예: 큐가 비어있으면 consumer 스레드는 대기.</p>
+
+  <p>이 모든 메커니즘의 <strong>기반</strong>은 LR/SC(또는 Compare-and-Swap)로 구현된 원자 연산이다. LR/SC 없이는 이들을 안전하게 구현할 수 없다.</p>
+
+  <aside class="interview">
+    <strong>🎯 면접 포인트</strong>
+    <p><strong>Q: 스핀락과 뮤텍스의 차이는?</strong></p>
+    <p><strong>A:</strong> 스핀락은 락을 획득할 때까지 계속 루프(spin)한다. 뮤텍스는 락을 획득하지 못하면 대기 큐에 진입하고, OS가 대기 중인 스레드를 휴면시킨다. 스핀락은 임계 영역이 매우 짧을 때(나노초 단위)만 효율적이고, 임계 영역이 길면 뮤텍스가 더 효율적이다. 이유는 뮤텍스는 CPU를 낭비하지 않기 때문이다.</p>
+  </aside>
+
+  <h3>Lock-Free 알고리즘의 개요</h3>
+
+  <p>LR/SC의 강력함을 이용하면, <strong>락을 사용하지 않고도 멀티스레딩 환경에서 안전한 자료구조</strong>를 구현할 수 있다. 이를 "Lock-Free" 또는 "Wait-Free" 알고리즘이라 부른다.</p>
+
+  <p>예: Compare-and-Swap 기반 스택</p>
+
+  <pre><code class="language-systemverilog">
+// C 의사 코드 (Lock-Free Stack)
+// struct Node { int value; Node *next; };
+// Node *top;  // 전역 스택 탑 포인터
+//
+// void push(int value) {
+//    Node *new_node = malloc(sizeof(Node));
+//    new_node-&gt;value = value;
+//
+//    while (1) {
+//       Node *old_top = atomic_load(&top);
+//       new_node-&gt;next = old_top;
+//
+//       // Compare-and-Swap: top가 old_top이면 new_node로 업데이트
+//       if (atomic_compare_and_swap(&top, old_top, new_node))
+//          break;  // 성공
+//    }
+// }
+
+// RISC-V LR/SC로 Compare-and-Swap 구현
+// cas(address, expected, new_value) → 성공하면 1, 실패하면 0 반환
+//
+// cas:
+//    lr.w  t0, (a0)       // t0 = *address, 예약 설정
+//    bne   t0, a1, cas_fail   // t0 != expected이면 실패
+//    sc.w  t2, a2, (a0)   // *address = new_value (조건부)
+//    bnez  t2, cas        // SC 실패하면 재시도
+//    li    a0, 1          // 반환값 = 1 (성공)
+//    ret
+// cas_fail:
+//    li    a0, 0          // 반환값 = 0 (실패)
+//    ret
+  </code></pre>
+
+  <p>Lock-Free 알고리즘의 장점:</p>
+
+  <ul>
+    <li><strong>성능</strong>: 락 경합(lock contention) 없으므로 캐시 일관성 오버헤드 감소</li>
+    <li><strong>데드락 방지</strong>: 스레드가 락 때문에 영구 대기하지 않음</li>
+  </ul>
+
+  <p>단점:</p>
+
+  <ul>
+    <li><strong>구현 복잡성</strong>: 미묘한 경쟁 조건(race condition)이 숨어 있을 수 있음</li>
+    <li><strong>성능 불확실성</strong>: 높은 경합 상황에서 CAS 반복으로 인한 지연</li>
+  </ul>
+
+  <p>Lock-Free 알고리즘은 이 장에서 다루기에는 고급 주제이므로, 이 책의 범위를 벗어난다. 하지만 LR/SC의 원리를 이해하면, 다음 단계로 이들을 학습하는 것은 자연스러운 확장이다.</p>
+
+</section>
+<!-- ========== 절 2 끝 ========== -->
+
+<!-- ========== 핵심 정리 ========== -->
+<section class="chapter-summary">
+  <h2>핵심 정리</h2>
+  <ul>
+    <li><strong>캐시 일관성 문제</strong>: 멀티코어에서 여러 캐시가 동일한 메모리 라인을 보유할 때, 한 캐시의 수정이 다른 캐시에 반영되지 않을 수 있다.</li>
+    <li><strong>MESI 프로토콜</strong>: Modified, Exclusive, Shared, Invalid 4가지 상태로 각 캐시 라인을 관리하며, 버스 스누핑으로 모든 캐시를 동기화한다.</li>
+    <li><strong>상태 전이</strong>: 프로세서 요청(PrRd, PrWr)과 버스 이벤트(BusRd, BusRdX)에 따라 상태가 자동으로 전이된다.</li>
+    <li><strong>버스 스누핑</strong>: 모든 캐시가 버스의 모든 트랜잭션을 감시하므로 실시간 동기화가 가능하다.</li>
+    <li><strong>LR/SC 명령어</strong>: Load-Reserved로 주소를 예약하고, Store-Conditional로 예약이 유효한지 확인한 후 조건부 저장을 수행한다.</li>
+    <li><strong>스핀락 구현</strong>: LR/SC를 이용해 "임계 영역을 획득할 때까지 반복 시도하는 락"을 구현할 수 있다.</li>
+    <li><strong>원자성 보장</strong>: LR과 SC 사이에 코드가 있어도, 다른 코어가 해당 주소를 건드리지 않으면 원자적 동작이 보장된다.</li>
+    <li><strong>멀티코어 확장</strong>: MESI와 LR/SC는 뮤텍스, 세마포어, Lock-Free 알고리즘 등의 고급 동기화 메커니즘의 기반이다.</li>
+  </ul>
+</section>
+
+<!-- ========== 연습문제 ========== -->
+<section class="exercises">
+  <h2>연습문제</h2>
+  <ol>
+    <li><strong>[기억]</strong> MESI 프로토콜의 4가지 상태 이름을 적고, 각각이 "이 캐시만 유일한가?" 와 "메모리와 일치하는가?" 를 기준으로 표로 정리하시오.</li>
+    <li><strong>[이해]</strong> 멀티코어에서 Core 0이 메모리 주소 X를 Exclusive 상태에서 보유할 때, Core 1이 같은 주소를 읽기 위해 BusRd를 보낸다. Core 0과 Core 1의 상태는 각각 어디로 전이하는가? 이때 Core 0이 해야 할 버스 동작은?</li>
+    <li><strong>[적용]</strong> 그림 25.1의 "캐시 일관성 문제" 시나리오에서, Core 0이 X를 값 5에서 수정하고자 할 때 MESI 프로토콜 하에서의 정확한 상태 전이 순서를 쓰시오. (Core 0과 Core 1/2의 초기 상태부터 Core 0의 쓰기까지)</li>
+    <li><strong>[분석]</strong> LR.W로 주소 0x1000을 예약한 후, 다른 코어가 주소 0x1004를 쓸 때, SC.W가 성공하는가 실패하는가? 예약 일치 판정 로직을 고려하여 설명하시오.</li>
+    <li><strong>[평가]</strong> 스핀락 vs 뮤텍스 중 어떤 것이 "임계 영역이 100 사이클 이상 유지되는 경우"에 더 효율적인가? 에너지와 캐시 일관성 관점에서 비교하시오.</li>
+  </ol>
+</section>
+
+<!-- ========== 다음 챕터 예고 ========== -->
+<section class="next-chapter">
+  <h2>다음 챕터 예고</h2>
+  <p>이 장에서는 멀티코어와 캐시 일관성의 기초를 다루었다. 다음 장들에서는 이 개념들을 더 심화하여, 다중 캐시 계층(L1, L2, L3), 고급 프로토콜(MESI의 확장), 그리고 실무 멀티코어 프로세서(ARM, Intel)의 설계를 분석할 예정이다. 또한 성능 최적화 기법으로 "거짓 공유(false sharing) 회피", "데이터 지역성(data locality) 개선" 등을 실습하게 될 것이다.</p>
+</section>
+
+<!-- ========== 전체 소스 코드 ========== -->
+<section class="full-source-section" id="sec-full-source">
+  <h2>📁 전체 소스 코드</h2>
+  <p>이 챕터에서 단계별로 설명한 모든 모듈의 완전한 소스 코드입니다.
+  본문에서 이미 각 코드의 동작 원리를 설명하였으므로, 지금 당장 전부를 이해하려 하지 않아도 됩니다.
+  다음 챕터에서 이 코드를 기반으로 더 복잡한 멀티코어 시스템을 설계할 예정입니다. 참고용으로 활용하십시오.</p>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch25_mesi_tracker.sv</h3>
+    <pre><code class="language-verilog">
+// ============================================================================
+// MESI 캐시 라인 상태 추적기 (Cache Line State Tracker)
+// - 교육용 단순화 모델: 단일 캐시 라인의 MESI 상태 전이를 구현
+// - 합성 가능, Basys 3 대상
+// ============================================================================
+module mesi_tracker (
+   input  logic       clk,
+   input  logic       rst_n,
+   // 프로세서 요청 (로컬 코어)
+   input  logic       pr_rd,        // 프로세서 Read 요청
+   input  logic       pr_wr,        // 프로세서 Write 요청
+   // 버스 스누핑 입력 (다른 코어의 버스 트랜잭션)
+   input  logic       bus_rd,       // 다른 코어의 Read 관찰
+   input  logic       bus_rdx,      // 다른 코어의 Read-Exclusive (Write 의도)
+   // 메모리 응답
+   input  logic       mem_shared,   // 메모리 응답 시 다른 캐시에도 복사본 존재 여부
+   // 상태 출력
+   output logic [1:0] state,        // 현재 MESI 상태
+   // 버스 동작 출력
+   output logic       do_flush,     // 수정된 데이터를 메모리에 기록
+   output logic       do_bus_rd,    // 버스 Read 트랜잭션 발생
+   output logic       do_bus_rdx,   // 버스 Read-Exclusive 트랜잭션 발생
+   output logic       do_invalidate // 자신의 캐시 라인을 무효화
+);
+
+   // MESI 상태 인코딩
+   localparam logic [1:0] MODIFIED  = 2'b00;
+   localparam logic [1:0] EXCLUSIVE = 2'b01;
+   localparam logic [1:0] SHARED    = 2'b10;
+   localparam logic [1:0] INVALID   = 2'b11;
+
+   logic [1:0] state_next;
+
+   // 상태 레지스터
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         state &lt;= INVALID;
+      else
+         state &lt;= state_next;
+   end
+
+   // 다음 상태 및 출력 결정 (조합 논리)
+   always_comb begin
+      // 기본값: 현재 상태 유지, 버스 동작 없음
+      state_next    = state;
+      do_flush      = 1'b0;
+      do_bus_rd     = 1'b0;
+      do_bus_rdx    = 1'b0;
+      do_invalidate = 1'b0;
+
+      case (state)
+         // ---------------------------------------------------------------
+         // Modified: 이 캐시만 유일한 최신 복사본 보유 (메모리는 오래됨)
+         // ---------------------------------------------------------------
+         MODIFIED: begin
+            if (bus_rd) begin
+               // 다른 코어가 읽기 요청 → 데이터 공급 후 Shared로 전이
+               state_next = SHARED;
+               do_flush   = 1'b1;  // 메모리에 기록 (Flush)
+            end
+            else if (bus_rdx) begin
+               // 다른 코어가 쓰기 의도 → 데이터 공급 후 Invalid로 전이
+               state_next    = INVALID;
+               do_flush      = 1'b1;
+               do_invalidate = 1'b1;
+            end
+            // pr_rd, pr_wr → 상태 변화 없음 (이미 Modified)
+         end
+
+         // ---------------------------------------------------------------
+         // Exclusive: 이 캐시만 보유, 메모리와 동일한 값
+         // ---------------------------------------------------------------
+         EXCLUSIVE: begin
+            if (pr_wr) begin
+               // 로컬 쓰기 → 버스 트랜잭션 없이 Modified로 (Silent 전이)
+               state_next = MODIFIED;
+            end
+            else if (bus_rd) begin
+               // 다른 코어가 읽기 → Shared로 전이
+               state_next = SHARED;
+            end
+            else if (bus_rdx) begin
+               // 다른 코어가 쓰기 의도 → Invalid로 전이
+               state_next    = INVALID;
+               do_invalidate = 1'b1;
+            end
+            // pr_rd → 상태 변화 없음
+         end
+
+         // ---------------------------------------------------------------
+         // Shared: 여러 캐시가 동일한 값 보유
+         // ---------------------------------------------------------------
+         SHARED: begin
+            if (pr_wr) begin
+               // 로컬 쓰기 → 다른 복사본 무효화 방송 후 Modified
+               state_next = MODIFIED;
+               do_bus_rdx = 1'b1;  // BusRdX (Invalidate 방송)
+            end
+            else if (bus_rdx) begin
+               // 다른 코어가 쓰기 의도 → 자신을 Invalid로
+               state_next    = INVALID;
+               do_invalidate = 1'b1;
+            end
+            // pr_rd, bus_rd → 상태 변화 없음
+         end
+
+         // ---------------------------------------------------------------
+         // Invalid: 유효한 데이터 없음
+         // ---------------------------------------------------------------
+         INVALID: begin
+            if (pr_rd) begin
+               // 로컬 읽기 미스 → 버스 Read
+               do_bus_rd = 1'b1;
+               if (mem_shared)
+                  state_next = SHARED;     // 다른 캐시에도 있으면 Shared
+               else
+                  state_next = EXCLUSIVE;  // 단독이면 Exclusive
+            end
+            else if (pr_wr) begin
+               // 로컬 쓰기 미스 → 버스 Read-Exclusive 후 Modified
+               state_next = MODIFIED;
+               do_bus_rdx = 1'b1;
+            end
+            // bus_rd, bus_rdx → 이미 Invalid, 변화 없음
+         end
+
+         default: state_next = INVALID;
+      endcase
+   end
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">SV</span>ch25_spinlock_lr_sc.sv</h3>
+    <pre><code class="language-verilog">
+// ============================================================================
+// LR/SC (Load-Reserved / Store-Conditional) 실행 유닛
+// - RISC-V A 확장의 LR.W / SC.W 명령어를 파이프라인 EX/MEM 스테이지에서 처리
+// - 교육용 단순화 모델: 단일 예약 세트(Single Reservation Set)
+// - 합성 가능, Basys 3 대상
+// ============================================================================
+module lr_sc_unit (
+   input  logic        clk,
+   input  logic        rst_n,
+
+   // 파이프라인 EX 스테이지 인터페이스
+   input  logic        ex_lr_w,       // LR.W 명령어 실행 중
+   input  logic        ex_sc_w,       // SC.W 명령어 실행 중
+   input  logic [31:0] ex_addr,       // 메모리 주소 (rs1 + offset)
+   input  logic [31:0] ex_wdata,      // SC.W 기록 데이터 (rs2 값)
+
+   // 외부 스누핑 입력 (다른 코어의 메모리 접근 감시)
+   input  logic        snoop_valid,   // 다른 코어의 메모리 접근 발생
+   input  logic [31:0] snoop_addr,    // 다른 코어가 접근한 주소
+   input  logic        snoop_write,   // 다른 코어의 쓰기 접근 여부
+
+   // 메모리 인터페이스 출력
+   output logic        mem_rd,        // 메모리 읽기 요청 (LR.W)
+   output logic        mem_wr,        // 메모리 쓰기 요청 (SC.W 성공 시)
+   output logic [31:0] mem_addr,      // 메모리 주소
+   output logic [31:0] mem_wdata,     // 메모리 기록 데이터
+
+   // SC.W 결과 (rd 레지스터에 기록)
+   output logic        sc_success,    // SC.W 성공 여부 (0=성공, 1=실패)
+   output logic        sc_result_valid // SC.W 결과 유효
+);
+
+   // 예약 레지스터 (Reservation Register)
+   logic        reservation_valid;     // 예약 유효 여부
+   logic [31:0] reservation_addr;      // 예약된 주소
+
+   // 예약 일치 판정 (워드 정렬 주소 비교)
+   logic addr_match;
+   assign addr_match = reservation_valid &amp;&amp;
+                       (reservation_addr[31:2] == ex_addr[31:2]);
+
+   // ---------------------------------------------------------------
+   // 예약 레지스터 관리
+   // ---------------------------------------------------------------
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n) begin
+         reservation_valid &lt;= 1'b0;
+         reservation_addr  &lt;= 32'h0;
+      end
+      else begin
+         // 우선순위: (1) SC.W 실행 → 예약 해제
+         //           (2) 스누핑으로 무효화
+         //           (3) LR.W 실행 → 새 예약 설정
+         if (ex_sc_w) begin
+            // SC.W가 실행되면 성공/실패와 무관하게 예약 해제
+            reservation_valid &lt;= 1'b0;
+         end
+         else if (snoop_valid &amp;&amp; reservation_valid &amp;&amp;
+                  (snoop_addr[31:2] == reservation_addr[31:2])) begin
+            // 다른 코어가 예약된 주소에 쓰기 → 예약 무효화
+            // (읽기에 의한 무효화는 구현에 따라 선택적)
+            if (snoop_write)
+               reservation_valid &lt;= 1'b0;
+         end
+         else if (ex_lr_w) begin
+            // LR.W 실행 → 새로운 예약 설정
+            reservation_valid &lt;= 1'b1;
+            reservation_addr  &lt;= ex_addr;
+         end
+      end
+   end
+
+   // ---------------------------------------------------------------
+   // 메모리 인터페이스 및 SC 결과 생성
+   // ---------------------------------------------------------------
+   always_comb begin
+      // 기본값
+      mem_rd          = 1'b0;
+      mem_wr          = 1'b0;
+      mem_addr        = ex_addr;
+      mem_wdata       = ex_wdata;
+      sc_success      = 1'b0;
+      sc_result_valid = 1'b0;
+
+      if (ex_lr_w) begin
+         // LR.W: 메모리 읽기 수행 (예약은 FF에서 설정)
+         mem_rd = 1'b1;
+      end
+      else if (ex_sc_w) begin
+         sc_result_valid = 1'b1;
+         if (addr_match) begin
+            // 예약이 유효하고 주소 일치 → SC 성공
+            mem_wr     = 1'b1;
+            sc_success = 1'b1;  // rd ← 0 (성공)
+         end
+         else begin
+            // 예약 무효 또는 주소 불일치 → SC 실패
+            mem_wr     = 1'b0;  // 메모리 쓰기 안 함
+            sc_success = 1'b0;  // rd ← 1 (실패) — 주의: RISC-V에서 0=성공
+         end
+      end
+   end
+
+   // 참고: RISC-V 스펙에서 SC.W의 rd 값
+   // - 0: Store-Conditional 성공
+   // - 비영(nonzero): Store-Conditional 실패
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>ch25_mesi_tracker_tb.sv</h3>
+    <pre><code class="language-verilog">
+// ============================================================================
+// MESI 캐시 라인 상태 추적기 테스트벤치
+// - 4가지 상태 전이 시나리오를 검증
+// - 시뮬레이션 전용 (합성 불가)
+// ============================================================================
+`timescale 1ns / 1ps
+
+module mesi_tracker_tb;
+
+   logic       clk;
+   logic       rst_n;
+   logic       pr_rd, pr_wr;
+   logic       bus_rd, bus_rdx;
+   logic       mem_shared;
+   logic [1:0] state;
+   logic       do_flush, do_bus_rd, do_bus_rdx, do_invalidate;
+
+   // DUT 인스턴스
+   mesi_tracker dut (
+      .clk          (clk),
+      .rst_n        (rst_n),
+      .pr_rd        (pr_rd),
+      .pr_wr        (pr_wr),
+      .bus_rd       (bus_rd),
+      .bus_rdx      (bus_rdx),
+      .mem_shared   (mem_shared),
+      .state        (state),
+      .do_flush     (do_flush),
+      .do_bus_rd    (do_bus_rd),
+      .do_bus_rdx   (do_bus_rdx),
+      .do_invalidate(do_invalidate)
+   );
+
+   // 상태 이름 출력용
+   function string state_name(input logic [1:0] s);
+      case (s)
+         2'b00:   return "Modified";
+         2'b01:   return "Exclusive";
+         2'b10:   return "Shared";
+         2'b11:   return "Invalid";
+         default: return "Unknown";
+      endcase
+   endfunction
+
+   // 클록 생성 (10ns 주기)
+   initial clk = 0;
+   always #5 clk = ~clk;
+
+   // 입력 초기화 태스크
+   task clear_inputs();
+      pr_rd      = 0;
+      pr_wr      = 0;
+      bus_rd     = 0;
+      bus_rdx    = 0;
+      mem_shared = 0;
+   endtask
+
+   // 테스트 시퀀스
+   initial begin
+      $display("========================================");
+      $display("MESI 상태 추적기 테스트벤치 시작");
+      $display("========================================");
+
+      clear_inputs();
+      rst_n = 0;
+      #20;
+      rst_n = 1;
+      #10;
+
+      // ----- 시나리오 1: Invalid → Exclusive (단독 Read) -----
+      $display("\n[시나리오 1] Invalid → Exclusive (단독 Read)");
+      assert(state == 2'b11) else $error("초기 상태가 Invalid가 아님!");
+      pr_rd      = 1;
+      mem_shared = 0;  // 다른 캐시에 없음
+      @(posedge clk); #1;
+      clear_inputs();
+      @(posedge clk); #1;
+      $display("  상태: %s", state_name(state));
+      assert(state == 2'b01) else $error("Exclusive 전이 실패!");
+
+      // ----- 시나리오 2: Exclusive → Modified (로컬 Write) -----
+      $display("\n[시나리오 2] Exclusive → Modified (로컬 Write)");
+      pr_wr = 1;
+      @(posedge clk); #1;
+      clear_inputs();
+      @(posedge clk); #1;
+      $display("  상태: %s", state_name(state));
+      assert(state == 2'b00) else $error("Modified 전이 실패!");
+
+      // ----- 시나리오 3: Modified → Shared (다른 코어 Read) -----
+      $display("\n[시나리오 3] Modified → Shared (BusRd)");
+      bus_rd = 1;
+      @(posedge clk); #1;
+      clear_inputs();
+      @(posedge clk); #1;
+      $display("  상태: %s, do_flush: %b", state_name(state), do_flush);
+      assert(state == 2'b10) else $error("Shared 전이 실패!");
+
+      // ----- 시나리오 4: Shared → Invalid (다른 코어 Write) -----
+      $display("\n[시나리오 4] Shared → Invalid (BusRdX)");
+      bus_rdx = 1;
+      @(posedge clk); #1;
+      clear_inputs();
+      @(posedge clk); #1;
+      $display("  상태: %s", state_name(state));
+      assert(state == 2'b11) else $error("Invalid 전이 실패!");
+
+      // ----- 시나리오 5: Invalid → Shared (공유 Read) -----
+      $display("\n[시나리오 5] Invalid → Shared (공유 Read)");
+      pr_rd      = 1;
+      mem_shared = 1;  // 다른 캐시에도 있음
+      @(posedge clk); #1;
+      clear_inputs();
+      @(posedge clk); #1;
+      $display("  상태: %s", state_name(state));
+      assert(state == 2'b10) else $error("Shared 전이 실패!");
+
+      // ----- 시나리오 6: Shared → Modified (로컬 Write + BusRdX) -----
+      $display("\n[시나리오 6] Shared → Modified (로컬 Write)");
+      pr_wr = 1;
+      @(posedge clk); #1;
+      clear_inputs();
+      @(posedge clk); #1;
+      $display("  상태: %s, do_bus_rdx: %b", state_name(state), do_bus_rdx);
+      assert(state == 2'b00) else $error("Modified 전이 실패!");
+
+      $display("\n========================================");
+      $display("모든 시나리오 통과!");
+      $display("========================================");
+      #20;
+      $finish;
+   end
+
+   // VCD 파형 저장
+   initial begin
+      $dumpfile("mesi_tracker_tb.vcd");
+      $dumpvars(0, mesi_tracker_tb);
+   end
+
+endmodule
+    </code></pre>
+  </div>
+
+  <div class="source-file">
+    <h3><span class="file-badge">TB</span>ch25_lr_sc_unit_tb.sv</h3>
+    <pre><code class="language-verilog">
+// ============================================================================
+// LR/SC 유닛 테스트벤치
+// - LR.W → SC.W 성공/실패 시나리오 검증
+// - 스누핑에 의한 예약 무효화 검증
+// - 시뮬레이션 전용 (합성 불가)
+// ============================================================================
+`timescale 1ns / 1ps
+
+module lr_sc_unit_tb;
+
+   logic        clk, rst_n;
+   logic        ex_lr_w, ex_sc_w;
+   logic [31:0] ex_addr, ex_wdata;
+   logic        snoop_valid, snoop_write;
+   logic [31:0] snoop_addr;
+   logic        mem_rd, mem_wr;
+   logic [31:0] mem_addr, mem_wdata;
+   logic        sc_success, sc_result_valid;
+
+   // DUT 인스턴스
+   lr_sc_unit dut (
+      .clk            (clk),
+      .rst_n          (rst_n),
+      .ex_lr_w        (ex_lr_w),
+      .ex_sc_w        (ex_sc_w),
+      .ex_addr        (ex_addr),
+      .ex_wdata       (ex_wdata),
+      .snoop_valid    (snoop_valid),
+      .snoop_addr     (snoop_addr),
+      .snoop_write    (snoop_write),
+      .mem_rd         (mem_rd),
+      .mem_wr         (mem_wr),
+      .mem_addr       (mem_addr),
+      .mem_wdata      (mem_wdata),
+      .sc_success     (sc_success),
+      .sc_result_valid(sc_result_valid)
+   );
+
+   // 클록 생성
+   initial clk = 0;
+   always #5 clk = ~clk;
+
+   // 입력 초기화
+   task clear_inputs();
+      ex_lr_w     = 0;
+      ex_sc_w     = 0;
+      ex_addr     = 32'h0;
+      ex_wdata    = 32'h0;
+      snoop_valid = 0;
+      snoop_addr  = 32'h0;
+      snoop_write = 0;
+   endtask
+
+   initial begin
+      $display("========================================");
+      $display("LR/SC 유닛 테스트벤치 시작");
+      $display("========================================");
+
+      clear_inputs();
+      rst_n = 0;
+      #20;
+      rst_n = 1;
+      #10;
+
+      // ----- 시나리오 1: LR.W → SC.W 성공 -----
+      $display("\n[시나리오 1] LR.W → SC.W 성공 (간섭 없음)");
+
+      // LR.W: 주소 0x1000에서 읽기 + 예약 설정
+      ex_lr_w = 1;
+      ex_addr = 32'h0000_1000;
+      @(posedge clk); #1;
+      clear_inputs();
+      assert(mem_rd == 1) else $error("LR.W 시 mem_rd가 1이 아님!");
+      $display("  LR.W 실행: addr=0x%08h, mem_rd=%b", 32'h1000, mem_rd);
+
+      @(posedge clk); #1;
+
+      // SC.W: 같은 주소에 값 42 기록 시도
+      ex_sc_w = 1;
+      ex_addr = 32'h0000_1000;
+      ex_wdata = 32'd42;
+      @(posedge clk); #1;
+      $display("  SC.W 실행: sc_success=%b, mem_wr=%b", sc_success, mem_wr);
+      assert(sc_success == 1) else $error("SC.W 성공해야 함!");
+      assert(mem_wr == 1) else $error("SC.W 성공 시 mem_wr=1이어야 함!");
+      clear_inputs();
+      @(posedge clk); #1;
+
+      // ----- 시나리오 2: LR.W → 스누핑 무효화 → SC.W 실패 -----
+      $display("\n[시나리오 2] LR.W → 스누핑 무효화 → SC.W 실패");
+
+      // LR.W: 주소 0x2000 예약
+      ex_lr_w = 1;
+      ex_addr = 32'h0000_2000;
+      @(posedge clk); #1;
+      clear_inputs();
+
+      @(posedge clk); #1;
+
+      // 다른 코어가 같은 주소에 쓰기 → 예약 무효화
+      snoop_valid = 1;
+      snoop_addr  = 32'h0000_2000;
+      snoop_write = 1;
+      @(posedge clk); #1;
+      clear_inputs();
+      $display("  스누핑 무효화: addr=0x%08h", 32'h2000);
+
+      @(posedge clk); #1;
+
+      // SC.W: 예약이 무효화되었으므로 실패해야 함
+      ex_sc_w  = 1;
+      ex_addr  = 32'h0000_2000;
+      ex_wdata = 32'd99;
+      @(posedge clk); #1;
+      $display("  SC.W 실행: sc_success=%b, mem_wr=%b", sc_success, mem_wr);
+      assert(sc_success == 0) else $error("SC.W 실패해야 함!");
+      assert(mem_wr == 0) else $error("SC.W 실패 시 mem_wr=0이어야 함!");
+      clear_inputs();
+      @(posedge clk); #1;
+
+      // ----- 시나리오 3: LR.W → SC.W 주소 불일치 → 실패 -----
+      $display("\n[시나리오 3] LR.W → SC.W 주소 불일치 → 실패");
+
+      // LR.W: 주소 0x3000 예약
+      ex_lr_w = 1;
+      ex_addr = 32'h0000_3000;
+      @(posedge clk); #1;
+      clear_inputs();
+
+      @(posedge clk); #1;
+
+      // SC.W: 다른 주소 0x4000에 시도 → 실패
+      ex_sc_w  = 1;
+      ex_addr  = 32'h0000_4000;
+      ex_wdata = 32'd77;
+      @(posedge clk); #1;
+      $display("  SC.W 실행 (주소 불일치): sc_success=%b", sc_success);
+      assert(sc_success == 0) else $error("주소 불일치 시 SC.W 실패해야 함!");
+      clear_inputs();
+      @(posedge clk); #1;
+
+      $display("\n========================================");
+      $display("모든 시나리오 통과!");
+      $display("========================================");
+      #20;
+      $finish;
+   end
+
+   // VCD 파형 저장
+   initial begin
+      $dumpfile("lr_sc_unit_tb.vcd");
+      $dumpvars(0, lr_sc_unit_tb);
+   end
+
+endmodule
+    </code></pre>
+  </div>
+
+</section>
+
+<!-- ========== Highlight.js 스크립트 (body 종료 직전) ========== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+<script>
+  // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+  document.querySelectorAll('pre code').forEach(el => {
+    if (el.className.includes('language-systemverilog')) {
+      el.className = el.className.replace('language-systemverilog', 'language-verilog');
+    }
+  });
+  hljs.highlightAll();
+</script>
+
+</body>
+</html>

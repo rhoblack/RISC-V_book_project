@@ -47,18 +47,33 @@
 - Basys 3 시뮬레이션 주력 (구현은 선택사항)
 - 실생활 비유 병행 (은행ATM, 도서관자리, 스마트폰멀티코어)
 
-## Ch25 Phase 2 일시 정지 (2026-03-15)
+## Ch25 Phase 2 초안 완료 (2026-03-16)
 
-**현재까지 생성된 파일**:
-- ✅ `review_logs/chapter25_plan.md` (기획 문서 완성)
-- ✅ `figures/ch25_sec01_mesi_states.svg`
-- ✅ `figures/ch25_sec01_multicore_coherence.svg`
-- ✅ `figures/ch25_sec02_spinlock_lr_sc.svg`
-- ✅ `code_examples/ch25_mesi_tracker.sv`
-- ✅ `code_examples/ch25_spinlock_lr_sc.sv`
-- ✅ `code_examples/ch25_mesi_tracker_tb.sv`
-- ✅ `code_examples/ch25_lr_sc_unit_tb.sv`
-- ⏳ `manuscripts/part9/chapter25.html` (진행 중)
+**완성된 파일**:
+- ✅ `review_logs/chapter25_plan.md` (기획 문서)
+- ✅ `figures/ch25_sec01_mesi_states.svg` (MESI 상태 전이도)
+- ✅ `figures/ch25_sec01_multicore_coherence.svg` (캐시 일관성 문제 시각화)
+- ✅ `figures/ch25_sec02_spinlock_lr_sc.svg` (LR/SC 타이밍 다이어그램)
+- ✅ `code_examples/ch25_mesi_tracker.sv` (MESI 상태 추적기)
+- ✅ `code_examples/ch25_spinlock_lr_sc.sv` (LR/SC 실행 유닛)
+- ✅ `code_examples/ch25_mesi_tracker_tb.sv` (MESI 테스트벤치)
+- ✅ `code_examples/ch25_lr_sc_unit_tb.sv` (LR/SC 테스트벤치)
+- ✅ `manuscripts/part9/chapter25.html` (1,341줄 원고 완성)
+
+**원고 통계**:
+- 전체 라인: 1,341
+- 섹션: 2개 (25.1 MESI, 25.2 LR/SC)
+- 학습 목표: 5개 (Remember~Create)
+- Aside 박스: 8개 (tip 1, faq 2, interview 1, metacognition 1, instructor-tip 1 + 추가 2)
+- 코드 예제: 4개 모두 포함 + 주석 상세
+- SVG 다이어그램: 3개 모두 참조
+- 비유: 4개 (도서관 필기본, Google Docs, 도서관 자리 예약, 은행 ATM/멀티프로세서 작업자)
+
+**핵심 내용**:
+- 25.1: MESI 상태 기계(M/E/S/I), 상태 전이 시나리오 6개, 버스 스누핑, 성능 분석
+- 25.2: LR/SC 명령어 시맨틱스, 예약 메커니즘, 스핀락 구현, Lock-Free 개요
+
+**다음 단계**: Phase 3 병렬 리뷰 (기술 리뷰어, 초보자 독자, 교육 설계자, 심리 전문가, 강사)
 
 ---
 
