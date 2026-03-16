@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .sig-name { fill: #374151; font-size: 12px; font-weight: 600; text-anchor: end; }
+      .clk-line { stroke: #2563EB; stroke-width: 1.5; fill: none; }
+      .sig-line { stroke: #374151; stroke-width: 1.5; fill: none; }
+      .beat { rx: 2; }
+      .beat0 { fill: #DBEAFE; opacity: 0.5; }
+      .beat1 { fill: #D1FAE5; opacity: 0.5; }
+      .beat2 { fill: #EDE9FE; opacity: 0.5; }
+      .beat3 { fill: #FEF3C7; opacity: 0.5; }
+      .cycle-num { font-size: 10px; fill: #9CA3AF; text-anchor: middle; }
+      .title { font-size: 14px; fill: #2563EB; font-weight: 700; }
+      .val-text { font-size: 9px; fill: #374151; text-anchor: middle; font-weight: 600; }
+    </style>
+  </defs>
+  <text x="10" y="20" class="title">AHB INCR4 버스트 전송 (4-beat)</text>
+
+  <text x="195" y="40" class="cycle-num">T1</text>
+  <text x="310" y="40" class="cycle-num">T2</text>
+  <text x="425" y="40" class="cycle-num">T3</text>
+  <text x="540" y="40" class="cycle-num">T4</text>
+  <text x="655" y="40" class="cycle-num">T5</text>
+
+  <!-- HCLK -->
+  <text x="100" y="65" class="sig-name">HCLK</text>
+  <path d="M 110,60 L 130,60 L 130,45 L 195,45 L 195,60 L 245,60 L 245,45 L 310,45 L 310,60 L 360,60 L 360,45 L 425,45 L 425,60 L 475,60 L 475,45 L 540,45 L 540,60 L 590,60 L 590,45 L 655,45 L 655,60 L 705,60 L 705,45 L 770,45 L 770,60" class="clk-line"/>
+
+  <!-- HTRANS -->
+  <text x="100" y="95" class="sig-name">HTRANS</text>
+  <rect x="130" y="78" width="115" height="20" class="beat beat0"/>
+  <rect x="245" y="78" width="115" height="20" class="beat beat1"/>
+  <rect x="360" y="78" width="115" height="20" class="beat beat2"/>
+  <rect x="475" y="78" width="115" height="20" class="beat beat3"/>
+  <path d="M 110,95 L 130,95 L 135,80 L 240,80 L 245,95 L 245,80 L 355,80 L 360,95 L 360,80 L 470,80 L 475,95 L 475,80 L 585,80 L 590,95 L 770,95" class="sig-line"/>
+  <text x="187" y="92" class="val-text" fill="#2563EB">NONSEQ</text>
+  <text x="302" y="92" class="val-text" fill="#059669">SEQ</text>
+  <text x="417" y="92" class="val-text" fill="#7C3AED">SEQ</text>
+  <text x="532" y="92" class="val-text" fill="#D97706">SEQ</text>
+
+  <!-- HADDR -->
+  <text x="100" y="125" class="sig-name">HADDR</text>
+  <rect x="130" y="108" width="115" height="20" class="beat beat0"/>
+  <rect x="245" y="108" width="115" height="20" class="beat beat1"/>
+  <rect x="360" y="108" width="115" height="20" class="beat beat2"/>
+  <rect x="475" y="108" width="115" height="20" class="beat beat3"/>
+  <path d="M 110,125 L 130,125 L 135,110 L 240,110 L 245,125 L 245,110 L 355,110 L 360,125 L 360,110 L 470,110 L 475,125 L 475,110 L 585,110 L 590,125 L 770,125" class="sig-line"/>
+  <text x="187" y="122" class="val-text">A</text>
+  <text x="302" y="122" class="val-text">A+4</text>
+  <text x="417" y="122" class="val-text">A+8</text>
+  <text x="532" y="122" class="val-text">A+12</text>
+
+  <!-- HBURST -->
+  <text x="100" y="155" class="sig-name">HBURST</text>
+  <rect x="130" y="138" width="460" height="20" rx="2" fill="#F3F4F6"/>
+  <path d="M 110,155 L 130,155 L 135,140 L 585,140 L 590,155 L 770,155" class="sig-line"/>
+  <text x="360" y="152" class="val-text">INCR4 (011)</text>
+
+  <!-- HWDATA (data phase) -->
+  <text x="100" y="185" class="sig-name">HWDATA</text>
+  <rect x="245" y="168" width="115" height="20" class="beat beat0"/>
+  <rect x="360" y="168" width="115" height="20" class="beat beat1"/>
+  <rect x="475" y="168" width="115" height="20" class="beat beat2"/>
+  <rect x="590" y="168" width="115" height="20" class="beat beat3"/>
+  <path d="M 110,185 L 245,185 L 250,170 L 355,170 L 360,185 L 360,170 L 470,170 L 475,185 L 475,170 L 585,170 L 590,185 L 590,170 L 700,170 L 705,185 L 770,185" class="sig-line"/>
+  <text x="302" y="182" class="val-text">D0</text>
+  <text x="417" y="182" class="val-text">D1</text>
+  <text x="532" y="182" class="val-text">D2</text>
+  <text x="647" y="182" class="val-text">D3</text>
+
+  <!-- HREADY -->
+  <text x="100" y="215" class="sig-name">HREADY</text>
+  <path d="M 110,215 L 110,200 L 770,200" stroke="#059669" stroke-width="2" fill="none"/>
+
+  <text x="400" y="248" fill="#6B7280" font-size="11" text-anchor="middle" font-style="italic">
+    버스트 전송: 첫 beat는 NONSEQ, 이후 beat는 SEQ. 데이터는 1사이클 뒤에 전달 (파이프라인).
+  </text>
+</svg>

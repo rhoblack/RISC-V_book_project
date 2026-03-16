@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix D — Basys 3 FPGA 리소스 및 핀 배치</title>
+    <link rel="stylesheet" href="../../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 40px 20px; text-align: center; margin-bottom: 40px;
+        }
+        .appendix-header h1 { margin: 0; font-size: 2.5em; }
+        .appendix-header p { margin: 10px 0 0 0; font-size: 1.1em; }
+        .appendix-section h2 {
+            border-left: 4px solid #667eea; padding-left: 15px;
+            margin-top: 40px; margin-bottom: 20px;
+        }
+        .reference-table {
+            width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em;
+        }
+        .reference-table th {
+            background: #f0f0f0; padding: 10px 8px; text-align: left;
+            border-bottom: 2px solid #667eea; font-size: 0.9em;
+        }
+        .reference-table td {
+            padding: 7px 8px; border-bottom: 1px solid #ddd; font-size: 0.88em;
+        }
+        .reference-table tr:nth-child(even) { background: #f9f9f9; }
+        .reference-table code {
+            background: #f5f5f5; padding: 1px 4px; border-radius: 3px;
+            font-family: 'Courier New', monospace; font-size: 0.85em;
+        }
+        .xdc-code { font-size: 0.82em; color: #059669; }
+        .usage-bar { height: 14px; border-radius: 3px; display: inline-block; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <div class="appendix-header">
+        <h1>Appendix D — Basys 3 FPGA 리소스 및 핀 배치</h1>
+        <p>XC7A35T 리소스 | Basys 3 핀 매핑 | 클록/리셋 회로</p>
+    </div>
+
+    <main class="content">
+
+        <!-- ========== D.1 XC7A35T 리소스 요약 ========== -->
+        <div class="appendix-section">
+            <h2>D.1 XC7A35T 리소스 요약</h2>
+            <p>
+                Basys 3 보드의 Artix-7 XC7A35TCPG236-1 FPGA 리소스 총량과
+                본 교재 프로젝트의 예상 사용량을 정리한다. 합성 시 리소스 사용률이
+                80%를 넘으면 배치배선 난이도가 급격히 증가하므로 70% 이하를 목표로 한다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>리소스</th>
+                        <th>전체 개수</th>
+                        <th>프로젝트 예상</th>
+                        <th>사용률</th>
+                        <th>비고</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CLB Slices</td>
+                        <td>5,200</td>
+                        <td>~3,500</td>
+                        <td>~67%</td>
+                        <td>각 Slice = 4 LUT + 8 FF</td>
+                    </tr>
+                    <tr>
+                        <td>LUT (6-input)</td>
+                        <td>20,800</td>
+                        <td>~13,000</td>
+                        <td>~63%</td>
+                        <td>파이프라인+캐시+AMBA+주변장치</td>
+                    </tr>
+                    <tr>
+                        <td>Flip-Flop</td>
+                        <td>41,600</td>
+                        <td>~8,000</td>
+                        <td>~19%</td>
+                        <td>파이프라인 레지스터, FSM 상태</td>
+                    </tr>
+                    <tr>
+                        <td>Block RAM (36Kb)</td>
+                        <td>50</td>
+                        <td>~15</td>
+                        <td>~30%</td>
+                        <td>IMEM + DMEM + I-Cache Data</td>
+                    </tr>
+                    <tr>
+                        <td>Block RAM (18Kb)</td>
+                        <td>100</td>
+                        <td>~0 (36Kb 사용)</td>
+                        <td>~0%</td>
+                        <td>18Kb 블록은 36Kb 반분할</td>
+                    </tr>
+                    <tr>
+                        <td>DSP48E1</td>
+                        <td>90</td>
+                        <td>~2</td>
+                        <td>~2%</td>
+                        <td>M 확장 곱셈기 (Ch24, 선택)</td>
+                    </tr>
+                    <tr>
+                        <td>IOB (I/O Block)</td>
+                        <td>100</td>
+                        <td>~60</td>
+                        <td>~57%</td>
+                        <td>LED+SW+BTN+SEG+UART</td>
+                    </tr>
+                    <tr>
+                        <td>BUFG (Global Buffer)</td>
+                        <td>32</td>
+                        <td>2</td>
+                        <td>~6%</td>
+                        <td>sys_clk + 가능 시 UART clk</td>
+                    </tr>
+                    <tr>
+                        <td>MMCM</td>
+                        <td>5</td>
+                        <td>1</td>
+                        <td>20%</td>
+                        <td>100MHz → 50MHz 변환</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>BRAM 활용 계획</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>용도</th><th>크기</th><th>36Kb BRAM 수</th><th>챕터</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>IMEM (명령어 메모리)</td><td>16KB</td><td>4</td><td>Ch05</td></tr>
+                    <tr><td>DMEM (데이터 메모리)</td><td>16KB</td><td>4</td><td>Ch05</td></tr>
+                    <tr><td>I-Cache Data Array</td><td>4KB</td><td>1</td><td>Ch13</td></tr>
+                    <tr><td>Main Memory (시뮬레이션용)</td><td>64KB</td><td>~15</td><td>Ch15</td></tr>
+                    <tr><td>I-Cache Tag</td><td>LUTRAM</td><td>0</td><td>Ch13</td></tr>
+                    <tr><td>D-Cache Data Array</td><td>LUTRAM</td><td>0</td><td>Ch14</td></tr>
+                    <tr><td><strong>합계</strong></td><td></td><td><strong>~15 (30%)</strong></td><td></td></tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>XC7A35T의 병목은 LUT(20,800개)이다. BRAM과 DSP는 여유가 있으므로
+                가능한 메모리는 BRAM으로, 곱셈은 DSP로 매핑하여 LUT 사용량을 줄이는 것이 핵심 전략이다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== D.2 보드 I/O 배치 개요 ========== -->
+        <div class="appendix-section">
+            <h2>D.2 Basys 3 보드 I/O 배치 개요</h2>
+            <p>
+                Basys 3 보드는 교육용으로 설계된 Artix-7 FPGA 개발 보드이다.
+                LED, 스위치, 7-세그먼트 디스플레이, USB-UART 등 다양한 주변 장치가 내장되어 있다.
+            </p>
+
+            <figure>
+                <img src="../../figures/app_d_basys3_block.svg" alt="Basys 3 블록 다이어그램" style="max-width:100%">
+                <figcaption>그림 D.1: Basys 3 보드 블록 다이어그램. FPGA를 중심으로 주변 I/O 인터페이스 배치.</figcaption>
+            </figure>
+        </div>
+
+        <!-- ========== D.3 전체 핀 배치 표 ========== -->
+        <div class="appendix-section">
+            <h2>D.3 전체 핀 배치 표 (XDC 레퍼런스)</h2>
+            <p>
+                각 표의 XDC 열을 그대로 복사하여 제약 파일에 붙여 넣을 수 있다.
+                모든 I/O 표준은 LVCMOS33 (3.3V)이다.
+            </p>
+
+            <h3>D.3.1 LED (16개)</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>신호</th><th>FPGA 핀</th><th>I/O 표준</th><th>XDC 구문</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>led[0]</td><td>U16</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U16 IOSTANDARD LVCMOS33} [get_ports {led[0]}]</code></td></tr>
+                    <tr><td>led[1]</td><td>E19</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN E19 IOSTANDARD LVCMOS33} [get_ports {led[1]}]</code></td></tr>
+                    <tr><td>led[2]</td><td>U19</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U19 IOSTANDARD LVCMOS33} [get_ports {led[2]}]</code></td></tr>
+                    <tr><td>led[3]</td><td>V19</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V19 IOSTANDARD LVCMOS33} [get_ports {led[3]}]</code></td></tr>
+                    <tr><td>led[4]</td><td>W18</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W18 IOSTANDARD LVCMOS33} [get_ports {led[4]}]</code></td></tr>
+                    <tr><td>led[5]</td><td>U15</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U15 IOSTANDARD LVCMOS33} [get_ports {led[5]}]</code></td></tr>
+                    <tr><td>led[6]</td><td>U14</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U14 IOSTANDARD LVCMOS33} [get_ports {led[6]}]</code></td></tr>
+                    <tr><td>led[7]</td><td>V14</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports {led[7]}]</code></td></tr>
+                    <tr><td>led[8]</td><td>V13</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V13 IOSTANDARD LVCMOS33} [get_ports {led[8]}]</code></td></tr>
+                    <tr><td>led[9]</td><td>V3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V3 IOSTANDARD LVCMOS33} [get_ports {led[9]}]</code></td></tr>
+                    <tr><td>led[10]</td><td>W3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W3 IOSTANDARD LVCMOS33} [get_ports {led[10]}]</code></td></tr>
+                    <tr><td>led[11]</td><td>U3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U3 IOSTANDARD LVCMOS33} [get_ports {led[11]}]</code></td></tr>
+                    <tr><td>led[12]</td><td>P3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN P3 IOSTANDARD LVCMOS33} [get_ports {led[12]}]</code></td></tr>
+                    <tr><td>led[13]</td><td>N3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN N3 IOSTANDARD LVCMOS33} [get_ports {led[13]}]</code></td></tr>
+                    <tr><td>led[14]</td><td>P1</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN P1 IOSTANDARD LVCMOS33} [get_ports {led[14]}]</code></td></tr>
+                    <tr><td>led[15]</td><td>L1</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN L1 IOSTANDARD LVCMOS33} [get_ports {led[15]}]</code></td></tr>
+                </tbody>
+            </table>
+
+            <h3>D.3.2 스위치 (16개)</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>신호</th><th>FPGA 핀</th><th>I/O 표준</th><th>XDC 구문</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>sw[0]</td><td>V17</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V17 IOSTANDARD LVCMOS33} [get_ports {sw[0]}]</code></td></tr>
+                    <tr><td>sw[1]</td><td>V16</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V16 IOSTANDARD LVCMOS33} [get_ports {sw[1]}]</code></td></tr>
+                    <tr><td>sw[2]</td><td>W16</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W16 IOSTANDARD LVCMOS33} [get_ports {sw[2]}]</code></td></tr>
+                    <tr><td>sw[3]</td><td>W17</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W17 IOSTANDARD LVCMOS33} [get_ports {sw[3]}]</code></td></tr>
+                    <tr><td>sw[4]</td><td>W15</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W15 IOSTANDARD LVCMOS33} [get_ports {sw[4]}]</code></td></tr>
+                    <tr><td>sw[5]</td><td>V15</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V15 IOSTANDARD LVCMOS33} [get_ports {sw[5]}]</code></td></tr>
+                    <tr><td>sw[6]</td><td>W14</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W14 IOSTANDARD LVCMOS33} [get_ports {sw[6]}]</code></td></tr>
+                    <tr><td>sw[7]</td><td>W13</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W13 IOSTANDARD LVCMOS33} [get_ports {sw[7]}]</code></td></tr>
+                    <tr><td>sw[8]</td><td>V2</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V2 IOSTANDARD LVCMOS33} [get_ports {sw[8]}]</code></td></tr>
+                    <tr><td>sw[9]</td><td>T3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN T3 IOSTANDARD LVCMOS33} [get_ports {sw[9]}]</code></td></tr>
+                    <tr><td>sw[10]</td><td>T2</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN T2 IOSTANDARD LVCMOS33} [get_ports {sw[10]}]</code></td></tr>
+                    <tr><td>sw[11]</td><td>R3</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN R3 IOSTANDARD LVCMOS33} [get_ports {sw[11]}]</code></td></tr>
+                    <tr><td>sw[12]</td><td>W2</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W2 IOSTANDARD LVCMOS33} [get_ports {sw[12]}]</code></td></tr>
+                    <tr><td>sw[13]</td><td>U1</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U1 IOSTANDARD LVCMOS33} [get_ports {sw[13]}]</code></td></tr>
+                    <tr><td>sw[14]</td><td>T1</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN T1 IOSTANDARD LVCMOS33} [get_ports {sw[14]}]</code></td></tr>
+                    <tr><td>sw[15]</td><td>R2</td><td>LVCMOS33</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN R2 IOSTANDARD LVCMOS33} [get_ports {sw[15]}]</code></td></tr>
+                </tbody>
+            </table>
+
+            <h3>D.3.3 버튼 (5개)</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>신호</th><th>위치</th><th>FPGA 핀</th><th>XDC 구문</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>btnC</td><td>중앙</td><td>U18</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U18 IOSTANDARD LVCMOS33} [get_ports btnC]</code></td></tr>
+                    <tr><td>btnU</td><td>상</td><td>T18</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN T18 IOSTANDARD LVCMOS33} [get_ports btnU]</code></td></tr>
+                    <tr><td>btnL</td><td>좌</td><td>W19</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W19 IOSTANDARD LVCMOS33} [get_ports btnL]</code></td></tr>
+                    <tr><td>btnR</td><td>우</td><td>T17</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN T17 IOSTANDARD LVCMOS33} [get_ports btnR]</code></td></tr>
+                    <tr><td>btnD</td><td>하</td><td>U17</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U17 IOSTANDARD LVCMOS33} [get_ports btnD]</code></td></tr>
+                </tbody>
+            </table>
+
+            <h3>D.3.4 7-세그먼트 디스플레이</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>신호</th><th>설명</th><th>FPGA 핀</th><th>XDC 구문</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>seg[0] (CA)</td><td>세그먼트 A</td><td>W7</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W7 IOSTANDARD LVCMOS33} [get_ports {seg[0]}]</code></td></tr>
+                    <tr><td>seg[1] (CB)</td><td>세그먼트 B</td><td>W6</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W6 IOSTANDARD LVCMOS33} [get_ports {seg[1]}]</code></td></tr>
+                    <tr><td>seg[2] (CC)</td><td>세그먼트 C</td><td>U8</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U8 IOSTANDARD LVCMOS33} [get_ports {seg[2]}]</code></td></tr>
+                    <tr><td>seg[3] (CD)</td><td>세그먼트 D</td><td>V8</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V8 IOSTANDARD LVCMOS33} [get_ports {seg[3]}]</code></td></tr>
+                    <tr><td>seg[4] (CE)</td><td>세그먼트 E</td><td>U5</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U5 IOSTANDARD LVCMOS33} [get_ports {seg[4]}]</code></td></tr>
+                    <tr><td>seg[5] (CF)</td><td>세그먼트 F</td><td>V5</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V5 IOSTANDARD LVCMOS33} [get_ports {seg[5]}]</code></td></tr>
+                    <tr><td>seg[6] (CG)</td><td>세그먼트 G</td><td>U7</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U7 IOSTANDARD LVCMOS33} [get_ports {seg[6]}]</code></td></tr>
+                    <tr><td>dp</td><td>소수점</td><td>V7</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V7 IOSTANDARD LVCMOS33} [get_ports dp]</code></td></tr>
+                    <tr><td>an[0]</td><td>자릿수 0 (우)</td><td>U2</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U2 IOSTANDARD LVCMOS33} [get_ports {an[0]}]</code></td></tr>
+                    <tr><td>an[1]</td><td>자릿수 1</td><td>U4</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN U4 IOSTANDARD LVCMOS33} [get_ports {an[1]}]</code></td></tr>
+                    <tr><td>an[2]</td><td>자릿수 2</td><td>V4</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN V4 IOSTANDARD LVCMOS33} [get_ports {an[2]}]</code></td></tr>
+                    <tr><td>an[3]</td><td>자릿수 3 (좌)</td><td>W4</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W4 IOSTANDARD LVCMOS33} [get_ports {an[3]}]</code></td></tr>
+                </tbody>
+            </table>
+
+            <h3>D.3.5 UART, 클록, 기타</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>신호</th><th>설명</th><th>FPGA 핀</th><th>XDC 구문</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>clk_100mhz</td><td>100MHz 클록</td><td>W5</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN W5 IOSTANDARD LVCMOS33} [get_ports clk_100mhz]</code></td></tr>
+                    <tr><td>uart_rxd</td><td>UART 수신</td><td>B18</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN B18 IOSTANDARD LVCMOS33} [get_ports uart_rxd]</code></td></tr>
+                    <tr><td>uart_txd</td><td>UART 송신</td><td>A18</td><td class="xdc-code"><code>set_property -dict {PACKAGE_PIN A18 IOSTANDARD LVCMOS33} [get_ports uart_txd]</code></td></tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>Basys 3의 LED는 <strong>액티브 하이(Active High)</strong>이고 (<code>led=1</code>이면 켜짐),
+                7-세그먼트는 <strong>액티브 로우(Active Low)</strong>이다 (<code>seg=0</code>이면 세그먼트 켜짐, <code>an=0</code>이면 자릿수 활성화).
+                두 장치의 극성이 다르므로 혼동에 주의하라.</p>
+            </aside>
+        </div>
+
+        <!-- ========== D.4 시스템 클록 및 리셋 회로 ========== -->
+        <div class="appendix-section">
+            <h2>D.4 시스템 클록 및 리셋 회로</h2>
+            <p>
+                Basys 3의 100MHz 온보드 오실레이터를 MMCM/PLL로 분주하여 50MHz 시스템 클록을 생성한다.
+                비동기 리셋(btnC)은 2단 플립플롭 동기화기를 거쳐 동기 리셋으로 변환한다.
+            </p>
+
+            <figure>
+                <img src="../../figures/app_d_clk_rst.svg" alt="클록/리셋 회로" style="max-width:100%">
+                <figcaption>그림 D.2: 시스템 클록 및 리셋 회로. 100MHz → MMCM → 50MHz, 비동기 리셋 → 2단 FF → 동기 리셋.</figcaption>
+            </figure>
+
+            <h3>왜 리셋을 동기화해야 하는가?</h3>
+            <p>
+                비동기 리셋 신호가 클록 상승 에지 근처에서 해제(deassert)되면,
+                플립플롭의 셋업/홀드 타임을 위반하여 메타스태빌리티(metastability)가 발생할 수 있다.
+                메타스태빌리티 상태의 플립플롭은 0도 1도 아닌 불확정 값을 출력하며,
+                이것이 다운스트림 로직으로 전파되면 시스템 전체가 예측 불가능한 상태에 빠진다.
+            </p>
+            <p>
+                2단 플립플롭 동기화기를 사용하면, 첫 번째 FF에서 메타스태빌리티가 발생하더라도
+                한 클록 사이클 내에 해소될 확률이 매우 높아(MTBF &gt; 10^20년)
+                두 번째 FF의 출력은 안정된 0 또는 1이 된다.
+            </p>
+
+            <h3>클록 생성기 코드</h3>
+            <pre><code class="language-systemverilog">
+// MMCME2_BASE: 100MHz → 50MHz
+// VCO = 100MHz × 10 = 1000MHz
+// CLKOUT0 = 1000MHz / 20 = 50MHz
+MMCME2_BASE #(
+   .CLKIN1_PERIOD    (10.000),
+   .CLKFBOUT_MULT_F  (10.000),
+   .DIVCLK_DIVIDE    (1),
+   .CLKOUT0_DIVIDE_F (20.000)
+) mmcm_inst (
+   .CLKIN1   (clk_100mhz),
+   .RST      (rst_raw),
+   .CLKFBIN  (clk_fb),
+   .CLKFBOUT (clk_fb),
+   .CLKOUT0  (clk_out0_unbuf),
+   .LOCKED   (locked),
+   .PWRDWN   (1'b0)
+   // ... 미사용 출력 생략
+);
+
+BUFG bufg_inst (
+   .I (clk_out0_unbuf),
+   .O (clk_50mhz)
+);
+            </code></pre>
+
+            <h3>리셋 동기화기 코드</h3>
+            <pre><code class="language-systemverilog">
+// 2단 FF 리셋 동기화기
+// 비동기 어서트 + 동기 디어서트
+(* async_reg = "true" *) logic rst_meta;
+(* async_reg = "true" *) logic rst_sync_reg;
+
+always_ff @(posedge clk or negedge rst_async_n) begin
+   if (!rst_async_n) begin
+      rst_meta     &lt;= 1'b0;   // 비동기 리셋: 즉시 활성화
+      rst_sync_reg &lt;= 1'b0;
+   end else begin
+      rst_meta     &lt;= 1'b1;   // 동기 해제: 2단 통과
+      rst_sync_reg &lt;= rst_meta;
+   end
+end
+
+assign rst_sync_n = rst_sync_reg;
+            </code></pre>
+
+            <aside class="faq">
+                <strong>수강생 단골 질문</strong>
+                <p><strong>Q:</strong> 왜 3단이 아니라 2단 동기화인가요?</p>
+                <p><strong>A:</strong> 2단만으로도 MTBF(평균 고장 간격)가 수십 년 이상이다. 3단을 사용하면 1사이클 추가 지연이 발생하고 면적이 증가하지만 MTBF 개선 효과는 미미하다. 산업 표준은 2단이며, 극한 환경(방사선 등)에서만 3단을 사용한다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== D.5 리소스 사용량 이력 ========== -->
+        <div class="appendix-section">
+            <h2>D.5 프로젝트 리소스 사용량 이력</h2>
+            <p>
+                각 챕터의 설계를 Basys 3에 합성한 결과를 비교한다.
+                이 표는 실제 Vivado 합성 결과로 채울 수 있도록 템플릿 형태로 제공한다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>챕터 / 구성</th>
+                        <th>LUT</th>
+                        <th>FF</th>
+                        <th>BRAM</th>
+                        <th>DSP</th>
+                        <th>Fmax (MHz)</th>
+                        <th>WNS (ns)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Ch06: 단일사이클 CPU</td>
+                        <td>~2,500</td>
+                        <td>~200</td>
+                        <td>8</td>
+                        <td>0</td>
+                        <td>~25</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch08: 멀티사이클 CPU</td>
+                        <td>~2,200</td>
+                        <td>~400</td>
+                        <td>8</td>
+                        <td>0</td>
+                        <td>~50</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch12: 파이프라인 CPU</td>
+                        <td>~4,500</td>
+                        <td>~2,000</td>
+                        <td>8</td>
+                        <td>0</td>
+                        <td>~65</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch13: + I-Cache</td>
+                        <td>~5,500</td>
+                        <td>~2,200</td>
+                        <td>9</td>
+                        <td>0</td>
+                        <td>~60</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch14: + D-Cache</td>
+                        <td>~7,500</td>
+                        <td>~2,800</td>
+                        <td>9</td>
+                        <td>0</td>
+                        <td>~55</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch15: + 메모리 컨트롤러</td>
+                        <td>~8,500</td>
+                        <td>~3,200</td>
+                        <td>15</td>
+                        <td>0</td>
+                        <td>~55</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch17: + AMBA + 주변장치</td>
+                        <td>~11,000</td>
+                        <td>~5,500</td>
+                        <td>15</td>
+                        <td>0</td>
+                        <td>~50</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr>
+                        <td>Ch22: 최종 SoC</td>
+                        <td>~13,000</td>
+                        <td>~8,000</td>
+                        <td>15</td>
+                        <td>0</td>
+                        <td>~50</td>
+                        <td>&mdash;</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p style="font-size:0.9em; color:#6B7280; font-style:italic;">
+                위 수치는 예상값이며, 실제 합성 결과는 코드 최적화 수준, Vivado 합성 전략, 제약 조건에 따라 달라진다.
+                WNS 열은 합성 후 <code>report_timing_summary</code>에서 확인하여 기입한다.
+            </p>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>LUT 사용량이 챕터마다 증가하는 추세를 확인하라. Ch06(단일사이클)에서 Ch22(최종 SoC)까지
+                약 5배 증가하며, 최종 사용률은 ~63%로 Basys 3의 리소스 예산 내에 있다.
+                LUT 사용률이 70%를 넘으면 배치배선 시간이 급증하고 타이밍 클로저가 어려워진다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== 전체 소스 코드 ========== -->
+        <section class="full-source-section" id="sec-full-source">
+            <h2>전체 소스 코드</h2>
+            <p>이 부록에서 소개한 클록 생성기와 리셋 동기화기의 완전한 소스 코드이다.
+            Chapter 01(환경 구축) 이후 모든 프로젝트에서 재사용할 수 있다.</p>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SV</span>app_d_clk_gen.sv</h3>
+                <pre><code class="language-systemverilog">
+module clk_gen (
+   input  logic clk_100mhz,
+   input  logic rst_raw,
+   output logic clk_50mhz,
+   output logic locked
+);
+   logic clk_fb;
+   logic clk_out0_unbuf;
+
+   MMCME2_BASE #(
+      .CLKIN1_PERIOD    (10.000),
+      .CLKFBOUT_MULT_F  (10.000),
+      .DIVCLK_DIVIDE    (1),
+      .CLKOUT0_DIVIDE_F (20.000),
+      .CLKOUT0_PHASE    (0.000)
+   ) mmcm_inst (
+      .CLKIN1   (clk_100mhz),
+      .RST      (rst_raw),
+      .CLKFBIN  (clk_fb),
+      .CLKFBOUT (clk_fb),
+      .CLKOUT0  (clk_out0_unbuf),
+      .LOCKED   (locked),
+      .CLKOUT0B (), .CLKOUT1  (), .CLKOUT1B (),
+      .CLKOUT2  (), .CLKOUT2B (), .CLKOUT3  (),
+      .CLKOUT3B (), .CLKOUT4  (), .CLKOUT5  (),
+      .CLKOUT6  (), .CLKFBOUTB(), .PWRDWN   (1'b0)
+   );
+
+   BUFG bufg_inst (.I(clk_out0_unbuf), .O(clk_50mhz));
+endmodule
+                </code></pre>
+            </div>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SV</span>app_d_rst_sync.sv</h3>
+                <pre><code class="language-systemverilog">
+module rst_sync (
+   input  logic clk,
+   input  logic rst_async_n,
+   output logic rst_sync_n
+);
+   (* async_reg = "true" *) logic rst_meta;
+   (* async_reg = "true" *) logic rst_sync_reg;
+
+   always_ff @(posedge clk or negedge rst_async_n) begin
+      if (!rst_async_n) begin
+         rst_meta     &lt;= 1'b0;
+         rst_sync_reg &lt;= 1'b0;
+      end else begin
+         rst_meta     &lt;= 1'b1;
+         rst_sync_reg &lt;= rst_meta;
+      end
+   end
+
+   assign rst_sync_n = rst_sync_reg;
+endmodule
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- 부록 끝 -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>이 부록의 목적</strong>: XDC 파일 작성, 리소스 예산 관리, 클록/리셋 설계 시
+                Basys 3 하드웨어 사양을 빠르게 참조할 수 있는 레퍼런스 카드이다.
+            </p>
+            <p>
+                기반 자료: Xilinx DS180 (Artix-7 Data Sheet) | Digilent Basys 3 Reference Manual (Rev C)
+            </p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script>
+        document.querySelectorAll('code.language-systemverilog').forEach(el => {
+            el.classList.remove('language-systemverilog');
+            el.classList.add('language-verilog');
+        });
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

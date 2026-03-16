@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 350" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .state { rx: 12; ry: 12; stroke-width: 2; }
+      .state-name { fill: white; font-size: 13px; font-weight: 700; text-anchor: middle; }
+      .state-desc { fill: white; font-size: 10px; text-anchor: middle; opacity: 0.85; }
+      .trans { stroke: #6B7280; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .trans-label { font-size: 10px; fill: #374151; text-anchor: middle; }
+      .trans-cond { font-size: 9px; fill: #6B7280; font-style: italic; text-anchor: middle; }
+      .title { font-size: 16px; fill: #7C3AED; font-weight: 700; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6B7280"/>
+    </marker>
+  </defs>
+  <text x="20" y="25" class="title">AHB-to-APB 브리지 FSM (3-state, Ch17 동일)</text>
+
+  <!-- IDLE 상태 -->
+  <rect x="250" y="50" width="160" height="55" class="state" fill="#6B7280" stroke="#4B5563"/>
+  <text x="330" y="72" class="state-name">IDLE</text>
+  <text x="330" y="88" class="state-desc">PSEL=0, PENABLE=0</text>
+
+  <!-- SETUP -->
+  <rect x="250" y="170" width="160" height="55" class="state" fill="#7C3AED" stroke="#6D28D9"/>
+  <text x="330" y="192" class="state-name">SETUP</text>
+  <text x="330" y="208" class="state-desc">PSEL=1, PENABLE=0</text>
+
+  <!-- ACCESS -->
+  <rect x="250" y="280" width="160" height="55" class="state" fill="#059669" stroke="#047857"/>
+  <text x="330" y="302" class="state-name">ACCESS</text>
+  <text x="330" y="318" class="state-desc">PSEL=1, PENABLE=1</text>
+
+  <!-- 전이: IDLE → SETUP -->
+  <line x1="330" y1="105" x2="330" y2="168" class="trans"/>
+  <text x="420" y="140" class="trans-label">HSELx &amp; HTRANS!=IDLE</text>
+
+  <!-- 전이: SETUP → ACCESS -->
+  <line x1="330" y1="225" x2="330" y2="278" class="trans"/>
+  <text x="420" y="255" class="trans-label">항상 (PENABLE=1)</text>
+
+  <!-- 전이: ACCESS → IDLE (PREADY=1, 단일 전송) -->
+  <path d="M 250,307 L 100,307 L 100,77 L 248,77" class="trans"/>
+  <text x="100" y="195" class="trans-label" transform="rotate(-90, 100, 195)">PREADY=1 &amp; !연속전송</text>
+
+  <!-- 전이: ACCESS → SETUP (PREADY=1, 연속 전송) -->
+  <path d="M 410,307 L 550,307 L 550,197 L 412,197" class="trans"/>
+  <text x="550" y="255" class="trans-label" transform="rotate(-90, 550, 255)">PREADY=1 &amp; 연속전송</text>
+
+  <!-- 전이: ACCESS → ACCESS (PREADY=0, 대기) -->
+  <path d="M 410,320 C 460,320 460,290 412,290" class="trans"/>
+  <text x="490" y="308" class="trans-cond">PREADY=0</text>
+  <text x="490" y="298" class="trans-label">대기</text>
+
+  <!-- 자기 루프: IDLE → IDLE -->
+  <path d="M 250,65 C 200,45 200,90 248,82" class="trans"/>
+  <text x="185" y="60" class="trans-cond">No transfer</text>
+
+  <!-- HREADY 출력 표시 -->
+  <rect x="20" y="270" width="190" height="60" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <text x="115" y="290" fill="#D97706" font-size="11" font-weight="600" text-anchor="middle">HREADY 출력 규칙</text>
+  <text x="115" y="305" fill="#374151" font-size="10" text-anchor="middle">IDLE: HREADY=1</text>
+  <text x="115" y="318" fill="#374151" font-size="10" text-anchor="middle">SETUP: HREADY=0</text>
+  <text x="115" y="331" fill="#374151" font-size="10" text-anchor="middle">ACCESS: HREADY=PREADY</text>
+</svg>

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .sig-name { fill: #374151; font-size: 12px; font-weight: 600; text-anchor: end; }
+      .clk-line { stroke: #2563EB; stroke-width: 1.5; fill: none; }
+      .sig-line { stroke: #374151; stroke-width: 1.5; fill: none; }
+      .sig-high { stroke: #059669; stroke-width: 2; fill: none; }
+      .addr1 { fill: #DBEAFE; opacity: 0.4; }
+      .addr2 { fill: #EDE9FE; opacity: 0.4; }
+      .data1 { fill: #D1FAE5; opacity: 0.4; }
+      .data2 { fill: #FEF3C7; opacity: 0.4; }
+      .phase-label { font-size: 10px; fill: #6B7280; text-anchor: middle; }
+      .cycle-num { font-size: 10px; fill: #9CA3AF; text-anchor: middle; }
+      .title { font-size: 14px; fill: #2563EB; font-weight: 700; }
+      .val-text { font-size: 10px; fill: #2563EB; text-anchor: middle; font-weight: 600; }
+    </style>
+  </defs>
+  <text x="10" y="20" class="title">AHB 파이프라인 전송 (주소-데이터 오버랩)</text>
+
+  <text x="230" y="40" class="cycle-num">T1</text>
+  <text x="380" y="40" class="cycle-num">T2</text>
+  <text x="530" y="40" class="cycle-num">T3</text>
+  <text x="680" y="40" class="cycle-num">T4</text>
+
+  <!-- HCLK -->
+  <text x="120" y="65" class="sig-name">HCLK</text>
+  <path d="M 130,60 L 160,60 L 160,45 L 230,45 L 230,60 L 310,60 L 310,45 L 380,45 L 380,60 L 460,60 L 460,45 L 530,45 L 530,60 L 610,60 L 610,45 L 680,45 L 680,60 L 750,60" class="clk-line"/>
+
+  <!-- HTRANS -->
+  <text x="120" y="95" class="sig-name">HTRANS</text>
+  <rect x="160" y="78" width="150" height="20" rx="2" class="addr1"/>
+  <rect x="310" y="78" width="150" height="20" rx="2" class="addr2"/>
+  <path d="M 130,95 L 160,95 L 165,80 L 305,80 L 310,95 L 310,80 L 455,80 L 460,95 L 750,95" class="sig-line"/>
+  <text x="235" y="92" class="val-text">NONSEQ</text>
+  <text x="385" y="92" class="val-text" fill="#7C3AED">NONSEQ</text>
+
+  <!-- HADDR -->
+  <text x="120" y="125" class="sig-name">HADDR</text>
+  <rect x="160" y="108" width="150" height="20" rx="2" class="addr1"/>
+  <rect x="310" y="108" width="150" height="20" rx="2" class="addr2"/>
+  <path d="M 130,125 L 160,125 L 165,110 L 305,110 L 310,125 L 310,110 L 455,110 L 460,125 L 750,125" class="sig-line"/>
+  <text x="235" y="122" class="val-text">Addr A</text>
+  <text x="385" y="122" class="val-text" fill="#7C3AED">Addr B</text>
+
+  <!-- HWDATA -->
+  <text x="120" y="165" class="sig-name">HWDATA</text>
+  <rect x="310" y="148" width="150" height="20" rx="2" class="data1"/>
+  <rect x="460" y="148" width="150" height="20" rx="2" class="data2"/>
+  <path d="M 130,165 L 310,165 L 315,150 L 455,150 L 460,165 L 460,150 L 605,150 L 610,165 L 750,165" class="sig-line"/>
+  <text x="385" y="162" class="val-text" fill="#059669">Data A</text>
+  <text x="535" y="162" class="val-text" fill="#D97706">Data B</text>
+
+  <!-- HREADY -->
+  <text x="120" y="200" class="sig-name">HREADY</text>
+  <path d="M 130,200 L 130,185 L 750,185" class="sig-high"/>
+
+  <!-- Phase annotations -->
+  <rect x="160" y="215" width="150" height="16" rx="3" fill="#DBEAFE"/>
+  <text x="235" y="226" class="phase-label" fill="#2563EB">Addr A</text>
+  <rect x="310" y="215" width="150" height="16" rx="3" fill="#D1FAE5"/>
+  <text x="385" y="226" class="phase-label" fill="#059669">Data A + Addr B</text>
+  <rect x="460" y="215" width="150" height="16" rx="3" fill="#FEF3C7"/>
+  <text x="535" y="226" class="phase-label" fill="#D97706">Data B</text>
+
+  <text x="385" y="260" fill="#6B7280" font-size="11" text-anchor="middle" font-style="italic">
+    파이프라인 전송: 주소 phase와 데이터 phase가 오버랩되어 대역폭 2배 향상
+  </text>
+</svg>

@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .fpga-box { fill: #2563EB; rx: 12; ry: 12; }
+      .periph-box { rx: 6; ry: 6; stroke-width: 1.5; }
+      .label { fill: white; text-anchor: middle; font-weight: 600; }
+      .periph-label { text-anchor: middle; font-size: 11px; font-weight: 600; }
+      .pin-count { text-anchor: middle; font-size: 9px; fill: #6B7280; }
+      .conn-line { stroke: #6B7280; stroke-width: 1.5; stroke-dasharray: 4,3; }
+      .title { font-size: 16px; fill: #2563EB; font-weight: 700; }
+    </style>
+  </defs>
+  <text x="400" y="25" text-anchor="middle" class="title">Basys 3 보드 블록 다이어그램</text>
+
+  <!-- FPGA 중앙 -->
+  <rect x="250" y="160" width="300" height="200" class="fpga-box"/>
+  <text x="400" y="240" class="label" font-size="18">XC7A35T</text>
+  <text x="400" y="262" class="label" font-size="12">CPG236-1</text>
+  <text x="400" y="285" class="label" font-size="10" opacity="0.8">LUT: 20,800 | FF: 41,600</text>
+  <text x="400" y="300" class="label" font-size="10" opacity="0.8">BRAM: 50x36Kb | DSP: 90</text>
+
+  <!-- LED x16 -->
+  <rect x="40" y="60" width="140" height="50" class="periph-box" fill="#059669" stroke="#047857"/>
+  <text x="110" y="82" class="label" font-size="13">LED x16</text>
+  <text x="110" y="97" class="label" font-size="9" opacity="0.8">LD0~LD15</text>
+  <text x="110" y="120" class="pin-count">16핀</text>
+  <line x1="180" y1="85" x2="250" y2="200" class="conn-line"/>
+
+  <!-- 스위치 x16 -->
+  <rect x="40" y="160" width="140" height="50" class="periph-box" fill="#D97706" stroke="#B45309"/>
+  <text x="110" y="182" class="label" font-size="13">스위치 x16</text>
+  <text x="110" y="197" class="label" font-size="9" opacity="0.8">SW0~SW15</text>
+  <text x="110" y="220" class="pin-count">16핀</text>
+  <line x1="180" y1="185" x2="250" y2="250" class="conn-line"/>
+
+  <!-- 버튼 x5 -->
+  <rect x="40" y="260" width="140" height="50" class="periph-box" fill="#DC2626" stroke="#B91C1C"/>
+  <text x="110" y="282" class="label" font-size="13">버튼 x5</text>
+  <text x="110" y="297" class="label" font-size="9" opacity="0.8">C/U/L/R/D</text>
+  <text x="110" y="320" class="pin-count">5핀</text>
+  <line x1="180" y1="285" x2="250" y2="300" class="conn-line"/>
+
+  <!-- 7-세그먼트 -->
+  <rect x="40" y="370" width="140" height="50" class="periph-box" fill="#7C3AED" stroke="#6D28D9"/>
+  <text x="110" y="392" class="label" font-size="12">7-세그먼트 x4</text>
+  <text x="110" y="407" class="label" font-size="9" opacity="0.8">CA~CG, AN0~3</text>
+  <text x="110" y="430" class="pin-count">12핀</text>
+  <line x1="180" y1="395" x2="250" y2="340" class="conn-line"/>
+
+  <!-- USB-UART -->
+  <rect x="620" y="60" width="140" height="50" class="periph-box" fill="#0891B2" stroke="#0E7490"/>
+  <text x="690" y="82" class="label" font-size="13">USB-UART</text>
+  <text x="690" y="97" class="label" font-size="9" opacity="0.8">TX/RX</text>
+  <text x="690" y="120" class="pin-count">2핀 (A18, B18)</text>
+  <line x1="620" y1="85" x2="550" y2="200" class="conn-line"/>
+
+  <!-- PMOD JA~JD -->
+  <rect x="620" y="160" width="140" height="50" class="periph-box" fill="#059669" stroke="#047857"/>
+  <text x="690" y="182" class="label" font-size="13">PMOD x4</text>
+  <text x="690" y="197" class="label" font-size="9" opacity="0.8">JA, JB, JC, JD</text>
+  <text x="690" y="220" class="pin-count">32핀 (8핀 x 4)</text>
+  <line x1="620" y1="185" x2="550" y2="250" class="conn-line"/>
+
+  <!-- VGA -->
+  <rect x="620" y="260" width="140" height="50" class="periph-box" fill="#DB2777" stroke="#BE185D"/>
+  <text x="690" y="282" class="label" font-size="13">VGA</text>
+  <text x="690" y="297" class="label" font-size="9" opacity="0.8">R4G4B4+Sync</text>
+  <text x="690" y="320" class="pin-count">14핀</text>
+  <line x1="620" y1="285" x2="550" y2="300" class="conn-line"/>
+
+  <!-- 100MHz 클록 -->
+  <rect x="330" y="400" width="140" height="45" class="periph-box" fill="#374151" stroke="#1F2937"/>
+  <text x="400" y="422" class="label" font-size="12">100MHz OSC</text>
+  <text x="400" y="437" class="label" font-size="9" opacity="0.8">W5</text>
+  <line x1="400" y1="400" x2="400" y2="362" class="conn-line"/>
+  <text x="400" y="460" class="pin-count">1핀</text>
+
+  <!-- USB 프로그래밍 -->
+  <rect x="620" y="370" width="140" height="50" class="periph-box" fill="#374151" stroke="#1F2937"/>
+  <text x="690" y="392" class="label" font-size="12">USB JTAG</text>
+  <text x="690" y="407" class="label" font-size="9" opacity="0.8">프로그래밍</text>
+  <line x1="620" y1="395" x2="550" y2="340" class="conn-line"/>
+
+  <!-- 총 I/O 요약 -->
+  <rect x="250" y="475" width="300" height="35" rx="6" fill="#F3F4F6" stroke="#D1D5DB"/>
+  <text x="400" y="497" text-anchor="middle" fill="#374151" font-size="12" font-weight="600">
+    총 사용 가능 I/O: ~100핀 (CPG236 패키지)
+  </text>
+</svg>

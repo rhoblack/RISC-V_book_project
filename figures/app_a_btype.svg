@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 120" font-family="Pretendard, monospace" font-size="13">
+  <defs>
+    <style>
+      .field-label { font-size: 11px; fill: #6B7280; text-anchor: middle; }
+      .bit-label { font-size: 10px; fill: #374151; text-anchor: middle; }
+      .field-name { font-size: 12px; fill: white; text-anchor: middle; font-weight: 600; }
+      .type-label { font-size: 16px; fill: #DC2626; font-weight: 700; }
+    </style>
+  </defs>
+  <text x="10" y="30" class="type-label">B-Type</text>
+  <!-- imm[12]: bit 31 (1 bit) -->
+  <rect x="60" y="40" width="30" height="40" rx="4" fill="#DC2626"/>
+  <text x="75" y="65" class="field-name" font-size="10">[12]</text>
+  <text x="75" y="95" class="field-label">31</text>
+  <!-- imm[10:5]: bits 30-25 (6 bits) -->
+  <rect x="92" y="40" width="110" height="40" rx="4" fill="#EF4444"/>
+  <text x="147" y="65" class="field-name">imm[10:5]</text>
+  <text x="147" y="95" class="field-label">[30:25] 6비트</text>
+  <!-- rs2: bits 24-20 (5 bits) -->
+  <rect x="204" y="40" width="100" height="40" rx="4" fill="#F87171"/>
+  <text x="254" y="65" class="field-name">rs2</text>
+  <text x="254" y="95" class="field-label">[24:20] 5비트</text>
+  <!-- rs1: bits 19-15 (5 bits) -->
+  <rect x="306" y="40" width="100" height="40" rx="4" fill="#FCA5A5"/>
+  <text x="356" y="65" class="field-name">rs1</text>
+  <text x="356" y="95" class="field-label">[19:15] 5비트</text>
+  <!-- funct3: bits 14-12 (3 bits) -->
+  <rect x="408" y="40" width="60" height="40" rx="4" fill="#DC2626"/>
+  <text x="438" y="65" class="field-name">funct3</text>
+  <text x="438" y="95" class="field-label">[14:12] 3비트</text>
+  <!-- imm[4:1]: bits 11-8 (4 bits) -->
+  <rect x="470" y="40" width="70" height="40" rx="4" fill="#EF4444"/>
+  <text x="505" y="65" class="field-name">[4:1]</text>
+  <text x="505" y="95" class="field-label">[11:8] 4비트</text>
+  <!-- imm[11]: bit 7 (1 bit) -->
+  <rect x="542" y="40" width="30" height="40" rx="4" fill="#DC2626"/>
+  <text x="557" y="65" class="field-name" font-size="10">[11]</text>
+  <text x="557" y="95" class="field-label">7</text>
+  <!-- opcode: bits 6-0 (7 bits) -->
+  <rect x="574" y="40" width="136" height="40" rx="4" fill="#B91C1C"/>
+  <text x="642" y="65" class="field-name">opcode</text>
+  <text x="642" y="95" class="field-label">[6:0] 7비트</text>
+  <!-- bit markers -->
+  <text x="60" y="38" class="bit-label">31</text>
+  <text x="90" y="38" class="bit-label">30</text>
+  <text x="202" y="38" class="bit-label">25 24</text>
+  <text x="304" y="38" class="bit-label">20 19</text>
+  <text x="406" y="38" class="bit-label">15 14</text>
+  <text x="470" y="38" class="bit-label">12 11</text>
+  <text x="540" y="38" class="bit-label">8 7</text>
+  <text x="710" y="38" class="bit-label">0</text>
+</svg>

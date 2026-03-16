@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .title { font-size: 15px; fill: #DC2626; font-weight: 700; }
+      .box { rx: 3; ry: 3; }
+      .label { fill: white; text-anchor: middle; font-size: 11px; font-weight: 600; }
+      .desc { fill: #374151; font-size: 11px; text-anchor: middle; }
+      .arrow { stroke: #6B7280; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+      .note { fill: #6B7280; font-size: 10px; font-style: italic; }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6B7280"/>
+    </marker>
+  </defs>
+  <text x="10" y="20" class="title">B-Type 즉치수 비트 재배열</text>
+
+  <!-- 명령어 비트 (상단) -->
+  <text x="10" y="50" fill="#374151" font-size="12" font-weight="600">명령어 비트:</text>
+  <rect x="100" y="38" width="40" height="28" class="box" fill="#DC2626"/>
+  <text x="120" y="57" class="label">inst[31]</text>
+  <rect x="145" y="38" width="40" height="28" class="box" fill="#EF4444"/>
+  <text x="165" y="57" class="label">inst[7]</text>
+  <rect x="190" y="38" width="120" height="28" class="box" fill="#F87171"/>
+  <text x="250" y="57" class="label">inst[30:25]</text>
+  <rect x="315" y="38" width="80" height="28" class="box" fill="#FCA5A5"/>
+  <text x="355" y="57" class="label" fill="#7F1D1D">inst[11:8]</text>
+
+  <!-- 화살표들 -->
+  <path d="M 120,68 L 120,130" class="arrow"/>
+  <path d="M 165,68 L 195,130" class="arrow"/>
+  <path d="M 250,68 L 320,130" class="arrow"/>
+  <path d="M 355,68 L 455,130" class="arrow"/>
+
+  <!-- 즉치수 비트 (하단) -->
+  <text x="10" y="150" fill="#374151" font-size="12" font-weight="600">즉치수:</text>
+  <rect x="100" y="135" width="50" height="28" class="box" fill="#DC2626"/>
+  <text x="125" y="154" class="label">imm[12]</text>
+  <rect x="155" y="135" width="50" height="28" class="box" fill="#EF4444"/>
+  <text x="180" y="154" class="label">imm[11]</text>
+  <rect x="210" y="135" width="140" height="28" class="box" fill="#F87171"/>
+  <text x="280" y="154" class="label">imm[10:5]</text>
+  <rect x="355" y="135" width="120" height="28" class="box" fill="#FCA5A5"/>
+  <text x="415" y="154" class="label" fill="#7F1D1D">imm[4:1]</text>
+  <rect x="480" y="135" width="50" height="28" class="box" fill="#FEE2E2" stroke="#DC2626" stroke-width="1"/>
+  <text x="505" y="154" class="desc">imm[0]=0</text>
+
+  <!-- 하단 설명 -->
+  <text x="100" y="185" class="desc">부호 비트</text>
+  <text x="280" y="185" class="desc">상위 비트</text>
+  <text x="415" y="185" class="desc">하위 비트</text>
+  <text x="505" y="185" class="desc">항상 0</text>
+
+  <text x="10" y="210" class="note">B-Type 즉치수는 항상 2의 배수 (최하위 비트=0). 부호 확장 후 13비트 오프셋 생성.</text>
+</svg>

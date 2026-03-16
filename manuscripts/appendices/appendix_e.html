@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix E — 개발 도구 설치 가이드</title>
+    <link rel="stylesheet" href="../../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .appendix-header h1 { margin: 0; font-size: 2.5em; }
+        .appendix-header p { margin: 10px 0 0 0; font-size: 1.1em; }
+        .appendix-section h2 {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        .reference-table th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #667eea;
+        }
+        .reference-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        .reference-table tr:nth-child(even) { background: #f9f9f9; }
+        .reference-table code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .checklist { list-style: none; padding-left: 0; }
+        .checklist li { padding: 6px 0; }
+        .checklist li::before { content: "☐ "; font-size: 1.1em; }
+        .step-box {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-left: 4px solid #2563EB;
+            padding: 16px 20px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .step-box h4 {
+            margin: 0 0 8px 0;
+            color: #1E40AF;
+        }
+        .prerequisite-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .badge-required { background: #FEE2E2; color: #991B1B; }
+        .badge-optional { background: #FEF3C7; color: #92400E; }
+        .badge-alt { background: #D1FAE5; color: #065F46; }
+    </style>
+</head>
+<body>
+
+    <div class="appendix-header">
+        <h1>Appendix E — 개발 도구 설치 가이드</h1>
+        <p>RISC-V 프로세서 설계를 위한 개발 환경 구축 (Vivado, 크로스 컴파일러, 시뮬레이터)</p>
+    </div>
+
+    <main class="content">
+
+        <!-- ========== 학습 목표 ========== -->
+        <nav class="learning-objectives">
+            <h2>학습 목표</h2>
+            <ul>
+                <li>Vivado 2024.x를 설치하고 Basys 3 보드에서 LED 깜박이기 프로젝트를 실행할 수 있다. (적용/Apply)</li>
+                <li>RISC-V 크로스 컴파일러(riscv-gnu-toolchain)로 어셈블리/C 코드를 컴파일하고 .hex 파일을 생성할 수 있다. (적용/Apply)</li>
+                <li>VCS 또는 Vivado Simulator로 SystemVerilog 시뮬레이션을 실행하고 파형을 해석할 수 있다. (이해/Understand)</li>
+                <li>개발 도구 설치 중 발생하는 일반적인 오류를 진단하고 해결 방법을 찾을 수 있다. (분석/Analyze)</li>
+            </ul>
+        </nav>
+
+        <!-- ========== 도입부 ========== -->
+        <div class="appendix-section">
+            <p>
+                이 부록은 본 교재에서 사용하는 세 가지 핵심 개발 도구의 설치 및 검증 절차를 안내한다.
+                각 도구는 독립적으로 설치할 수 있으며, 반드시 순서대로 진행할 필요는 없다.
+                다만, 아래 표에 명시한 <strong>시작 시점</strong>까지는 해당 도구의 설치를 완료해야 본문 실습을 진행할 수 있다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>도구</th>
+                        <th>필수/선택</th>
+                        <th>시작 시점</th>
+                        <th>설치 시간</th>
+                        <th>주요 역할</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Vivado 2024.1 (또는 이후 버전)</strong></td>
+                        <td><span class="prerequisite-badge badge-required">필수</span></td>
+                        <td>Ch01.2 이전</td>
+                        <td>2~3시간</td>
+                        <td>합성, P&amp;R, 비트스트림, FPGA 프로그래밍</td>
+                    </tr>
+                    <tr>
+                        <td><strong>riscv-gnu-toolchain</strong></td>
+                        <td><span class="prerequisite-badge badge-required">필수</span></td>
+                        <td>Ch03.10 이전</td>
+                        <td>5~10분</td>
+                        <td>C/어셈블리 컴파일, .hex 파일 생성</td>
+                    </tr>
+                    <tr>
+                        <td><strong>VCS / Verdi</strong></td>
+                        <td><span class="prerequisite-badge badge-optional">선택</span></td>
+                        <td>Ch15 이후</td>
+                        <td>1~2시간</td>
+                        <td>고성능 시뮬레이션, 파형 분석</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vivado Simulator</strong></td>
+                        <td><span class="prerequisite-badge badge-alt">VCS 대체</span></td>
+                        <td>Vivado에 포함</td>
+                        <td>0분</td>
+                        <td>기본 시뮬레이션 (대부분의 실습에 충분)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <figure>
+                <img src="../../figures/app_e_tool_requirements.svg" alt="개발 도구 요구사항 비교표" style="max-width: 100%; height: auto;">
+                <figcaption>그림 E.1: 개발 도구별 요구사항 비교</figcaption>
+            </figure>
+
+            <aside class="tip">
+                <strong>💡 실무 팁</strong>
+                <p>
+                    환경 설치는 하드웨어 설계와는 성격이 완전히 다르다.
+                    논리 설계에는 정답이 있지만, 환경 설치는 여러분의 PC, 운영체제 버전, 기존 소프트웨어 조합에 따라 결과가 달라진다.
+                    <strong>첫 시도에 실패하는 것이 정상</strong>이며, 대기업 신입 설계자들도 보통 2~3회 시도 끝에 성공한다.
+                    서두르지 말고 한 단계씩 차근차근 진행하자.
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== E.1 Vivado 설치 ========== -->
+        <div class="appendix-section" id="sec-E-1">
+            <h2>E.1 Vivado 2024.1 (또는 이후 버전) 설치 및 검증</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>Vivado 개발 환경을 설치하고 설정할 수 있다. (적용/Apply)</li>
+                    <li>Basys 3 드라이버를 확인하고 정상 인식을 검증할 수 있다.</li>
+                    <li>LED 깜박이기 프로젝트를 통해 FPGA 프로그래밍 전체 워크플로우를 경험할 수 있다.</li>
+                </ul>
+            </nav>
+
+            <!-- E.1.1 왜 Vivado인가 -->
+            <h3>왜 Vivado를 설치해야 하는가?</h3>
+
+            <p>
+                이 교재는 Xilinx Basys 3 FPGA 보드에서 직접 설계한 RISC-V 프로세서를 실행하는 것을 최종 목표로 한다.
+                하드웨어를 FPGA에 구현하려면 다음 다섯 단계를 거쳐야 한다.
+            </p>
+
+            <ol>
+                <li><strong>설계</strong> (SystemVerilog 작성) &mdash; Ch01~Ch25에서 배운다.</li>
+                <li><strong>합성</strong>(Synthesis) &mdash; Vivado가 자동 처리한다.</li>
+                <li><strong>배치 &amp; 라우팅</strong>(Place &amp; Route) &mdash; Vivado가 자동 처리한다.</li>
+                <li><strong>비트스트림 생성</strong>(Bitstream Generation) &mdash; Vivado가 자동 처리한다.</li>
+                <li><strong>FPGA 프로그래밍</strong> &mdash; Vivado IDE에서 버튼 한 번으로 완료한다.</li>
+            </ol>
+
+            <p>
+                즉, Vivado는 여러분이 작성한 RTL 코드를 실제 하드웨어로 변환하는 <strong>EDA(Electronic Design Automation) 통합 개발 환경</strong>이다.
+            </p>
+
+            <div class="analogy">
+                <strong>비유:</strong>
+                건축가가 설계도를 그리면, 시공 회사가 그 도면을 실제 건물로 만들어 준다.
+                여러분이 SystemVerilog로 "설계도"를 작성하면, Vivado가 "시공 회사" 역할을 하여 FPGA 위에 실제 회로를 만들어 준다.
+                다만, 이 비유에는 한계가 있다. 건물은 한 번 지으면 바꾸기 어렵지만, FPGA는 비트스트림을 다시 로드하면 언제든 "재시공"할 수 있다.
+            </div>
+
+            <figure>
+                <img src="../../figures/app_e_vivado_flow.svg" alt="Vivado 설치 및 검증 흐름도" style="max-width: 100%; height: auto;">
+                <figcaption>그림 E.2: Vivado 설치 및 검증 5단계 흐름</figcaption>
+            </figure>
+
+            <!-- E.1.2 Vivado 개념 -->
+            <h3>Vivado 개발 환경의 이해</h3>
+
+            <p>
+                Vivado Design Suite는 Xilinx(현재 AMD 산하)가 개발한 FPGA 설계 도구로,
+                2013년부터 이전 도구인 ISE를 대체하여 표준으로 자리 잡았다.
+                Artix-7, Spartan-7, UltraScale 등 최신 Xilinx FPGA를 모두 지원하며,
+                이 교재에서는 Basys 3 보드에 탑재된 <strong>Artix-7 XC7A35T</strong>를 사용한다.
+            </p>
+
+            <p>설치 시 선택해야 하는 옵션은 다음과 같다.</p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>설치 옵션</th>
+                        <th>선택</th>
+                        <th>이유</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Design Tools (Vivado IDE)</td>
+                        <td><strong>필수</strong></td>
+                        <td>합성, P&amp;R, 비트스트림 생성의 핵심 도구</td>
+                    </tr>
+                    <tr>
+                        <td>Vivado Simulator (xsim)</td>
+                        <td><strong>권장</strong></td>
+                        <td>VCS 라이선스가 없으면 시뮬레이션에 필수</td>
+                    </tr>
+                    <tr>
+                        <td>Cable Drivers</td>
+                        <td><strong>필수</strong></td>
+                        <td>Basys 3 USB 연결에 필요 (JTAG 프로그래밍)</td>
+                    </tr>
+                    <tr>
+                        <td>DocNav</td>
+                        <td>선택</td>
+                        <td>온라인 문서로 충분, 디스크 절약 가능</td>
+                    </tr>
+                    <tr>
+                        <td>Vivado HLS</td>
+                        <td>불필요</td>
+                        <td>고수준 합성 도구 (이 교재 범위 밖)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>설치 환경 요구사항은 다음과 같다.</p>
+            <ul>
+                <li><strong>운영체제</strong>: Windows 10/11 또는 Linux (이 교재는 Windows 기준으로 설명)</li>
+                <li><strong>디스크</strong>: 최소 40GB 자유 공간</li>
+                <li><strong>RAM</strong>: 최소 8GB (권장 16GB)</li>
+                <li><strong>라이선스</strong>: <strong>무료 WebPACK 라이선스</strong> &mdash; Basys 3의 Artix-7 XC7A35T는 완전 지원</li>
+            </ul>
+
+            <aside class="faq">
+                <strong>&#x2753; 수강생 단골 질문</strong>
+                <p><strong>Q:</strong> Vivado를 설치하는 데 왜 40GB나 필요한가요?</p>
+                <p><strong>A:</strong>
+                    Vivado는 수백 가지 FPGA 디바이스의 라이브러리와 합성 알고리즘을 포함한다.
+                    우리는 Artix-7 한 종류만 사용하지만, 설치 프로그램이 기본 라이브러리를 함께 설치하기 때문에 용량이 크다.
+                    설치 시 "WebPACK" 에디션을 선택하면 전체 설치보다 용량을 줄일 수 있다.
+                </p>
+            </aside>
+
+            <!-- E.1.3 설치 절차 -->
+            <h3>Vivado 설치 절차 (Step-by-Step)</h3>
+
+            <div class="step-box">
+                <h4>Step 1: Vivado 다운로드 및 WebPACK 라이선스 신청</h4>
+                <ol>
+                    <li>AMD/Xilinx 공식 사이트에서 "Vivado Design Suite 2024.1" 다운로드 페이지로 이동한다.</li>
+                    <li>AMD 계정이 없으면 회원가입한다 (대학 이메일 사용 권장 &mdash; 학생 할인 혜택).</li>
+                    <li>Windows용 설치 파일을 다운로드한다 (약 12GB, 네트워크 환경에 따라 2~3시간 소요).</li>
+                    <li>회원가입 시 <strong>WebPACK 라이선스가 자동으로 활성화</strong>된다.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 2: 설치 실행</h4>
+                <ol>
+                    <li>다운로드한 <code>Vivado_*.exe</code> 파일을 관리자 권한으로 실행한다.</li>
+                    <li>"Install Vivado"를 선택한다.</li>
+                    <li>설치 경로: <code>C:\Xilinx\Vivado\2024.1\</code> (기본값 권장, 경로에 한글이나 공백이 없어야 한다).</li>
+                    <li>선택 항목:
+                        <ul>
+                            <li>Design Tools: 모든 항목 선택</li>
+                            <li>Vivado Simulator: 선택</li>
+                            <li>Cable Drivers: 선택 (Basys 3 USB 연결용)</li>
+                        </ul>
+                    </li>
+                    <li>설치 완료까지 약 30분 소요 (시스템 성능에 따라 변동).</li>
+                </ol>
+            </div>
+
+            <aside class="tip">
+                <strong>💡 실무 팁</strong>
+                <p>
+                    설치 경로에 <strong>한글, 공백, 특수문자</strong>가 포함되면 이후 합성 과정에서 경로 인식 오류가 발생할 수 있다.
+                    반드시 <code>C:\Xilinx\</code>처럼 영문 경로를 사용하자.
+                </p>
+            </aside>
+
+            <div class="step-box">
+                <h4>Step 3: Vivado 첫 실행 및 라이선스 활성화</h4>
+                <ol>
+                    <li>바탕화면 아이콘 또는 시작 메뉴에서 "Vivado 2024.1"을 실행한다.</li>
+                    <li>처음 실행 시 스플래시 화면이 나타난 후 메인 IDE로 진입한다 (~10초).</li>
+                    <li><code>Help &rarr; Manage License &rarr; Load License</code>를 클릭한다.</li>
+                    <li>"ISE/Vivado Design Suite LE WebPACK" 라이선스가 활성화되어 있는지 확인한다.</li>
+                    <li>활성화가 안 되어 있으면, 같은 메뉴에서 "Get Free ISE WebPACK License"를 선택하여 온라인 인증한다.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 4: Basys 3 드라이버 확인 (Windows 10/11)</h4>
+                <ol>
+                    <li>Basys 3 보드를 USB 케이블(Micro-B)로 PC에 연결한다.</li>
+                    <li><code>Win+X &rarr; 디바이스 관리자</code>를 연다.</li>
+                    <li>"Xilinx USB Cable" 또는 "XC7 FPGA Programmer" 항목이 표시되는지 확인한다.</li>
+                    <li>표시되지 않으면 드라이버를 수동 설치한다:
+                        탐색기 주소창에 <code>C:\Xilinx\Vivado\2024.1\data\xilinx_drivers\</code>를 복사-붙여넣기하면 해당 폴더로 자동 이동한다.
+                        그곳에서 드라이버 설치 파일을 실행한다.</li>
+                </ol>
+            </div>
+
+            <aside class="faq">
+                <strong>&#x2753; 수강생 단골 질문</strong>
+                <p><strong>Q:</strong> USB를 연결했는데 디바이스 관리자에 아무것도 안 보여요.</p>
+                <p><strong>A:</strong>
+                    세 가지를 순서대로 확인한다.
+                    (1) USB 케이블이 "데이터 전송 지원" 케이블인지 확인 &mdash; 충전 전용 케이블은 인식 불가.
+                    (2) 다른 USB 포트에 연결해 본다.
+                    (3) Vivado 설치 폴더의 드라이버를 수동 설치한다.
+                </p>
+            </aside>
+
+            <!-- E.1.4 LED 검증 -->
+            <h3>검증: LED 깜박이기 프로젝트</h3>
+
+            <p>
+                환경 설치가 올바른지 확인하는 가장 좋은 방법은 <strong>실제로 FPGA를 프로그래밍</strong>하는 것이다.
+                아래 LED 깜박이기 프로젝트를 통해 Vivado의 전체 워크플로우(프로젝트 생성 &rarr; 합성 &rarr; 구현 &rarr; 비트스트림 &rarr; 프로그래밍)를 한 번에 경험할 수 있다.
+            </p>
+
+            <div class="step-box">
+                <h4>프로젝트 생성</h4>
+                <ol>
+                    <li><code>File &rarr; New Project</code>를 선택한다.</li>
+                    <li>Project name: <code>led_blink_test</code></li>
+                    <li>Location: <code>C:\vivado_projects\</code></li>
+                    <li>Project type: <code>RTL Project</code></li>
+                    <li>Device: <code>Basys3 (xc7a35tcpg236-1)</code> 또는 Boards 탭에서 Basys3 선택.</li>
+                </ol>
+            </div>
+
+            <p>아래 SystemVerilog 코드를 <code>led_blink.sv</code>라는 이름으로 프로젝트에 추가한다.</p>
+
+            <pre><code class="language-verilog">
+// led_blink.sv - 100MHz 클록으로 LED를 약 1Hz로 깜박이는 모듈
+module led_blink(
+   input  clk,        // 100 MHz (Basys 3 보드 클록)
+   input  rst_n,      // 능동 저전압 리셋 (BTN3)
+   output led_out     // LED[0] 출력
+);
+   logic [26:0] counter;  // 27비트 카운터 (~1.34초 주기)
+
+   always_ff @(posedge clk or negedge rst_n) begin
+      if (!rst_n)
+         counter &lt;= 27'd0;
+      else
+         counter &lt;= counter + 1'b1;
+   end
+
+   // counter[26]: 약 0.67초 ON / 0.67초 OFF
+   assign led_out = counter[26];
+endmodule
+            </code></pre>
+
+            <p>다음으로 XDC 제약 파일을 <code>basys3.xdc</code>라는 이름으로 추가한다.</p>
+
+            <pre><code class="language-tcl">
+## Basys 3 - 100 MHz 클록
+set_property -dict {PACKAGE_PIN W5 IOSTANDARD LVCMOS33} [get_ports clk]
+create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]
+
+## 능동 저전압 리셋 (Basys 3 BTN3)
+set_property -dict {PACKAGE_PIN U18 IOSTANDARD LVCMOS33} [get_ports rst_n]
+
+## LED[0] 출력
+set_property -dict {PACKAGE_PIN V17 IOSTANDARD LVCMOS33} [get_ports led_out]
+            </code></pre>
+
+            <p>파일을 추가한 뒤, 다음 순서로 실행한다.</p>
+
+            <ol>
+                <li><strong>합성</strong>: <code>Flow &rarr; Run Synthesis</code> (에러 없음 확인)</li>
+                <li><strong>구현</strong>: <code>Flow &rarr; Run Implementation</code> (경고는 무시 가능)</li>
+                <li><strong>비트스트림 생성</strong>: <code>Flow &rarr; Generate Bitstream</code></li>
+                <li><strong>FPGA 프로그래밍</strong>: <code>Tools &rarr; Program Device &rarr; Basys3</code> &rarr; 생성된 <code>led_blink.bit</code> 선택 &rarr; Program 클릭</li>
+            </ol>
+
+            <p>
+                프로그래밍이 완료되면 <strong>Basys 3 보드의 LED[0]이 약 1Hz로 깜박이는 것</strong>을 확인할 수 있다.
+                이것이 바로 여러분의 첫 번째 FPGA 프로그래밍 성공이다!
+            </p>
+
+            <aside class="instructor-tip">
+                <strong>📌 강사 꿀팁</strong>
+                <p>
+                    수업에서 이 LED 검증을 <strong>첫 주 실습</strong>으로 진행하면 효과적이다.
+                    학생들이 "내가 작성한 코드가 실제 하드웨어에서 동작한다"는 경험을 빨리 할수록 이후 학습 동기가 크게 높아진다.
+                    Tcl 자동화 스크립트(<code>app_e_vivado_tcl_script.tcl</code>, 이 부록 말미의 <a href="#sec-full-source">전체 소스 코드</a> 참조)를
+                    미리 배포하면 실습 시간을 절약할 수 있다.
+                </p>
+            </aside>
+
+            <!-- E.1.5 체크리스트 -->
+            <aside class="metacognition">
+                <strong>🔍 Vivado 설치 완료 체크리스트</strong>
+                <ul class="checklist">
+                    <li>Vivado 2024.1 (또는 이후 버전) 실행 가능 (<code>Help &rarr; About</code>에서 버전 확인)</li>
+                    <li>WebPACK 라이선스 활성화 (<code>Help &rarr; Manage License</code>)</li>
+                    <li>Basys 3 드라이버 인식 (<code>Tools &rarr; Hardware Manager</code>에서 "xc7a35t_0" 표시)</li>
+                    <li>LED 깜박이기 검증 성공 (Basys 3 LED[0] 약 1Hz 점멸)</li>
+                    <li>Vivado 종료 후 재시작 가능 (안정성 확인)</li>
+                </ul>
+                <p>모든 항목을 통과했다면, Ch01부터 시작할 준비가 완료된 것이다.</p>
+            </aside>
+
+            <aside class="tip">
+                <strong>💡 첫 번째 FPGA 프로그래밍 성공을 축하합니다!</strong>
+                <p>
+                    LED가 깜박인다는 것은, 여러분의 PC가 이제 진정한 하드웨어 개발 환경이 되었다는 증거이다.
+                    여러분은 방금 SystemVerilog 코드를 작성하고, 그것을 합성하여 실제 FPGA 위에서 동작시켰다.
+                    이 경험이 앞으로 25개 챕터를 진행하는 원동력이 될 것이다.
+                    처음에는 "이게 진짜 되나?" 싶었겠지만, 이제 "된다!"는 것을 직접 확인했다.
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== E.2 riscv-gnu-toolchain ========== -->
+        <div class="appendix-section" id="sec-E-2">
+            <h2>E.2 riscv-gnu-toolchain 설치 (크로스 컴파일러)</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>크로스 컴파일러의 개념과 필요성을 설명할 수 있다.</li>
+                    <li>riscv-gnu-toolchain을 설치하고 RISC-V 바이너리를 생성할 수 있다. (적용/Apply)</li>
+                    <li>C/어셈블리 소스를 .hex 파일로 변환하여 Vivado의 <code>$readmemh</code>로 로드할 수 있다.</li>
+                </ul>
+            </nav>
+
+            <!-- E.2.1 도입 -->
+            <h3>왜 크로스 컴파일러가 필요한가?</h3>
+
+            <p>
+                E.1에서 설치한 Vivado는 <strong>하드웨어(FPGA)</strong>를 만드는 도구이다.
+                하지만 아무리 훌륭한 CPU를 설계하더라도, 그 위에서 실행할 <strong>소프트웨어</strong>가 없으면 쓸모가 없다.
+                우리가 설계한 RV32I 프로세서에서 프로그램을 실행하려면, 소스 코드를 RISC-V 기계어로 변환해야 한다.
+                이 작업을 담당하는 것이 바로 <strong>크로스 컴파일러(Cross Compiler)</strong>이다.
+            </p>
+
+            <div class="analogy">
+                <strong>비유:</strong>
+                여러분의 PC는 x86 아키텍처이고, 설계한 CPU는 RISC-V 아키텍처이다.
+                일반 컴파일러(gcc)는 "한국어 → 한국어" 번역기라면, 크로스 컴파일러(riscv-gcc)는 "한국어 → 일본어" 번역기에 해당한다.
+                PC에서 작업하지만, 결과물은 RISC-V CPU가 이해할 수 있는 기계어가 된다.
+                다만, 이 비유에는 한계가 있다. 실제로는 "번역"이 아니라 "컴파일"이며, 출력은 자연어가 아닌 바이너리 코드이다.
+            </p>
+            </div>
+
+            <p>전체 변환 과정은 다음과 같다.</p>
+
+            <figure>
+                <img src="../../figures/app_e_toolchain_flow.svg" alt="RISC-V 크로스 컴파일 도구 체인 흐름도" style="max-width: 100%; height: auto;">
+                <figcaption>그림 E.3: RISC-V 크로스 컴파일 도구 체인 &mdash; 소스 코드에서 FPGA 로드까지</figcaption>
+            </figure>
+
+            <!-- E.2.2 개념 -->
+            <h3>riscv-gnu-toolchain이란?</h3>
+
+            <p>
+                riscv-gnu-toolchain은 GNU 프로젝트의 도구 모음을 RISC-V ISA용으로 빌드한 것이다.
+                주요 도구는 다음과 같다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>도구</th>
+                        <th>역할</th>
+                        <th>사용 예</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>riscv64-unknown-elf-gcc</code></td>
+                        <td>C/어셈블리 컴파일러</td>
+                        <td><code>gcc -march=rv32i sample.c -o sample.elf</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>riscv64-unknown-elf-objcopy</code></td>
+                        <td>형식 변환 (ELF &rarr; hex)</td>
+                        <td><code>objcopy -O verilog sample.elf sample.hex</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>riscv64-unknown-elf-objdump</code></td>
+                        <td>디스어셈블리 분석</td>
+                        <td><code>objdump -d sample.elf</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>riscv64-unknown-elf-gdb</code></td>
+                        <td>디버거 (선택)</td>
+                        <td>고급 디버깅 시 사용</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="faq">
+                <strong>&#x2753; 수강생 단골 질문</strong>
+                <p><strong>Q:</strong> 도구 이름에 "64"가 들어 있는데, 우리는 RV32I를 사용하잖아요?</p>
+                <p><strong>A:</strong>
+                    <code>riscv64-unknown-elf-gcc</code>는 RISC-V 32비트와 64비트를 모두 지원하는 통합 도구이다.
+                    컴파일 시 <code>-march=rv32i</code> 플래그를 지정하면 32비트 RV32I 코드를 생성한다.
+                    이름에 "64"가 있다고 해서 64비트 전용은 아니다.
+                </p>
+            </aside>
+
+            <!-- E.2.3 설치 -->
+            <h3>설치 방법 (Windows 기준)</h3>
+
+            <p>Windows 환경에서는 <strong>사전 빌드(pre-built) 바이너리</strong>를 사용하는 것이 가장 간편하다.</p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>방식</th>
+                        <th>설명</th>
+                        <th>난이도</th>
+                        <th>설치 시간</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #D1FAE5;">
+                        <td><strong>사전 빌드 바이너리 (권장)</strong></td>
+                        <td>이미 컴파일된 바이너리 다운로드</td>
+                        <td>낮음</td>
+                        <td>5~10분</td>
+                    </tr>
+                    <tr>
+                        <td>직접 빌드 (Linux/WSL)</td>
+                        <td>소스에서 컴파일</td>
+                        <td>높음</td>
+                        <td>30~60분</td>
+                    </tr>
+                    <tr>
+                        <td>Docker 컨테이너</td>
+                        <td>사전 구성된 환경</td>
+                        <td>중간</td>
+                        <td>10분</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="step-box">
+                <h4>Step 1: 사전 빌드 바이너리 다운로드 (GitHub 공식 릴리즈)</h4>
+                <ol>
+                    <li>GitHub의 riscv-collab/riscv-gnu-toolchain 릴리즈 페이지로 이동한다.
+                        (검색 엔진에서 <strong>"riscv-gnu-toolchain releases github"</strong>를 검색하면 바로 찾을 수 있다.)</li>
+                    <li>최신 버전의 Windows x64 .zip 파일을 다운로드한다 (약 300~500MB).</li>
+                    <li>예: <code>riscv64-unknown-elf-toolchain-14.2.0-win64.zip</code>
+                        (버전 번호는 시기에 따라 다를 수 있다.)</li>
+                </ol>
+            </div>
+
+            <aside class="tip">
+                <strong>💡 실무 팁</strong>
+                <p>
+                    GitHub 공식 릴리즈를 사용하면 실행 파일 이름이 <code>riscv64-unknown-elf-gcc</code>로 시작하여,
+                    이 교재와 대부분의 온라인 자료에서 사용하는 명령어와 정확히 일치한다.
+                    다른 배포판(xPack 등)은 실행 파일 이름이 다를 수 있으므로 주의가 필요하다.
+                </p>
+            </aside>
+
+            <div class="step-box">
+                <h4>Step 2: 압축 해제</h4>
+                <ol>
+                    <li><code>C:\riscv-toolchain\</code> 폴더를 생성한다 (경로에 한글/공백 금지).</li>
+                    <li>다운로드한 .zip 파일을 해당 폴더에 압축 해제한다.</li>
+                    <li>결과 경로 예: <code>C:\riscv-toolchain\bin\riscv64-unknown-elf-gcc.exe</code></li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 3: PATH 환경 변수 등록</h4>
+                <ol>
+                    <li><code>제어판 &rarr; 시스템 및 보안 &rarr; 시스템 &rarr; 고급 시스템 설정 &rarr; 환경 변수</code>를 연다.</li>
+                    <li>"사용자 변수"에서 <code>PATH</code>를 선택하고 "편집"을 클릭한다.</li>
+                    <li>"새로 만들기"를 클릭하고 <code>C:\riscv-toolchain\bin\</code>을 추가한다.</li>
+                    <li>확인을 눌러 저장한 뒤, 열려 있는 PowerShell/CMD 창을 모두 닫고 새로 연다.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 4: 설치 확인</h4>
+                <p>PowerShell 또는 CMD를 열고 다음 명령을 실행한다.</p>
+            </div>
+
+            <pre><code class="language-bash">
+# 버전 확인
+riscv64-unknown-elf-gcc --version
+# 출력 예:
+# riscv64-unknown-elf-gcc (GCC) 14.2.0
+            </code></pre>
+
+            <aside class="tip">
+                <strong>💡 실무 팁</strong>
+                <p>
+                    PATH 변경 후에는 반드시 터미널(PowerShell/CMD)을 <strong>새로 열어야</strong> 변경사항이 반영된다.
+                    기존 창에서는 이전 PATH가 유지되므로, "명령어를 찾을 수 없습니다" 오류가 발생할 수 있다.
+                </p>
+            </aside>
+
+            <!-- E.2.4 검증 -->
+            <h3>검증: .hex 파일 생성</h3>
+
+            <p>
+                설치가 완료되면, 간단한 C 프로그램을 RISC-V 바이너리로 컴파일하고 .hex 파일로 변환하여 검증한다.
+                아래 테스트 프로그램을 <code>sample.c</code>로 저장한다.
+            </p>
+
+            <pre><code class="language-c">
+// sample.c - 간단한 RISC-V C 프로그램
+int main() {
+    volatile int value = 5;   // x5 레지스터에 값 저장
+
+    while(1) {                // 무한 루프 (프로세서 계속 동작)
+        value = value + 1;
+    }
+
+    return 0;
+}
+            </code></pre>
+
+            <p>다음 명령으로 컴파일하고 .hex 파일을 생성한다.</p>
+
+            <pre><code class="language-bash">
+# Step 1: C → ELF (RISC-V 바이너리)
+riscv64-unknown-elf-gcc \
+    -march=rv32i \
+    -mabi=ilp32 \
+    -nostartfiles \
+    -nostdlib \
+    sample.c -o sample.elf
+
+# Step 2: ELF → Hex (Vivado $readmemh 형식)
+riscv64-unknown-elf-objcopy \
+    -O verilog sample.elf sample.hex
+
+# Step 3: 생성 확인
+ls -la sample.hex
+
+# Step 4: 디스어셈블리 확인 (선택)
+riscv64-unknown-elf-objdump -d sample.elf
+            </code></pre>
+
+            <p>
+                정상적으로 생성되면 <code>sample.hex</code> 파일에 16진수 기계어 코드가 들어 있다.
+                이 파일을 Ch05에서 배우는 <code>$readmemh</code> 명령어로 FPGA의 명령어 메모리(IMEM)에 로드할 수 있다.
+            </p>
+
+            <aside class="metacognition">
+                <strong>🔍 riscv-gnu-toolchain 설치 완료 체크리스트</strong>
+                <ul class="checklist">
+                    <li><code>riscv64-unknown-elf-gcc --version</code> 실행 가능</li>
+                    <li><code>-march=rv32i</code> 플래그로 컴파일 성공</li>
+                    <li>sample.c &rarr; sample.elf &rarr; sample.hex 변환 성공</li>
+                    <li>sample.hex 파일 생성 (용량 ~2KB)</li>
+                </ul>
+                <p>모든 항목을 통과했다면, Ch03부터 RISC-V 어셈블리를 배울 준비가 된 것이다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== E.3 VCS / Vivado Simulator ========== -->
+        <div class="appendix-section" id="sec-E-3">
+            <h2>E.3 시뮬레이션 환경: VCS 또는 Vivado Simulator</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>VCS와 Vivado Simulator의 차이점을 설명할 수 있다. (이해/Understand)</li>
+                    <li>자신의 환경에 적합한 시뮬레이터를 선택할 수 있다.</li>
+                </ul>
+            </nav>
+
+            <!-- E.3.1 도입 -->
+            <h3>시뮬레이션이 필요한 이유</h3>
+
+            <p>
+                하드웨어 설계는 소프트웨어와 달리, 오류가 발생해도 "디버그 출력"을 찍어볼 수 없다.
+                대신 <strong>시뮬레이션(Simulation)</strong>을 통해 설계한 회로가 예상대로 동작하는지 확인한다.
+                시뮬레이터는 클록 사이클마다 모든 신호의 값을 기록하여 <strong>파형(Waveform)</strong>으로 보여주므로,
+                마치 회로 내부를 "투시"하는 것처럼 동작을 분석할 수 있다.
+            </p>
+
+            <div class="analogy">
+                <strong>비유:</strong>
+                의사가 환자의 몸 내부를 보기 위해 X-ray나 MRI를 사용하듯,
+                하드웨어 설계자는 시뮬레이터의 파형 분석을 통해 회로 내부의 신호를 관찰한다.
+                Vivado Simulator가 "동네 병원의 X-ray"라면, VCS/Verdi는 "대학 병원의 MRI"에 해당한다.
+                대부분의 진단(시뮬레이션)은 X-ray로 충분하지만, 복잡한 경우에는 MRI가 필요할 수 있다.
+            </div>
+
+            <!-- E.3.2 비교 -->
+            <h3>VCS vs Vivado Simulator 비교</h3>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>Vivado Simulator (xsim)</th>
+                        <th>VCS + Verdi (Synopsys)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>라이선스</td>
+                        <td>무료 (WebPACK 포함)</td>
+                        <td>유료 (대학 라이선스 필요)</td>
+                    </tr>
+                    <tr>
+                        <td>시뮬레이션 속도</td>
+                        <td>보통 (소~중형 설계 적합)</td>
+                        <td>매우 빠름 (대형 설계 적합)</td>
+                    </tr>
+                    <tr>
+                        <td>파형 분석</td>
+                        <td>기본 (Vivado 내장 뷰어)</td>
+                        <td>고급 (Verdi: 계층적 검색, 신호 비교)</td>
+                    </tr>
+                    <tr>
+                        <td>이 교재 실습 범위</td>
+                        <td><strong>Ch01~Ch22 충분</strong></td>
+                        <td>Ch25 이후 대규모 시뮬레이션</td>
+                    </tr>
+                    <tr>
+                        <td>설치 난이도</td>
+                        <td>낮음 (Vivado에 포함)</td>
+                        <td>높음 (IT 지원 필요)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>💡 실무 팁</strong>
+                <p>
+                    <strong>결론부터 말하면, 대부분의 독자는 Vivado Simulator만으로 충분하다.</strong>
+                    이 교재의 Ch01~Ch22 실습은 모두 Vivado Simulator에서 실행 가능하다.
+                    VCS/Verdi는 대학원에서 라이선스를 제공하는 경우에만 고려하면 된다.
+                </p>
+            </aside>
+
+            <!-- E.3.3 Vivado Simulator 사용법 -->
+            <h3>Vivado Simulator 사용법 (권장)</h3>
+
+            <p>
+                Vivado Simulator는 E.1에서 Vivado를 설치할 때 함께 설치되므로, 별도의 추가 작업이 필요 없다.
+                시뮬레이션을 실행하는 기본 절차는 다음과 같다.
+            </p>
+
+            <ol>
+                <li>Vivado 프로젝트에 테스트벤치 파일을 <strong>Simulation Sources</strong>로 추가한다.</li>
+                <li><code>Flow &rarr; Run Simulation &rarr; Run Behavioral Simulation</code>을 클릭한다.</li>
+                <li>파형 창에서 관심 신호를 선택하여 분석한다.</li>
+                <li>시뮬레이션 시간을 조정하거나 (<code>run 100us</code>), 특정 신호에 브레이크포인트를 설정할 수 있다.</li>
+            </ol>
+
+            <p>아래는 E.1에서 만든 LED 깜박이기 모듈의 간단한 테스트벤치 예시이다.</p>
+
+            <pre><code class="language-verilog">
+`timescale 1ns / 1ps
+
+module tb_led_blink;
+   logic clk;
+   logic rst_n;
+   logic led_out;
+
+   // DUT (Device Under Test) 인스턴스
+   led_blink dut (
+      .clk     (clk),
+      .rst_n   (rst_n),
+      .led_out (led_out)
+   );
+
+   // 100 MHz 클록 생성 (주기 10ns)
+   initial clk = 1'b0;
+   always #5 clk = ~clk;
+
+   // 테스트 시나리오
+   initial begin
+      rst_n = 1'b0;         // 리셋 인가
+      #100;
+      rst_n = 1'b1;         // 리셋 해제
+      #500_000;             // 500us 시뮬레이션
+      $display("counter = %0d, led_out = %b", dut.counter, led_out);
+      $finish;
+   end
+endmodule
+            </code></pre>
+
+            <!-- E.3.4 VCS 안내 (선택) -->
+            <h3>VCS / Verdi 설치 안내 (선택사항)</h3>
+
+            <p>
+                VCS는 Synopsys사의 상용 시뮬레이터로, 업계 표준이지만 라이선스 비용이 매우 높다 (연간 수천만 원).
+                대학원 환경에서 대학 라이선스로 제공되는 경우에만 사용이 가능하다.
+            </p>
+
+            <div class="step-box">
+                <h4>VCS 설치 확인 (대학원 환경)</h4>
+                <ol>
+                    <li>소속 대학원의 "산학협력단" 또는 "컴퓨터 센터"에 Synopsys 라이선스 서버 주소를 문의한다.</li>
+                    <li>라이선스 서버가 구성되어 있으면, Linux/WSL 환경에서 <code>vcs -version</code>을 실행하여 설치를 확인한다.</li>
+                    <li>간단한 테스트벤치를 컴파일한다: <code>vcs -sv tb_simple.sv module.sv -o simv</code></li>
+                    <li>시뮬레이션을 실행한다: <code>./simv</code></li>
+                </ol>
+            </div>
+
+            <p>
+                VCS 설치의 세부 사항은 대학마다 환경이 다르므로, <strong>IT 담당자나 선배에게 직접 문의</strong>하는 것을 권장한다.
+                이 교재의 모든 실습은 Vivado Simulator로 충분히 수행할 수 있으므로, VCS가 없다고 걱정하지 않아도 된다.
+            </p>
+
+            <aside class="metacognition">
+                <strong>🔍 시뮬레이션 환경 체크리스트</strong>
+                <p><strong>Vivado Simulator 사용 시 (권장):</strong></p>
+                <ul class="checklist">
+                    <li>Vivado에서 <code>Run Behavioral Simulation</code> 실행 가능</li>
+                    <li>파형 창에서 신호 관찰 가능 (clk, rst_n 파형 확인)</li>
+                    <li>시뮬레이션 시간 조정 가능 (<code>run 100us</code>)</li>
+                </ul>
+                <p><strong>VCS 사용 시 (선택):</strong></p>
+                <ul class="checklist">
+                    <li>대학 라이선스 서버 확인 완료</li>
+                    <li><code>vcs -version</code> 실행 가능</li>
+                    <li>간단한 테스트벤치 컴파일 및 실행 성공</li>
+                    <li>Verdi로 .fsdb 파일 열기 가능</li>
+                </ul>
+            </aside>
+        </div>
+
+        <!-- ========== E.4 FAQ 및 실패 정상화 ========== -->
+        <div class="appendix-section" id="sec-E-4">
+            <h2>E.4 자주 묻는 질문 (FAQ) 및 문제 해결</h2>
+
+            <p>
+                개발 도구 설치 중 오류가 발생하는 것은 <strong>매우 흔한 일</strong>이다.
+                아래 FAQ는 수강생들이 가장 자주 겪는 6가지 문제와 해결 방법을 정리한 것이다.
+                여기에 없는 문제가 발생하면 E.4.7의 안내를 참조하기 바란다.
+            </p>
+
+            <!-- FAQ 1 -->
+            <h3>E.4.1 Vivado 설치 중 'Cannot find a supported device driver' 오류</h3>
+
+            <p><strong>원인</strong>: Xilinx 라이선스 서버 연결 실패 또는 방화벽 차단</p>
+            <p><strong>해결 방법</strong>:</p>
+            <ol>
+                <li>방화벽 설정에서 <code>Vivado.exe</code>의 아웃바운드 연결을 허용한다.</li>
+                <li><code>Help &rarr; Manage License &rarr; Load License &rarr; Manual</code>에서 수동 설정을 시도한다.</li>
+                <li>그래도 안 되면 WebPACK 라이선스를 AMD 사이트에서 재신청한다.</li>
+            </ol>
+
+            <!-- FAQ 2 -->
+            <h3>E.4.2 Basys 3를 연결했는데 'No device found' 표시</h3>
+
+            <p><strong>원인</strong>: USB 드라이버 미설치 또는 USB 케이블 문제</p>
+            <p><strong>해결 방법</strong>:</p>
+            <ol>
+                <li>USB 케이블을 다른 포트에 연결해 본다.</li>
+                <li>디바이스 관리자에서 "Xilinx USB Cable" 항목을 확인한다.
+                    없으면 <code>C:\Xilinx\Vivado\2024.1\data\xilinx_drivers\</code>에서 드라이버를 수동 설치한다.</li>
+                <li>충전 전용 USB 케이블이 아닌, <strong>데이터 전송 지원</strong> Micro-B 케이블을 사용한다.</li>
+            </ol>
+
+            <!-- FAQ 3 -->
+            <h3>E.4.3 비트스트림 생성 중 'Out of Memory' 오류</h3>
+
+            <p><strong>원인</strong>: RAM 부족 (복잡한 설계 + 낮은 시스템 메모리)</p>
+            <p><strong>해결 방법</strong>:</p>
+            <ol>
+                <li>다른 프로그램(브라우저, 메신저 등)을 종료하여 메모리를 확보한다.</li>
+                <li>임시 파일을 정리한다: <code>C:\Users\{사용자명}\AppData\Local\Temp\</code></li>
+                <li>Vivado 합성 옵션에서 <code>Synthesis Settings &rarr; Algorithm &rarr; "Area Reduction"</code>을 선택한다.</li>
+            </ol>
+
+            <!-- FAQ 4 -->
+            <h3>E.4.4 'riscv64-unknown-elf-gcc' is not recognized</h3>
+
+            <p><strong>원인</strong>: PATH 환경 변수 미등록 또는 터미널 미갱신</p>
+            <p><strong>해결 방법</strong>:</p>
+            <ol>
+                <li>설치 경로를 확인한다: <code>C:\riscv-toolchain\bin\</code> 폴더가 존재하고 <code>riscv64-unknown-elf-gcc.exe</code> 파일이 있는가?</li>
+                <li>PATH 환경 변수에 위 경로가 추가되어 있는지 확인한다.</li>
+                <li>PowerShell 또는 CMD를 <strong>새로 열고</strong> 다시 시도한다 (기존 창에서는 PATH 변경이 반영되지 않음).</li>
+            </ol>
+
+            <!-- FAQ 5 -->
+            <h3>E.4.5 컴파일은 성공했는데 .hex 파일이 생성되지 않음</h3>
+
+            <p><strong>원인</strong>: <code>objcopy</code> 명령 누락 또는 문법 오류</p>
+            <p><strong>해결 방법</strong>:</p>
+            <pre><code class="language-bash">
+# 올바른 명령:
+riscv64-unknown-elf-objcopy -O verilog sample.elf sample.hex
+
+# 검증:
+ls -la sample.hex        # 파일 존재 확인 (Linux/WSL)
+dir sample.hex           # 파일 존재 확인 (Windows CMD)
+type sample.hex          # 내용 확인 (16진수 데이터가 표시되어야 함)
+            </code></pre>
+
+            <!-- FAQ 6 -->
+            <h3>E.4.6 Vivado Simulator에서 신호가 X(unknown)로 표시됨</h3>
+
+            <p><strong>원인</strong>: 신호가 초기화되지 않았거나 클록/리셋이 연결되지 않음</p>
+            <p><strong>해결 방법</strong>:</p>
+            <ol>
+                <li>테스트벤치에서 <code>clk</code>과 <code>rst_n</code> 신호가 올바르게 생성되는지 확인한다.</li>
+                <li>시뮬레이션 시간이 너무 짧으면 신호 전파가 되지 않으므로, <code>run</code> 시간을 늘려본다.</li>
+                <li>레지스터에 명시적 초기값을 지정한다: <code>logic [31:0] data = 32'h0000_0000;</code></li>
+            </ol>
+
+            <!-- 실패 정상화 -->
+            <h3>E.4.7 설치가 잘 안 될 때 &mdash; 실패는 정상이다</h3>
+
+            <aside class="instructor-tip">
+                <strong>📌 강사의 경험</strong>
+                <p>
+                    필자도 처음 Vivado를 설치했을 때, 드라이버 문제로 반나절을 소비한 적이 있다.
+                    지금 여러분이 느끼는 답답함은 필자도 느꼈고, 삼성이나 SK하이닉스의 신입 설계자도 느낀다.
+                    환경 설치에서 막히는 것은 기술 부족이 아니라, <strong>누구에게나 일어나는 일</strong>이다.
+                    한 번 성공하면 다시는 겪지 않을 문제이니, 조금만 더 인내해 보자.
+                </p>
+            </aside>
+
+            <aside class="tip">
+                <strong>💡 기억하세요</strong>
+                <p>
+                    여러분이 배우는 Verilog는 <strong>논리 설계</strong>이다.
+                    하지만 환경 설치는 <strong>소프트웨어 운영</strong>이다.
+                    이 둘은 완전히 다른 영역이다.
+                </p>
+                <p>
+                    논리 설계에는 정답이 있다. <code>(A AND B) OR C</code>는 항상 같은 결과를 낸다.
+                    하지만 환경 설치는 여러분의 PC, 운영체제 버전, 기존 소프트웨어 조합에 따라 결과가 달라진다.
+                    따라서 <strong>첫 시도에 실패하는 것이 정상</strong>이다.
+                </p>
+            </aside>
+
+            <p>막혔을 때는 다음 순서로 해결을 시도하자.</p>
+
+            <ol>
+                <li>이 FAQ(E.4)를 다시 한 번 읽어본다.</li>
+                <li>FAQ에 없으면 선배나 조교(TA)에게 물어본다.</li>
+                <li>그래도 해결되지 않으면, 조교실의 "설치 완료 PC"에서 직접 시연을 요청한다.</li>
+            </ol>
+
+            <p>
+                <strong>질문하는 것은 부끄러운 일이 아니다.</strong>
+                오히려, 설치 오류를 해결한 경험이 다음번 문제를 푸는 능력이 된다.
+                삼성, SK하이닉스, 인텔 등 대기업의 설계 엔지니어들도 신입 때는 환경 설치에서 여러 번 막혔다.
+                중요한 것은 포기하지 않고 한 단계씩 나아가는 것이다.
+            </p>
+        </div>
+
+        <!-- ========== E.5 요약 ========== -->
+        <div class="appendix-section" id="sec-E-5">
+            <h2>E.5 요약 및 다음 단계</h2>
+
+            <p>이 부록에서 다룬 개발 도구의 설치 상태를 아래 표로 최종 확인하자.</p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>도구</th>
+                        <th>설치 완료?</th>
+                        <th>검증 성공?</th>
+                        <th>다음 단계</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Vivado 2024.1 (또는 이후 버전)</td>
+                        <td>☐</td>
+                        <td>☐ LED 깜박이기</td>
+                        <td>Ch01.2부터 시작</td>
+                    </tr>
+                    <tr>
+                        <td>riscv-gnu-toolchain</td>
+                        <td>☐</td>
+                        <td>☐ .hex 파일 생성</td>
+                        <td>Ch03.10부터 사용</td>
+                    </tr>
+                    <tr>
+                        <td>시뮬레이터 (xsim/VCS)</td>
+                        <td>☐</td>
+                        <td>☐ 파형 관찰</td>
+                        <td>Ch04부터 활용</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                Vivado와 riscv-gnu-toolchain의 체크리스트를 모두 통과했다면,
+                본 교재의 <strong>Ch01</strong>부터 학습을 시작할 수 있다.
+            </p>
+
+            <p>
+                시뮬레이터는 Ch04의 첫 번째 테스트벤치 실습에서 사용하게 되므로,
+                그때까지 Vivado Simulator가 정상 동작하는지 확인해 두면 좋다.
+            </p>
+
+            <aside class="tip">
+                <strong>💡 첫 번째 성공을 축하합니다</strong>
+                <p>
+                    LED가 깜박이고, .hex 파일이 생성되었다면 &mdash; 축하한다!
+                    환경 설치라는 가장 지루하고 예측 불가능한 단계를 통과한 것이다.
+                    이제부터는 여러분이 더 흥미로워하는 <strong>논리 설계</strong>의 세계가 펼쳐진다.
+                    서두르지 말고, 한 챕터씩 차근차근 나아가자.
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== 전체 소스 코드 ========== -->
+        <section class="full-source-section" id="sec-full-source">
+            <h2>📁 전체 소스 코드</h2>
+            <p>이 부록에서 사용한 코드와 스크립트의 완전한 소스 코드이다.
+            지금 당장 전부 이해하지 않아도 된다. 각 절 학습 후 참조용으로 활용하십시오.</p>
+
+            <div class="source-file">
+                <h3><span class="file-badge">TCL</span>app_e_vivado_tcl_script.tcl</h3>
+                <pre><code class="language-tcl">
+# Vivado Tcl 자동화 스크립트: Basys 3 LED 깜박이기 프로젝트
+# 사용법: vivado -mode batch -source app_e_vivado_tcl_script.tcl
+
+set project_name "led_blink_test"
+set project_dir  "C:/vivado_projects/${project_name}"
+
+# 기존 프로젝트 폴더가 있으면 삭제
+if {[file exists $project_dir]} {
+    file delete -force $project_dir
+}
+
+create_project $project_name $project_dir -part xc7a35tcpg236-1
+set_property board_part digilentinc.com:basys3:part0:1.2 [current_project]
+
+# RTL 소스 파일 생성 및 추가
+set sv_content {
+module led_blink(
+    input  clk,
+    input  rst_n,
+    output led_out
+);
+    logic [26:0] counter;
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) counter &lt;= 27'd0;
+        else        counter &lt;= counter + 1'b1;
+    end
+    assign led_out = counter[26];
+endmodule
+}
+set sv_file "${project_dir}/led_blink.sv"
+set fp [open $sv_file w]
+puts $fp $sv_content
+close $fp
+add_files $sv_file
+
+# XDC 제약 파일 생성 및 추가
+set xdc_content {
+set_property -dict {PACKAGE_PIN W5 IOSTANDARD LVCMOS33} [get_ports clk]
+create_clock -add -name sys_clk -period 10.00 -waveform {0 5} [get_ports clk]
+set_property -dict {PACKAGE_PIN U18 IOSTANDARD LVCMOS33} [get_ports rst_n]
+set_property -dict {PACKAGE_PIN V17 IOSTANDARD LVCMOS33} [get_ports led_out]
+}
+set xdc_file "${project_dir}/basys3.xdc"
+set fp [open $xdc_file w]
+puts $fp $xdc_content
+close $fp
+add_files -fileset constrs_1 $xdc_file
+
+# 합성 → 구현 → 비트스트림 생성
+launch_runs synth_1 -jobs 4
+wait_on_run synth_1
+launch_runs impl_1 -jobs 4
+wait_on_run impl_1
+launch_runs impl_1 -to_step write_bitstream -jobs 4
+wait_on_run impl_1
+
+puts "비트스트림 생성 완료!"
+                </code></pre>
+            </div>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SH</span>app_e_toolchain_asm_to_hex.sh</h3>
+                <pre><code class="language-bash">
+#!/bin/bash
+# RISC-V 어셈블리/C → .hex 파일 변환 스크립트
+# 사용법: ./app_e_toolchain_asm_to_hex.sh sample.c
+
+TOOLCHAIN_PREFIX="riscv64-unknown-elf"
+MARCH="rv32i"
+MABI="ilp32"
+
+SOURCE_FILE="$1"
+BASENAME="${SOURCE_FILE%.*}"
+
+# Step 1: C/어셈블리 → ELF
+${TOOLCHAIN_PREFIX}-gcc \
+    -march=${MARCH} -mabi=${MABI} \
+    -nostartfiles -nostdlib -static \
+    "$SOURCE_FILE" -o "${BASENAME}.elf"
+
+# Step 2: ELF → Hex (Verilog 형식)
+${TOOLCHAIN_PREFIX}-objcopy \
+    -O verilog "${BASENAME}.elf" "${BASENAME}.hex"
+
+# Step 3: 디스어셈블리 (참고용)
+${TOOLCHAIN_PREFIX}-objdump -d "${BASENAME}.elf" &gt; "${BASENAME}.dis"
+
+echo "빌드 완료: ${BASENAME}.hex"
+                </code></pre>
+            </div>
+
+            <div class="source-file">
+                <h3><span class="file-badge">TB</span>app_e_vivado_sim_testbench.sv</h3>
+                <pre><code class="language-verilog">
+`timescale 1ns / 1ps
+
+module tb_led_blink;
+   logic clk;
+   logic rst_n;
+   logic led_out;
+
+   // DUT 인스턴스
+   led_blink dut (
+      .clk     (clk),
+      .rst_n   (rst_n),
+      .led_out (led_out)
+   );
+
+   // 100 MHz 클록 (주기 10ns)
+   initial clk = 1'b0;
+   always #5 clk = ~clk;
+
+   // 테스트 시나리오
+   initial begin
+      rst_n = 1'b0;
+      #100;
+      rst_n = 1'b1;
+      $display("[%0t ns] 리셋 해제", $time);
+
+      #500_000;
+      $display("[%0t ns] 시뮬레이션 종료", $time);
+      $display("  led_out = %b, counter = %0d", led_out, dut.counter);
+
+      if (dut.counter != 27'd0)
+         $display("  테스트 통과!");
+      else
+         $display("  테스트 실패: 클록/리셋 확인 필요");
+
+      $finish;
+   end
+
+   // 파형 덤프
+   initial begin
+      $dumpfile("tb_led_blink.vcd");
+      $dumpvars(0, tb_led_blink);
+   end
+endmodule
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- ========== 부록 푸터 ========== -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>이 부록의 목적</strong>: RISC-V 프로세서 설계를 시작하기 전에 필요한 개발 환경을 구축하는 안내서이다.
+                설치 과정에서 문제가 발생하면 E.4 FAQ를 참조하거나, 조교/선배에게 도움을 요청하기 바란다.
+            </p>
+            <p>
+                문의: RISC-V 프로세서 설계 완전정복 교재 프로젝트 | 2026년
+            </p>
+        </footer>
+
+    </main>
+
+    <!-- Highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/c.min.js"></script>
+    <script>
+        // language-systemverilog → language-verilog 변환 (Highlight.js 호환)
+        document.querySelectorAll('pre code').forEach(el => {
+            if (el.className.includes('language-systemverilog')) {
+                el.className = el.className.replace('language-systemverilog', 'language-verilog');
+            }
+        });
+        hljs.highlightAll();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix B — SystemVerilog 합성 가능 구문 레퍼런스</title>
+    <link rel="stylesheet" href="../../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 40px 20px; text-align: center; margin-bottom: 40px;
+        }
+        .appendix-header h1 { margin: 0; font-size: 2.5em; }
+        .appendix-header p { margin: 10px 0 0 0; font-size: 1.1em; }
+        .appendix-section h2 {
+            border-left: 4px solid #667eea; padding-left: 15px;
+            margin-top: 40px; margin-bottom: 20px;
+        }
+        .reference-table {
+            width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em;
+        }
+        .reference-table th {
+            background: #f0f0f0; padding: 10px 8px; text-align: left;
+            border-bottom: 2px solid #667eea; font-size: 0.9em;
+        }
+        .reference-table td {
+            padding: 7px 8px; border-bottom: 1px solid #ddd; font-size: 0.88em;
+        }
+        .reference-table tr:nth-child(even) { background: #f9f9f9; }
+        .reference-table code {
+            background: #f5f5f5; padding: 1px 4px; border-radius: 3px;
+            font-family: 'Courier New', monospace; font-size: 0.92em;
+        }
+        .synth-yes { color: #059669; font-weight: 700; }
+        .synth-cond { color: #D97706; font-weight: 700; }
+        .synth-no { color: #DC2626; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="appendix-header">
+        <h1>Appendix B — SystemVerilog 합성 가능 구문 레퍼런스</h1>
+        <p>합성 가능 여부 판별 | Vivado 추론 규칙 | XDC 타이밍 제약 템플릿</p>
+    </div>
+
+    <main class="content">
+
+        <!-- ========== B.1 합성 가능/불가 구문 분류표 ========== -->
+        <div class="appendix-section">
+            <h2>B.1 합성 가능/불가 구문 분류표</h2>
+            <p>
+                SystemVerilog IEEE 1800-2017 표준의 구문 중 Vivado 2024.x에서 합성 가능한 것과
+                시뮬레이션 전용인 것을 분류한다. RTL 코드 작성 시 이 표를 참고하여 합성 불가 구문을
+                실수로 사용하지 않도록 한다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>구문</th>
+                        <th>합성</th>
+                        <th>비고</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 합성 가능 -->
+                    <tr><td colspan="3" style="font-weight:700; background:#D1FAE5; padding-top:12px;">합성 가능 구문</td></tr>
+                    <tr>
+                        <td><code>always_ff @(posedge clk)</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>순차 논리(플립플롭) 추론. 클록 에지 필수.</td>
+                    </tr>
+                    <tr>
+                        <td><code>always_comb</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>조합 논리 추론. 불완전 분기 시 래치 경고.</td>
+                    </tr>
+                    <tr>
+                        <td><code>assign</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>연속 할당. 조합 논리.</td>
+                    </tr>
+                    <tr>
+                        <td><code>logic</code> / <code>wire</code></td>
+                        <td class="synth-yes">O</td>
+                        <td><code>logic</code>은 <code>reg</code>와 <code>wire</code>를 통합. SystemVerilog 권장.</td>
+                    </tr>
+                    <tr>
+                        <td><code>parameter</code> / <code>localparam</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>정적 상수. 제네릭 설계에 필수.</td>
+                    </tr>
+                    <tr>
+                        <td><code>generate</code> / <code>genvar</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>반복 구조 생성. 정적으로 확장됨.</td>
+                    </tr>
+                    <tr>
+                        <td><code>if-else</code> / <code>case</code> / <code>casez</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>MUX 또는 우선순위 인코더 추론. <code>casex</code>는 권장하지 않음.</td>
+                    </tr>
+                    <tr>
+                        <td>산술 연산자 (<code>+</code>, <code>-</code>, <code>*</code>)</td>
+                        <td class="synth-yes">O</td>
+                        <td>가산기/감산기/곱셈기 추론. <code>*</code>는 DSP48E1 추론 가능.</td>
+                    </tr>
+                    <tr>
+                        <td>논리/비트 연산자 (<code>&amp;</code>, <code>|</code>, <code>^</code>, <code>~</code>)</td>
+                        <td class="synth-yes">O</td>
+                        <td>LUT로 직접 매핑.</td>
+                    </tr>
+                    <tr>
+                        <td>시프트 연산자 (<code>&lt;&lt;</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;&gt;</code>)</td>
+                        <td class="synth-yes">O</td>
+                        <td>배럴 시프터 추론. <code>&gt;&gt;&gt;</code>는 산술 시프트(부호 확장).</td>
+                    </tr>
+                    <tr>
+                        <td>비교 연산자 (<code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>)</td>
+                        <td class="synth-yes">O</td>
+                        <td>비교기 추론.</td>
+                    </tr>
+                    <tr>
+                        <td><code>typedef enum</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>FSM 상태 정의에 권장. 자동 인코딩.</td>
+                    </tr>
+                    <tr>
+                        <td><code>typedef struct packed</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>파이프라인 레지스터 번들에 유용. <code>packed</code> 필수.</td>
+                    </tr>
+                    <tr>
+                        <td>삼항 연산자 (<code>? :</code>)</td>
+                        <td class="synth-yes">O</td>
+                        <td>2:1 MUX 추론.</td>
+                    </tr>
+                    <tr>
+                        <td><code>module</code> / <code>endmodule</code></td>
+                        <td class="synth-yes">O</td>
+                        <td>계층 구조 정의.</td>
+                    </tr>
+
+                    <!-- 조건부 합성 -->
+                    <tr><td colspan="3" style="font-weight:700; background:#FEF3C7; padding-top:12px;">조건부 합성 (사용 맥락에 따라)</td></tr>
+                    <tr>
+                        <td><code>initial</code></td>
+                        <td class="synth-cond">△</td>
+                        <td>BRAM/ROM 초기화에만 합성 가능. 일반 로직에서는 시뮬레이션 전용.</td>
+                    </tr>
+                    <tr>
+                        <td><code>$clog2()</code></td>
+                        <td class="synth-cond">△</td>
+                        <td><code>parameter</code>/<code>localparam</code> 계산에서만 합성 가능. 런타임 사용 불가.</td>
+                    </tr>
+                    <tr>
+                        <td><code>for</code> 루프</td>
+                        <td class="synth-cond">△</td>
+                        <td>정적 언롤(unroll) 가능한 경우만 합성. 루프 범위가 상수여야 함.</td>
+                    </tr>
+                    <tr>
+                        <td><code>function</code></td>
+                        <td class="synth-cond">△</td>
+                        <td>조합 논리 함수만 합성 가능. 시간 지연(<code>#</code>) 포함 불가.</td>
+                    </tr>
+                    <tr>
+                        <td><code>interface</code></td>
+                        <td class="synth-cond">△</td>
+                        <td>Vivado에서 부분 지원. <code>modport</code> 사용 시 주의 필요.</td>
+                    </tr>
+                    <tr>
+                        <td>나눗셈 (<code>/</code>, <code>%</code>)</td>
+                        <td class="synth-cond">△</td>
+                        <td>2의 거듭제곱 나눗셈은 시프트로 합성. 일반 나눗셈은 매우 큰 면적.</td>
+                    </tr>
+
+                    <!-- 합성 불가 -->
+                    <tr><td colspan="3" style="font-weight:700; background:#FEE2E2; padding-top:12px;">합성 불가 (시뮬레이션 전용)</td></tr>
+                    <tr>
+                        <td><code>$display</code> / <code>$monitor</code> / <code>$write</code></td>
+                        <td class="synth-no">X</td>
+                        <td>콘솔 출력. 테스트벤치 전용.</td>
+                    </tr>
+                    <tr>
+                        <td><code>$readmemh</code> / <code>$readmemb</code></td>
+                        <td class="synth-cond">&triangle;</td>
+                        <td>Vivado는 BRAM/LUTRAM 초기화용으로 합성 지원한다. 단, 시뮬레이션 전용 사용(파일 I/O)과 구분 필요.</td>
+                    </tr>
+                    <tr>
+                        <td><code>#delay</code></td>
+                        <td class="synth-no">X</td>
+                        <td>시간 지연. 합성기가 무시함.</td>
+                    </tr>
+                    <tr>
+                        <td><code>fork</code> / <code>join</code></td>
+                        <td class="synth-no">X</td>
+                        <td>병렬 프로세스. 시뮬레이션 전용.</td>
+                    </tr>
+                    <tr>
+                        <td><code>class</code> / <code>program</code></td>
+                        <td class="synth-no">X</td>
+                        <td>객체지향 구문. UVM 검증 전용.</td>
+                    </tr>
+                    <tr>
+                        <td><code>real</code> / <code>string</code></td>
+                        <td class="synth-no">X</td>
+                        <td>부동소수점/문자열 타입. 하드웨어 표현 불가.</td>
+                    </tr>
+                    <tr>
+                        <td><code>assert</code> / <code>assume</code> / <code>cover</code></td>
+                        <td class="synth-no">X</td>
+                        <td>검증 구문. 합성기가 무시(경고 발생).</td>
+                    </tr>
+                    <tr>
+                        <td><code>@(negedge clk)</code> (하강 에지)</td>
+                        <td class="synth-cond">&triangle;</td>
+                        <td>Vivado는 하강 에지 플립플롭을 합성 지원한다. DDR 인터페이스, 위상 조정 등에 사용되지만, 단일 에지 설계가 권장됨.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p><code>always_comb</code> 내에서 모든 분기가 모든 출력을 할당하지 않으면 래치(latch)가 추론된다.
+                의도하지 않은 래치는 타이밍 문제를 유발하므로, <code>case</code>문에는 항상 <code>default</code>를 포함하라.</p>
+            </aside>
+        </div>
+
+        <!-- ========== B.2 Vivado 하드웨어 추론 규칙 ========== -->
+        <div class="appendix-section">
+            <h2>B.2 Vivado 하드웨어 추론 규칙</h2>
+            <p>
+                Vivado 합성기는 RTL 코드의 패턴을 분석하여 FPGA 전용 리소스(BRAM, LUTRAM, DSP48E1, SRL)로
+                자동 매핑한다. 아래 그림은 전체 합성 흐름을 보여준다.
+            </p>
+
+            <figure>
+                <img src="../../figures/app_b_synth_flow.svg" alt="Vivado 합성 흐름" style="max-width:100%">
+                <figcaption>그림 B.1: Vivado 합성 흐름 &mdash; RTL 코드의 패턴에 따라 BRAM/LUTRAM/DSP가 자동 추론된다.</figcaption>
+            </figure>
+
+            <h3>B.2.1 Block RAM (BRAM) 추론 조건</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>조건</th><th>설명</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>읽기 방식</td><td><strong>동기 읽기</strong> 필수 (<code>always_ff</code> 내에서 읽기)</td></tr>
+                    <tr><td>쓰기 방식</td><td>동기 쓰기 (<code>always_ff</code> 내에서 쓰기)</td></tr>
+                    <tr><td>최소 크기</td><td>일반적으로 256비트 이상 (Vivado가 자동 판단)</td></tr>
+                    <tr><td>최대 크기</td><td>Artix-7: 36Kb/블록, 50개 블록 = 1,800Kb</td></tr>
+                    <tr><td>포트 구성</td><td>Single Port / Simple Dual Port / True Dual Port</td></tr>
+                    <tr><td>초기화</td><td><code>initial</code> 블록 또는 COE 파일</td></tr>
+                    <tr><td>Vivado 힌트</td><td><code>(* ram_style = "block" *)</code></td></tr>
+                    <tr><td>본 교재 사용</td><td>IMEM (Ch05), DMEM (Ch05), I-Cache Data (Ch13)</td></tr>
+                </tbody>
+            </table>
+
+            <p>BRAM 추론 코드 패턴:</p>
+            <pre><code class="language-systemverilog">
+// BRAM 추론: 동기 읽기 + 동기 쓰기
+logic [31:0] mem [0:1023];
+
+always_ff @(posedge clk) begin
+   if (we)
+      mem[addr] &lt;= din;
+   dout &lt;= mem[addr];    // 동기 읽기 → BRAM 추론
+end
+            </code></pre>
+
+            <h3>B.2.2 LUTRAM (분산 RAM) 추론 조건</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>조건</th><th>설명</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>읽기 방식</td><td><strong>비동기 읽기</strong> (<code>assign</code> 또는 <code>always_comb</code>)</td></tr>
+                    <tr><td>쓰기 방식</td><td>동기 쓰기 (<code>always_ff</code>)</td></tr>
+                    <tr><td>리소스 비용</td><td>LUT 소비 큼 &mdash; 소규모 메모리에만 권장</td></tr>
+                    <tr><td>Vivado 힌트</td><td><code>(* ram_style = "distributed" *)</code></td></tr>
+                    <tr><td>본 교재 사용</td><td>레지스터 파일 (Ch04), I-Cache Tag (Ch13), D-Cache Data (Ch14)</td></tr>
+                </tbody>
+            </table>
+
+            <p>LUTRAM 추론 코드 패턴:</p>
+            <pre><code class="language-systemverilog">
+// LUTRAM 추론: 비동기 읽기 + 동기 쓰기
+(* ram_style = "distributed" *)
+logic [31:0] mem [0:31];
+
+always_ff @(posedge clk) begin
+   if (we) mem[waddr] &lt;= din;
+end
+
+assign dout = mem[raddr];   // 비동기 읽기 → LUTRAM 추론
+            </code></pre>
+
+            <h3>B.2.3 DSP48E1 추론 조건</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>조건</th><th>설명</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>곱셈</td><td><code>*</code> 연산자 사용 (25x18 이내에서 1개 DSP)</td></tr>
+                    <tr><td>MAC</td><td><code>acc &lt;= acc + a * b</code> 패턴</td></tr>
+                    <tr><td>파이프라인</td><td>입력/출력 레지스터 추가 시 DSP 내부 레지스터 매핑</td></tr>
+                    <tr><td>Artix-7</td><td>DSP48E1 90개 (XC7A35T)</td></tr>
+                    <tr><td>Vivado 힌트</td><td><code>(* use_dsp = "yes" *)</code></td></tr>
+                    <tr><td>본 교재 사용</td><td>M 확장 곱셈기 (Ch24)</td></tr>
+                </tbody>
+            </table>
+
+            <h3>B.2.4 SRL (Shift Register LUT) 추론 조건</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr><th>조건</th><th>설명</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>패턴</td><td>고정 깊이 시프트 레지스터 (체인 연결)</td></tr>
+                    <tr><td>깊이</td><td>SRL16E: 1~16단, SRLC32E: 1~32단</td></tr>
+                    <tr><td>리셋</td><td>리셋 신호가 없어야 SRL 추론 (리셋 있으면 FF 사용)</td></tr>
+                    <tr><td>용도</td><td>파이프라인 지연 매칭, 소규모 FIFO</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== B.3 합성 관련 pragma 및 속성 ========== -->
+        <div class="appendix-section">
+            <h2>B.3 합성 관련 Pragma 및 속성</h2>
+            <p>
+                Vivado 합성기의 자동 추론 결과가 의도와 다를 때, 속성(attribute)을 사용하여
+                추론을 수동으로 제어할 수 있다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>속성</th>
+                        <th>적용 대상</th>
+                        <th>값</th>
+                        <th>효과</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>(* ram_style *)</code></td>
+                        <td>메모리 배열</td>
+                        <td><code>"block"</code> / <code>"distributed"</code> / <code>"registers"</code></td>
+                        <td>BRAM / LUTRAM / FF 강제 선택</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* rom_style *)</code></td>
+                        <td>ROM 배열</td>
+                        <td><code>"block"</code> / <code>"distributed"</code></td>
+                        <td>ROM 구현 방식 선택</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* use_dsp *)</code></td>
+                        <td>곱셈/가산</td>
+                        <td><code>"yes"</code> / <code>"no"</code></td>
+                        <td>DSP48E1 사용 강제/금지</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* keep *)</code></td>
+                        <td>신호/레지스터</td>
+                        <td><code>"true"</code></td>
+                        <td>최적화(제거/병합) 방지</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* dont_touch *)</code></td>
+                        <td>모듈/신호</td>
+                        <td><code>"true"</code></td>
+                        <td>계층 간 최적화 완전 방지</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* max_fanout *)</code></td>
+                        <td>신호</td>
+                        <td>정수 (예: <code>32</code>)</td>
+                        <td>팬아웃 제한 (버퍼 자동 삽입)</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* async_reg *)</code></td>
+                        <td>레지스터</td>
+                        <td><code>"true"</code></td>
+                        <td>CDC 동기화기 표시 (메타스태빌리티 최적화)</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* fsm_encoding *)</code></td>
+                        <td>FSM 상태 변수</td>
+                        <td><code>"one_hot"</code> / <code>"sequential"</code> / <code>"auto"</code></td>
+                        <td>FSM 인코딩 방식 지정</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* full_case *)</code></td>
+                        <td>case 문</td>
+                        <td>&mdash;</td>
+                        <td>모든 경우가 커버됨을 선언 (래치 방지)</td>
+                    </tr>
+                    <tr>
+                        <td><code>(* parallel_case *)</code></td>
+                        <td>case 문</td>
+                        <td>&mdash;</td>
+                        <td>우선순위 없는 병렬 비교 선언</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p><code>(* full_case *)</code>와 <code>(* parallel_case *)</code>는 시뮬레이션과 합성 간 불일치를 유발할 수 있다.
+                가능하면 <code>default</code> 절과 <code>unique case</code>를 사용하여 언어 수준에서 해결하는 것이 안전하다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== B.4 XDC 타이밍 제약 템플릿 ========== -->
+        <div class="appendix-section">
+            <h2>B.4 XDC 타이밍 제약 템플릿</h2>
+            <p>
+                다음은 Basys 3 (XC7A35T, 100MHz 오실레이터) 프로젝트에 바로 적용할 수 있는 XDC 템플릿이다.
+                본 교재 프로젝트는 100MHz 입력을 PLL로 50MHz로 분주하여 사용한다.
+            </p>
+
+            <pre><code class="language-tcl">
+## ============================================================
+## Basys 3 타이밍 제약 템플릿 (XDC)
+## 대상: XC7A35TCPG236-1, 100MHz 오실레이터
+## ============================================================
+
+## --- 1. 기본 클록 제약 ---
+## Basys 3 온보드 100MHz 오실레이터 (핀 W5)
+create_clock -period 10.000 -name sys_clk_100 [get_ports clk_100mhz]
+
+## PLL 출력 클록 (50MHz 시스템 클록)
+## Vivado가 PLL/MMCM 출력 클록을 자동 생성하지만, 명시적 선언 권장
+# create_generated_clock -name sys_clk_50 \
+#   -source [get_pins clk_gen/mmcm_inst/CLKIN1] \
+#   -divide_by 2 [get_pins clk_gen/mmcm_inst/CLKOUT0]
+
+## --- 2. I/O 타이밍 제약 ---
+## 입력 지연: 외부 디바이스 → FPGA 핀 도착 시간
+set_input_delay -clock sys_clk_100 -max 3.0 [get_ports {sw[*]}]
+set_input_delay -clock sys_clk_100 -min 1.0 [get_ports {sw[*]}]
+set_input_delay -clock sys_clk_100 -max 3.0 [get_ports {btn*}]
+
+## 출력 지연: FPGA 핀 → 외부 디바이스 셋업/홀드
+set_output_delay -clock sys_clk_100 -max 2.0 [get_ports {led[*]}]
+set_output_delay -clock sys_clk_100 -min 0.5 [get_ports {led[*]}]
+
+## --- 3. 거짓 경로 (False Path) ---
+## 비동기 리셋은 타이밍 분석에서 제외
+set_false_path -from [get_ports rst_n]
+
+## CDC (Clock Domain Crossing) 경로
+# set_false_path -from [get_clocks clk_a] -to [get_clocks clk_b]
+
+## --- 4. 멀티사이클 경로 (해당 시 사용) ---
+## 예: 2사이클 곱셈기 출력
+# set_multicycle_path 2 -setup -from [get_pins mult_reg/Q] -to [get_pins product/D]
+# set_multicycle_path 1 -hold  -from [get_pins mult_reg/Q] -to [get_pins product/D]
+
+## --- 5. 최대 지연 (특수 경로) ---
+## 예: UART TX 출력 최대 지연
+# set_max_delay 8.0 -from [get_pins uart_tx_reg/Q] -to [get_ports uart_txd]
+            </code></pre>
+
+            <table class="reference-table">
+                <thead>
+                    <tr><th>XDC 명령어</th><th>용도</th><th>예시</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>create_clock</code></td>
+                        <td>기본 클록 정의</td>
+                        <td>-period 10.0 (= 100MHz)</td>
+                    </tr>
+                    <tr>
+                        <td><code>create_generated_clock</code></td>
+                        <td>파생 클록 정의 (PLL 출력)</td>
+                        <td>-divide_by 2 (50MHz)</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_input_delay</code></td>
+                        <td>입력 핀 타이밍</td>
+                        <td>-max 3.0 (최대 도착 시간)</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_output_delay</code></td>
+                        <td>출력 핀 타이밍</td>
+                        <td>-max 2.0 (외부 셋업 요구)</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_false_path</code></td>
+                        <td>타이밍 분석 제외</td>
+                        <td>리셋, CDC 경로</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_multicycle_path</code></td>
+                        <td>다중 사이클 경로</td>
+                        <td>곱셈기 2사이클</td>
+                    </tr>
+                    <tr>
+                        <td><code>set_max_delay</code></td>
+                        <td>최대 지연 제한</td>
+                        <td>특수 비동기 경로</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== B.5 흔한 합성 경고/오류 ========== -->
+        <div class="appendix-section">
+            <h2>B.5 흔한 합성 경고/오류와 해결법</h2>
+            <p>
+                Vivado 합성 시 자주 만나는 경고(Warning)와 오류(Error) 메시지 Top 10을 정리한다.
+                메시지를 만났을 때 이 표를 참조하여 원인을 빠르게 파악할 수 있다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>메시지 (요약)</th>
+                        <th>심각도</th>
+                        <th>원인</th>
+                        <th>해결법</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"Inferring latch for signal..."</td>
+                        <td style="color:#D97706;">Warning</td>
+                        <td><code>always_comb</code>/<code>always @*</code>에서 불완전 분기</td>
+                        <td><code>case</code>에 <code>default</code> 추가, 모든 분기에서 모든 출력 할당</td>
+                    </tr>
+                    <tr>
+                        <td>"Multi-driven net..."</td>
+                        <td style="color:#DC2626;">Error</td>
+                        <td>하나의 신호가 여러 <code>always</code> 블록에서 구동됨</td>
+                        <td>하나의 <code>always</code> 블록에서만 할당하거나, MUX로 선택</td>
+                    </tr>
+                    <tr>
+                        <td>"Timing constraint not met (WNS &lt; 0)"</td>
+                        <td style="color:#DC2626;">Error</td>
+                        <td>임계 경로가 클록 주기를 초과</td>
+                        <td>파이프라인 레지스터 삽입, 클록 주파수 하향, 로직 최적화</td>
+                    </tr>
+                    <tr>
+                        <td>"Signal is read but never assigned"</td>
+                        <td style="color:#D97706;">Warning</td>
+                        <td>미연결 입력 또는 선언만 한 신호</td>
+                        <td>포트 연결 확인, 미사용 신호 제거</td>
+                    </tr>
+                    <tr>
+                        <td>"ROM will be implemented using Block RAM"</td>
+                        <td style="color:#059669;">Info</td>
+                        <td>큰 ROM이 BRAM으로 추론됨</td>
+                        <td>의도된 경우 정상. LUTRAM 원하면 <code>(* rom_style = "distributed" *)</code></td>
+                    </tr>
+                    <tr>
+                        <td>"Found N-bit register for signal..."</td>
+                        <td style="color:#059669;">Info</td>
+                        <td>합성기가 레지스터를 추론함</td>
+                        <td>정상 메시지. 비트 폭이 예상과 다르면 코드 확인</td>
+                    </tr>
+                    <tr>
+                        <td>"Width mismatch..."</td>
+                        <td style="color:#D97706;">Warning</td>
+                        <td>포트 연결 시 비트 폭 불일치</td>
+                        <td>명시적 비트 슬라이싱 또는 파라미터 수정</td>
+                    </tr>
+                    <tr>
+                        <td>"Unused sequential element removed"</td>
+                        <td style="color:#D97706;">Warning</td>
+                        <td>출력이 아무 곳에도 연결되지 않은 레지스터</td>
+                        <td>의도적이면 무시. 디버깅용이면 <code>(* keep = "true" *)</code></td>
+                    </tr>
+                    <tr>
+                        <td>"Combinational loop detected"</td>
+                        <td style="color:#DC2626;">Error</td>
+                        <td>조합 논리에 피드백 루프 존재</td>
+                        <td>레지스터를 삽입하여 루프 끊기. <code>always_comb</code> 내부 점검</td>
+                    </tr>
+                    <tr>
+                        <td>"DSP48E1 output overflow"</td>
+                        <td style="color:#D97706;">Warning</td>
+                        <td>곱셈 결과 비트 폭이 DSP 출력(48비트)을 초과</td>
+                        <td>결과 비트 폭을 48비트 이내로 제한 또는 분할 곱셈</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>합성 경고를 무시하지 마라. 특히 "Inferring latch"와 "Multi-driven net"은 시뮬레이션에서는 문제가 없어도
+                하드웨어에서 예측 불가능한 동작을 유발한다. 합성 보고서의 경고를 0건으로 만드는 것이 이상적이다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== 전체 소스 코드 ========== -->
+        <section class="full-source-section" id="sec-full-source">
+            <h2>전체 소스 코드</h2>
+            <p>이 부록에서 소개한 추론 패턴의 완전한 소스 코드이다.
+            각 파일은 독립적으로 합성 가능하며, Vivado에서 추론 결과를 직접 확인할 수 있다.</p>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SV</span>app_b_bram_pattern.sv</h3>
+                <pre><code class="language-systemverilog">
+// BRAM 추론 패턴 — 동기 읽기 + 동기 쓰기
+module bram_single_port #(
+   parameter ADDR_WIDTH = 10,
+   parameter DATA_WIDTH = 32
+)(
+   input  logic                    clk,
+   input  logic                    we,
+   input  logic [ADDR_WIDTH-1:0]   addr,
+   input  logic [DATA_WIDTH-1:0]   din,
+   output logic [DATA_WIDTH-1:0]   dout
+);
+   logic [DATA_WIDTH-1:0] mem [0:2**ADDR_WIDTH-1];
+
+   always_ff @(posedge clk) begin
+      if (we)
+         mem[addr] &lt;= din;
+      dout &lt;= mem[addr];
+   end
+endmodule
+                </code></pre>
+            </div>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SV</span>app_b_lutram_pattern.sv</h3>
+                <pre><code class="language-systemverilog">
+// LUTRAM 추론 패턴 — 비동기 읽기 + 동기 쓰기
+module lutram_async_read #(
+   parameter ADDR_WIDTH = 5,
+   parameter DATA_WIDTH = 32
+)(
+   input  logic                    clk,
+   input  logic                    we,
+   input  logic [ADDR_WIDTH-1:0]   waddr,
+   input  logic [ADDR_WIDTH-1:0]   raddr,
+   input  logic [DATA_WIDTH-1:0]   din,
+   output logic [DATA_WIDTH-1:0]   dout
+);
+   (* ram_style = "distributed" *)
+   logic [DATA_WIDTH-1:0] mem [0:2**ADDR_WIDTH-1];
+
+   always_ff @(posedge clk) begin
+      if (we) mem[waddr] &lt;= din;
+   end
+
+   assign dout = mem[raddr];
+endmodule
+                </code></pre>
+            </div>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SV</span>app_b_dsp_pattern.sv</h3>
+                <pre><code class="language-systemverilog">
+// DSP48E1 추론 패턴 — 파이프라인 곱셈기
+// 주의: DSP48E1은 비동기 리셋을 지원하지 않으므로 동기 리셋 사용
+module dsp_multiplier (
+   input  logic        clk,
+   input  logic        rst,      // 동기 리셋
+   input  logic [15:0] a,
+   input  logic [15:0] b,
+   output logic [31:0] product
+);
+   logic [15:0] a_reg, b_reg;
+   logic [31:0] mult_reg;
+
+   always_ff @(posedge clk) begin
+      if (rst) begin
+         a_reg &lt;= '0;  b_reg &lt;= '0;
+         mult_reg &lt;= '0;  product &lt;= '0;
+      end else begin
+         a_reg &lt;= a;  b_reg &lt;= b;
+         mult_reg &lt;= a_reg * b_reg;
+         product &lt;= mult_reg;
+      end
+   end
+endmodule
+                </code></pre>
+            </div>
+
+            <div class="source-file">
+                <h3><span class="file-badge">SV</span>app_b_srl_pattern.sv</h3>
+                <pre><code class="language-systemverilog">
+// SRL 추론 패턴 — 시프트 레지스터 (리셋 없음)
+module srl_delay #(
+   parameter DEPTH = 16,
+   parameter WIDTH = 8
+)(
+   input  logic             clk,
+   input  logic             ce,
+   input  logic [WIDTH-1:0] din,
+   output logic [WIDTH-1:0] dout
+);
+   logic [WIDTH-1:0] shreg [0:DEPTH-1];
+
+   always_ff @(posedge clk) begin
+      if (ce) begin
+         shreg[0] &lt;= din;
+         for (int i = 1; i &lt; DEPTH; i++)
+            shreg[i] &lt;= shreg[i-1];
+      end
+   end
+
+   assign dout = shreg[DEPTH-1];
+endmodule
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- 부록 끝 -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>이 부록의 목적</strong>: RTL 코드 작성 시 합성 가능 여부를 빠르게 판별하고,
+                Vivado의 리소스 추론 규칙을 이해하며, XDC 제약 파일을 올바르게 작성할 수 있도록 돕는 참조 문서이다.
+            </p>
+            <p>
+                기반 자료: Vivado Design Suite User Guide - Synthesis (UG901), Xilinx 7 Series FPGAs Memory Resources (UG473)
+            </p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/tcl.min.js"></script>
+    <script>
+        document.querySelectorAll('code.language-systemverilog').forEach(el => {
+            el.classList.remove('language-systemverilog');
+            el.classList.add('language-verilog');
+        });
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 340" font-family="Pretendard, 'Malgun Gothic', sans-serif">
+  <!-- Title -->
+  <text x="410" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">개발 도구 요구사항 비교</text>
+
+  <!-- Table Header -->
+  <rect x="10" y="45" width="800" height="35" rx="4" fill="#2563EB"/>
+  <text x="85" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="white">도구</text>
+  <text x="210" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="white">필수/선택</text>
+  <text x="330" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="white">라이선스</text>
+  <text x="445" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="white">설치 시간</text>
+  <text x="560" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="white">디스크 용량</text>
+  <text x="710" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="white">주요 기능</text>
+
+  <!-- Vertical lines -->
+  <line x1="150" y1="45" x2="150" y2="320" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="270" y1="45" x2="270" y2="320" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="390" y1="45" x2="390" y2="320" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="500" y1="45" x2="500" y2="320" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="620" y1="45" x2="620" y2="320" stroke="#CBD5E1" stroke-width="1"/>
+
+  <!-- Row 1: Vivado -->
+  <rect x="10" y="80" width="800" height="60" rx="0" fill="#DBEAFE"/>
+  <text x="85" y="106" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">Vivado</text>
+  <text x="85" y="124" text-anchor="middle" font-size="10" fill="#3B82F6">2024.1</text>
+  <rect x="180" y="96" width="60" height="22" rx="4" fill="#DC2626"/>
+  <text x="210" y="112" text-anchor="middle" font-size="11" font-weight="bold" fill="white">필수</text>
+  <text x="330" y="106" text-anchor="middle" font-size="11" fill="#1E3A5F">무료</text>
+  <text x="330" y="124" text-anchor="middle" font-size="10" fill="#6B7280">(WebPACK)</text>
+  <text x="445" y="106" text-anchor="middle" font-size="11" fill="#1E3A5F">2~3시간</text>
+  <text x="445" y="124" text-anchor="middle" font-size="10" fill="#6B7280">(다운로드 포함)</text>
+  <text x="560" y="112" text-anchor="middle" font-size="11" fill="#1E3A5F">~40 GB</text>
+  <text x="710" y="100" text-anchor="middle" font-size="10" fill="#1E3A5F">합성, P&amp;R,</text>
+  <text x="710" y="116" text-anchor="middle" font-size="10" fill="#1E3A5F">비트스트림 생성,</text>
+  <text x="710" y="132" text-anchor="middle" font-size="10" fill="#1E3A5F">FPGA 프로그래밍</text>
+
+  <!-- Row 2: riscv-gnu-toolchain -->
+  <rect x="10" y="140" width="800" height="60" rx="0" fill="#EFF6FF"/>
+  <text x="85" y="166" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">riscv-gnu-</text>
+  <text x="85" y="182" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">toolchain</text>
+  <rect x="180" y="156" width="60" height="22" rx="4" fill="#DC2626"/>
+  <text x="210" y="172" text-anchor="middle" font-size="11" font-weight="bold" fill="white">필수</text>
+  <text x="330" y="166" text-anchor="middle" font-size="11" fill="#1E3A5F">무료</text>
+  <text x="330" y="182" text-anchor="middle" font-size="10" fill="#6B7280">(오픈소스)</text>
+  <text x="445" y="166" text-anchor="middle" font-size="11" fill="#1E3A5F">5~10분</text>
+  <text x="445" y="182" text-anchor="middle" font-size="10" fill="#6B7280">(사전 빌드)</text>
+  <text x="560" y="172" text-anchor="middle" font-size="11" fill="#1E3A5F">~500 MB</text>
+  <text x="710" y="160" text-anchor="middle" font-size="10" fill="#1E3A5F">C/어셈블리 컴파일,</text>
+  <text x="710" y="176" text-anchor="middle" font-size="10" fill="#1E3A5F">.hex 생성,</text>
+  <text x="710" y="192" text-anchor="middle" font-size="10" fill="#1E3A5F">디스어셈블리 분석</text>
+
+  <!-- Row 3: VCS/Verdi -->
+  <rect x="10" y="200" width="800" height="60" rx="0" fill="#DBEAFE"/>
+  <text x="85" y="226" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">VCS / Verdi</text>
+  <text x="85" y="244" text-anchor="middle" font-size="10" fill="#3B82F6">(Synopsys)</text>
+  <rect x="180" y="216" width="60" height="22" rx="4" fill="#F59E0B"/>
+  <text x="210" y="232" text-anchor="middle" font-size="11" font-weight="bold" fill="white">선택</text>
+  <text x="330" y="226" text-anchor="middle" font-size="11" fill="#1E3A5F">유료</text>
+  <text x="330" y="244" text-anchor="middle" font-size="10" fill="#6B7280">(대학 라이선스)</text>
+  <text x="445" y="226" text-anchor="middle" font-size="11" fill="#1E3A5F">1~2시간</text>
+  <text x="445" y="244" text-anchor="middle" font-size="10" fill="#6B7280">(IT 지원 필요)</text>
+  <text x="560" y="232" text-anchor="middle" font-size="11" fill="#1E3A5F">~10 GB</text>
+  <text x="710" y="220" text-anchor="middle" font-size="10" fill="#1E3A5F">고성능 시뮬레이션,</text>
+  <text x="710" y="236" text-anchor="middle" font-size="10" fill="#1E3A5F">파형 분석 (Verdi),</text>
+  <text x="710" y="252" text-anchor="middle" font-size="10" fill="#1E3A5F">대규모 설계 지원</text>
+
+  <!-- Row 4: Vivado Simulator -->
+  <rect x="10" y="260" width="800" height="60" rx="0" fill="#EFF6FF"/>
+  <text x="85" y="286" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">Vivado</text>
+  <text x="85" y="302" text-anchor="middle" font-size="11" font-weight="bold" fill="#1E40AF">Simulator</text>
+  <rect x="173" y="276" width="74" height="22" rx="4" fill="#16A34A"/>
+  <text x="210" y="292" text-anchor="middle" font-size="10" font-weight="bold" fill="white">VCS 대체</text>
+  <text x="330" y="286" text-anchor="middle" font-size="11" fill="#1E3A5F">무료</text>
+  <text x="330" y="302" text-anchor="middle" font-size="10" fill="#6B7280">(Vivado 포함)</text>
+  <text x="445" y="292" text-anchor="middle" font-size="11" fill="#1E3A5F">0분</text>
+  <text x="445" y="306" text-anchor="middle" font-size="10" fill="#6B7280">(Vivado에 포함)</text>
+  <text x="560" y="292" text-anchor="middle" font-size="11" fill="#1E3A5F">0 (포함)</text>
+  <text x="710" y="280" text-anchor="middle" font-size="10" fill="#1E3A5F">기본 시뮬레이션,</text>
+  <text x="710" y="296" text-anchor="middle" font-size="10" fill="#1E3A5F">파형 분석 (내장),</text>
+  <text x="710" y="312" text-anchor="middle" font-size="10" fill="#1E3A5F">소~중형 설계 적합</text>
+
+  <!-- Border -->
+  <rect x="10" y="45" width="800" height="275" rx="4" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
+</svg>

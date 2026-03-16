@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix C — AMBA 프로토콜 퀵 레퍼런스</title>
+    <link rel="stylesheet" href="../../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 40px 20px; text-align: center; margin-bottom: 40px;
+        }
+        .appendix-header h1 { margin: 0; font-size: 2.5em; }
+        .appendix-header p { margin: 10px 0 0 0; font-size: 1.1em; }
+        .appendix-section h2 {
+            border-left: 4px solid #667eea; padding-left: 15px;
+            margin-top: 40px; margin-bottom: 20px;
+        }
+        .reference-table {
+            width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em;
+        }
+        .reference-table th {
+            background: #f0f0f0; padding: 10px 8px; text-align: left;
+            border-bottom: 2px solid #667eea; font-size: 0.9em;
+        }
+        .reference-table td {
+            padding: 7px 8px; border-bottom: 1px solid #ddd; font-size: 0.88em;
+        }
+        .reference-table tr:nth-child(even) { background: #f9f9f9; }
+        .reference-table code {
+            background: #f5f5f5; padding: 1px 4px; border-radius: 3px;
+            font-family: 'Courier New', monospace; font-size: 0.92em;
+        }
+        .dir-master { color: #2563EB; font-weight: 600; }
+        .dir-slave { color: #059669; font-weight: 600; }
+        .used-yes { color: #059669; }
+        .used-no { color: #9CA3AF; }
+    </style>
+</head>
+<body>
+    <div class="appendix-header">
+        <h1>Appendix C — AMBA 프로토콜 퀵 레퍼런스</h1>
+        <p>AHB-Lite 및 APB 프로토콜 신호 · 타이밍 · 브리지 FSM 참조</p>
+    </div>
+
+    <main class="content">
+
+        <!-- ========== C.1 AHB-Lite 신호 목록 ========== -->
+        <div class="appendix-section">
+            <h2>C.1 AHB-Lite 신호 목록</h2>
+            <p>
+                AHB-Lite는 단일 마스터(Single Master) 버전의 AMBA AHB 프로토콜이다.
+                본 교재(Chapter 16)에서는 캐시 미스 핸들러를 AHB Requester(Master)로, SRAM 컨트롤러를 AHB Completer(Slave)로 구현한다.
+            </p>
+            <aside class="tip">
+                <strong>용어 안내</strong>
+                <p>AMBA 5부터 ARM은 Master/Slave 대신 <strong>Requester/Completer</strong> 용어를 사용한다.
+                본 부록에서는 AHB-Lite(AMBA 3 기반)의 원 스펙 용어 Master/Slave를 병기하되,
+                APB(AMBA 4 이후)에서는 Requester/Completer를 우선 사용한다.</p>
+            </aside>
+            <p>
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>신호명</th>
+                        <th>방향</th>
+                        <th>비트 폭</th>
+                        <th>설명</th>
+                        <th>Ch16</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>HCLK</code></td>
+                        <td>Global</td>
+                        <td>1</td>
+                        <td>버스 클록. 모든 신호는 HCLK 상승 에지에 동기.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HRESETn</code></td>
+                        <td>Global</td>
+                        <td>1</td>
+                        <td>액티브 로우 리셋.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HADDR</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>32</td>
+                        <td>전송 주소. Address Phase에서 유효.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HTRANS</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>2</td>
+                        <td>전송 타입: IDLE(00), BUSY(01), NONSEQ(10), SEQ(11)</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HWRITE</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>1</td>
+                        <td>전송 방향: 1=Write, 0=Read</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HSIZE</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>3</td>
+                        <td>전송 크기: 000=Byte, 001=Halfword, 010=Word</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HBURST</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>3</td>
+                        <td>버스트 타입: SINGLE(000), INCR4(011), INCR8(101) 등</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HPROT</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>4</td>
+                        <td>보호 제어: [0]=Opcode/Data, [1]=Priv, [2]=Buffer, [3]=Cache</td>
+                        <td class="used-no">미사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HWDATA</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>32</td>
+                        <td>쓰기 데이터. Data Phase에서 유효.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HSELx</code></td>
+                        <td>Decoder</td>
+                        <td>1</td>
+                        <td>Slave 선택 신호 (디코더가 생성).</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HRDATA</code></td>
+                        <td class="dir-slave">Slave</td>
+                        <td>32</td>
+                        <td>읽기 데이터. Data Phase에서 유효.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HREADY</code></td>
+                        <td class="dir-slave">Slave</td>
+                        <td>1</td>
+                        <td>전송 완료: 1=완료, 0=대기(웨이트 스테이트)</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HREADYOUT</code></td>
+                        <td class="dir-slave">Slave</td>
+                        <td>1</td>
+                        <td>개별 Slave의 준비 신호. MUX로 HREADY 생성.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HRESP</code></td>
+                        <td class="dir-slave">Slave</td>
+                        <td>1</td>
+                        <td>응답: 0=OKAY, 1=ERROR (AHB-Lite에서 1비트)</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>HMASTLOCK</code></td>
+                        <td class="dir-master">Master</td>
+                        <td>1</td>
+                        <td>잠긴 전송 표시. 원자 연산용.</td>
+                        <td class="used-no">미사용</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>HTRANS 인코딩</h3>
+            <table class="reference-table">
+                <thead><tr><th>값</th><th>이름</th><th>설명</th></tr></thead>
+                <tbody>
+                    <tr><td><code>2'b00</code></td><td>IDLE</td><td>전송 없음. Slave는 무시.</td></tr>
+                    <tr><td><code>2'b01</code></td><td>BUSY</td><td>버스트 중 Master가 삽입하는 유휴 사이클. Slave는 무시.</td></tr>
+                    <tr><td><code>2'b10</code></td><td>NONSEQ</td><td>단일 전송 또는 버스트의 첫 beat.</td></tr>
+                    <tr><td><code>2'b11</code></td><td>SEQ</td><td>버스트의 연속 beat. 주소 자동 증가.</td></tr>
+                </tbody>
+            </table>
+
+            <h3>HBURST 인코딩</h3>
+            <table class="reference-table">
+                <thead><tr><th>값</th><th>이름</th><th>Beat 수</th><th>주소 패턴</th></tr></thead>
+                <tbody>
+                    <tr><td><code>3'b000</code></td><td>SINGLE</td><td>1</td><td>단일 전송</td></tr>
+                    <tr><td><code>3'b001</code></td><td>INCR</td><td>가변</td><td>증가 (길이 미정)</td></tr>
+                    <tr><td><code>3'b010</code></td><td>WRAP4</td><td>4</td><td>4-beat 래핑</td></tr>
+                    <tr><td><code>3'b011</code></td><td>INCR4</td><td>4</td><td>4-beat 증가</td></tr>
+                    <tr><td><code>3'b100</code></td><td>WRAP8</td><td>8</td><td>8-beat 래핑</td></tr>
+                    <tr><td><code>3'b101</code></td><td>INCR8</td><td>8</td><td>8-beat 증가</td></tr>
+                    <tr><td><code>3'b110</code></td><td>WRAP16</td><td>16</td><td>16-beat 래핑</td></tr>
+                    <tr><td><code>3'b111</code></td><td>INCR16</td><td>16</td><td>16-beat 증가</td></tr>
+                </tbody>
+            </table>
+
+            <h3>HSIZE 인코딩</h3>
+            <table class="reference-table">
+                <thead><tr><th>값</th><th>크기</th><th>비트</th></tr></thead>
+                <tbody>
+                    <tr><td><code>3'b000</code></td><td>Byte</td><td>8비트</td></tr>
+                    <tr><td><code>3'b001</code></td><td>Halfword</td><td>16비트</td></tr>
+                    <tr><td><code>3'b010</code></td><td>Word</td><td>32비트 (본 교재 기본)</td></tr>
+                    <tr><td><code>3'b011</code></td><td>Doubleword</td><td>64비트</td></tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>AHB-Lite에서 가장 중요한 규칙: <strong>HREADY=0일 때 Master는 주소/제어 신호를 변경하면 안 된다.</strong>
+                이 규칙 위반은 가장 흔한 프로토콜 오류이다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== C.2 AHB 타이밍 다이어그램 ========== -->
+        <div class="appendix-section">
+            <h2>C.2 AHB 타이밍 다이어그램</h2>
+            <p>
+                AHB 전송은 <strong>Address Phase</strong>와 <strong>Data Phase</strong>의 2단계로 구성된다.
+                파이프라인 전송에서는 두 phase가 오버랩되어 대역폭이 향상된다.
+            </p>
+
+            <h3>C.2.1 기본 단일 전송</h3>
+            <figure>
+                <img src="../../figures/app_c_ahb_single.svg" alt="AHB 단일 전송" style="max-width:100%">
+                <figcaption>그림 C.1: AHB 기본 단일 전송. T1에 주소, T2에 데이터. HREADY=1이면 1사이클에 완료.</figcaption>
+            </figure>
+
+            <h3>C.2.2 파이프라인 전송</h3>
+            <figure>
+                <img src="../../figures/app_c_ahb_pipeline.svg" alt="AHB 파이프라인 전송" style="max-width:100%">
+                <figcaption>그림 C.2: AHB 파이프라인 전송. 전송 A의 Data Phase 동안 전송 B의 Address Phase가 동시 진행.</figcaption>
+            </figure>
+
+            <h3>C.2.3 웨이트 스테이트</h3>
+            <figure>
+                <img src="../../figures/app_c_ahb_wait.svg" alt="AHB 웨이트 스테이트" style="max-width:100%">
+                <figcaption>그림 C.3: 웨이트 스테이트. Slave가 HREADY=0으로 응답하면 Master는 주소/제어 신호를 유지해야 한다.</figcaption>
+            </figure>
+
+            <h3>C.2.4 버스트 전송 (INCR4)</h3>
+            <figure>
+                <img src="../../figures/app_c_ahb_burst.svg" alt="AHB 버스트 전송" style="max-width:100%">
+                <figcaption>그림 C.4: INCR4 버스트 전송. 첫 beat는 NONSEQ, 이후는 SEQ. 캐시 라인 채움에 사용.</figcaption>
+            </figure>
+        </div>
+
+        <!-- ========== C.3 APB 신호 목록 ========== -->
+        <div class="appendix-section">
+            <h2>C.3 APB 신호 목록</h2>
+            <p>
+                APB(Advanced Peripheral Bus)는 저속 주변 장치 연결에 사용하는 간단한 프로토콜이다.
+                AHB-to-APB 브리지를 통해 UART, GPIO, 타이머 등을 연결한다(Chapter 17).
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>신호명</th>
+                        <th>방향</th>
+                        <th>비트 폭</th>
+                        <th>설명</th>
+                        <th>Ch17</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>PCLK</code></td>
+                        <td>Global</td>
+                        <td>1</td>
+                        <td>APB 클록. 보통 HCLK과 동일.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PRESETn</code></td>
+                        <td>Global</td>
+                        <td>1</td>
+                        <td>액티브 로우 리셋.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PADDR</code></td>
+                        <td class="dir-master">Requester</td>
+                        <td>32</td>
+                        <td>APB 주소.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PSEL</code></td>
+                        <td class="dir-master">Requester</td>
+                        <td>1</td>
+                        <td>Completer 선택. SETUP/ACCESS phase에서 1.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PENABLE</code></td>
+                        <td class="dir-master">Requester</td>
+                        <td>1</td>
+                        <td>전송 인에이블. ACCESS phase에서 1.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PWRITE</code></td>
+                        <td class="dir-master">Requester</td>
+                        <td>1</td>
+                        <td>전송 방향: 1=Write, 0=Read.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PWDATA</code></td>
+                        <td class="dir-master">Requester</td>
+                        <td>32</td>
+                        <td>쓰기 데이터.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PSTRB</code></td>
+                        <td class="dir-master">Requester</td>
+                        <td>4</td>
+                        <td>바이트 스트로브 (APB4). 바이트별 쓰기 인에이블.</td>
+                        <td class="used-no">미사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PRDATA</code></td>
+                        <td class="dir-slave">Completer</td>
+                        <td>32</td>
+                        <td>읽기 데이터. ACCESS phase에서 유효.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PREADY</code></td>
+                        <td class="dir-slave">Completer</td>
+                        <td>1</td>
+                        <td>전송 완료: 1=완료, 0=대기.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                    <tr>
+                        <td><code>PSLVERR</code></td>
+                        <td class="dir-slave">Completer</td>
+                        <td>1</td>
+                        <td>에러 응답: 1=에러. ACCESS phase에서 유효.</td>
+                        <td class="used-yes">사용</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>APB 전송은 최소 2사이클(SETUP + ACCESS). AHB의 1사이클 전송보다 느리지만,
+                프로토콜이 단순하여 주변 장치 설계가 쉽다. 성능이 중요한 메모리는 AHB에,
+                저속 주변 장치(UART, GPIO, 타이머)는 APB에 연결하는 것이 일반적이다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== C.4 APB 타이밍 다이어그램 ========== -->
+        <div class="appendix-section">
+            <h2>C.4 APB 타이밍 다이어그램</h2>
+            <p>
+                APB 전송은 <strong>SETUP Phase</strong> (PSEL=1, PENABLE=0)와
+                <strong>ACCESS Phase</strong> (PSEL=1, PENABLE=1)로 구성된다.
+            </p>
+
+            <h3>C.4.1 쓰기 전송</h3>
+            <figure>
+                <img src="../../figures/app_c_apb_write.svg" alt="APB 쓰기 전송" style="max-width:100%">
+                <figcaption>그림 C.5: APB 쓰기 전송. SETUP(T1) + ACCESS(T2) = 최소 2사이클.</figcaption>
+            </figure>
+
+            <h3>C.4.2 읽기 전송 + 웨이트 스테이트</h3>
+            <figure>
+                <img src="../../figures/app_c_apb_read_wait.svg" alt="APB 읽기 전송 + 웨이트" style="max-width:100%">
+                <figcaption>그림 C.6: APB 읽기 전송. Completer가 PREADY=0으로 대기 상태 삽입. PRDATA는 PREADY=1일 때 유효.</figcaption>
+            </figure>
+        </div>
+
+        <!-- ========== C.5 AHB-to-APB 브리지 FSM ========== -->
+        <div class="appendix-section">
+            <h2>C.5 AHB-to-APB 브리지 상태 전이도</h2>
+            <p>
+                AHB-to-APB 브리지는 고속 AHB 프로토콜을 저속 APB 프로토콜로 변환한다.
+                브리지는 AHB 측에서는 Completer(Slave)로, APB 측에서는 Requester(Master)로 동작한다.
+            </p>
+
+            <figure>
+                <img src="../../figures/app_c_ahb2apb_fsm.svg" alt="AHB-to-APB 브리지 FSM" style="max-width:100%">
+                <figcaption>그림 C.7: AHB-to-APB 브리지 FSM 상태 전이도. 3개 상태(IDLE&rarr;SETUP&rarr;ACCESS), Chapter 17과 동일한 구조.</figcaption>
+            </figure>
+
+            <h3>FSM 상태별 출력 신호</h3>
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>상태</th>
+                        <th>HREADY</th>
+                        <th>PSEL</th>
+                        <th>PENABLE</th>
+                        <th>설명</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>IDLE</code></td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>유휴 상태. AHB 전송 대기. 주소/제어 래치 포함.</td>
+                    </tr>
+                    <tr>
+                        <td><code>SETUP</code></td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>APB SETUP phase. AHB Master에 대기 요청.</td>
+                    </tr>
+                    <tr>
+                        <td><code>ACCESS</code></td>
+                        <td>PREADY</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>APB ACCESS phase. PREADY=1이면 완료.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>브리지 FSM 핵심 코드 조각</h3>
+            <pre><code class="language-systemverilog">
+// AHB-to-APB 브리지 FSM (핵심 로직) — Ch17과 동일한 3-state 구조
+typedef enum logic [1:0] {
+   ST_IDLE, ST_SETUP, ST_ACCESS
+} bridge_state_t;
+
+bridge_state_t state, next_state;
+
+always_comb begin
+   next_state = state;
+   case (state)
+      ST_IDLE:
+         if (hsel &amp;&amp; htrans != 2'b00)
+            next_state = ST_SETUP;   // 주소/제어 래치 후 바로 SETUP
+      ST_SETUP:
+         next_state = ST_ACCESS;
+      ST_ACCESS:
+         if (pready)
+            next_state = (hsel &amp;&amp; htrans != 2'b00) ?
+                         ST_SETUP : ST_IDLE;
+   endcase
+end
+
+// HREADY 출력: SETUP에서는 0, ACCESS에서는 PREADY 전달
+assign hready_out = (state == ST_SETUP)  ? 1'b0 :
+                    (state == ST_ACCESS) ? pready : 1'b1;
+            </code></pre>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>브리지의 핵심 역할은 AHB의 파이프라인 전송을 APB의 2-phase 전송으로 변환하는 것이다.
+                AHB Master가 대기하는 시간(<code>HREADY=0</code>)은 APB Completer의 응답 시간에 의해 결정된다.</p>
+            </aside>
+        </div>
+
+        <!-- 부록 끝 -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>이 부록의 목적</strong>: Chapter 16~17의 AMBA 버스 설계 및 시뮬레이션 디버깅 시
+                신호 의미, 타이밍 규칙, 브리지 FSM 동작을 빠르게 참조할 수 있는 퀵 레퍼런스 카드이다.
+            </p>
+            <p>
+                기반 스펙: ARM AMBA 3 AHB-Lite Protocol Specification | ARM AMBA APB Protocol Specification (APB4)
+            </p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script>
+        document.querySelectorAll('code.language-systemverilog').forEach(el => {
+            el.classList.remove('language-systemverilog');
+            el.classList.add('language-verilog');
+        });
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

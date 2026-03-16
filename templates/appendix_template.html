@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부록 — RISC-V 프로세서 설계 완전정복</title>
+    <link rel="stylesheet" href="../../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        /* 부록 전용 스타일 */
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .appendix-header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .appendix-header p {
+            margin: 10px 0 0 0;
+            font-size: 1.1em;
+        }
+
+        /* 참고: 부록의 섹션은 일반 장(chapter)보다 간단 */
+        .appendix-section h2 {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        /* 참조 표 스타일 */
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        .reference-table th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #667eea;
+        }
+        .reference-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        .reference-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .reference-table code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="appendix-header">
+        <h1>Appendix X — 부록 제목</h1>
+        <p>부록 용도: 참조 자료 | 학습 지원</p>
+    </div>
+
+    <main class="content">
+        <div class="appendix-section">
+            <h2>X.1 첫 번째 섹션</h2>
+            <p>
+                이 섹션은 ... 를 다룹니다.
+            </p>
+
+            <!-- 표 예시 -->
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>항목 1</th>
+                        <th>항목 2</th>
+                        <th>설명</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>example</code></td>
+                        <td>0x00</td>
+                        <td>예시 항목</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 코드 예시 -->
+            <h3>코드 예</h3>
+            <pre><code class="language-systemverilog">
+// 코드 예시
+module example (
+    input logic clk,
+    input logic rst_n
+);
+    // 본문
+endmodule
+            </code></pre>
+
+            <!-- SVG 다이어그램 예시 -->
+            <h3>다이어그램</h3>
+            <p>
+                <img src="../../figures/app_x_sec1_diagram.svg" alt="섹션 1 다이어그램" style="max-width: 100%; height: auto;">
+            </p>
+        </div>
+
+        <div class="appendix-section">
+            <h2>X.2 두 번째 섹션</h2>
+            <p>
+                이 섹션은 ... 를 다룹니다.
+            </p>
+        </div>
+
+        <!-- 부록 끝 -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>이 부록의 목적</strong>: 본문에서 학습한 내용을 빠르게 참조하거나, 필요한 기술 스펙/코드 템플릿을 찾을 수 있도록 구성되었습니다.
+            </p>
+            <p>
+                문의: RISC-V 교재 프로젝트 | 2026년
+            </p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script>
+        // language-systemverilog 클래스를 verilog로 변환 후 하이라이팅
+        document.querySelectorAll('code.language-systemverilog').forEach(el => {
+            el.classList.remove('language-systemverilog');
+            el.classList.add('language-verilog');
+        });
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

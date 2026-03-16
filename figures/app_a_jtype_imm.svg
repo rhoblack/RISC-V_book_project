@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .title { font-size: 15px; fill: #DB2777; font-weight: 700; }
+      .box { rx: 3; ry: 3; }
+      .label { fill: white; text-anchor: middle; font-size: 11px; font-weight: 600; }
+      .desc { fill: #374151; font-size: 11px; text-anchor: middle; }
+      .arrow { stroke: #6B7280; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+      .note { fill: #6B7280; font-size: 10px; font-style: italic; }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6B7280"/>
+    </marker>
+  </defs>
+  <text x="10" y="20" class="title">J-Type 즉치수 비트 재배열</text>
+
+  <!-- 명령어 비트 (상단) -->
+  <text x="10" y="50" fill="#374151" font-size="12" font-weight="600">명령어 비트:</text>
+  <rect x="100" y="38" width="40" height="28" class="box" fill="#DB2777"/>
+  <text x="120" y="57" class="label">inst[31]</text>
+  <rect x="145" y="38" width="150" height="28" class="box" fill="#EC4899"/>
+  <text x="220" y="57" class="label">inst[19:12]</text>
+  <rect x="300" y="38" width="45" height="28" class="box" fill="#F472B6"/>
+  <text x="322" y="57" class="label">inst[20]</text>
+  <rect x="350" y="38" width="170" height="28" class="box" fill="#F9A8D4"/>
+  <text x="435" y="57" class="label" fill="#831843">inst[30:21]</text>
+
+  <!-- 화살표들 -->
+  <path d="M 120,68 L 110,130" class="arrow"/>
+  <path d="M 220,68 L 230,130" class="arrow"/>
+  <path d="M 322,68 L 340,130" class="arrow"/>
+  <path d="M 435,68 L 460,130" class="arrow"/>
+
+  <!-- 즉치수 비트 (하단) -->
+  <text x="10" y="150" fill="#374151" font-size="12" font-weight="600">즉치수:</text>
+  <rect x="90" y="135" width="50" height="28" class="box" fill="#DB2777"/>
+  <text x="115" y="154" class="label">imm[20]</text>
+  <rect x="145" y="135" width="130" height="28" class="box" fill="#EC4899"/>
+  <text x="210" y="154" class="label">imm[19:12]</text>
+  <rect x="280" y="135" width="55" height="28" class="box" fill="#F472B6"/>
+  <text x="307" y="154" class="label">imm[11]</text>
+  <rect x="340" y="135" width="170" height="28" class="box" fill="#F9A8D4"/>
+  <text x="425" y="154" class="label" fill="#831843">imm[10:1]</text>
+  <rect x="515" y="135" width="50" height="28" class="box" fill="#FCE7F3" stroke="#DB2777" stroke-width="1"/>
+  <text x="540" y="154" class="desc">imm[0]=0</text>
+
+  <!-- 하단 설명 -->
+  <text x="115" y="185" class="desc">부호 비트</text>
+  <text x="307" y="185" class="desc">비트 11</text>
+  <text x="425" y="185" class="desc">하위 비트</text>
+  <text x="540" y="185" class="desc">항상 0</text>
+
+  <text x="10" y="210" class="note">J-Type 즉치수는 항상 2의 배수 (최하위 비트=0). 부호 확장 후 21비트 오프셋 생성 (+-1MB 범위).</text>
+</svg>

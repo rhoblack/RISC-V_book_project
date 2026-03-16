@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .sig-name { fill: #374151; font-size: 12px; font-weight: 600; text-anchor: end; }
+      .clk-line { stroke: #2563EB; stroke-width: 1.5; fill: none; }
+      .sig-line { stroke: #374151; stroke-width: 1.5; fill: none; }
+      .setup-area { fill: #DBEAFE; opacity: 0.3; }
+      .access-area { fill: #D1FAE5; opacity: 0.3; }
+      .cycle-num { font-size: 10px; fill: #9CA3AF; text-anchor: middle; }
+      .title { font-size: 14px; fill: #7C3AED; font-weight: 700; }
+      .val-text { font-size: 10px; text-anchor: middle; font-weight: 600; }
+      .phase-label { font-size: 11px; text-anchor: middle; font-weight: 600; }
+    </style>
+  </defs>
+  <text x="10" y="20" class="title">APB 쓰기 전송 (Write Transfer)</text>
+
+  <text x="230" y="40" class="cycle-num">T1</text>
+  <text x="380" y="40" class="cycle-num">T2</text>
+  <text x="530" y="40" class="cycle-num">T3</text>
+
+  <!-- Phase highlights -->
+  <rect x="160" y="42" width="150" height="170" class="setup-area"/>
+  <rect x="310" y="42" width="150" height="170" class="access-area"/>
+
+  <!-- PCLK -->
+  <text x="120" y="65" class="sig-name">PCLK</text>
+  <path d="M 130,60 L 160,60 L 160,45 L 230,45 L 230,60 L 310,60 L 310,45 L 380,45 L 380,60 L 460,60 L 460,45 L 530,45 L 530,60 L 610,60 L 610,45 L 680,45 L 680,60" class="clk-line"/>
+
+  <!-- PSEL -->
+  <text x="120" y="90" class="sig-name">PSEL</text>
+  <path d="M 130,90 L 160,90 L 160,75 L 460,75 L 460,90 L 680,90" class="sig-line"/>
+
+  <!-- PENABLE -->
+  <text x="120" y="115" class="sig-name">PENABLE</text>
+  <path d="M 130,115 L 310,115 L 310,100 L 460,100 L 460,115 L 680,115" class="sig-line"/>
+
+  <!-- PWRITE -->
+  <text x="120" y="140" class="sig-name">PWRITE</text>
+  <path d="M 130,140 L 160,140 L 160,125 L 460,125 L 460,140 L 680,140" class="sig-line"/>
+  <text x="310" y="137" class="val-text" fill="#059669">1 (Write)</text>
+
+  <!-- PADDR -->
+  <text x="120" y="165" class="sig-name">PADDR</text>
+  <rect x="160" y="148" width="300" height="20" rx="2" fill="#EDE9FE" opacity="0.4"/>
+  <path d="M 130,165 L 160,165 L 165,150 L 455,150 L 460,165 L 680,165" class="sig-line"/>
+  <text x="310" y="162" class="val-text" fill="#7C3AED">Address</text>
+
+  <!-- PWDATA -->
+  <text x="120" y="190" class="sig-name">PWDATA</text>
+  <rect x="160" y="173" width="300" height="20" rx="2" fill="#FEF3C7" opacity="0.4"/>
+  <path d="M 130,190 L 160,190 L 165,175 L 455,175 L 460,190 L 680,190" class="sig-line"/>
+  <text x="310" y="187" class="val-text" fill="#D97706">Write Data</text>
+
+  <!-- Phase labels -->
+  <rect x="170" y="218" width="130" height="16" rx="3" fill="#DBEAFE"/>
+  <text x="235" y="230" class="phase-label" fill="#2563EB" font-size="10">SETUP Phase</text>
+  <rect x="320" y="218" width="130" height="16" rx="3" fill="#D1FAE5"/>
+  <text x="385" y="230" class="phase-label" fill="#059669" font-size="10">ACCESS Phase</text>
+</svg>

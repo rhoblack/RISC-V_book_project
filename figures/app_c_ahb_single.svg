@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" font-family="Pretendard, monospace" font-size="12">
+  <defs>
+    <style>
+      .sig-name { fill: #374151; font-size: 12px; font-weight: 600; text-anchor: end; }
+      .clk-line { stroke: #2563EB; stroke-width: 1.5; fill: none; }
+      .sig-line { stroke: #374151; stroke-width: 1.5; fill: none; }
+      .sig-high { stroke: #059669; stroke-width: 2; fill: none; }
+      .sig-valid { fill: #DBEAFE; opacity: 0.4; }
+      .data-valid { fill: #D1FAE5; opacity: 0.4; }
+      .phase-label { font-size: 11px; fill: #6B7280; text-anchor: middle; }
+      .cycle-num { font-size: 10px; fill: #9CA3AF; text-anchor: middle; }
+      .title { font-size: 14px; fill: #2563EB; font-weight: 700; }
+      .val-text { font-size: 10px; fill: #2563EB; text-anchor: middle; font-weight: 600; }
+    </style>
+  </defs>
+  <text x="10" y="20" class="title">AHB 기본 단일 전송 (NONSEQ)</text>
+
+  <!-- 사이클 번호 -->
+  <text x="230" y="40" class="cycle-num">T1</text>
+  <text x="380" y="40" class="cycle-num">T2</text>
+  <text x="530" y="40" class="cycle-num">T3</text>
+
+  <!-- HCLK -->
+  <text x="120" y="65" class="sig-name">HCLK</text>
+  <path d="M 130,60 L 160,60 L 160,45 L 230,45 L 230,60 L 310,60 L 310,45 L 380,45 L 380,60 L 460,60 L 460,45 L 530,45 L 530,60 L 610,60 L 610,45 L 680,45 L 680,60 L 750,60" class="clk-line"/>
+
+  <!-- HTRANS -->
+  <text x="120" y="95" class="sig-name">HTRANS[1:0]</text>
+  <rect x="160" y="78" width="150" height="20" rx="2" class="sig-valid"/>
+  <path d="M 130,95 L 160,95 L 165,80 L 305,80 L 310,95 L 750,95" class="sig-line"/>
+  <path d="M 130,95 L 160,95 L 165,95" class="sig-line"/>
+  <text x="235" y="92" class="val-text">NONSEQ (10)</text>
+
+  <!-- HADDR -->
+  <text x="120" y="125" class="sig-name">HADDR[31:0]</text>
+  <rect x="160" y="108" width="150" height="20" rx="2" class="sig-valid"/>
+  <path d="M 130,125 L 160,125 L 165,110 L 305,110 L 310,125 L 750,125" class="sig-line"/>
+  <text x="235" y="122" class="val-text">Address</text>
+
+  <!-- HWRITE -->
+  <text x="120" y="155" class="sig-name">HWRITE</text>
+  <path d="M 130,155 L 160,155 L 160,140 L 310,140 L 310,155 L 750,155" class="sig-line"/>
+  <text x="235" y="152" class="val-text">1 (Write)</text>
+
+  <!-- HWDATA -->
+  <text x="120" y="185" class="sig-name">HWDATA[31:0]</text>
+  <rect x="310" y="168" width="150" height="20" rx="2" class="data-valid"/>
+  <path d="M 130,185 L 310,185 L 315,170 L 455,170 L 460,185 L 750,185" class="sig-line"/>
+  <text x="385" y="182" class="val-text">Write Data</text>
+
+  <!-- HREADY -->
+  <text x="120" y="215" class="sig-name">HREADY</text>
+  <path d="M 130,215 L 130,200 L 750,200" class="sig-high"/>
+
+  <!-- Phase labels -->
+  <rect x="160" y="230" width="150" height="20" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <text x="235" y="244" class="phase-label" fill="#2563EB" font-weight="600">Address Phase</text>
+  <rect x="310" y="230" width="150" height="20" rx="4" fill="#D1FAE5" stroke="#059669" stroke-width="1"/>
+  <text x="385" y="244" class="phase-label" fill="#059669" font-weight="600">Data Phase</text>
+</svg>

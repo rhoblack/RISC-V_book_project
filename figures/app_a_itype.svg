@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 120" font-family="Pretendard, monospace" font-size="13">
+  <defs>
+    <style>
+      .field-label { font-size: 11px; fill: #6B7280; text-anchor: middle; }
+      .bit-label { font-size: 10px; fill: #374151; text-anchor: middle; }
+      .field-name { font-size: 13px; fill: white; text-anchor: middle; font-weight: 600; }
+      .type-label { font-size: 16px; fill: #059669; font-weight: 700; }
+    </style>
+  </defs>
+  <text x="10" y="30" class="type-label">I-Type</text>
+  <!-- imm[11:0]: bits 31-20 (12 bits) -->
+  <rect x="60" y="40" width="240" height="40" rx="4" fill="#059669"/>
+  <text x="180" y="65" class="field-name">imm[11:0]</text>
+  <text x="180" y="95" class="field-label">[31:20] 12비트</text>
+  <!-- rs1: bits 19-15 (5 bits) -->
+  <rect x="304" y="40" width="100" height="40" rx="4" fill="#10B981"/>
+  <text x="354" y="65" class="field-name">rs1</text>
+  <text x="354" y="95" class="field-label">[19:15] 5비트</text>
+  <!-- funct3: bits 14-12 (3 bits) -->
+  <rect x="406" y="40" width="60" height="40" rx="4" fill="#059669"/>
+  <text x="436" y="65" class="field-name">funct3</text>
+  <text x="436" y="95" class="field-label">[14:12] 3비트</text>
+  <!-- rd: bits 11-7 (5 bits) -->
+  <rect x="468" y="40" width="100" height="40" rx="4" fill="#34D399"/>
+  <text x="518" y="65" class="field-name">rd</text>
+  <text x="518" y="95" class="field-label">[11:7] 5비트</text>
+  <!-- opcode: bits 6-0 (7 bits) -->
+  <rect x="570" y="40" width="140" height="40" rx="4" fill="#047857"/>
+  <text x="640" y="65" class="field-name">opcode</text>
+  <text x="640" y="95" class="field-label">[6:0] 7비트</text>
+  <!-- bit markers -->
+  <text x="60" y="38" class="bit-label">31</text>
+  <text x="302" y="38" class="bit-label">20 19</text>
+  <text x="404" y="38" class="bit-label">15 14</text>
+  <text x="466" y="38" class="bit-label">12 11</text>
+  <text x="568" y="38" class="bit-label">7 6</text>
+  <text x="710" y="38" class="bit-label">0</text>
+</svg>

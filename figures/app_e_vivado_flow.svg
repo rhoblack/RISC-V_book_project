@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" font-family="Pretendard, 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB"/>
+    </marker>
+    <linearGradient id="stepGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#DBEAFE;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EFF6FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="successGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#D1FAE5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ECFDF5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="25" text-anchor="middle" font-size="16" font-weight="bold" fill="#1E3A5F">Vivado 설치 및 검증 흐름</text>
+
+  <!-- Step 1: 다운로드 -->
+  <rect x="10" y="50" width="140" height="80" rx="10" fill="url(#stepGrad)" stroke="#2563EB" stroke-width="2"/>
+  <text x="80" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">Step 1</text>
+  <text x="80" y="96" text-anchor="middle" font-size="11" fill="#1E3A5F">Vivado 2024.1</text>
+  <text x="80" y="112" text-anchor="middle" font-size="11" fill="#1E3A5F">다운로드 (~12GB)</text>
+  <line x1="150" y1="90" x2="175" y2="90" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 2: 설치 -->
+  <rect x="180" y="50" width="140" height="80" rx="10" fill="url(#stepGrad)" stroke="#2563EB" stroke-width="2"/>
+  <text x="250" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">Step 2</text>
+  <text x="250" y="96" text-anchor="middle" font-size="11" fill="#1E3A5F">설치 실행</text>
+  <text x="250" y="112" text-anchor="middle" font-size="11" fill="#1E3A5F">(~30분)</text>
+  <line x1="320" y1="90" x2="345" y2="90" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 3: 라이선스 -->
+  <rect x="350" y="50" width="140" height="80" rx="10" fill="url(#stepGrad)" stroke="#2563EB" stroke-width="2"/>
+  <text x="420" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">Step 3</text>
+  <text x="420" y="96" text-anchor="middle" font-size="11" fill="#1E3A5F">WebPACK</text>
+  <text x="420" y="112" text-anchor="middle" font-size="11" fill="#1E3A5F">라이선스 활성화</text>
+  <line x1="490" y1="90" x2="515" y2="90" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 4: Basys 3 -->
+  <rect x="520" y="50" width="140" height="80" rx="10" fill="url(#stepGrad)" stroke="#2563EB" stroke-width="2"/>
+  <text x="590" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#1E40AF">Step 4</text>
+  <text x="590" y="96" text-anchor="middle" font-size="11" fill="#1E3A5F">Basys 3 드라이버</text>
+  <text x="590" y="112" text-anchor="middle" font-size="11" fill="#1E3A5F">설정 및 확인</text>
+  <line x1="660" y1="90" x2="685" y2="90" stroke="#2563EB" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Step 5: LED 검증 (성공) -->
+  <rect x="690" y="50" width="160" height="80" rx="10" fill="url(#successGrad)" stroke="#16A34A" stroke-width="2"/>
+  <text x="770" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#166534">Step 5 &#x2713;</text>
+  <text x="770" y="96" text-anchor="middle" font-size="11" fill="#166534">LED 깜박이기</text>
+  <text x="770" y="112" text-anchor="middle" font-size="11" fill="#166534">검증 성공!</text>
+
+  <!-- 하단 설명 -->
+  <rect x="10" y="155" width="880" height="50" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1"/>
+  <text x="450" y="178" text-anchor="middle" font-size="12" fill="#92400E">
+    설치 옵션: Design Tools &#x2713; | Vivado Simulator &#x2713; | Cable Drivers &#x2713; | DocNav (선택) | HLS (불필요)
+  </text>
+  <text x="450" y="196" text-anchor="middle" font-size="11" fill="#92400E">
+    요구 사항: Windows 10/11 | 디스크 40GB+ | RAM 8GB+ (권장 16GB) | 인터넷 연결 (라이선스 인증)
+  </text>
+</svg>

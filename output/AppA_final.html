@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix A — RV32I 명령어 레퍼런스</title>
+    <link rel="stylesheet" href="../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .appendix-header h1 { margin: 0; font-size: 2.5em; }
+        .appendix-header p { margin: 10px 0 0 0; font-size: 1.1em; }
+        .appendix-section h2 {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        .reference-table th {
+            background: #f0f0f0;
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 2px solid #667eea;
+            font-size: 0.9em;
+        }
+        .reference-table td {
+            padding: 7px 8px;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.88em;
+        }
+        .reference-table tr:nth-child(even) { background: #f9f9f9; }
+        .reference-table code {
+            background: #f5f5f5;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.92em;
+        }
+        /* 타입별 색상 코딩 */
+        .type-r { background-color: #DBEAFE; }
+        .type-i { background-color: #D1FAE5; }
+        .type-s { background-color: #FEF3C7; }
+        .type-b { background-color: #FEE2E2; }
+        .type-u { background-color: #EDE9FE; }
+        .type-j { background-color: #FCE7F3; }
+        .type-header td {
+            font-weight: 700;
+            font-size: 0.95em !important;
+            padding-top: 14px !important;
+        }
+        .caller-saved { background-color: #FEF3C7; }
+        .callee-saved { background-color: #DBEAFE; }
+        .special-reg { background-color: #EDE9FE; }
+    </style>
+</head>
+<body>
+    <div class="appendix-header">
+        <h1>Appendix A — RV32I 명령어 레퍼런스</h1>
+        <p>RV32I 기본 정수 명령어 세트 40개 명령어 완전 참조</p>
+    </div>
+
+    <main class="content">
+
+        <!-- ========== A.1 명령어 인코딩 전체 표 ========== -->
+        <div class="appendix-section">
+            <h2>A.1 명령어 인코딩 전체 표</h2>
+            <p>
+                다음 표는 RV32I 기본 정수 명령어 세트의 40개 명령어(ECALL, EBREAK, FENCE 포함)를 타입별로 분류한 것이다.
+                디코더 설계(Chapter 06) 시 <code>opcode</code>, <code>funct3</code>, <code>funct7</code> 조합으로
+                명령어를 식별한다. 타입별 색상 코딩을 참고하라.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>명령어</th>
+                        <th>타입</th>
+                        <th>opcode [6:0]</th>
+                        <th>funct3</th>
+                        <th>funct7 / imm</th>
+                        <th>동작</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- R-Type Header -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-r">R-Type (레지스터-레지스터 연산) &mdash; opcode = 0110011</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>ADD</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>000</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = rs1 + rs2</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>SUB</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>000</code></td>
+                        <td><code>0100000</code></td>
+                        <td>rd = rs1 - rs2</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>SLL</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>001</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = rs1 &lt;&lt; rs2[4:0]</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>SLT</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>010</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = (rs1 &lt; rs2) ? 1 : 0 (부호 있는 비교)</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>SLTU</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>011</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = (rs1 &lt; rs2) ? 1 : 0 (부호 없는 비교)</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>XOR</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>100</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = rs1 ^ rs2</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>SRL</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>101</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = rs1 &gt;&gt; rs2[4:0] (논리 시프트)</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>SRA</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>101</code></td>
+                        <td><code>0100000</code></td>
+                        <td>rd = rs1 &gt;&gt;&gt; rs2[4:0] (산술 시프트)</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>OR</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>110</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = rs1 | rs2</td>
+                    </tr>
+                    <tr class="type-r">
+                        <td><code>AND</code></td>
+                        <td>R</td>
+                        <td><code>0110011</code></td>
+                        <td><code>111</code></td>
+                        <td><code>0000000</code></td>
+                        <td>rd = rs1 &amp; rs2</td>
+                    </tr>
+
+                    <!-- I-Type Header: 산술/논리 -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-i">I-Type (즉치수 연산) &mdash; opcode = 0010011</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>ADDI</code></td>
+                        <td>I</td>
+                        <td><code>0010011</code></td>
+                        <td><code>000</code></td>
+                        <td>imm[11:0]</td>
+                        <td>rd = rs1 + sext(imm)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>SLTI</code></td>
+                        <td>I</td>
+                        <td><code>0010011</code></td>
+                        <td><code>010</code></td>
+                        <td>imm[11:0]</td>
+                        <td>rd = (rs1 &lt; sext(imm)) ? 1 : 0</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>SLTIU</code></td>
+                        <td>I</td>
+                        <td><code>0010011</code></td>
+                        <td><code>011</code></td>
+                        <td>imm[11:0]</td>
+                        <td>rd = (rs1 &lt; sext(imm)) ? 1 : 0 (부호 없는)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>XORI</code></td>
+                        <td>I</td>
+                        <td><code>0010011</code></td>
+                        <td><code>100</code></td>
+                        <td>imm[11:0]</td>
+                        <td>rd = rs1 ^ sext(imm)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>ORI</code></td>
+                        <td>I</td>
+                        <td><code>0010011</code></td>
+                        <td><code>110</code></td>
+                        <td>imm[11:0]</td>
+                        <td>rd = rs1 | sext(imm)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>ANDI</code></td>
+                        <td>I</td>
+                        <td><code>0010011</code></td>
+                        <td><code>111</code></td>
+                        <td>imm[11:0]</td>
+                        <td>rd = rs1 &amp; sext(imm)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>SLLI</code></td>
+                        <td>I*</td>
+                        <td><code>0010011</code></td>
+                        <td><code>001</code></td>
+                        <td><code>0000000</code> | shamt</td>
+                        <td>rd = rs1 &lt;&lt; shamt (funct7[5]=0)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>SRLI</code></td>
+                        <td>I*</td>
+                        <td><code>0010011</code></td>
+                        <td><code>101</code></td>
+                        <td><code>0000000</code> | shamt</td>
+                        <td>rd = rs1 &gt;&gt; shamt (논리, funct7[5]=0)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>SRAI</code></td>
+                        <td>I*</td>
+                        <td><code>0010011</code></td>
+                        <td><code>101</code></td>
+                        <td><code>0100000</code> | shamt</td>
+                        <td>rd = rs1 &gt;&gt;&gt; shamt (산술, funct7[5]=1)</td>
+                    </tr>
+
+                    <!-- I-Type: 로드 -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-i">I-Type (로드) &mdash; opcode = 0000011</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>LB</code></td>
+                        <td>I</td>
+                        <td><code>0000011</code></td>
+                        <td><code>000</code></td>
+                        <td>offset[11:0]</td>
+                        <td>rd = sext(M[rs1+offset][7:0])</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>LH</code></td>
+                        <td>I</td>
+                        <td><code>0000011</code></td>
+                        <td><code>001</code></td>
+                        <td>offset[11:0]</td>
+                        <td>rd = sext(M[rs1+offset][15:0])</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>LW</code></td>
+                        <td>I</td>
+                        <td><code>0000011</code></td>
+                        <td><code>010</code></td>
+                        <td>offset[11:0]</td>
+                        <td>rd = M[rs1+offset][31:0]</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>LBU</code></td>
+                        <td>I</td>
+                        <td><code>0000011</code></td>
+                        <td><code>100</code></td>
+                        <td>offset[11:0]</td>
+                        <td>rd = zext(M[rs1+offset][7:0])</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>LHU</code></td>
+                        <td>I</td>
+                        <td><code>0000011</code></td>
+                        <td><code>101</code></td>
+                        <td>offset[11:0]</td>
+                        <td>rd = zext(M[rs1+offset][15:0])</td>
+                    </tr>
+
+                    <!-- S-Type Header -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-s">S-Type (스토어) &mdash; opcode = 0100011</td>
+                    </tr>
+                    <tr class="type-s">
+                        <td><code>SB</code></td>
+                        <td>S</td>
+                        <td><code>0100011</code></td>
+                        <td><code>000</code></td>
+                        <td>offset[11:0]</td>
+                        <td>M[rs1+offset][7:0] = rs2[7:0]</td>
+                    </tr>
+                    <tr class="type-s">
+                        <td><code>SH</code></td>
+                        <td>S</td>
+                        <td><code>0100011</code></td>
+                        <td><code>001</code></td>
+                        <td>offset[11:0]</td>
+                        <td>M[rs1+offset][15:0] = rs2[15:0]</td>
+                    </tr>
+                    <tr class="type-s">
+                        <td><code>SW</code></td>
+                        <td>S</td>
+                        <td><code>0100011</code></td>
+                        <td><code>010</code></td>
+                        <td>offset[11:0]</td>
+                        <td>M[rs1+offset][31:0] = rs2[31:0]</td>
+                    </tr>
+
+                    <!-- B-Type Header -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-b">B-Type (분기) &mdash; opcode = 1100011</td>
+                    </tr>
+                    <tr class="type-b">
+                        <td><code>BEQ</code></td>
+                        <td>B</td>
+                        <td><code>1100011</code></td>
+                        <td><code>000</code></td>
+                        <td>offset[12:1]</td>
+                        <td>if (rs1 == rs2) PC += sext(offset)</td>
+                    </tr>
+                    <tr class="type-b">
+                        <td><code>BNE</code></td>
+                        <td>B</td>
+                        <td><code>1100011</code></td>
+                        <td><code>001</code></td>
+                        <td>offset[12:1]</td>
+                        <td>if (rs1 != rs2) PC += sext(offset)</td>
+                    </tr>
+                    <tr class="type-b">
+                        <td><code>BLT</code></td>
+                        <td>B</td>
+                        <td><code>1100011</code></td>
+                        <td><code>100</code></td>
+                        <td>offset[12:1]</td>
+                        <td>if (rs1 &lt; rs2) PC += sext(offset) (부호 있는)</td>
+                    </tr>
+                    <tr class="type-b">
+                        <td><code>BGE</code></td>
+                        <td>B</td>
+                        <td><code>1100011</code></td>
+                        <td><code>101</code></td>
+                        <td>offset[12:1]</td>
+                        <td>if (rs1 &gt;= rs2) PC += sext(offset) (부호 있는)</td>
+                    </tr>
+                    <tr class="type-b">
+                        <td><code>BLTU</code></td>
+                        <td>B</td>
+                        <td><code>1100011</code></td>
+                        <td><code>110</code></td>
+                        <td>offset[12:1]</td>
+                        <td>if (rs1 &lt; rs2) PC += sext(offset) (부호 없는)</td>
+                    </tr>
+                    <tr class="type-b">
+                        <td><code>BGEU</code></td>
+                        <td>B</td>
+                        <td><code>1100011</code></td>
+                        <td><code>111</code></td>
+                        <td>offset[12:1]</td>
+                        <td>if (rs1 &gt;= rs2) PC += sext(offset) (부호 없는)</td>
+                    </tr>
+
+                    <!-- U-Type Header -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-u">U-Type (상위 즉치수) &mdash; opcode = 0110111 / 0010111</td>
+                    </tr>
+                    <tr class="type-u">
+                        <td><code>LUI</code></td>
+                        <td>U</td>
+                        <td><code>0110111</code></td>
+                        <td>&mdash;</td>
+                        <td>imm[31:12]</td>
+                        <td>rd = imm &lt;&lt; 12</td>
+                    </tr>
+                    <tr class="type-u">
+                        <td><code>AUIPC</code></td>
+                        <td>U</td>
+                        <td><code>0010111</code></td>
+                        <td>&mdash;</td>
+                        <td>imm[31:12]</td>
+                        <td>rd = PC + (imm &lt;&lt; 12)</td>
+                    </tr>
+
+                    <!-- J-Type Header -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-j">J-Type (점프) &mdash; opcode = 1101111</td>
+                    </tr>
+                    <tr class="type-j">
+                        <td><code>JAL</code></td>
+                        <td>J</td>
+                        <td><code>1101111</code></td>
+                        <td>&mdash;</td>
+                        <td>offset[20:1]</td>
+                        <td>rd = PC+4; PC += sext(offset)</td>
+                    </tr>
+
+                    <!-- JALR (I-Type) -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-i">I-Type (점프 레지스터) &mdash; opcode = 1100111</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>JALR</code></td>
+                        <td>I</td>
+                        <td><code>1100111</code></td>
+                        <td><code>000</code></td>
+                        <td>offset[11:0]</td>
+                        <td>rd = PC+4; PC = (rs1+sext(offset)) &amp; ~1</td>
+                    </tr>
+
+                    <!-- 시스템 명령어 -->
+                    <tr class="type-header">
+                        <td colspan="6" class="type-i">I-Type (시스템) &mdash; opcode = 1110011 / 0001111</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>ECALL</code></td>
+                        <td>I</td>
+                        <td><code>1110011</code></td>
+                        <td><code>000</code></td>
+                        <td><code>000000000000</code></td>
+                        <td>환경 호출 (트랩 발생)</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>EBREAK</code></td>
+                        <td>I</td>
+                        <td><code>1110011</code></td>
+                        <td><code>000</code></td>
+                        <td><code>000000000001</code></td>
+                        <td>디버거 중단점</td>
+                    </tr>
+                    <tr class="type-i">
+                        <td><code>FENCE</code></td>
+                        <td>I</td>
+                        <td><code>0001111</code></td>
+                        <td><code>000</code></td>
+                        <td>fm/pred/succ</td>
+                        <td>메모리 순서 보장 (본 교재: NOP 처리)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>SLLI, SRLI, SRAI는 I-Type이지만 상위 7비트(<code>funct7</code>)로 시프트 방향을 구분한다.
+                디코더 설계 시 이 3개 명령어는 <code>funct7[5]</code>를 추가로 확인해야 한다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== A.2 명령어 타입별 비트 필드 ========== -->
+        <div class="appendix-section">
+            <h2>A.2 명령어 타입별 비트 필드 다이어그램</h2>
+            <p>
+                RV32I의 6가지 명령어 타입은 32비트 명령어 내에서 필드 배치가 다르다.
+                <code>opcode</code> 필드(비트 [6:0])는 모든 타입에서 동일한 위치에 있어 디코더의 첫 단계에서 타입을 분류할 수 있다.
+            </p>
+
+            <figure>
+                <img src="../figures/app_a_rtype.svg" alt="R-Type 비트 필드" style="max-width:100%">
+                <figcaption>그림 A.1: R-Type &mdash; 레지스터-레지스터 연산 (ADD, SUB, AND, OR 등)</figcaption>
+            </figure>
+
+            <figure>
+                <img src="../figures/app_a_itype.svg" alt="I-Type 비트 필드" style="max-width:100%">
+                <figcaption>그림 A.2: I-Type &mdash; 즉치수 연산 및 로드 (ADDI, LW, JALR 등)</figcaption>
+            </figure>
+
+            <figure>
+                <img src="../figures/app_a_stype.svg" alt="S-Type 비트 필드" style="max-width:100%">
+                <figcaption>그림 A.3: S-Type &mdash; 스토어 (SW, SH, SB). 즉치수가 두 필드로 분할됨</figcaption>
+            </figure>
+
+            <figure>
+                <img src="../figures/app_a_btype.svg" alt="B-Type 비트 필드" style="max-width:100%">
+                <figcaption>그림 A.4: B-Type &mdash; 분기 (BEQ, BNE 등). 즉치수 비트가 재배열됨에 주의</figcaption>
+            </figure>
+
+            <figure>
+                <img src="../figures/app_a_utype.svg" alt="U-Type 비트 필드" style="max-width:100%">
+                <figcaption>그림 A.5: U-Type &mdash; 상위 즉치수 (LUI, AUIPC). 20비트 즉치수 사용</figcaption>
+            </figure>
+
+            <figure>
+                <img src="../figures/app_a_jtype.svg" alt="J-Type 비트 필드" style="max-width:100%">
+                <figcaption>그림 A.6: J-Type &mdash; 점프 (JAL). 20비트 즉치수가 재배열됨</figcaption>
+            </figure>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>6가지 타입 모두 <code>rs1</code>(비트 [19:15])과 <code>rd</code>(비트 [11:7])의 위치가 동일하다.
+                이 설계 덕분에 디코더가 타입 판별 전에도 레지스터 번호를 읽을 수 있어 파이프라인 효율이 높아진다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== A.3 즉치수 비트 재배열 상세 ========== -->
+        <div class="appendix-section">
+            <h2>A.3 즉치수(Immediate) 비트 재배열 상세</h2>
+            <p>
+                B-Type과 J-Type의 즉치수는 명령어 비트 내에서 재배열(reordering)되어 저장된다.
+                이 설계는 부호 비트(sign bit)를 항상 비트 31에 배치하여 부호 확장 하드웨어를 단순화하고,
+                타입 간 공통 비트 위치를 최대화하여 즉치수 생성기(Immediate Generator)의 MUX를 줄이기 위함이다.
+            </p>
+
+            <h3>B-Type 즉치수 재배열</h3>
+            <figure>
+                <img src="../figures/app_a_btype_imm.svg" alt="B-Type 즉치수 재배열" style="max-width:100%">
+                <figcaption>그림 A.7: B-Type 즉치수 비트 재배열 경로. 최종 즉치수는 13비트(부호 확장 후), 항상 2의 배수.</figcaption>
+            </figure>
+            <p>
+                B-Type 즉치수 조립 공식: <code>imm = {inst[31], inst[7], inst[30:25], inst[11:8], 1'b0}</code>
+            </p>
+
+            <h3>J-Type 즉치수 재배열</h3>
+            <figure>
+                <img src="../figures/app_a_jtype_imm.svg" alt="J-Type 즉치수 재배열" style="max-width:100%">
+                <figcaption>그림 A.8: J-Type 즉치수 비트 재배열 경로. 최종 즉치수는 21비트(부호 확장 후), +-1MB 범위.</figcaption>
+            </figure>
+            <p>
+                J-Type 즉치수 조립 공식: <code>imm = {inst[31], inst[19:12], inst[20], inst[30:21], 1'b0}</code>
+            </p>
+
+            <aside class="faq">
+                <strong>수강생 단골 질문</strong>
+                <p><strong>Q:</strong> 왜 즉치수를 순서대로 저장하지 않나요?</p>
+                <p><strong>A:</strong> 부호 비트를 항상 inst[31]에 두면, 부호 확장 회로가 모든 타입에서 동일한 wire 하나로 처리된다. 또한 S-Type과 B-Type의 상위 비트(inst[30:25])가 같은 위치에 있어 즉치수 생성기의 MUX 입력을 공유할 수 있다. 소프트웨어(어셈블러)가 한 번만 수고하면, 하드웨어가 매 사이클 절약한다.</p>
+            </aside>
+        </div>
+
+        <!-- ========== A.4 ABI 레지스터 명명규약 ========== -->
+        <div class="appendix-section">
+            <h2>A.4 ABI 레지스터 명명규약</h2>
+            <p>
+                RISC-V의 32개 정수 레지스터(<code>x0</code>~<code>x31</code>)에는 ABI(Application Binary Interface)에서
+                정한 이름과 용도가 있다. C 프로그램과 연동(Chapter 22) 시 이 규약을 따라야 한다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>레지스터</th>
+                        <th>ABI 이름</th>
+                        <th>용도</th>
+                        <th>호출 규약</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="special-reg">
+                        <td><code>x0</code></td>
+                        <td><code>zero</code></td>
+                        <td>하드와이어드 0 (항상 0)</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr class="special-reg">
+                        <td><code>x1</code></td>
+                        <td><code>ra</code></td>
+                        <td>복귀 주소(Return Address)</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="special-reg">
+                        <td><code>x2</code></td>
+                        <td><code>sp</code></td>
+                        <td>스택 포인터(Stack Pointer)</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="special-reg">
+                        <td><code>x3</code></td>
+                        <td><code>gp</code></td>
+                        <td>전역 포인터(Global Pointer)</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr class="special-reg">
+                        <td><code>x4</code></td>
+                        <td><code>tp</code></td>
+                        <td>스레드 포인터(Thread Pointer)</td>
+                        <td>&mdash;</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x5</code></td>
+                        <td><code>t0</code></td>
+                        <td>임시 레지스터 / 대체 링크 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x6</code></td>
+                        <td><code>t1</code></td>
+                        <td>임시 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x7</code></td>
+                        <td><code>t2</code></td>
+                        <td>임시 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x8</code></td>
+                        <td><code>s0 / fp</code></td>
+                        <td>저장 레지스터 / 프레임 포인터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x9</code></td>
+                        <td><code>s1</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x10</code></td>
+                        <td><code>a0</code></td>
+                        <td>함수 인자 / 반환값</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x11</code></td>
+                        <td><code>a1</code></td>
+                        <td>함수 인자 / 반환값</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x12</code></td>
+                        <td><code>a2</code></td>
+                        <td>함수 인자</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x13</code></td>
+                        <td><code>a3</code></td>
+                        <td>함수 인자</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x14</code></td>
+                        <td><code>a4</code></td>
+                        <td>함수 인자</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x15</code></td>
+                        <td><code>a5</code></td>
+                        <td>함수 인자</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x16</code></td>
+                        <td><code>a6</code></td>
+                        <td>함수 인자</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x17</code></td>
+                        <td><code>a7</code></td>
+                        <td>함수 인자</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x18</code></td>
+                        <td><code>s2</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x19</code></td>
+                        <td><code>s3</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x20</code></td>
+                        <td><code>s4</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x21</code></td>
+                        <td><code>s5</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x22</code></td>
+                        <td><code>s6</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x23</code></td>
+                        <td><code>s7</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x24</code></td>
+                        <td><code>s8</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x25</code></td>
+                        <td><code>s9</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x26</code></td>
+                        <td><code>s10</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="callee-saved">
+                        <td><code>x27</code></td>
+                        <td><code>s11</code></td>
+                        <td>저장 레지스터</td>
+                        <td>Callee-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x28</code></td>
+                        <td><code>t3</code></td>
+                        <td>임시 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x29</code></td>
+                        <td><code>t4</code></td>
+                        <td>임시 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x30</code></td>
+                        <td><code>t5</code></td>
+                        <td>임시 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                    <tr class="caller-saved">
+                        <td><code>x31</code></td>
+                        <td><code>t6</code></td>
+                        <td>임시 레지스터</td>
+                        <td>Caller-saved</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>색상 범례: <span style="background:#EDE9FE;padding:2px 8px;border-radius:3px;">특수 레지스터</span>
+            <span style="background:#FEF3C7;padding:2px 8px;border-radius:3px;">Caller-saved (호출자 저장)</span>
+            <span style="background:#DBEAFE;padding:2px 8px;border-radius:3px;">Callee-saved (피호출자 저장)</span></p>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p><strong>Caller-saved</strong> 레지스터는 함수 호출 전에 호출자가 백업해야 하고,
+                <strong>Callee-saved</strong> 레지스터는 피호출 함수가 사용 전에 스택에 저장하고 복귀 전에 복원해야 한다.
+                <code>x0</code>에 쓰기를 시도하면 값이 무시된다(하드웨어에서 0으로 고정).</p>
+            </aside>
+        </div>
+
+        <!-- ========== A.5 의사 명령어 매핑 ========== -->
+        <div class="appendix-section">
+            <h2>A.5 의사 명령어(Pseudo-instruction) 매핑</h2>
+            <p>
+                RISC-V 어셈블러는 프로그래머의 편의를 위해 의사 명령어(pseudo-instruction)를 제공한다.
+                이들은 실제 하드웨어 명령어가 아니며, 어셈블러가 하나 이상의 실제 명령어로 변환한다.
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>의사 명령어</th>
+                        <th>실제 명령어</th>
+                        <th>설명</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>nop</code></td>
+                        <td><code>addi x0, x0, 0</code></td>
+                        <td>아무 동작 없음 (NOP = 0x00000013)</td>
+                    </tr>
+                    <tr>
+                        <td><code>mv rd, rs</code></td>
+                        <td><code>addi rd, rs, 0</code></td>
+                        <td>레지스터 복사</td>
+                    </tr>
+                    <tr>
+                        <td><code>not rd, rs</code></td>
+                        <td><code>xori rd, rs, -1</code></td>
+                        <td>비트 반전 (1의 보수)</td>
+                    </tr>
+                    <tr>
+                        <td><code>neg rd, rs</code></td>
+                        <td><code>sub rd, x0, rs</code></td>
+                        <td>부호 반전 (2의 보수)</td>
+                    </tr>
+                    <tr>
+                        <td><code>li rd, imm</code></td>
+                        <td><code>lui rd, imm[31:12]</code><br><code>addi rd, rd, imm[11:0]</code></td>
+                        <td>32비트 즉치수 로드 (2개 명령어)</td>
+                    </tr>
+                    <tr>
+                        <td><code>la rd, symbol</code></td>
+                        <td><code>auipc rd, offset[31:12]</code><br><code>addi rd, rd, offset[11:0]</code></td>
+                        <td>주소 로드 (PC 상대)</td>
+                    </tr>
+                    <tr>
+                        <td><code>j offset</code></td>
+                        <td><code>jal x0, offset</code></td>
+                        <td>무조건 점프 (복귀 주소 저장 안 함)</td>
+                    </tr>
+                    <tr>
+                        <td><code>jr rs</code></td>
+                        <td><code>jalr x0, rs, 0</code></td>
+                        <td>레지스터 간접 점프</td>
+                    </tr>
+                    <tr>
+                        <td><code>ret</code></td>
+                        <td><code>jalr x0, x1, 0</code></td>
+                        <td>함수 복귀 (jr ra)</td>
+                    </tr>
+                    <tr>
+                        <td><code>call symbol</code></td>
+                        <td><code>auipc x1, offset[31:12]</code><br><code>jalr x1, x1, offset[11:0]</code></td>
+                        <td>함수 호출 (원거리)</td>
+                    </tr>
+                    <tr>
+                        <td><code>tail symbol</code></td>
+                        <td><code>auipc x6, offset[31:12]</code><br><code>jalr x0, x6, offset[11:0]</code></td>
+                        <td>꼬리 호출 (복귀 주소 저장 안 함)</td>
+                    </tr>
+                    <tr>
+                        <td><code>beqz rs, offset</code></td>
+                        <td><code>beq rs, x0, offset</code></td>
+                        <td>0이면 분기</td>
+                    </tr>
+                    <tr>
+                        <td><code>bnez rs, offset</code></td>
+                        <td><code>bne rs, x0, offset</code></td>
+                        <td>0이 아니면 분기</td>
+                    </tr>
+                    <tr>
+                        <td><code>bgt rs, rt, offset</code></td>
+                        <td><code>blt rt, rs, offset</code></td>
+                        <td>rs &gt; rt이면 분기 (피연산자 교환)</td>
+                    </tr>
+                    <tr>
+                        <td><code>ble rs, rt, offset</code></td>
+                        <td><code>bge rt, rs, offset</code></td>
+                        <td>rs &lt;= rt이면 분기 (피연산자 교환)</td>
+                    </tr>
+                    <tr>
+                        <td><code>bgtu rs, rt, offset</code></td>
+                        <td><code>bltu rt, rs, offset</code></td>
+                        <td>rs &gt; rt이면 분기 (부호 없는)</td>
+                    </tr>
+                    <tr>
+                        <td><code>bleu rs, rt, offset</code></td>
+                        <td><code>bgeu rt, rs, offset</code></td>
+                        <td>rs &lt;= rt이면 분기 (부호 없는)</td>
+                    </tr>
+                    <tr>
+                        <td><code>seqz rd, rs</code></td>
+                        <td><code>sltiu rd, rs, 1</code></td>
+                        <td>rs == 0이면 rd = 1</td>
+                    </tr>
+                    <tr>
+                        <td><code>snez rd, rs</code></td>
+                        <td><code>sltu rd, x0, rs</code></td>
+                        <td>rs != 0이면 rd = 1</td>
+                    </tr>
+                    <tr>
+                        <td><code>sgtz rd, rs</code></td>
+                        <td><code>slt rd, x0, rs</code></td>
+                        <td>rs &gt; 0이면 rd = 1</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>핵심 포인트</strong>
+                <p>의사 명령어는 하드웨어에 존재하지 않는다. 디코더를 설계할 때는 실제 명령어(우측 열)만
+                고려하면 된다. 테스트벤치에서 .hex 파일을 만들 때는 어셈블러가 변환한 실제 인코딩을 사용한다.</p>
+            </aside>
+        </div>
+
+        <!-- 부록 끝 -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>이 부록의 목적</strong>: 디코더 설계(Ch06), 파이프라인 디버깅(Ch09~12), 테스트벤치 작성 시
+                명령어 인코딩과 레지스터 규약을 빠르게 참조할 수 있는 레퍼런스 카드이다.
+            </p>
+            <p>
+                기반 스펙: RISC-V Unprivileged ISA Specification v20191213 | RISC-V ABI Specification
+            </p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script>
+        document.querySelectorAll('code.language-systemverilog').forEach(el => {
+            el.classList.remove('language-systemverilog');
+            el.classList.add('language-verilog');
+        });
+        hljs.highlightAll();
+    </script>
+</body>
+</html>
