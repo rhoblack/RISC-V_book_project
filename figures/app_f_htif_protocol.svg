@@ -1,0 +1,133 @@
+<svg viewBox="0 0 900 700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #1E40AF; font-family: 'Pretendard'; }
+      .label { font-size: 12px; fill: #1E40AF; font-family: monospace; }
+      .text-desc { font-size: 11px; fill: #666; font-family: monospace; }
+      .text-code { font-size: 11px; fill: white; font-family: monospace; font-weight: bold; }
+      .box-memory { fill: #DBEAFE; stroke: #2563EB; stroke-width: 2; }
+      .box-addr { fill: #3B82F6; stroke: #1E40AF; stroke-width: 1.5; }
+      .box-arrow { fill: none; stroke: #2563EB; stroke-width: 2; marker-end: url(#arrowhead); }
+      .box-target { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+      .box-host { fill: #E0E7FF; stroke: #4F46E5; stroke-width: 2; }
+      .line-solid { stroke: #2563EB; stroke-width: 1; fill: none; }
+      .line-dashed { stroke: #2563EB; stroke-width: 1; stroke-dasharray: 5,5; fill: none; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="30" class="title" text-anchor="middle">HTIF 프로토콜: 타겟과 호스트의 통신</text>
+
+  <!-- Memory Map Section -->
+  <text x="50" y="70" class="label" font-weight="bold">메모리 맵 (타겟 프로세서)</text>
+
+  <!-- Memory blocks -->
+  <rect x="50" y="90" width="120" height="50" class="box-memory" rx="2"/>
+  <text x="110" y="108" class="text-code" text-anchor="middle">0x80000000</text>
+  <text x="110" y="125" class="text-desc" text-anchor="middle">프로그램 메모리</text>
+
+  <rect x="50" y="150" width="120" height="50" class="box-addr" rx="2"/>
+  <text x="110" y="168" class="text-code" text-anchor="middle">0x80001000</text>
+  <text x="110" y="185" class="text-desc" text-anchor="middle">tohost (읽기)</text>
+
+  <rect x="50" y="210" width="120" height="50" class="box-addr" rx="2"/>
+  <text x="110" y="228" class="text-code" text-anchor="middle">0x80001008</text>
+  <text x="110" y="245" class="text-desc" text-anchor="middle">fromhost (읽기)</text>
+
+  <!-- tohost description -->
+  <text x="190" y="175" class="label" font-weight="bold">tohost</text>
+  <text x="190" y="195" class="text-desc">타겟 쓰기 / 호스트 읽기</text>
+  <text x="190" y="210" class="text-desc">테스트 프로그램이 결과를 써놓음</text>
+
+  <!-- fromhost description -->
+  <text x="190" y="235" class="label" font-weight="bold">fromhost</text>
+  <text x="190" y="255" class="text-desc">호스트 쓰기 / 타겟 읽기</text>
+  <text x="190" y="270" class="text-desc">호스트가 명령을 써놓음</text>
+
+  <!-- Communication Flow -->
+  <text x="450" y="70" class="label" font-weight="bold">타겟-호스트 통신 흐름</text>
+
+  <!-- Target Side -->
+  <rect x="330" y="100" width="150" height="280" class="box-target" rx="4"/>
+  <text x="405" y="125" class="label" text-anchor="middle" font-weight="bold">타겟 (프로세서)</text>
+
+  <!-- Target timeline -->
+  <text x="345" y="155" class="text-desc">1. 테스트 프로그램 실행</text>
+  <text x="345" y="175" class="text-desc">   모든 명령 검증</text>
+
+  <text x="345" y="205" class="text-desc">2. 결과 계산</text>
+  <text x="345" y="225" class="text-desc">   li x7, 0x00000001</text>
+
+  <text x="345" y="255" class="text-desc">3. tohost에 기록</text>
+  <text x="345" y="275" class="text-desc">   sw x7, 0(x6)</text>
+  <text x="345" y="290" class="text-desc">   (x6 = 0x80001000)</text>
+
+  <text x="345" y="320" class="text-desc">4. 폴링 대기</text>
+  <text x="345" y="335" class="text-desc">   PC 갱신 가능 상태</text>
+
+  <!-- Host Side -->
+  <rect x="520" y="100" width="150" height="280" class="box-host" rx="4"/>
+  <text x="595" y="125" class="label" text-anchor="middle" font-weight="bold">호스트 (Spike)</text>
+
+  <!-- Host timeline -->
+  <text x="535" y="155" class="text-desc">1. 타겟 시뮬레이션</text>
+  <text x="535" y="175" class="text-desc">   매 사이클 실행</text>
+
+  <text x="535" y="205" class="text-desc">2. tohost 폴링</text>
+  <text x="535" y="225" class="text-desc">   값이 바뀌었나?</text>
+
+  <text x="535" y="255" class="text-desc">3. 결과 해석</text>
+  <text x="535" y="275" class="text-desc">   0x1 = 성공</text>
+  <text x="535" y="290" class="text-desc">   0x0 = 계속</text>
+
+  <text x="535" y="320" class="text-desc">4. fromhost 쓰기</text>
+  <text x="535" y="335" class="text-desc">   (선택사항)</text>
+
+  <!-- Communication arrows -->
+  <line x1="480" y1="200" x2="520" y2="200" class="box-arrow"/>
+  <text x="500" y="195" class="text-desc" text-anchor="middle" font-size="10">쓰기</text>
+
+  <line x1="520" y1="220" x2="480" y2="220" class="box-arrow"/>
+  <text x="500" y="240" class="text-desc" text-anchor="middle" font-size="10">읽기</text>
+
+  <!-- State Values Section -->
+  <text x="50" y="410" class="label" font-weight="bold">tohost 값의 의미</text>
+
+  <rect x="50" y="430" width="350" height="40" class="box-memory" rx="2"/>
+  <text x="60" y="450" class="label" font-family="monospace">tohost = 0x00000001</text>
+  <text x="60" y="465" class="text-desc">✅ 성공! 모든 테스트 케이스가 정확히 실행됨</text>
+
+  <rect x="50" y="480" width="350" height="40" class="box-memory" rx="2"/>
+  <text x="60" y="500" class="label" font-family="monospace">tohost = 0x0000_0000</text>
+  <text x="60" y="515" class="text-desc">⏳ 진행 중 (프로그램이 아직 실행 중)</text>
+
+  <rect x="50" y="530" width="350" height="40" style="fill: #FEE2E2; stroke: #DC2626; stroke-width: 2;" rx="2"/>
+  <text x="60" y="550" class="label" font-family="monospace" fill="#DC2626">tohost = 0xNNNN_0000</text>
+  <text x="60" y="565" class="text-desc" fill="#991B1B">❌ 실패! NNNN은 오류 코드</text>
+
+  <!-- Example states -->
+  <text x="450" y="410" class="label" font-weight="bold">tohost 값 예시</text>
+
+  <rect x="450" y="430" width="200" height="35" style="fill: #DBEAFE; stroke: #3B82F6; stroke-width: 1;" rx="2"/>
+  <text x="550" y="450" class="text-code" text-anchor="middle" fill="#1E40AF">tohost = 0x0000_0001</text>
+  <text x="550" y="465" class="text-desc" text-anchor="middle">테스트 통과 ✅</text>
+
+  <rect x="450" y="480" width="200" height="35" style="fill: #DBEAFE; stroke: #3B82F6; stroke-width: 1;" rx="2"/>
+  <text x="550" y="500" class="text-code" text-anchor="middle" fill="#1E40AF">tohost = 0x0003_0000</text>
+  <text x="550" y="515" class="text-desc" text-anchor="middle">오류 코드 0x0003 ❌</text>
+
+  <rect x="450" y="530" width="200" height="35" style="fill: #DBEAFE; stroke: #3B82F6; stroke-width: 1;" rx="2"/>
+  <text x="550" y="550" class="text-code" text-anchor="middle" fill="#1E40AF">tohost = 0x0000_0000</text>
+  <text x="550" y="565" class="text-desc" text-anchor="middle">실행 진행 중 ⏳</text>
+
+  <!-- Key Points -->
+  <text x="50" y="600" class="label" font-weight="bold">핵심 포인트</text>
+
+  <text x="50" y="620" class="text-desc">• tohost/fromhost는 특정 메모리 주소일 뿐, 일반 RAM과 동일</text>
+  <text x="50" y="635" class="text-desc">• 타겟(프로세서)이 tohost에 쓰면, 호스트(Spike)가 읽음</text>
+  <text x="50" y="650" class="text-desc">• 호스트의 폴링 메커니즘이 테스트 결과 자동 판정 가능하게 함</text>
+  <text x="50" y="665" class="text-desc">• 설계에서: 메모리에 쓰는 동작 정확성이 HTIF 신호 정확성을 좌우</text>
+</svg>

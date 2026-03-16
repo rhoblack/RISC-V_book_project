@@ -1,0 +1,140 @@
+<svg viewBox="0 0 900 750" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-size: 18px; font-weight: bold; fill: #1E40AF; font-family: 'Pretendard'; }
+      .label { font-size: 12px; fill: #1E40AF; font-family: 'Pretendard'; }
+      .text-desc { font-size: 11px; fill: #666; font-family: monospace; }
+      .box-step { fill: #3B82F6; stroke: #1E40AF; stroke-width: 2; }
+      .box-action { fill: #DBEAFE; stroke: #2563EB; stroke-width: 1.5; }
+      .box-success { fill: #D1FAE5; stroke: #059669; stroke-width: 2; }
+      .box-output { fill: #FEF3C7; stroke: #F59E0B; stroke-width: 2; }
+      .text-white { font-size: 12px; font-weight: bold; fill: white; font-family: monospace; }
+      .text-dark { font-size: 12px; font-weight: bold; fill: #1E40AF; font-family: monospace; }
+      .arrow-line { stroke: #2563EB; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .line-dashed { stroke: #2563EB; stroke-width: 1; stroke-dasharray: 4,4; fill: none; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2563EB"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="30" class="title" text-anchor="middle">회귀 테스트 자동화 흐름도</text>
+
+  <!-- Step 1: Clone -->
+  <rect x="350" y="60" width="200" height="50" class="box-step" rx="4"/>
+  <text x="450" y="86" class="text-white" text-anchor="middle">Step 1: Clone</text>
+  <text x="450" y="103" class="text-white" text-anchor="middle" font-size="10">git clone riscv-tests</text>
+
+  <!-- Arrow -->
+  <line x1="450" y1="110" x2="450" y2="140" class="arrow-line"/>
+
+  <!-- Step 2: Configure -->
+  <rect x="350" y="140" width="200" height="50" class="box-step" rx="4"/>
+  <text x="450" y="166" class="text-white" text-anchor="middle">Step 2: Configure</text>
+  <text x="450" y="183" class="text-white" text-anchor="middle" font-size="10">export RISCV=/path/to/riscv</text>
+
+  <!-- Arrow -->
+  <line x1="450" y1="190" x2="450" y2="220" class="arrow-line"/>
+
+  <!-- Step 3: Build -->
+  <rect x="350" y="220" width="200" height="50" class="box-step" rx="4"/>
+  <text x="450" y="246" class="text-white" text-anchor="middle">Step 3: Build Tests</text>
+  <text x="450" y="263" class="text-white" text-anchor="middle" font-size="10">make XLEN=32 rv32ui</text>
+
+  <!-- Arrow -->
+  <line x1="450" y1="270" x2="450" y2="300" class="arrow-line"/>
+
+  <!-- Output: ELF files -->
+  <rect x="350" y="300" width="200" height="60" class="box-success" rx="4"/>
+  <text x="450" y="320" class="text-dark" text-anchor="middle" font-weight="bold">생성된 파일</text>
+  <text x="450" y="337" class="text-dark" text-anchor="middle" font-size="10">add-p-add.elf</text>
+  <text x="450" y="351" class="text-dark" text-anchor="middle" font-size="10">addi-p-addi.elf ... (40개)</text>
+
+  <!-- Arrow -->
+  <line x1="450" y1="360" x2="450" y2="390" class="arrow-line"/>
+
+  <!-- Step 4: Run tests -->
+  <rect x="350" y="390" width="200" height="60" class="box-action" rx="4"/>
+  <text x="450" y="410" class="text-dark" text-anchor="middle" font-weight="bold">Step 4: Run Tests</text>
+  <text x="450" y="427" class="text-desc" text-anchor="middle" font-size="10">for each .elf:</text>
+  <text x="450" y="442" class="text-desc" text-anchor="middle" font-size="10">spike pk test.elf</text>
+
+  <!-- Arrow to results -->
+  <line x1="450" y1="450" x2="450" y2="480" class="arrow-line"/>
+
+  <!-- Results collection -->
+  <rect x="300" y="480" width="300" height="80" class="box-output" rx="4"/>
+  <text x="450" y="500" class="text-dark" text-anchor="middle" font-weight="bold">Step 5: Collect Results</text>
+  <text x="450" y="520" class="text-desc" text-anchor="middle">log_add.txt: ✅ passed</text>
+  <text x="450" y="535" class="text-desc" text-anchor="middle">log_addi.txt: ✅ passed</text>
+  <text x="450" y="550" class="text-desc" text-anchor="middle">... (40 파일)</text>
+
+  <!-- Arrow -->
+  <line x1="450" y1="560" x2="450" y2="590" class="arrow-line"/>
+
+  <!-- Final Report -->
+  <rect x="280" y="590" width="340" height="100" style="fill: #E0E7FF; stroke: #4F46E5; stroke-width: 2;" rx="4"/>
+  <text x="450" y="615" class="text-dark" text-anchor="middle" font-weight="bold" font-size="14">Step 6: Generate Report</text>
+  <text x="450" y="635" class="text-dark" text-anchor="middle" font-family="monospace">Passed:  35 / 40</text>
+  <text x="450" y="650" class="text-dark" text-anchor="middle" font-family="monospace">Failed:  5</text>
+  <text x="450" y="665" class="text-dark" text-anchor="middle" font-family="monospace">Percentage: 87%</text>
+
+  <!-- Parallel execution note -->
+  <text x="50" y="70" class="label" font-weight="bold">병렬 실행 (선택)</text>
+
+  <rect x="50" y="90" width="250" height="120" class="box-action" rx="4"/>
+  <text x="175" y="110" class="text-dark" text-anchor="middle" font-weight="bold">순차 vs 병렬</text>
+
+  <text x="65" y="130" class="text-desc" font-weight="bold">순차 실행:</text>
+  <text x="65" y="147" class="text-desc">40개 × 1초 = 40초</text>
+
+  <text x="65" y="167" class="text-desc" font-weight="bold">병렬 실행 (-j 4):</text>
+  <text x="65" y="184" class="text-desc">40초 ÷ 4 = 10초</text>
+
+  <text x="65" y="204" class="text-desc" font-size="10" font-weight="bold">명령: make -j 4</text>
+
+  <!-- Failure analysis note -->
+  <text x="620" y="70" class="label" font-weight="bold">실패 시 분석</text>
+
+  <rect x="620" y="90" width="250" height="500" class="box-action" rx="4"/>
+
+  <text x="745" y="110" class="text-dark" text-anchor="middle" font-weight="bold">실패한 테스트</text>
+
+  <!-- Case 1 -->
+  <text x="635" y="135" class="text-dark" font-weight="bold">❌ add-p-add (실패)</text>
+
+  <text x="635" y="155" class="text-desc">1. 로그 확인</text>
+  <text x="650" y="170" class="text-desc">log_add.txt</text>
+
+  <text x="635" y="190" class="text-desc">2. 실패 명령어 파악</text>
+  <text x="650" y="205" class="text-desc">마지막 실행 명령어?</text>
+
+  <text x="635" y="225" class="text-desc">3. 파형 분석</text>
+  <text x="650" y="240" class="text-desc">입력값, ALU, PC 추적</text>
+
+  <text x="635" y="260" class="text-desc">4. 버그 특정</text>
+  <text x="650" y="275" class="text-desc">포워딩? 스톨? ALU?</text>
+
+  <!-- Case 2 -->
+  <text x="635" y="310" class="text-dark" font-weight="bold">❌ beq-p-beq (실패)</text>
+
+  <text x="635" y="330" class="text-desc">→ 동일 절차</text>
+
+  <!-- Iteration -->
+  <text x="635" y="370" class="text-desc" font-weight="bold">✅ 버그 수정 후</text>
+
+  <text x="650" y="390" class="text-desc">코드 수정</text>
+  <text x="650" y="407" class="text-desc">↓</text>
+  <text x="650" y="424" class="text-desc">재테스트</text>
+  <text x="650" y="441" class="text-desc">↓</text>
+  <text x="650" y="458" class="text-desc">결과 비교</text>
+
+  <!-- Converge -->
+  <text x="635" y="500" class="text-dark" font-weight="bold">반복:</text>
+  <text x="635" y="520" class="text-desc">32/40 → 35/40</text>
+  <text x="635" y="537" class="text-desc">→ 38/40 → 40/40 ✅</text>
+
+  <!-- Footer -->
+  <text x="450" y="720" class="text-desc" text-anchor="middle" font-weight="bold">전체 프로세스 시간: ~30분 (순차) 또는 ~10분 (병렬)</text>
+</svg>

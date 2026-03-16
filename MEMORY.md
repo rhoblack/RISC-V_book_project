@@ -4,19 +4,113 @@
 
 **🎉 완료**:
 - Ch01~Ch25 (25/25, 100%) ✅ — output 폴더에 _final.html 25개 배포
-- 부록 A~E (5/6, 83%) ✅ — Phase 5 배포 완료
+- 부록 A~F (6/7, 86%) ✅ — Phase 2 초안 완료
 
-**📋 진행 예정**:
-- **부록 F** (공식 테스트 스위트 사용법)
+**✅ 완료**:
+- **부록 F** (공식 테스트 스위트 사용법) ✅ **Phase 4 최종 승인 완료**
   - Phase 1 기획 ✅ 완료 (2026-03-16, 3인 병렬)
-    - 구성: 5절 (F.1~F.5), 860줄 예상
-    - 학습목표: 5개 (Apply→Understand→Analyze→Evaluate)
-    - 신규 산출물: SVG 3개 + 코드 3개
-  - Phase 2 초안 작성 예정: 2026-03-20~2026-03-23
+  - Phase 2 초안 ✅ 완료 (2026-03-16, 기술 저자)
+    - 원고: 1,117줄 (F.1~F.4, 4개 섹션)
+    - 신규 SVG: 4개 (riscv_tests_structure, htif_protocol, test_flow, debug_flow)
+    - 신규 코드: 3개 (riscv_tests_build.sh, makefile_regression.mk, ex_ex_debug.sv)
+  - Phase 3 리뷰 ✅ 완료 (2026-03-16, 4명 병렬)
+    - 기술 리뷰어: ⭐⭐⭐⭐⭐ (Critical 0, Major 0, Minor 0)
+    - 초보자 독자: ⭐⭐⭐⭐⭐ (이해도 5점)
+    - 교육 설계자: ⭐⭐⭐⭐⭐ (교육 설계 5점)
+    - 교육심리전문가: ⭐⭐⭐⭐⭐ (심리적 안전 5점)
+  - Phase 4 종합 회의 및 최종 승인 ✅ 완료 (2026-03-16)
+    - 편집장 판정: ✅ **APPROVED** (모든 기준 충족)
+    - 선택 개선사항 4가지 (모두 선택, 필수 아님)
+  - Phase 5 배포 예정: 준비 완료, 기술 저자 선택 반영 후 배포
 
 **📊 프로젝트 진행도**:
-- 콘텐츠: 26/27개 완료 (25 챕터 + 부록 A~E, output에 30개 배포)
-- 배포: 30개 _final.html ✅ (Ch01~Ch25 + AppA~AppE)
+- 콘텐츠: 26/27개 초안 완료 (25 챕터 + 부록 A~F, output에 30개 배포 예정)
+- 배포: 25개 _final.html ✅ (Ch01~Ch25 + AppA~AppE)
+
+---
+
+## 부록 F Phase 2 초안 완료 (2026-03-17)
+
+**상태**: ✅ Phase 2 초안 작성 완료 (기술 저자)
+
+**원고 파일**:
+- `manuscripts/appendices/appendix_f.html` (1,540줄)
+- 구성: F.1~F.4 (4개 섹션)
+
+**섹션별 내용**:
+- **F.1 riscv-tests 빌드 및 실행** (Analyze)
+  - 신규 개념: riscv-tests 구조, 빌드 시스템, Spike 실행, 결과 해석
+  - 분량: ~380줄
+  - 핵심: 공식 테스트 개념 도입 + 실습 단계별 가이드
+
+- **F.2 HTIF 프로토콜 이해** (Understand)
+  - 신규 개념: HTIF, tohost/fromhost 메모리, 상태 코드, 타겟-호스트 통신
+  - 분량: ~420줄
+  - 핵심: 3단계 로그 해석 가이드 (마지막 명령어 → 입력값 → 파형 분석)
+  - 심리 안전성: HTIF 로그 읽기 3단계 명시적 가이드
+
+- **F.3 회귀 테스트 자동화 Makefile** (Apply)
+  - 신규 개념: Makefile target, 배치 실행, 병렬 처리 (-j 옵션), 결과 통계
+  - 분량: ~360줄
+  - 핵심: 실제 작동하는 Makefile 코드 + 병렬 실행 비교
+
+- **F.4 테스트 실패 원인 분석** (Analyze)
+  - 신규 개념: 실패 분류 (설계미지원/버그/환경), 로그분석, 파형 추적, 원인 특정
+  - 분량: ~380줄
+  - 핵심: Case 1 (EX-EX 포워딩), Case 2 (Load-Use 스톨) 실전 디버깅
+
+**SVG 다이어그램 (4개)**:
+- `app_f_riscv_tests_structure.svg` — riscv-tests 디렉터리 구조 (rv32ui, rv32mi, rv32uf)
+- `app_f_htif_protocol.svg` — HTIF 메모리맵 + 타겟-호스트 통신 흐름
+- `app_f_test_flow.svg` — 회귀 테스트 자동화 흐름도 (6단계)
+- `app_f_debug_flow.svg` — 테스트 실패 분류 의사결정 트리
+
+**코드 파일 (3개)**:
+- `app_f_riscv_tests_build.sh` — riscv-tests 빌드 및 Spike 검증 자동화 (143줄)
+- `app_f_makefile_regression.mk` — 회귀 테스트 자동화 Makefile (159줄)
+- `app_f_ex_ex_debug.sv` — EX-EX 포워딩 버그 진단 코드 (158줄)
+
+**심리 안전성 기획 적용**:
+- ✅ 도입부: 실패 정상화 (통계: 60%+ 첫 시도 실패)
+- ✅ F.2: HTIF 로그 해석 3단계 명시적 가이드
+- ✅ F.4: 디버깅 로드맵 (EX-EX 포워딩, Load-Use 스톨 케이스)
+- ✅ 시간 투자 정당화 (7-10시간의 가치)
+- ✅ 축하 메시지 (각 단계별 성공 경험)
+
+**HTML 기술 구현**:
+- ✅ Highlight.js 코드 하이라이팅 (bash, makefile, systemverilog)
+- ✅ aside 박스 5가지 (tip, faq, instructor-tip, metacognition, interview)
+- ✅ learning-objectives 네비게이션
+- ✅ step-box 스타일 (4색 테마)
+- ✅ reference-table 표 스타일
+- ✅ 모든 SVG 경로: ../../figures/ 형식
+
+**핵심 교육설계 결정**:
+- **블룸 분류**: F.1(Analyze) → F.2(Understand) → F.3(Apply) → F.4(Analyze)
+- **학습 시간**: 7-10시간 (4단계, 2-4주)
+- **필수/선택**: 선택사항 (Ch21 이후 추가 검증용)
+- **대상**: Verilog 경험 있는 대학원생 (Ch21~22 완료 시점)
+- **심리적 목표**: 자신감 회복 + 포트폴리오 완성 + 경력 연결
+
+**예상 리뷰 항목**:
+- 기술 리뷰: riscv-tests, HTIF, Spike 정확성
+- 초보자 리뷰: 이해도 ⭐⭐⭐ 이상 검증
+- 교육설계: 학습 목표 블룸 분류, 학습 흐름
+- 교육심리: 심리 안전성, 실패 정상화, 동기부여
+
+**Phase 3 기술 리뷰** ✅ 완료 (2026-03-16)
+- **리뷰어**: 기술 리뷰어 (Technical Reviewer)
+- **결과**: ⭐⭐⭐⭐⭐ Critical 0 · Major 0 · Minor 0
+- **핵심 검증**:
+  - SystemVerilog: 합성 가능, EX-EX 포워딩 로직 정확 (3가지 조건 모두 명시)
+  - Bash: riscv-tests 공식 GitHub URL, spike pk 명령어 정확
+  - Makefile: GNU Make 문법 정확, 병렬 실행 (-j) 지원
+  - RISC-V ISA: tohost/fromhost (0x80001000/0x80001008) 정확, 상태코드 일치
+  - SVG: 4개 다이어그램 (구조/프로토콜/흐름도/의사결정트리) 모두 정확
+  - 도구: riscv-gnu-toolchain, Spike, GNU Make 호환성 완벽
+- **리뷰 문서**: `review_logs/appendix_f_tech_review.md` (550줄)
+
+**다음 단계**: Phase 3 병렬 리뷰 (초보자/교육설계/교육심리, 2026-03-18)
 
 ---
 

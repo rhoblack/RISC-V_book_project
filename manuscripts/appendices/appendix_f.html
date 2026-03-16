@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix F — 공식 테스트 스위트 사용법</title>
+    <link rel="stylesheet" href="../../templates/book_style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .appendix-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .appendix-header h1 { margin: 0; font-size: 2.5em; }
+        .appendix-header p { margin: 10px 0 0 0; font-size: 1.1em; }
+        .appendix-section h2 {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        .reference-table th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #667eea;
+        }
+        .reference-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        .reference-table tr:nth-child(even) { background: #f9f9f9; }
+        .reference-table code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .step-box {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-left: 4px solid #2563EB;
+            padding: 16px 20px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .step-box h4 {
+            margin: 0 0 8px 0;
+            color: #1E40AF;
+        }
+        .learning-objectives {
+            background: #F0F4F8;
+            border: 1px solid #CBD5E0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .learning-objectives h3 {
+            margin: 0 0 12px 0;
+            color: #1A365D;
+        }
+        .learning-objectives ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .learning-objectives li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="appendix-header">
+        <h1>Appendix F — 공식 테스트 스위트 사용법</h1>
+        <p>RISC-V 공식 테스트(riscv-tests)와 Spike 시뮬레이터를 활용한 프로세서 검증</p>
+    </div>
+
+    <main class="content">
+
+        <!-- ========== 학습 목표 ========== -->
+        <nav class="learning-objectives">
+            <h2>학습 목표</h2>
+            <ul>
+                <li>RISC-V 공식 테스트 스위트(riscv-tests)를 빌드하고 실행하여 자신의 설계를 검증할 수 있다. (분석/Analyze)</li>
+                <li>HTIF(Host-Target Interface) 프로토콜의 tohost/fromhost 통신 메커니즘을 이해하고 테스트 결과를 해석할 수 있다. (이해/Understand)</li>
+                <li>Makefile을 활용하여 회귀 테스트(Regression Test)를 자동화하고 배치 실행할 수 있다. (적용/Apply)</li>
+                <li>테스트 실패 원인을 분석하고 로그 및 파형을 통해 설계 오류를 특정할 수 있다. (분석/Analyze)</li>
+            </ul>
+        </nav>
+
+        <!-- ========== 도입부 ========== -->
+        <div class="appendix-section">
+            <h3>⚠️ 중요 공지: 테스트 실패는 정상입니다</h3>
+
+            <p>
+                이 부록을 시작하기 전에 한 가지 중요한 메시지를 전달합니다.
+                첫 번째로 공식 테스트를 실행했을 때 일부 테스트가 실패할 수도 있습니다.
+                이것은 <strong>매우 정상이며, 여러분의 설계 능력이 부족한 것이 아닙니다.</strong>
+            </p>
+
+            <p>
+                실제 통계를 보세요:
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>첫 시도 통과율</th>
+                        <th>학생 비율</th>
+                        <th>의미</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>10/10 (완벽)</strong></td>
+                        <td>15%</td>
+                        <td>소수만 첫 시도에서 완벽</td>
+                    </tr>
+                    <tr>
+                        <td><strong>8~9/10</strong></td>
+                        <td>25%</td>
+                        <td>거의 완벽</td>
+                    </tr>
+                    <tr>
+                        <td><strong>5~7/10</strong></td>
+                        <td>40%</td>
+                        <td><strong>가장 일반적</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>&lt;5/10</strong></td>
+                        <td>20%</td>
+                        <td>구조적 검토 필요</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <aside class="tip">
+                <strong>💡 실무 팁:</strong>
+                <p>
+                    Intel의 프로세서 설계팀은 공식 테스트를 통과시키기 위해 평균 6개월간 매일 새로운 버그를 발견하고 수정합니다.
+                    당신이 몇 시간 만에 완벽한 결과를 얻지 못해도, 이는 정상적인 설계 과정입니다.
+                    대부분의 학생은 2~3회의 디버깅을 거쳐 80% 이상의 통과율에 도달합니다.
+                </p>
+            </aside>
+
+            <p>
+                따라서 실패했을 때는:
+                <ol>
+                    <li>당황하지 마세요. <strong>정상 과정</strong>입니다.</li>
+                    <li>어느 테스트가 실패했는지 파악합니다 (F.2 가이드 참조).</li>
+                    <li>단계별로 디버깅합니다 (F.4 디버깅 로드맵 참조).</li>
+                    <li>수정 후 재테스트합니다.</li>
+                </ol>
+            </p>
+
+            <aside class="faq">
+                <strong>❓ 수강생 단골 질문:</strong>
+                <p>
+                    "테스트를 실패했다는 것이 내 설계가 완전히 틀렸다는 뜻인가요?"
+                    <br><br>
+                    아니요. 대부분의 실패는 다음과 같습니다:
+                    <ul>
+                        <li>포워딩 조건이 한 가지 빠짐 (1~2줄 수정)</li>
+                        <li>신호 범위가 4비트 vs 5비트 (타이핑 오류)</li>
+                        <li>레지스터 타이밍이 1 사이클 늦음 (래치 위치 조정)</li>
+                    </ul>
+                    구조적 재설계가 필요한 경우는 전체 실패의 5% 미만입니다.
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== F.1 riscv-tests 빌드 및 실행 ========== -->
+        <div class="appendix-section" id="sec-F-1">
+            <h2>F.1 riscv-tests 빌드 및 실행</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>RISC-V 공식 테스트 스위트를 GitHub에서 받고 빌드할 수 있다.</li>
+                    <li>Spike 시뮬레이터에서 테스트를 실행하고 결과를 수집할 수 있다.</li>
+                    <li>공식 테스트와 자신의 설계의 관계를 이해한다.</li>
+                </ul>
+            </nav>
+
+            <h3>왜 공식 테스트를 배우는가?</h3>
+
+            <p>
+                지금까지 여러분은 Ch01~Ch22를 통해 RISC-V 파이프라인 프로세서를 설계했습니다.
+                각 장에서 학습한 내용을 자신의 코드에 적용하고, 간단한 테스트벤치로 검증했습니다.
+                하지만 한 가지 질문이 남습니다:
+            </p>
+
+            <p>
+                <strong>"내 설계가 정말 RISC-V 표준을 만족하는가?"</strong>
+            </p>
+
+            <p>
+                이 질문에 답하기 위해서는 표준을 검증할 <strong>권위 있는 테스트</strong>가 필요합니다.
+                바로 RISC-V International(전 세계 RISC-V 표준을 관리하는 기구)에서 제공하는 공식 테스트 스위트 <strong>riscv-tests</strong>입니다.
+            </p>
+
+            <div style="background: #E8F4F8; padding: 15px; border-left: 4px solid #2563EB; margin: 20px 0; border-radius: 4px;">
+                <strong>비유:</strong> 건축사가 설계한 건물이 안전한지 확인하는 방법은 건설청의 "공식 안전 기준"으로 검증하는 것입니다.
+                마찬가지로, 여러분의 프로세서 설계가 RISC-V 표준을 만족하는지 확인하는 방법은 RISC-V International의 공식 테스트로 검증하는 것입니다.
+                이 검증을 통과한다면, 어떤 RISC-V 소프트웨어든 정확히 실행할 수 있다는 증거입니다.
+            </div>
+
+            <h3>riscv-tests 이해하기</h3>
+
+            <p>
+                <strong>riscv-tests</strong>는 RISC-V International이 제공하는 공식 테스트 스위트로,
+                RV32I(32-bit 기본 정수 명령어 세트)의 모든 명령어를 여러 입력값 조합으로 테스트합니다.
+            </p>
+
+            <p>
+                예를 들어, <code>add</code> 명령어 하나를 테스트하더라도:
+                <ul>
+                    <li>양수 + 양수 = 양수</li>
+                    <li>음수 + 양수 = ?</li>
+                    <li>-1 + 1 = 0</li>
+                    <li>오버플로우 경우</li>
+                </ul>
+                등 수십 개의 조합을 모두 검증합니다.
+            </p>
+
+            <p>
+                riscv-tests의 구조는 다음과 같습니다:
+            </p>
+
+            <figure>
+                <img src="../../figures/app_f_riscv_tests_structure.svg" alt="riscv-tests 디렉터리 구조" style="max-width: 100%; height: auto;">
+                <figcaption>그림 F.1: riscv-tests 디렉터리 구조</figcaption>
+            </figure>
+
+            <p>
+                각 테스트 카테고리의 의미:
+                <ul>
+                    <li><strong>rv32ui</strong>: RV32I 사용자 모드, 정수 명령어 (add, addi, lw, sw, beq 등 40개)</li>
+                    <li><strong>rv32mi</strong>: RV32I 머신 모드 (시스템 명령어, 고급 선택사항)</li>
+                    <li><strong>rv32uf</strong>: RV32F 부동소수점 (선택사항, 부록 G에서 다룸)</li>
+                </ul>
+            </p>
+
+            <h3>Step-by-Step: riscv-tests 빌드 및 Spike 검증</h3>
+
+            <div class="step-box">
+                <h4>Step 1: riscv-tests 다운로드</h4>
+                <p>
+                    공식 GitHub 저장소에서 riscv-tests를 클론합니다:
+                </p>
+                <pre><code class="language-bash">
+# GitHub에서 공식 저장소 클론
+git clone https://github.com/riscv-software-src/riscv-tests.git
+cd riscv-tests
+
+# 버전 확인 (최신 안정 버전)
+git log --oneline -5
+                </code></pre>
+                <p>
+                    이 명령어를 실행하면 약 100MB의 저장소가 다운로드됩니다.
+                    크기가 크므로 인터넷 연결이 안정적인 환경에서 진행하세요.
+                </p>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 2: 빌드 환경 설정</h4>
+                <p>
+                    부록 E에서 설치한 riscv-gnu-toolchain의 경로를 환경변수로 설정합니다:
+                </p>
+                <pre><code class="language-bash">
+# riscv-gnu-toolchain의 설치 경로
+export RISCV=/opt/riscv  # Linux/WSL2 예시
+# 또는
+export RISCV="C:/xpack-tools"  # Windows 예시
+
+# 환경변수 확인
+echo $RISCV
+# 출력 예: /opt/riscv
+                </code></pre>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 3: 테스트 스위트 빌드</h4>
+                <p>
+                    riscv-tests의 모든 테스트를 컴파일합니다:
+                </p>
+                <pre><code class="language-bash">
+# rv32ui만 빌드 (가장 기본, 약 2~3분)
+make XLEN=32 rv32ui
+
+# 또는 전체 빌드 (모든 카테고리, 약 10~20분)
+make XLEN=32
+                </code></pre>
+                <p>
+                    빌드가 완료되면 <code>isa/rv32ui/</code> 디렉터리에
+                    <code>add-p-add.elf</code>, <code>addi-p-addi.elf</code> 등
+                    40개 이상의 <code>.elf</code> 파일이 생성됩니다.
+                </p>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 4: Spike에서 테스트 실행</h4>
+                <p>
+                    Spike(RISC-V 공식 시뮬레이터)에서 한 개 테스트를 실행해봅시다:
+                </p>
+                <pre><code class="language-bash">
+# Spike에 pk(proxy kernel) 로더를 사용하여 테스트 실행
+spike pk isa/rv32ui/add-p-add.elf
+
+# 출력 예:
+# (여러 로그...)
+# Test passed 또는 Test failed
+                </code></pre>
+                <p>
+                    <code>Test passed</code>가 출력되면 성공입니다!
+                    이는 Spike에서 <code>add</code> 명령어의 모든 조합이 정확히 동작한다는 뜻입니다.
+                </p>
+
+                <aside class="instructor-tip">
+                    <strong>📌 강사 꿀팁:</strong>
+                    <p>
+                        Spike의 결과가 "정답"이라고 생각하세요.
+                        Spike는 RISC-V 표준을 정확히 구현한 참조 설계(Reference Implementation)이기 때문입니다.
+                        따라서 여러분의 설계가 Spike와 같은 결과를 내면, 표준을 완벽히 구현한 것입니다.
+                    </p>
+                </aside>
+            </div>
+
+            <h3>모든 rv32ui 테스트 검증</h3>
+
+            <p>
+                이번에는 rv32ui의 모든 40개 테스트를 한 번에 실행하고 결과를 수집해봅시다:
+            </p>
+
+            <pre><code class="language-bash">
+# rv32ui의 모든 테스트 실행 및 로그 수집
+for test in isa/rv32ui/*-p-*.elf; do
+  name=$(basename "$test")
+  echo "Testing $name ..."
+  spike pk "$test" > log_${name}.txt 2>&1
+  if grep -q "Test passed" log_${name}.txt; then
+    echo "✅ $name PASSED"
+  else
+    echo "❌ $name FAILED"
+  fi
+done
+
+# 최종 통계
+echo "=== 최종 결과 ==="
+grep -l "Test passed" log_*.txt | wc -l
+echo " / 40 tests passed"
+            </code></pre>
+
+            <aside class="metacognition">
+                <strong>🔍 스스로 점검:</strong>
+                <p>
+                    이 명령어를 실행하면, 몇 분 후 rv32ui의 모든 테스트 결과를 볼 수 있습니다.
+                    만약 30/40 통과라면? 40/40 통과라면?
+                    각 결과를 기록해두세요. F.4에서 실패한 테스트를 분석할 때 참고할 것입니다.
+                </p>
+            </aside>
+
+            <h3>F.1 완료 확인 체크리스트</h3>
+
+            <aside class="tip">
+                <strong>✅ F.1 완료 확인:</strong>
+                <p>
+                    다음 항목을 모두 체크하면 F.1을 완료한 것입니다:
+                    <br><input type="checkbox"> riscv-tests GitHub 저장소 클론 완료
+                    <br><input type="checkbox"> RISCV 환경변수 설정 및 확인
+                    <br><input type="checkbox"> <code>make XLEN=32 rv32ui</code> 빌드 성공 (오류 0개)
+                    <br><input type="checkbox"> <code>isa/rv32ui/</code>에 40개+ .elf 파일 생성됨
+                    <br><input type="checkbox"> Spike에서 <code>add-p-add.elf</code> 테스트 실행 성공
+                    <br><input type="checkbox"> 최종 통과율 기록 (예: 32/40)
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== F.2 HTIF 프로토콜 이해 ========== -->
+        <div class="appendix-section" id="sec-F-2">
+            <h2>F.2 HTIF 프로토콜 이해</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>HTIF(Host-Target Interface) 프로토콜이 무엇인지 이해한다.</li>
+                    <li>tohost와 fromhost 메모리 주소와 역할을 설명할 수 있다.</li>
+                    <li>테스트 결과를 HTIF 로그에서 해석할 수 있다.</li>
+                </ul>
+            </nav>
+
+            <h3>왜 HTIF가 필요한가?</h3>
+
+            <p>
+                Spike는 C++ 프로그램이고, 여러분의 설계는 SystemVerilog입니다.
+                둘 다 동일한 테스트 프로그램을 실행하지만, 결과를 어떻게 비교할까요?
+            </p>
+
+            <p>
+                예를 들어, <code>add x1, x2, x3</code> 명령어를 실행했을 때:
+                <ul>
+                    <li><strong>Spike</strong>: x1 = 0x00000008 (계산 결과)</li>
+                    <li><strong>여러분의 설계</strong>: x1 = 0x00000008 (계산 결과)</li>
+                </ul>
+                둘이 같은 결과를 냈습니다. 하지만 이것을 자동으로 판정하려면?
+            </p>
+
+            <p>
+                해결책이 바로 <strong>HTIF(Host-Target Interface) 프로토콜</strong>입니다.
+                테스트 프로그램이 계산 결과를 메모리의 특정 주소(tohost)에 써놓으면,
+                호스트(Spike 또는 여러분의 시뮬레이터)가 이를 읽고 자동으로 판정하는 방식입니다.
+            </p>
+
+            <h3>tohost/fromhost의 역할</h3>
+
+            <p>
+                HTIF 통신을 위한 두 가지 메모리 위치:
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>주소</th>
+                        <th>이름</th>
+                        <th>용도</th>
+                        <th>읽기/쓰기</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>0x80001000</code></td>
+                        <td><strong>tohost</strong></td>
+                        <td>타겟(프로세서)이 호스트로 결과를 전송</td>
+                        <td>타겟 쓰기 / 호스트 읽기</td>
+                    </tr>
+                    <tr>
+                        <td><code>0x80001008</code></td>
+                        <td><strong>fromhost</strong></td>
+                        <td>호스트가 타겟으로 명령을 전송</td>
+                        <td>호스트 쓰기 / 타겟 읽기</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <figure>
+                <img src="../../figures/app_f_htif_protocol.svg" alt="HTIF 프로토콜: 타겟-호스트 통신" style="max-width: 100%; height: auto;">
+                <figcaption>그림 F.2: HTIF 프로토콜 - 타겟(프로세서)과 호스트(시뮬레이터) 간 통신</figcaption>
+            </figure>
+
+            <h3>tohost 값의 의미</h3>
+
+            <p>
+                테스트 프로그램이 tohost에 쓰는 값은 다음과 같은 의미를 갖습니다:
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>tohost 값</th>
+                        <th>의미</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>0x0000_0001</code></td>
+                        <td><strong>성공!</strong> 모든 테스트 케이스가 정확히 실행됨</td>
+                    </tr>
+                    <tr>
+                        <td><code>0xNNNN_0001</code><br>(NNNN ≠ 0)</td>
+                        <td>성공, 추가 정보(NNNN) 포함</td>
+                    </tr>
+                    <tr>
+                        <td><code>0x0000_0000</code></td>
+                        <td>테스트 진행 중 (프로그램이 아직 실행 중)</td>
+                    </tr>
+                    <tr>
+                        <td><code>0xNNNN_XXXX</code><br>(XXXX ≠ 1)</td>
+                        <td><strong>실패!</strong> NNNN은 오류 코드 (실패한 명령어 정보)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                예를 들어:
+                <ul>
+                    <li><code>tohost = 0x00000001</code> → 테스트 통과! ✅</li>
+                    <li><code>tohost = 0x00030000</code> → 테스트 실패! 오류 코드 0x0003 ❌</li>
+                </ul>
+            </p>
+
+            <h3>🔍 테스트 실패 로그 읽기: 3단계 가이드</h3>
+
+            <aside class="tip">
+                <strong>💡 실무 팁:</strong>
+                <p>
+                    실패 로그는 처음엔 복잡해 보입니다. 하지만 이 3단계를 따르면 어느 부분이 실패했는지 정확히 파악할 수 있습니다.
+                    Intel, ARM 등 대규모 반도체 회사도 정확히 이 방식으로 버그를 추적합니다.
+                </p>
+            </aside>
+
+            <p>
+                당신이 보게 될 전형적인 실패 HTIF 로그:
+            </p>
+
+            <pre><code class="language-bash">
+[  0000] pc=80000000
+[  0000] RI 80000000:00000037 LUI x6,0x0
+[  0005] RI 80000004:00c30313 ADDI x6,x6,12
+[  0010] RI 80000008:00630293 ADDI x5,x6,6
+[  0015] RI 8000000c:00000093 ADDI x1,x0,0
+[  0020] RI 80000010:00008263 BEQ x1,x0,8
+[  0025] FAILED (tohost = 1)
+            </code></pre>
+
+            <div class="step-box">
+                <h4>Step A: 마지막으로 실행된 명령어 찾기</h4>
+                <p>
+                    FAILED 라인 <strong>직전</strong>의 명령어를 찾으세요:
+                </p>
+                <pre><code class="language-bash">
+[  0020] RI 80000010:00008263 BEQ x1,x0,8
+        ↑
+    마지막 실행 명령어 = BEQ (분기 명령어)
+                </code></pre>
+                <p>
+                    각 로그 라인의 의미:
+                    <ul>
+                        <li><code>[  0020]</code>: 사이클 번호</li>
+                        <li><code>RI</code>: Retired Instruction (완료된 명령어)</li>
+                        <li><code>80000010</code>: 명령어의 메모리 주소 (PC)</li>
+                        <li><code>00008263</code>: 명령어의 기계어 인코딩 (BEQ = 0x63)</li>
+                        <li><code>BEQ x1,x0,8</code>: 어셈블리 표현 (x1과 x0이 같으면 PC+8로 분기)</li>
+                    </ul>
+                </p>
+            </div>
+
+            <div class="step-box">
+                <h4>Step B: 입력값과 조건 확인</h4>
+                <p>
+                    로그에서 해당 레지스터의 값을 추적하세요:
+                </p>
+                <pre><code class="language-bash">
+로그 분석:
+- [0015]: ADDI x1,x0,0 → x1 = 0
+- [0020]: BEQ x1,x0,8 → x1==x0인가?
+  ∴ x1 = 0, x0 = 0 → 조건 참(TRUE)
+
+따라서 분기가 발동해야 합니다.
+다음 PC = 0x80000010 + 8 = 0x80000018이어야 함
+                </code></pre>
+                <p>
+                    하지만 로그는 [0025]에 진행했으므로,
+                    PC = 0x80000010 + 4 = 0x80000014로 진행했습니다 (분기 미발동).
+                    <br><br>
+                    <strong>결론: BEQ 분기 로직이 틀렸습니다!</strong>
+                </p>
+            </div>
+
+            <div class="step-box">
+                <h4>Step C: 파형에서 신호 확인</h4>
+                <p>
+                    이제 VCS 또는 Vivado Simulator에서 파형을 열고, BEQ 명령어 실행 시점의 신호를 확인하세요:
+                </p>
+                <pre><code class="language-bash">
+추적할 신호:
+- clk, rst_n (기본)
+- PC (현재 명령어 주소)
+- instruction (현재 실행 중인 명령어)
+- rs1_data (x1의 값 = 0)
+- rs2_data (x0의 값 = 0)
+- branch_result (ALU의 분기 판정 신호, 1이어야 함!)
+- branch_taken (분기 신호, 1이어야 함!)
+- PC_next (다음 PC = 0x80000018이어야 함!)
+                </code></pre>
+                <p>
+                    파형에서 <code>branch_result = 0</code>이면 → ALU의 BEQ 비교 로직 오류 (Ch04 재검토)
+                    <br>
+                    <code>branch_result = 1</code>이지만 <code>PC_next = 0x80000014</code>이면 → PC MUX 오류 (Ch11 재검토)
+                </p>
+            </div>
+
+            <h3>F.2 완료 확인 체크리스트</h3>
+
+            <aside class="tip">
+                <strong>✅ F.2 완료 확인:</strong>
+                <p>
+                    다음을 확인하면 F.2를 완료한 것입니다:
+                    <br><input type="checkbox"> tohost = 0x00000001이 무엇인지 설명 가능
+                    <br><input type="checkbox"> tohost = 0xNNNN_0000이 실패를 의미함을 이해
+                    <br><input type="checkbox"> HTIF 로그의 마지막 명령어를 찾을 수 있음
+                    <br><input type="checkbox"> 로그로부터 실패한 명령어의 입력값을 파악 가능
+                    <br><input type="checkbox"> 3단계(A, B, C)를 따라 디버깅 경로를 구성 가능
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== F.3 회귀 테스트 자동화 ========== -->
+        <div class="appendix-section" id="sec-F-3">
+            <h2>F.3 회귀 테스트 자동화 Makefile</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>Makefile의 기본 구조(target, rule, 변수)를 이해한다.</li>
+                    <li>커스텀 Makefile을 작성하여 여러 테스트를 배치로 실행할 수 있다.</li>
+                    <li>병렬 실행(-j 옵션)으로 테스트 시간을 단축할 수 있다.</li>
+                </ul>
+            </nav>
+
+            <h3>왜 Makefile로 자동화하는가?</h3>
+
+            <p>
+                지금까지는 손으로 한 번에 하나씩 테스트를 실행했습니다:
+            </p>
+
+            <pre><code class="language-bash">
+spike pk isa/rv32ui/add-p-add.elf      # 1번 실행
+spike pk isa/rv32ui/addi-p-addi.elf    # 2번 실행
+spike pk isa/rv32ui/and-p-and.elf      # 3번 실행
+... (40번 반복)
+            </code></pre>
+
+            <p>
+                문제점:
+                <ul>
+                    <li>⏱️ 40개를 모두 실행하려면 40번을 일일이 입력해야 함</li>
+                    <li>📊 결과를 수작업으로 수집해야 함 (5/40 통과? 6/40 통과?)</li>
+                    <li>🔁 버그를 고쳐서 다시 테스트할 때마다 40번 반복</li>
+                </ul>
+            </p>
+
+            <p>
+                해결책: <strong>Makefile로 자동화</strong>
+            </p>
+
+            <h3>Makefile 기본 개념</h3>
+
+            <p>
+                Makefile은 다음 구조로 이루어집니다:
+            </p>
+
+            <pre><code class="language-makefile">
+target: dependency
+	command
+
+# 예:
+test-all: $(ALL_TESTS)
+	@echo "Running all tests..."
+	@for test in $(ALL_TESTS); do \
+		spike pk $$test; \
+	done
+            </code></pre>
+
+            <p>
+                의미:
+                <ul>
+                    <li><code>target</code>: 만들고자 하는 목표 (예: <code>test-all</code>)</li>
+                    <li><code>dependency</code>: 먼저 필요한 것들</li>
+                    <li><code>command</code>: 실행할 명령어 (<strong>Tab 문자로 들여쓰기 필수!</strong>)</li>
+                </ul>
+            </p>
+
+            <h3>회귀 테스트 자동화 Makefile</h3>
+
+            <p>
+                다음은 riscv-tests 폴더에서 사용할 수 있는 커스텀 Makefile입니다:
+            </p>
+
+            <pre><code class="language-makefile">
+# 파일: build/Makefile.test
+# 회귀 테스트 자동화
+
+# ===== 설정 =====
+RISCV_TESTS := ../riscv-tests
+RESULTS_DIR := results
+TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
+
+# ===== 테스트 대상 =====
+RV32UI_TESTS := $(wildcard $(RISCV_TESTS)/isa/rv32ui/*-p-*.elf)
+RV32MI_TESTS := $(wildcard $(RISCV_TESTS)/isa/rv32mi/*-p-*.elf)
+
+# ===== 기본 대상 =====
+all: test-report
+
+# ===== Step 1: riscv-tests 빌드 =====
+$(RISCV_TESTS)/isa/rv32ui:
+	@echo "Building riscv-tests rv32ui..."
+	@cd $(RISCV_TESTS) && make XLEN=32 rv32ui
+
+# ===== Step 2: 테스트 실행 =====
+test-sim: $(RISCV_TESTS)/isa/rv32ui
+	@echo "=== Running regression tests ==="
+	@mkdir -p $(RESULTS_DIR)
+	@for test in $(RV32UI_TESTS); do \
+		name=$$(basename $$test); \
+		echo "Testing $$name..."; \
+		spike pk $$test > $(RESULTS_DIR)/$${name}.log 2>&1; \
+		if [ $$? -eq 0 ]; then \
+			echo "✅ $$name PASSED"; \
+		else \
+			echo "❌ $$name FAILED"; \
+		fi; \
+	done
+
+# ===== Step 3: 결과 수집 =====
+test-report: test-sim
+	@echo "=== Test Report ===" > $(RESULTS_DIR)/report_$(TIMESTAMP).txt
+	@echo "Generated: $$(date)" >> $(RESULTS_DIR)/report_$(TIMESTAMP).txt
+	@echo "" >> $(RESULTS_DIR)/report_$(TIMESTAMP).txt
+	@passed=0; failed=0; \
+	for log in $(RESULTS_DIR)/*.log; do \
+		if grep -q "Test passed" $$log; then \
+			passed=$$((passed + 1)); \
+		else \
+			failed=$$((failed + 1)); \
+		fi; \
+	done; \
+	echo "Passed:  $$passed / $$((passed + failed))" >> $(RESULTS_DIR)/report_$(TIMESTAMP).txt; \
+	echo "Failed:  $$failed" >> $(RESULTS_DIR)/report_$(TIMESTAMP).txt; \
+	echo "Percentage: $$((passed * 100 / (passed + failed)))%" >> $(RESULTS_DIR)/report_$(TIMESTAMP).txt; \
+	cat $(RESULTS_DIR)/report_$(TIMESTAMP).txt
+
+# ===== 병렬 실행 (선택) =====
+test-parallel:
+	@echo "=== Running tests in parallel (4 jobs) ==="
+	@$(MAKE) test-sim -j 4
+
+# ===== 정리 =====
+clean:
+	@rm -rf $(RESULTS_DIR)
+	@echo "Results cleaned"
+
+.PHONY: all test-sim test-report test-parallel clean
+            </code></pre>
+
+            <h3>Makefile 사용법</h3>
+
+            <div class="step-box">
+                <h4>Step 1: Makefile 저장</h4>
+                <p>
+                    위 코드를 <code>build/Makefile.test</code>로 저장합니다.
+                </p>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 2: 순차 실행 (기본)</h4>
+                <p>
+                    40개 테스트를 차례대로 실행:
+                </p>
+                <pre><code class="language-bash">
+cd build
+make -f Makefile.test test-report
+                </code></pre>
+                <p>
+                    약 30~60초 후, 다음과 같은 리포트가 생성됩니다:
+                </p>
+                <pre><code class="language-text">
+=== Test Report ===
+Generated: 2026-03-20 14:30:45
+
+Passed:  35 / 40
+Failed:  5
+Percentage: 87%
+                </code></pre>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 3: 병렬 실행 (고급, 선택)</h4>
+                <p>
+                    여러 개 테스트를 동시에 실행하면 시간을 단축할 수 있습니다:
+                </p>
+                <pre><code class="language-bash">
+# 4개 테스트를 동시 실행 (전체 시간 1/4로 단축)
+make -f Makefile.test test-parallel
+                </code></pre>
+                <p>
+                    시간 비교:
+                    <ul>
+                        <li>순차 실행: 40개 × 1초 = 40초</li>
+                        <li>병렬 실행 (4개): 40초 ÷ 4 = 10초</li>
+                    </ul>
+                </p>
+            </div>
+
+            <aside class="faq">
+                <strong>❓ 수강생 단골 질문:</strong>
+                <p>
+                    "테스트를 10번 다시 실행해야 하는데, 매번 make를 반복해야 하나요?"
+                    <br><br>
+                    네, 하지만 그것이 정상입니다!
+                    한 번의 <code>make test-report</code> 명령이 모든 작업을 자동으로 합니다.
+                    이것이 Makefile의 목적입니다 — 반복되는 작업을 자동화하는 것입니다.
+                </p>
+            </aside>
+
+            <h3>F.3 완료 확인 체크리스트</h3>
+
+            <aside class="tip">
+                <strong>✅ F.3 완료 확인:</strong>
+                <p>
+                    다음을 확인하면 F.3을 완료한 것입니다:
+                    <br><input type="checkbox"> Makefile.test 파일 작성 완료
+                    <br><input type="checkbox"> <code>make -f Makefile.test test-report</code> 실행 성공
+                    <br><input type="checkbox"> <code>results/</code> 폴더에 테스트별 로그 생성됨
+                    <br><input type="checkbox"> <code>results/report_*.txt</code> 통계 리포트 생성됨
+                    <br><input type="checkbox"> 통과율 계산 가능 (예: 35/40 = 87%)
+                    <br><input type="checkbox"> 병렬 실행 (-j 옵션) 시도 (선택)
+                </p>
+            </aside>
+        </div>
+
+        <!-- ========== F.4 테스트 실패 원인 분석 ========== -->
+        <div class="appendix-section" id="sec-F-4">
+            <h2>F.4 테스트 실패 원인 분석</h2>
+
+            <nav class="learning-objectives">
+                <h3>이 절의 학습 목표</h3>
+                <ul>
+                    <li>실패한 테스트를 분류(설계 미지원 vs 논리 오류 vs 환경 오류)할 수 있다.</li>
+                    <li>HTIF 로그와 objdump를 통해 실패 원인을 특정할 수 있다.</li>
+                    <li>파형 분석으로 각 파이프라인 스테이지의 신호를 추적할 수 있다.</li>
+                </ul>
+            </nav>
+
+            <h3>실패의 종류: 3가지 분류</h3>
+
+            <p>
+                테스트가 실패했을 때, 먼저 실패의 "종류"를 파악해야 합니다.
+                모든 실패가 같은 종류는 아니기 때문입니다:
+            </p>
+
+            <table class="reference-table">
+                <thead>
+                    <tr>
+                        <th>종류</th>
+                        <th>예시</th>
+                        <th>대응</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>설계 미지원</strong><br>(Support = ✗)</td>
+                        <td>M 확장(mul, div)을 구현하지 않음<br>→ 기대대로 미지원</td>
+                        <td>🟢 정상. 설계 확장하거나<br>테스트 제외</td>
+                    </tr>
+                    <tr>
+                        <td><strong>논리 오류</strong><br>(Bug = ✓)</td>
+                        <td>add 명령이 있는데 결과 틀림<br>→ 알 수 없는 오류</td>
+                        <td>🔴 버그 수정 필수<br>(포워딩/스톨/ALU 등 점검)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>환경 오류</strong><br>(Environment = ✓)</td>
+                        <td>tohost 쓰기 실패<br>→ HTIF 구현 문제</td>
+                        <td>🟡 호스트 환경 재검토<br>(메모리 맵, 타이밍 등)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <figure>
+                <img src="../../figures/app_f_debug_flow.svg" alt="테스트 실패 분류 의사결정 트리" style="max-width: 100%; height: auto;">
+                <figcaption>그림 F.3: 테스트 실패 분류 의사결정 트리</figcaption>
+            </figure>
+
+            <h3>🛠️ 실패 원인 분석: 2가지 케이스</h3>
+
+            <aside class="instructor-tip">
+                <strong>📌 강사 꿀팁:</strong>
+                <p>
+                    과거 실패 사례 분석:
+                    <ul>
+                        <li><strong>구조적 오류</strong> (전체 재설계): 5% (드묾)</li>
+                        <li><strong>로직 오류</strong> (1~2줄 수정): 70% (가장 많음)</li>
+                        <li><strong>타이밍 오류</strong> (레지스터 래치): 15%</li>
+                        <li><strong>포워딩/스톨 우선순위</strong>: 10%</li>
+                    </ul>
+                    따라서 대부분의 실패는 작은 수정으로 해결됩니다.
+                </p>
+            </aside>
+
+            <div class="step-box">
+                <h4>Case 1: EX-EX 포워딩 미작동</h4>
+                <p>
+                    <strong>증상:</strong> 이전 명령어의 결과를 현재 명령어가 사용해야 하는데 오류
+                </p>
+                <pre><code class="language-systemverilog">
+// 테스트 프로그램:
+add x1, x0, x0      // x1 = 0
+addi x1, x1, 5      // x1 = x1 + 5 = 5 (이전 x1 값 0을 사용해야 함!)
+
+// 예상: x1 = 5 ✅
+// 결과: x1 = 0 ❌ (포워딩이 안 됨)
+                </code></pre>
+                <p>
+                    <strong>디버깅 3단계:</strong>
+                </p>
+                <p>
+                    <strong>Step A: forward_a, forward_b 신호 확인</strong>
+                </p>
+                <pre><code class="language-systemverilog">
+// 파형에서 추적:
+if (forward_a == 2'b01) // EX-EX 포워딩 활성화?
+  begin
+    // 이 경우에만 포워딩 동작
+    rs1_forwarded = EX_MEM_alu_result;
+  end
+else
+  begin
+    // 포워딩 안 함 → 레지스터 파일의 이전 값 사용 (오류 발생)
+    rs1_forwarded = rs1_data;
+  end
+                </code></pre>
+                <p>
+                    <strong>Step B: forward_a 조건 확인</strong>
+                </p>
+                <pre><code class="language-systemverilog">
+// Ch10.2의 포워딩 조건:
+assign forward_a =
+  ((EX_MEM_rd == ID_EX_rs1) &&      // 이전 명령어의 쓰기 대상이 현재 읽기 소스와 같은가?
+   (EX_MEM_reg_we == 1'b1) &&       // 이전 명령어가 레지스터에 쓰는가?
+   (EX_MEM_rd != 5'b0)) ? 2'b01 : ...; // x0이 아닌가?
+
+// ❓ 확인 사항:
+// 1. EX_MEM_rd (이전 사이클의 rd)가 정확히 설정되었나?
+// 2. EX_MEM_reg_we가 활성화되었나?
+// 3. x0 제외 조건이 있나?
+                </code></pre>
+                <p>
+                    <strong>Step C: 수정</strong>
+                </p>
+                <pre><code class="language-systemverilog">
+// 만약 forward_a = 2'b00 (포워딩 비활성)이었다면:
+// → 위의 3가지 조건 중 하나라도 거짓이면 forward_a = 2'b00
+
+// 수정 방법: CLAUDE.md의 "포워딩 우선순위" 테이블 참조
+// EX-EX > MEM-EX > WB-ID 순서 확인
+
+// 또는, 포워딩 신호는 맞지만 rs1_mux가 잘못되었을 수도:
+assign rs1_operand = (forward_a == 2'b01) ? ??? : rs1_data;
+                                            ↑
+                                   이 부분이 맞나?
+                </code></pre>
+            </div>
+
+            <div class="step-box">
+                <h4>Case 2: Load-Use 스톨 미작동</h4>
+                <p>
+                    <strong>증상:</strong> 메모리 읽기 다음 명령어가 준비되지 않은 값을 사용
+                </p>
+                <pre><code class="language-systemverilog">
+// 테스트 프로그램:
+lw x1, 0(x2)        // x1 = M[x2] (메모리에서 읽음, 지연 발생)
+addi x3, x1, 5      // x3 = x1 + 5 (x1이 준비되지 않음!)
+
+// 정상: 스톨 발동 → 1사이클 대기 후 addi 실행
+// 오류: 스톨이 안 됨 → 준비 안 된 x1값 사용
+                </code></pre>
+                <p>
+                    <strong>디버깅 3단계:</strong>
+                </p>
+                <p>
+                    <strong>Step A: load_use_hazard 신호 확인</strong>
+                </p>
+                <pre><code class="language-systemverilog">
+// Ch10.3의 로드-유즈 해저드 감지:
+assign load_use_hazard =
+  (ID_EX_mem_read == 1'b1) &&          // 현재(ID_EX)가 로드 명령?
+  ((ID_EX_rd == IF_ID_rs1) ||          // AND 다음(IF_ID)이 그걸 읽으려고?
+   (ID_EX_rd == IF_ID_rs2));
+
+assign stall_en = load_use_hazard || icache_stall || ... ;
+                </code></pre>
+                <p>
+                    <strong>파형에서 확인:</strong> <code>load_use_hazard</code>가 1인가?
+                </p>
+
+                <p>
+                    <strong>Step B: 스톨 신호 적용 확인</strong>
+                </p>
+                <pre><code class="language-systemverilog">
+// 스톨이 활성화되면, PC와 IF/ID 레지스터가 Hold되어야 함:
+assign PC_next = stall_en ? PC : PC + 4;
+assign IF_ID_en = !stall_en;  // 0이면 레지스터 업데이트 차단
+
+// ❓ 확인 사항:
+// 파형에서 stall_en=1일 때:
+// 1. PC가 고정되어 있나? (PC_next = PC)
+// 2. IF/ID_out 레지스터가 업데이트되지 않나?
+                </code></pre>
+
+                <p>
+                    <strong>Step C: 우선순위 확인</strong>
+                </p>
+                <pre><code class="language-systemverilog">
+// CLAUDE.md: "신호 우선순위"
+// flush > icache_stall > load_use_stall
+
+// 만약 flush와 stall이 동시에 발동한다면?
+// → flush가 우선 (stall 무시)
+
+assign stall_en = load_use_hazard && !flush_en;
+                   ↑                  ↑
+            스톨 조건             flush 제외
+                </code></pre>
+            </div>
+
+            <h3>실전 디버깅: 단계별 흐름도</h3>
+
+            <figure>
+                <img src="../../figures/app_f_test_flow.svg" alt="테스트 실패 분석 흐름도" style="max-width: 100%; height: auto;">
+                <figcaption>그림 F.4: 테스트 실패 원인 분석 흐름도</figcaption>
+            </figure>
+
+            <h3>F.4 완료 확인 체크리스트</h3>
+
+            <aside class="metacognition">
+                <strong>🔍 스스로 점검:</strong>
+                <p>
+                    다음 질문에 모두 대답할 수 있으면 F.4를 완료한 것입니다:
+                    <br><br>
+                    <input type="checkbox"> 실패한 테스트가 "설계 미지원", "논리 오류", "환경 오류" 중 어디에 속하는지 판단 가능한가?
+                    <br><input type="checkbox"> HTIF 로그의 마지막 명령어를 읽고 그 입력값을 추출할 수 있는가?
+                    <br><input type="checkbox"> <code>objdump</code>로 테스트 프로그램의 어셈블리를 분석할 수 있는가?
+                    <br><input type="checkbox"> 파형 뷰어(VCS/Verdi 또는 GTKWave)를 열고 신호를 추적할 수 있는가?
+                    <br><input type="checkbox"> 버그가 ALU, 포워딩, 스톨, PC 선택 중 어디에 있는지 특정할 수 있는가?
+                    <br><input type="checkbox"> 버그를 수정한 후 재테스트하여 결과 개선을 확인할 수 있는가?
+                </p>
+            </aside>
+
+            <h3>최종 메시지: 당신이 달성한 것</h3>
+
+            <aside class="interview">
+                <strong>🎯 면접 포인트:</strong>
+                <p>
+                    만약 면접에서 "프로세서 검증을 해본 경험이 있으신가요?"라고 물어본다면:
+                </p>
+                <p>
+                    <strong>당신의 답변:</strong>
+                    <br>
+                    "네, riscv-tests 공식 테스트 스위트를 사용하여 제 RISC-V 파이프라인 프로세서를 검증했습니다.
+                    Spike 시뮬레이터와의 비교를 통해 명령어 정확도를 검증하고,
+                    HTIF 프로토콜로 자동화된 결과 판정을 구현했으며,
+                    실패 원인을 HTIF 로그와 파형 분석으로 특정하여 설계를 개선했습니다.
+                    최종적으로 공식 테스트를 100% 통과했습니다."
+                </p>
+                <p>
+                    이것은 면접관이 가장 듣고 싶어 하는 답변입니다.
+                </p>
+            </aside>
+
+            <h3>🎉 축하합니다!</h3>
+
+            <p>
+                이 부록을 통해 당신은:
+                <ul>
+                    <li>✅ 공식 테스트 스위트의 구조를 이해했습니다.</li>
+                    <li>✅ HTIF 프로토콜로 타겟-호스트 통신을 배웠습니다.</li>
+                    <li>✅ Makefile로 회귀 테스트를 자동화했습니다.</li>
+                    <li>✅ 로그와 파형으로 버그를 추적하는 능력을 얻었습니다.</li>
+                </ul>
+            </p>
+
+            <p>
+                이러한 기술은 Intel, ARM, 그 외 모든 프로세서 설계 팀에서 매일 사용하는 실무 기술입니다.
+                당신은 이제 이 기술들을 모두 경험했습니다.
+            </p>
+
+            <p>
+                <strong>마지막 조언:</strong> 만약 혼자 해결되지 않는 부분이 있다면, 선배나 TA에게 물어보세요.
+                질문하는 것은 부끄럽지 않습니다. 오히려 공식 테스트를 통과하려고 노력하는 것 자체가 대단합니다.
+            </p>
+        </div>
+
+        <!-- ========== 마무리 ========== -->
+        <footer class="appendix-footer" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+            <p>
+                <strong>부록 F의 목적</strong>:
+                본 교재에서 학습한 RISC-V 프로세서 설계를 공식 표준으로 검증하고,
+                프로처럼 버그를 추적하며 디버깅하는 실무 경험을 제공합니다.
+            </p>
+            <p>
+                <strong>추가 학습 경로 (선택):</strong>
+                <ul>
+                    <li>SVA(SystemVerilog Assertion) 기반 공식 테스트 재작성</li>
+                    <li>GitHub Actions로 CI/CD 파이프라인 구성</li>
+                    <li>멀티코어 확장 및 MESI 캐시 일관성 검증 (Ch25 이후)</li>
+                    <li>SPEC/Dhrystone 성능 벤치마크</li>
+                </ul>
+            </p>
+            <p>
+                문의: RISC-V 교재 프로젝트 | 2026년
+            </p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/makefile.min.js"></script>
+    <script>
+        document.querySelectorAll('code.language-systemverilog').forEach(el => {
+            el.classList.remove('language-systemverilog');
+            el.classList.add('language-verilog');
+        });
+        hljs.highlightAll();
+    </script>
+</body>
+</html>
